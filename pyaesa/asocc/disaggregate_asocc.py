@@ -1,0 +1,339 @@
+"""Public entrypoint for allocated shares of carrying capacities (aSoCC) disaggregation."""
+
+from pyaesa.shared.runtime.reporting.composite_phase_index import (
+    phase_ready_detail,
+    phase_reused_detail,
+)
+from pyaesa.shared.runtime.reporting.phase import PhasePrinter
+
+from .disaggregation.config import parse_disaggregate_args
+from .disaggregation.models import DisaggregationReport
+from .disaggregation.pipeline import run_disaggregation
+from .io.logging import close_loggers_for_scope
+from .runtime.scope.branch_resolution import outputs_project_root
+
+
+def disaggregate_asocc(
+    *,
+    disaggregation_config: dict = {
+        "target_grouped_run": None,
+        "ref_grouped_run": None,
+        "ref_split_run": None,
+        "disaggregation_specs": None,
+        "new_disaggregated_version_name": None,
+    },
+    base_asocc_args: dict = {
+        "project_name": None,
+        "years": None,
+        "fu_code": None,
+        "r_p": None,
+        "r_c": None,
+        "r_f": None,
+        "aggreg_indices": False,
+        "method_plan": "default",
+        "l1_methods": None,
+        "one_step_methods": None,
+        "two_step_methods": None,
+        "l1_l2_pairs": None,
+        "l1_reg_aggreg": "post",
+        "ssp_scenario": ["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"],
+        "projection_mode": "regression",
+        "reg_window": None,
+        "l2_reuse_years": None,
+    },
+    output_format: str = "csv",
+    figures: bool = True,
+    figure_format: dict = {"format": "png", "dpi": 500},
+    figure_external_method: dict[str, list[str]] | None = None,
+    refresh: bool = False,
+) -> DisaggregationReport:
+    """Disaggregate non LCIA deterministic allocated shares of carrying capacities (aSoCC).
+
+    The function creates a published disaggregated aSoCC source by transferring
+    a sector split observed in a reference ixi MRIO to a grouped target ixi
+    MRIO. For every requested year ``y`` the allocates shares are equal to
+    ``target_grouped(y) * ref_split(y) / ref_grouped(y)``.
+
+    Only non LCIA aSoCC methods are supported. Do not pass ``lcia_method`` in
+    ``base_asocc_args``. Supported sources are ``"oecd_v2025"``,
+    ``"exiobase_3102_ixi"``, and ``"exiobase_396_ixi"`` because OECD ICIO is
+    an ixi MRIO. It renders figures when requested.
+    Omit arguments to use their default.
+
+    Args:
+        disaggregation_config: Required disaggregation envelope. Required keys
+            are ``target_grouped_run``, ``ref_grouped_run``,
+            ``ref_split_run``, ``disaggregation_specs``, and
+            ``new_disaggregated_version_name``.
+
+            Disaggregation configuration fields:
+
+            - ``target_grouped_run``: grouped deterministic aSoCC source to
+              disaggregate. Its published rows supply ``target_grouped`` in
+              the formula above. Example: OECD ICIO sector ``D``.
+            - ``ref_grouped_run``: reference ixi source grouped to the same
+              sector labels as ``target_grouped_run``. Its published rows
+              supply ``ref_grouped``. Example: EXIOBASE ixi grouped to OECD
+              ICIO sector ``D``.
+            - ``ref_split_run``: the same reference source as
+              ``ref_grouped_run``, but at the detailed split sector labels
+              that should be written in the new source. Its published rows
+              supply ``ref_split``. Example: EXIOBASE ixi electricity sectors.
+            - ``disaggregation_specs``: mapping from each grouped sector label
+              to the detailed split sector label(s) that replace it in the new
+              source.
+            - ``new_disaggregated_version_name``: output source label used for
+              the published disaggregated aSoCC source created by this
+              function.
+
+            Each ``*_run`` selector requires:
+
+            - ``source``: supported MRIO source key for this transformation.
+              Accepted values are ``"oecd_v2025"``, ``"exiobase_3102_ixi"``,
+              and ``"exiobase_396_ixi"``. Only ixi MRIO layouts are supported.
+            - ``s_p``: non empty list of sector labels.
+            - ``group_reg``: If ``True``, aggregate regions using a grouping
+              file. Default ``False`` keeps native source regions.
+            - ``group_sec``: If ``True``, aggregate sectors using a grouping
+              file. Default ``False`` keeps native source sectors.
+            - ``group_version``: Grouping version tag used to resolve the
+              region/sector mapping CSVs. Required when ``group_reg`` or
+              ``group_sec`` is True. Defaults to an empty string for ungrouped
+              processing. Follow ``README_grouping.txt`` in the active
+              ``data_raw/mrio/<source>/grouping`` folder to name grouping
+              versions and place the matching mapping CSVs.
+
+            ``disaggregation_specs`` is a non empty list of
+            ``{"grouped_sector_label": ..., "split_sector_label": ...}``
+            mappings. ``target_grouped_run.s_p`` and
+            ``ref_grouped_run.s_p`` must exactly match the grouped labels,
+            ``ref_split_run.s_p`` must exactly match the split labels,
+            ``ref_grouped_run.source`` must equal ``ref_split_run.source``,
+            and one split sector can map to exactly one grouped sector.
+            The studied region labels requested through ``r_p``, ``r_c``, or
+            ``r_f`` must be present with the same names in all three selected
+            prerequisite scopes. If source native region names differ, use
+            ``group_reg=True`` and a grouping version to rename or aggregate
+            regions before disaggregation.
+
+        base_asocc_args: Deterministic aSoCC scope used to match prerequisite
+            published outputs and define the written disaggregated branch.
+            Write nested arguments as ``base_asocc_args={"project_name": "...",
+            "fu_code": "L2.c.b"}``. Source, grouping, and sector identity are
+            owned by ``disaggregation_config``. LCIA selectors are not
+            accepted, and the scope must resolve non LCIA deterministic aSoCC
+            outputs.
+
+            Nested keys:
+
+            - ``project_name``: Required project name used to build
+              ``<repo>/<project_name>``.
+            - ``fu_code``: Required functional unit code (for example
+              ``"L1.a"``, ``"L2.c.b"``). See
+              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              for all available functional unit codes and the system
+              boundaries each represents. Disaggregation is defined only on
+              L2 published outputs.
+            - ``years``: Studied years. Accepts a single year, list, or
+              range. If omitted, all available MRIO years for the selected
+              source/group version are used.
+            - ``r_p``: Producing region filter(s), single string or list. If
+              this is a required axis for ``fu_code`` and the argument is
+              omitted, the run expands to all valid producing regions. To
+              identify valid region names, see the first column of the
+              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              file.
+            - ``r_c``: Consuming region filter(s), single string or list. If
+              this is a required axis for ``fu_code`` and the argument is
+              omitted, the run expands to all valid consuming regions. To
+              identify valid region names, see the first column of the
+              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              file.
+            - ``r_f``: Final demand region filter(s), single string or list.
+              If this is a required axis for ``fu_code`` and the argument is
+              omitted, the run expands to all valid final demand regions. To
+              identify valid region names, see the first column of the
+              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              file.
+            - ``aggreg_indices``: Whether multiple selected region/sector
+              indices are reported as separate rows or summed into one row
+              after the selected MRIO scope is computed.
+              - ``False`` (default): keep selected values as independent rows.
+              - ``True``: sum selected values into one row.
+              Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
+              aggregating CBA total demand system boundaries can double count.
+              For these functional units, define the aggregation from
+              ``process_mrio(...)`` onward with
+              ``group_reg``/``group_sec``/``group_version``.
+            - ``method_plan``: ``method_plan`` defaults to ``"default"`` and
+              accepts ``"default"``, ``"one_step"``, ``"two_steps"``,
+              ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
+              allocation methods available for the selected ``fu_code`` are
+              applied. See
+              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              for the allocation methods available per functional unit,
+              including definitions and mathematical expressions.
+            - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
+              methods allowed by ``method_plan``. In ``"default"``, this
+              filters only L1 weights used by two step methods. In
+              ``"two_steps"``, it filters the two step cartesian L1 side.
+            - ``one_step_methods``: Optional one step L2 subset. Omit it to
+              keep all one step methods allowed by ``method_plan``.
+            - ``two_step_methods``: Optional two step L2 subset. Omit it to
+              keep all two step L2 methods allowed by ``method_plan``.
+            - ``l1_l2_pairs``: Explicit pair list formatted as
+              ``"L1METHOD::L2METHOD"``. Omit it unless ``method_plan`` is
+              ``"pairs"`` or ``"one_step_pairs"``.
+            - ``l1_reg_aggreg``: L1 aggregation mode for methods where timing
+              matters (``PR(GDPcap)``, ``PR-HR(Ecap)`` and ``AR(Ecap)``).
+              ``"pre"`` aggregates regions before L1 computation. ``"post"``
+              (default) computes on original regions, then aggregates.
+            - ``ssp_scenario``: SSP scenario name or list. Defaults to
+              ``["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"]`` and is applied
+              when scenario dependent inputs are required.
+            - ``projection_mode``: Projection policy for post historical
+              years of L2 utilitarian (UT) methods (MRIO economic enacting
+              metrics). Defaults to ``"regression"``. ``"regression"``
+              projects UT inputs for future years. ``"historical_reuse"``
+              reuses historical UT structures.
+            - ``reg_window``: Historical regression fit window for regression
+              mode. Provide it as ``range(start_year, end_year + 1)`` or as
+              an explicit list of consecutive years in fit window order. When
+              omitted, the source registry supplies the default fit window
+              from the modeled year minimum through the source historical
+              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
+              to 1995 to 2022; other supported MRIO sources use their own
+              registry window.
+            - ``l2_reuse_years``: Historical L2 reuse year selector used by
+              all UT historical reuse routes. In
+              ``projection_mode="historical_reuse"`` it applies to all UT
+              methods; in ``projection_mode="regression"`` it applies to
+              adjusted UT routes (``UT(FDa)``, ``UT(GVAa)``), which always
+              use historical reuse as regression is not supported (would
+              require regression on full MRIO). If omitted, defaults to
+              ``reg_window`` when required.
+
+        output_format: Persisted output file format: ``"csv"`` (default),
+            ``"pickle"``, or ``"parquet"``.
+        figures: Whether to render figures.
+            Default is ``True``.
+        figure_format: Figure render settings mapping. Defaults to
+            ``{"format": "png", "dpi": 500}``.
+
+            Nested keys:
+
+            - ``format``: Figure file format. Accepted values are ``"png"``,
+              ``"pdf"``, and ``"svg"``.
+            - ``dpi``: Positive integer figure resolution used for raster
+              outputs.
+        figure_external_method: Optional external deterministic aSoCC selector
+            block used only for figure rendering. Use
+            ``prepare_external_inputs(...)`` to import the external aSoCC
+            README guidance and runnable CSV examples, then follow the
+            imported guide for method syntax and data input format. This
+            argument is valid only when ``figures=True``. Omit it to render only native
+            deterministic aSoCC method rows. Defaults to ``None``.
+        refresh: If ``True``, remove and rebuild only the published
+            disaggregated aSoCC source created by this call. The cleared scope
+            is the ``deterministic`` folder under
+            ``<project>/B1_asocc/<new_disaggregated_version_name>``. For
+            example, for ``project_name="demo"`` and
+            ``new_disaggregated_version_name="oecd_electricity"``, the
+            refreshed path is
+            ``<repo>/demo/B1_asocc/oecd_electricity/deterministic``. The
+            deterministic prerequisite scopes named in ``target_grouped_run``,
+            ``ref_grouped_run``, and ``ref_split_run`` are not refreshed.
+            Processed MRIO inputs, processed population and GDP, raw
+            downloads, and downstream aCC or ASR outputs are not refreshed.
+            Defaults to ``False``.
+
+    Returns:
+        DisaggregationReport describing disaggregated aSoCC table outputs and
+        figure outputs when figures are requested.
+
+    Raises:
+        ValueError: If the configuration is invalid, one prerequisite
+            deterministic scope is unavailable, requested published output
+            coverage is missing, or one strict disaggregation failure rule is
+            triggered.
+
+    Notes:
+        The repository root is taken from the package default configured by
+        ``set_workspace()``; call ``set_workspace()`` before invoking this
+        function.
+
+        - Region labels are matched strictly between the MRIO sources.
+          Studied regions requested through ``r_p``/``r_c``/``r_f`` must use
+          the same labels in all selected sources. Use region grouping to
+          update region names syntax when they do not already match.
+        - Disaggregation may run for any requested year whose prerequisite
+          published outputs exist for all three selectors.
+
+    Example:
+        Disaggregate OECD ICIO sector D into EXIOBASE electricity sector,
+        using defaults where omitted::
+
+            disaggregate_asocc(
+                disaggregation_config={
+                    "target_grouped_run": {
+                        "source": "oecd_v2025",
+                        "s_p": ["D"],
+                    },
+                    "ref_grouped_run": {
+                        "source": "exiobase_3102_ixi",
+                        "group_sec": True,
+                        "group_version": "oecd_d",
+                        "s_p": ["D"],
+                    },
+                    "ref_split_run": {
+                        "source": "exiobase_3102_ixi",
+                        "group_sec": True,
+                        "group_version": "elec",
+                        "s_p": ["Electricity"],
+                    },
+                    "disaggregation_specs": [
+                        {
+                            "grouped_sector_label": "D",
+                            "split_sector_label": "Electricity",
+                        }
+                    ],
+                    "new_disaggregated_version_name": "disagg_oecd_elec",
+                },
+                base_asocc_args={
+                    "project_name": "demo",
+                    "fu_code": "L2.c.b",
+                    "years": range(2005, 2031),
+                    "r_c": ["FR", "US"],
+                    "ssp_scenario": ["SSP2", "SSP3"],
+                },
+            )
+    """
+    phase = PhasePrinter("disaggregate_asocc")
+    project_root = None
+    try:
+        phase.announce("Phase B.1: aSoCC", "disaggregate_asocc")
+        parsed = parse_disaggregate_args(
+            disaggregation_config=disaggregation_config,
+            base_allocate_args=base_asocc_args,
+            output_format=output_format,
+            figures=figures,
+            figure_options=None,
+            figure_format=figure_format,
+            figure_external_method=figure_external_method,
+            refresh=refresh,
+        )
+        project_root = outputs_project_root(project_name=parsed.base_allocate_args["project_name"])
+        report = run_disaggregation(parsed, phase=phase)
+        output_root = report.output_root()
+        detail = (
+            phase_reused_detail if report.reuse_status() == "reused_exact" else phase_ready_detail
+        )
+        phase.complete(
+            detail(scope_name="disaggregate_asocc", output_root=output_root),
+            owner="disaggregate_asocc",
+        )
+        return report
+    finally:
+        phase.finish()
+        if project_root is not None:
+            close_loggers_for_scope(project_root)

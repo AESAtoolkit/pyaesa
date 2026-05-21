@@ -1,0 +1,1 @@
+"""aSoCC write metadata owners."""

@@ -1,0 +1,1 @@
+"""External aSoCC schema owners."""

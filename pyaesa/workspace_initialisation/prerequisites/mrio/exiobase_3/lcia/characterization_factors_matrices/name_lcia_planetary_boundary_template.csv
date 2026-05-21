@@ -1,0 +1,3 @@
+"Planetary boundary","Control variable","impact_parent","impact","impact_unit","stressor","extension","stressor_unit","factor"
+"Climate change","Energy imbalance at top-of-atmosphere","EI","EI","W yr m-2","CH4 - combustion - air","air emissions","kg","1.59e-12"
+"Climate change","Atmospheric CO2 concentration","aCO2","aCO2","ppm yr","CH4 - combustion - air","air emissions","kg","7.4e-11"

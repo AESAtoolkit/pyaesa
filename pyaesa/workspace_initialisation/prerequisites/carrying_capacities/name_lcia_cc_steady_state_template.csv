@@ -1,0 +1,3 @@
+impact_full_name,impact,impact_unit,optional_global_normalisation_factor,min_cc,max_cc
+Climate change,GWP_100,kg CO2-eq,5.21E+13,6.81E+12,8.72E+12
+Ozone depletion,ODP,kg CFC-11-eq,3.61E+08,5.39E+08,1.08E+09

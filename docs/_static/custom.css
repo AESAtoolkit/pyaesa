@@ -1,0 +1,89 @@
+/* Notebook argument checklists are raw HTML tables rendered through nbsphinx. */
+.rst-content details {
+  margin: 1rem 0 1.5rem;
+}
+
+.rst-content details summary {
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.rst-content details > table {
+  border-collapse: collapse;
+  display: block;
+  margin: 0.75rem 0 1.25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.rst-content details > table th,
+.rst-content details > table td {
+  border: 1px solid #d9e1e5;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal !important;
+}
+
+.rst-content details > table th {
+  background: #f3f6f8;
+  color: #24343c;
+  font-weight: 700;
+}
+
+.rst-content details > table td:first-child {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-weight: 700;
+  min-width: 10rem;
+  width: 10rem;
+}
+
+.rst-content details > table td:first-child p {
+  white-space: nowrap;
+}
+
+.rst-content details > table td p {
+  color: inherit;
+  line-height: 1.35rem;
+  margin: 0.2rem 0;
+  white-space: pre-line;
+}
+
+.rst-content details > table td ul {
+  margin-bottom: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.rst-content details > table code,
+.rst-content details > table .docutils.literal,
+.rst-content details > table tt {
+  color: inherit;
+}
+
+.pyaesa-argument-legend {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.6rem 0 0.75rem;
+}
+
+.pyaesa-default-row,
+.pyaesa-default-row td,
+.pyaesa-default-block {
+  color: #087f5b !important;
+}
+
+.pyaesa-optional-row,
+.pyaesa-optional-row td,
+.pyaesa-optional-block {
+  color: #a85700 !important;
+}
+
+.pyaesa-default-block,
+.pyaesa-optional-block {
+  border-left: 3px solid currentColor;
+  margin: 0.35rem 0;
+  padding-left: 0.5rem;
+}

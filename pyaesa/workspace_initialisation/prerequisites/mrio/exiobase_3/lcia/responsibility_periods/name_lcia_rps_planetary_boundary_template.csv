@@ -1,0 +1,3 @@
+"Planetary boundary","Control variable","impact_parent","impact","impact_duration_years","responsibility_period_years","source","comment"
+"Climate change","Energy imbalance at top-of-atmosphere","EI","EI","1,000,000 or 300","300","Ryberg et al. (2018) and Shine et al. (2005)","Use the same responsibility horizon logic as the paired characterization factors."
+"Climate change","Atmospheric CO2 concentration","aCO2","aCO2","300","300","Ryberg et al. (2018)","Keep this row aligned with the paired planetary boundary characterization matrix."

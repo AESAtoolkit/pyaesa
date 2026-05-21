@@ -1,0 +1,101 @@
+External LCA README for deterministic_asr() and uncertainty_asr()
+
+This folder contains the external LCA numerator input contract for ASR.
+Packaged runnable examples are copied into the real input folders:
+
+- deterministic/template__ef_3.1.csv
+- deterministic/template__ef_3.1__ssp2.csv
+- monte_carlo/template__ef_3.1.csv
+- monte_carlo/template__ef_3.1/public_row_identity.csv
+- monte_carlo/template__ef_3.1/lca_runs.csv
+
+Use lca_args={"external_lca": {"active": True, "version_name": "template"}}
+to select the packaged example. The example uses fu_code="L2.c.b",
+s_p="Paper", r_c="FR", and years 2019 to 2030. Packaged examples are
+provided for lcia_method="ef_3.1". The base deterministic file covers 2019 to
+2025. The SSP2 deterministic file covers 2026 to 2030. Monte Carlo examples
+contain 100 fixed runs.
+
+Important example value notice
+==============================
+
+The packaged external LCA values are dummy demonstration values provided only
+to show valid filenames, columns, year coverage, SSP routing, and Monte Carlo
+layouts. They are not source data for research results and must be replaced by
+project specific external LCA values before interpreting or publishing ASR
+results.
+
+Deterministic accepted filename patterns
+========================================
+
+- <version_name>__<lcia_method>.csv
+- <version_name>__<lcia_method>__<ssp_token>.csv
+
+Monte Carlo accepted filename pattern
+=====================================
+
+- <version_name>__<lcia_method>.csv
+
+Monte Carlo compact folder pattern
+==================================
+
+- <version_name>__<lcia_method>/public_row_identity.csv
+- <version_name>__<lcia_method>/lca_runs.csv
+
+Required deterministic columns
+==============================
+
+- impact
+- impact_unit
+- one or more year columns such as 2019, 2020, 2021
+- selector columns expected by the selected FU, for example s_p and r_c for
+  L2.c.b
+
+Required Monte Carlo long row columns
+=====================================
+
+- run_index
+- year
+- lca_ssp_scenario
+- impact
+- impact_unit
+- value
+- selector columns expected by the selected FU
+
+Compact CSV layout
+==================
+
+public_row_identity.csv stores one row identity per public row:
+
+public_row_id,year,lca_ssp_scenario,impact,impact_unit,s_p,r_c
+0,2019,,GWP_100,kg CO2-eq,Paper,FR
+1,2026,SSP2,GWP_100,kg CO2-eq,Paper,FR
+
+lca_runs.csv stores one row per Monte Carlo run and one value column per
+public_row_id:
+
+run_index,0,1
+0,4.17e-06,4.05e-06
+1,4.21e-06,4.08e-06
+
+Validation rules
+================
+
+- Files inside "templates" are README guidance only and are not ingested.
+- Real deterministic external LCA inputs are read only from "deterministic/".
+- Real Monte Carlo external LCA inputs are read only from "monte_carlo/".
+- The filename stem must encode the requested version name and LCIA method.
+- The package validates impact and impact_unit values against the bundled
+  carrying capacity CSV for the requested LCIA method.
+- Historical and SSP tagged deterministic files for the same LCIA method must
+  not overlap on year coverage.
+- Monte Carlo loading first looks for a matching compact folder, then for a
+  matching long row CSV. If no Monte Carlo source exists, uncertainty_asr(...)
+  repeats deterministic values across runs.
+
+Selector columns
+================
+
+Accepted selector columns are r_f, r_c, r_p, and s_p. Provide exactly the
+selector columns expected by the selected FU, and leave unrelated selector
+columns out of the file.

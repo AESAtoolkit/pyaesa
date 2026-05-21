@@ -1,0 +1,4 @@
+"impact_full_name","impact_parent","impact","impact_unit","stressor","extension","stressor_unit","factor"
+"Climate change","aCO2","aCO2","ppm yr","CH4 - combustion - air","air emissions","kg","7.40E-11"
+"Functional diversity (Biodiversity Intactness Index - BII)","BI FD","BI FD GHG","%BII loss","CH4 - combustion - air","air emissions","kg","6.20E-12"
+"Functional diversity (Biodiversity Intactness Index - BII)","BI FD","BI FD LAND","%BII loss","Artificial Surfaces","land","km2","7.31E-07"

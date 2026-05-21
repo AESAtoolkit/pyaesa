@@ -1,0 +1,151 @@
+External aSoCC README
+
+This folder contains the external allocated shares of carrying capacities
+(aSoCC) input contract. Packaged runnable examples are copied into the real
+input folders:
+
+- deterministic/CO(S).csv
+- deterministic/CO(S)__ssp2.csv
+- deterministic/l1_AR(E)_l2_UT(S)__ef_3.1.csv
+- monte_carlo/CO(S).csv
+- monte_carlo/CO(S)/public_row_identity.csv
+- monte_carlo/CO(S)/asocc_runs.csv
+- monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1.csv
+- monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1/public_row_identity.csv
+- monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1/asocc_runs.csv
+
+The runnable examples use fu_code="L2.c.b", s_p="Paper", r_c="FR", years
+2019 to 2030, and 100 fixed Monte Carlo runs.
+
+Use external_method={"one_step_methods": ["CO(S)"]} for the one step example.
+Use external_method={"l1_l2_pairs": ["AR(E)::UT(S)"]} for the two step example.
+The two step user selector is AR(E)::UT(S), while the file stem is
+l1_AR(E)_l2_UT(S)__ef_3.1.
+The one step CO(S) example is non LCIA specific.
+The two step AR(E)::UT(S) example is EF 3.1 specific.
+
+Important example value notice
+==============================
+
+The packaged external aSoCC values are dummy demonstration values provided only
+to show valid filenames, columns, year coverage, SSP routing, selector syntax,
+and Monte Carlo layouts. They are not source data for research results and must
+be replaced by project specific external aSoCC values before interpreting or
+publishing aSoCC, aCC, or ASR results.
+
+How uncertainty_asocc reads external methods
+============================================
+
+For each selected external method, uncertainty_asocc first looks for a matching
+compact Monte Carlo folder in "monte_carlo/". If no matching compact folder
+exists, it looks for matching long row Monte Carlo files. If no matching Monte
+Carlo source exists, the deterministic wide file set in "deterministic/" is
+loaded and repeated for every run.
+
+Declaration driven base stems
+=============================
+
+- L1 methods: l1_<l1_method>
+- L2 one step methods: <l2_method>
+- L2 two step methods: l1_<resolved_l1_method>_l2_<l2_method>
+
+Deterministic accepted filename patterns
+========================================
+
+- <base_stem>.csv
+- <base_stem>__<lcia_method>.csv
+- <base_stem>__<ssp_token>.csv
+- <base_stem>__<lcia_method>__<ssp_token>.csv
+
+Monte Carlo accepted long row filename patterns
+===============================================
+
+- <base_stem>.csv
+- <base_stem>__<lcia_method>.csv
+
+Monte Carlo compact folder patterns
+===================================
+
+- <base_stem>/public_row_identity.csv
+- <base_stem>/asocc_runs.csv
+- <base_stem>__<lcia_method>/public_row_identity.csv
+- <base_stem>__<lcia_method>/asocc_runs.csv
+
+Non LCIA deterministic schema
+=============================
+
+- wide year columns such as 2019, 2020, 2021
+- selector columns expected by the selected FU
+- no impact column
+- no reference_year column
+
+LCIA deterministic schema
+=========================
+
+- wide year columns such as 2019, 2020, 2021
+- impact column
+- selector columns expected by the selected FU
+- optional reference_year column
+
+Non LCIA Monte Carlo long row schema
+====================================
+
+- run_index
+- year
+- asocc_ssp_scenario
+- value
+- selector columns expected by the selected FU
+- no impact column
+- no reference_year column
+
+LCIA Monte Carlo long row schema
+================================
+
+- run_index
+- year
+- asocc_ssp_scenario
+- impact
+- value
+- selector columns expected by the selected FU
+- optional reference_year column
+
+Compact CSV layout
+==================
+
+public_row_identity.csv stores one row identity per public row:
+
+public_row_id,year,asocc_ssp_scenario,s_p,r_c
+0,2019,,Paper,FR
+1,2026,SSP2,Paper,FR
+
+asocc_runs.csv stores one row per Monte Carlo run and one value column per
+public_row_id:
+
+run_index,0,1
+0,0.000192,0.000135
+1,0.000196,0.000138
+
+Validation rules
+================
+
+- Files inside "templates" are README guidance only and are not ingested.
+- Real external aSoCC inputs are read only from "deterministic/" and
+  "monte_carlo/".
+- External aSoCC is unitless by contract and must not supply impact units.
+- Non LCIA files must not contain impact or reference_year columns.
+- LCIA based files must include impact values that match the bundled carrying
+  capacity CSV for the filename LCIA token.
+- Deterministic staged external aSoCC files must not provide
+  asocc_ssp_scenario because deterministic SSP scope is encoded in the
+  filename.
+- Monte Carlo staged external aSoCC files must provide asocc_ssp_scenario
+  because all requested SSP scenarios share the same run file.
+- Historical and SSP tagged deterministic files for the same candidate must not
+  overlap on year coverage.
+
+Selector columns
+================
+
+Accepted selector columns are r_f, r_c, r_p, and s_p. Provide exactly the
+selector columns expected by the selected FU, and leave unrelated selector
+columns out of the file.

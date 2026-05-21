@@ -1,0 +1,193 @@
+public_row_id,year,lca_ssp_scenario,impact,impact_unit,s_p,r_c
+0,2019,,GWP_100,kg CO2-eq,Paper,FR
+1,2020,,GWP_100,kg CO2-eq,Paper,FR
+2,2021,,GWP_100,kg CO2-eq,Paper,FR
+3,2022,,GWP_100,kg CO2-eq,Paper,FR
+4,2023,,GWP_100,kg CO2-eq,Paper,FR
+5,2024,,GWP_100,kg CO2-eq,Paper,FR
+6,2025,,GWP_100,kg CO2-eq,Paper,FR
+7,2026,SSP2,GWP_100,kg CO2-eq,Paper,FR
+8,2027,SSP2,GWP_100,kg CO2-eq,Paper,FR
+9,2028,SSP2,GWP_100,kg CO2-eq,Paper,FR
+10,2029,SSP2,GWP_100,kg CO2-eq,Paper,FR
+11,2030,SSP2,GWP_100,kg CO2-eq,Paper,FR
+12,2019,,ODP,kg CFC-11-eq,Paper,FR
+13,2020,,ODP,kg CFC-11-eq,Paper,FR
+14,2021,,ODP,kg CFC-11-eq,Paper,FR
+15,2022,,ODP,kg CFC-11-eq,Paper,FR
+16,2023,,ODP,kg CFC-11-eq,Paper,FR
+17,2024,,ODP,kg CFC-11-eq,Paper,FR
+18,2025,,ODP,kg CFC-11-eq,Paper,FR
+19,2026,SSP2,ODP,kg CFC-11-eq,Paper,FR
+20,2027,SSP2,ODP,kg CFC-11-eq,Paper,FR
+21,2028,SSP2,ODP,kg CFC-11-eq,Paper,FR
+22,2029,SSP2,ODP,kg CFC-11-eq,Paper,FR
+23,2030,SSP2,ODP,kg CFC-11-eq,Paper,FR
+24,2019,,PM,Disease incidence,Paper,FR
+25,2020,,PM,Disease incidence,Paper,FR
+26,2021,,PM,Disease incidence,Paper,FR
+27,2022,,PM,Disease incidence,Paper,FR
+28,2023,,PM,Disease incidence,Paper,FR
+29,2024,,PM,Disease incidence,Paper,FR
+30,2025,,PM,Disease incidence,Paper,FR
+31,2026,SSP2,PM,Disease incidence,Paper,FR
+32,2027,SSP2,PM,Disease incidence,Paper,FR
+33,2028,SSP2,PM,Disease incidence,Paper,FR
+34,2029,SSP2,PM,Disease incidence,Paper,FR
+35,2030,SSP2,PM,Disease incidence,Paper,FR
+36,2019,,IR,kBq U-235-eq,Paper,FR
+37,2020,,IR,kBq U-235-eq,Paper,FR
+38,2021,,IR,kBq U-235-eq,Paper,FR
+39,2022,,IR,kBq U-235-eq,Paper,FR
+40,2023,,IR,kBq U-235-eq,Paper,FR
+41,2024,,IR,kBq U-235-eq,Paper,FR
+42,2025,,IR,kBq U-235-eq,Paper,FR
+43,2026,SSP2,IR,kBq U-235-eq,Paper,FR
+44,2027,SSP2,IR,kBq U-235-eq,Paper,FR
+45,2028,SSP2,IR,kBq U-235-eq,Paper,FR
+46,2029,SSP2,IR,kBq U-235-eq,Paper,FR
+47,2030,SSP2,IR,kBq U-235-eq,Paper,FR
+48,2019,,POF,kg NMVOC-eq,Paper,FR
+49,2020,,POF,kg NMVOC-eq,Paper,FR
+50,2021,,POF,kg NMVOC-eq,Paper,FR
+51,2022,,POF,kg NMVOC-eq,Paper,FR
+52,2023,,POF,kg NMVOC-eq,Paper,FR
+53,2024,,POF,kg NMVOC-eq,Paper,FR
+54,2025,,POF,kg NMVOC-eq,Paper,FR
+55,2026,SSP2,POF,kg NMVOC-eq,Paper,FR
+56,2027,SSP2,POF,kg NMVOC-eq,Paper,FR
+57,2028,SSP2,POF,kg NMVOC-eq,Paper,FR
+58,2029,SSP2,POF,kg NMVOC-eq,Paper,FR
+59,2030,SSP2,POF,kg NMVOC-eq,Paper,FR
+60,2019,,AC,mol H+ eq,Paper,FR
+61,2020,,AC,mol H+ eq,Paper,FR
+62,2021,,AC,mol H+ eq,Paper,FR
+63,2022,,AC,mol H+ eq,Paper,FR
+64,2023,,AC,mol H+ eq,Paper,FR
+65,2024,,AC,mol H+ eq,Paper,FR
+66,2025,,AC,mol H+ eq,Paper,FR
+67,2026,SSP2,AC,mol H+ eq,Paper,FR
+68,2027,SSP2,AC,mol H+ eq,Paper,FR
+69,2028,SSP2,AC,mol H+ eq,Paper,FR
+70,2029,SSP2,AC,mol H+ eq,Paper,FR
+71,2030,SSP2,AC,mol H+ eq,Paper,FR
+72,2019,,TEU,mol N-eq,Paper,FR
+73,2020,,TEU,mol N-eq,Paper,FR
+74,2021,,TEU,mol N-eq,Paper,FR
+75,2022,,TEU,mol N-eq,Paper,FR
+76,2023,,TEU,mol N-eq,Paper,FR
+77,2024,,TEU,mol N-eq,Paper,FR
+78,2025,,TEU,mol N-eq,Paper,FR
+79,2026,SSP2,TEU,mol N-eq,Paper,FR
+80,2027,SSP2,TEU,mol N-eq,Paper,FR
+81,2028,SSP2,TEU,mol N-eq,Paper,FR
+82,2029,SSP2,TEU,mol N-eq,Paper,FR
+83,2030,SSP2,TEU,mol N-eq,Paper,FR
+84,2019,,FEU,kg P-eq,Paper,FR
+85,2020,,FEU,kg P-eq,Paper,FR
+86,2021,,FEU,kg P-eq,Paper,FR
+87,2022,,FEU,kg P-eq,Paper,FR
+88,2023,,FEU,kg P-eq,Paper,FR
+89,2024,,FEU,kg P-eq,Paper,FR
+90,2025,,FEU,kg P-eq,Paper,FR
+91,2026,SSP2,FEU,kg P-eq,Paper,FR
+92,2027,SSP2,FEU,kg P-eq,Paper,FR
+93,2028,SSP2,FEU,kg P-eq,Paper,FR
+94,2029,SSP2,FEU,kg P-eq,Paper,FR
+95,2030,SSP2,FEU,kg P-eq,Paper,FR
+96,2019,,MEU,kg N-eq,Paper,FR
+97,2020,,MEU,kg N-eq,Paper,FR
+98,2021,,MEU,kg N-eq,Paper,FR
+99,2022,,MEU,kg N-eq,Paper,FR
+100,2023,,MEU,kg N-eq,Paper,FR
+101,2024,,MEU,kg N-eq,Paper,FR
+102,2025,,MEU,kg N-eq,Paper,FR
+103,2026,SSP2,MEU,kg N-eq,Paper,FR
+104,2027,SSP2,MEU,kg N-eq,Paper,FR
+105,2028,SSP2,MEU,kg N-eq,Paper,FR
+106,2029,SSP2,MEU,kg N-eq,Paper,FR
+107,2030,SSP2,MEU,kg N-eq,Paper,FR
+108,2019,,ECOTOX,CTUe,Paper,FR
+109,2020,,ECOTOX,CTUe,Paper,FR
+110,2021,,ECOTOX,CTUe,Paper,FR
+111,2022,,ECOTOX,CTUe,Paper,FR
+112,2023,,ECOTOX,CTUe,Paper,FR
+113,2024,,ECOTOX,CTUe,Paper,FR
+114,2025,,ECOTOX,CTUe,Paper,FR
+115,2026,SSP2,ECOTOX,CTUe,Paper,FR
+116,2027,SSP2,ECOTOX,CTUe,Paper,FR
+117,2028,SSP2,ECOTOX,CTUe,Paper,FR
+118,2029,SSP2,ECOTOX,CTUe,Paper,FR
+119,2030,SSP2,ECOTOX,CTUe,Paper,FR
+120,2019,,HTOX_nc,CTUh,Paper,FR
+121,2020,,HTOX_nc,CTUh,Paper,FR
+122,2021,,HTOX_nc,CTUh,Paper,FR
+123,2022,,HTOX_nc,CTUh,Paper,FR
+124,2023,,HTOX_nc,CTUh,Paper,FR
+125,2024,,HTOX_nc,CTUh,Paper,FR
+126,2025,,HTOX_nc,CTUh,Paper,FR
+127,2026,SSP2,HTOX_nc,CTUh,Paper,FR
+128,2027,SSP2,HTOX_nc,CTUh,Paper,FR
+129,2028,SSP2,HTOX_nc,CTUh,Paper,FR
+130,2029,SSP2,HTOX_nc,CTUh,Paper,FR
+131,2030,SSP2,HTOX_nc,CTUh,Paper,FR
+132,2019,,HTOX_c,CTUh,Paper,FR
+133,2020,,HTOX_c,CTUh,Paper,FR
+134,2021,,HTOX_c,CTUh,Paper,FR
+135,2022,,HTOX_c,CTUh,Paper,FR
+136,2023,,HTOX_c,CTUh,Paper,FR
+137,2024,,HTOX_c,CTUh,Paper,FR
+138,2025,,HTOX_c,CTUh,Paper,FR
+139,2026,SSP2,HTOX_c,CTUh,Paper,FR
+140,2027,SSP2,HTOX_c,CTUh,Paper,FR
+141,2028,SSP2,HTOX_c,CTUh,Paper,FR
+142,2029,SSP2,HTOX_c,CTUh,Paper,FR
+143,2030,SSP2,HTOX_c,CTUh,Paper,FR
+144,2019,,LU,Pt,Paper,FR
+145,2020,,LU,Pt,Paper,FR
+146,2021,,LU,Pt,Paper,FR
+147,2022,,LU,Pt,Paper,FR
+148,2023,,LU,Pt,Paper,FR
+149,2024,,LU,Pt,Paper,FR
+150,2025,,LU,Pt,Paper,FR
+151,2026,SSP2,LU,Pt,Paper,FR
+152,2027,SSP2,LU,Pt,Paper,FR
+153,2028,SSP2,LU,Pt,Paper,FR
+154,2029,SSP2,LU,Pt,Paper,FR
+155,2030,SSP2,LU,Pt,Paper,FR
+156,2019,,WU,m3 water-eq,Paper,FR
+157,2020,,WU,m3 water-eq,Paper,FR
+158,2021,,WU,m3 water-eq,Paper,FR
+159,2022,,WU,m3 water-eq,Paper,FR
+160,2023,,WU,m3 water-eq,Paper,FR
+161,2024,,WU,m3 water-eq,Paper,FR
+162,2025,,WU,m3 water-eq,Paper,FR
+163,2026,SSP2,WU,m3 water-eq,Paper,FR
+164,2027,SSP2,WU,m3 water-eq,Paper,FR
+165,2028,SSP2,WU,m3 water-eq,Paper,FR
+166,2029,SSP2,WU,m3 water-eq,Paper,FR
+167,2030,SSP2,WU,m3 water-eq,Paper,FR
+168,2019,,FRD,MJ,Paper,FR
+169,2020,,FRD,MJ,Paper,FR
+170,2021,,FRD,MJ,Paper,FR
+171,2022,,FRD,MJ,Paper,FR
+172,2023,,FRD,MJ,Paper,FR
+173,2024,,FRD,MJ,Paper,FR
+174,2025,,FRD,MJ,Paper,FR
+175,2026,SSP2,FRD,MJ,Paper,FR
+176,2027,SSP2,FRD,MJ,Paper,FR
+177,2028,SSP2,FRD,MJ,Paper,FR
+178,2029,SSP2,FRD,MJ,Paper,FR
+179,2030,SSP2,FRD,MJ,Paper,FR
+180,2019,,MRD,kg Sb-eq,Paper,FR
+181,2020,,MRD,kg Sb-eq,Paper,FR
+182,2021,,MRD,kg Sb-eq,Paper,FR
+183,2022,,MRD,kg Sb-eq,Paper,FR
+184,2023,,MRD,kg Sb-eq,Paper,FR
+185,2024,,MRD,kg Sb-eq,Paper,FR
+186,2025,,MRD,kg Sb-eq,Paper,FR
+187,2026,SSP2,MRD,kg Sb-eq,Paper,FR
+188,2027,SSP2,MRD,kg Sb-eq,Paper,FR
+189,2028,SSP2,MRD,kg Sb-eq,Paper,FR
+190,2029,SSP2,MRD,kg Sb-eq,Paper,FR
+191,2030,SSP2,MRD,kg Sb-eq,Paper,FR

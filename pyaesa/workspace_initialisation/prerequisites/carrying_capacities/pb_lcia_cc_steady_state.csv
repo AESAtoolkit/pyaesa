@@ -1,0 +1,11 @@
+Planetary boundary,Control variable,impact,impact_unit,min_cc,max_cc,ratio,comment
+Stratospheric ozone depletion,,SOD,DU yr,13,27,2.076923077,
+Atmospheric aerosol loading,,AAL,AOD yr,0.07,0.22,3.142857143,
+Ocean acidification,,OA,mol yr,0.58,0.69,1.189655172,
+Biogeochemical flows,Nitrogen,N,Tg N yr-1,62,82,1.322580645,Global industrial and intentional biological fixation of N
+Biogeochemical flows,Phosphorus,P GLO,Tg P yr-1,11,100,9.090909091,Global P flow from freshwater systems into the ocean
+Freshwater use,Blue water,FWC,km3,4000,6000,1.5,
+Land-system change,Global area of forested land,LSC,%,25,46,1.84,
+Biosphere integrity,Functional diversity,BI FD,%BII loss,10,70,7,Biodiversity Intactness Index
+Climate change,Energy imbalance,EI,W yr m-2,1,1.5,1.5,
+Climate change,Atmospheric CO2 concentration,aCO2,ppm yr,70,170,2.428571429,

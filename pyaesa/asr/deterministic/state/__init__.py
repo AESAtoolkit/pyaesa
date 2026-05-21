@@ -1,0 +1,1 @@
+"""Deterministic ASR state ownership."""

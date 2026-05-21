@@ -1,0 +1,1 @@
+"""Shared figure primitive boundaries."""

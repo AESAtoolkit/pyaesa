@@ -1,0 +1,9 @@
+name: pyaesa-docs
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14
+  - pandoc>=2.9.2,<4
+  - pip
+  - pip:
+      - -e ..[docs]

@@ -1,0 +1,382 @@
+Recommended Citations
+
+This file lists all recommended citations when using pyaesa, covering data
+sources and methodological references.
+
+Sections are organized as package citation, data sources, methodological
+references, and an AESA phase citation checklist.
+
+1. Use of PyAESA
+
+Please cite these references when using pyaesa, and when using ASOCC methods documented
+by the package methodological notes.
+
+Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
+Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
+Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
+for systematically allocating carrying capacities under uncertainty in AESA
+[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
+Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bouillass, G.,
+Yannou, B., Jankovic, M., Bol, D., & Hauschild, M. Z.
+UNCASExt -- Extending the UNCASE Framework to Quantify Uncertainties in
+Retrospective and Prospective Absolute Environmental Sustainability Assessments
+(AESA) [Manuscript submitted for publication].
+
+2. DATA SOURCES
+
+Use this section when results computed with pyaesa rely on population, GDP,
+MRIO, or AR6 climate pathway inputs. 
+
+Population, GDP, and MRIO inputs can be
+used by allocation methods; MRIO inputs can also be used by IO-LCA; AR6 climate
+pathway inputs are used for dynamic climate change carrying capacities.
+
+2.1 Population and GDP
+
+World Bank historical population and GDP are used by download_pop_gdp(...) and
+process_pop_gdp(...), and by allocation methods that request historical
+population, GDP, or GDP per capita inputs.
+
+Source:
+World Bank World Development Indicators:
+https://databank.worldbank.org/source/world-development-indicators
+
+
+SSP population projections are used by download_pop_gdp(...) and
+process_pop_gdp(...), and by prospective allocation methods that request
+population inputs.
+
+Citation:
+KC, S., Moradhvaj, Potančoková, M., Adhikari, S., Yildiz, D., Mamolo, M.,
+Sobotka, T., Zeman, K., Abel, G., Lutz, W., & Goujon, A. (2024). Wittgenstein
+Center (WIC) Population and Human Capital Projections - 2023 (Version V13)
+[Data set]. Zenodo. https://doi.org/10.5281/zenodo.10618931
+
+SSP GDP projections are used by download_pop_gdp(...) and process_pop_gdp(...)
+and by prospective allocation methods that request GDP or GDP per capita inputs.
+
+Citation:
+Crespo Cuaresma, J. (2017). Income projections for climate change research: A
+framework based on human capital dynamics. Global Environmental Change, 42,
+226-236.
+
+2.2 MRIO tables
+
+2.2.1 EXIOBASE 3.10.2
+
+exiobase_3102 is used by download_mrio(...) and
+process_mrio(...) when this MRIO source is selected. 
+
+Citations:
+Stadler, K. (2021). Pymrio: A Python-based multi-regional input-output analysis
+toolbox. Journal of Open Research Software, 9(1).
+https://doi.org/10.5334/jors.251
+
+Stadler, K., Wood, R., Bulavskaya, T., Södersten, C.-J., Simas, M., Schmidt,
+S., Usubiaga, A., Acosta-Fernández, J., Kuenen, J., Bruckner, M., Giljum, S.,
+Lutter, S., Merciai, S., Schmidt, J. H., Theurl, M. C., Plutzar, C., Kastner,
+T., Eisenmenger, N., Erb, K.-H., ... Tukker, A. (2018). EXIOBASE 3: Developing
+a time series of detailed environmentally extended multi-regional input-output
+tables. Journal of Industrial Ecology, 22(3), 502-515.
+https://doi.org/10.1111/jiec.12715
+
+Stadler, K., Wood, R., Bulavskaya, T., Södersten, C.-J., Simas, M., Schmidt,
+S., Usubiaga, A., Acosta-Fernández, J., Kuenen, J., Bruckner, M., Giljum, S.,
+Lutter, S., Merciai, S., Schmidt, J. H., Theurl, M. C., Plutzar, C., Kastner,
+T., Eisenmenger, N., Erb, K.-H., ... Tukker, A. (2026). EXIOBASE 3 (3.10.2)
+[Data set]. Zenodo. https://doi.org/10.5281/zenodo.20051562
+
+2.2.2 OECD ICIO v2025
+
+oecd_v2025 is used by download_mrio(...) and process_mrio(...) when OECD ICIO
+v2025 is selected.
+
+Citations:
+OECD Inter Country Input Output Tables:
+https://www.oecd.org/en/data/datasets/inter-country-input-output-tables.html
+
+Yamano, N., and coauthors. (2023). Development of the OECD Inter-Country
+Input-Output Database 2023. OECD Science, Technology and Industry Working
+Papers, 2023/08. OECD Publishing. https://doi.org/10.1787/5a5d0665-en
+
+Stadler, K. (2021). Pymrio: A Python-based multi-regional input-output analysis
+toolbox. Journal of Open Research Software, 9(1).
+https://doi.org/10.5334/jors.251
+
+2.3 AR6 climate pathways for dynamic carrying capacities
+
+2.3.1 AR6 scenario database
+
+The AR6 Scenarios Database hosted by IIASA is used by download_ar6(...),
+process_ar6(...), deterministic_ar6_cc(...), dynamic AR6 carrying capacity
+routes in ACC and ASR.
+
+Citation:
+Byers, E., Krey, V., Kriegler, E., Riahi, K., Schaeffer, R., Kikstra, J.,
+Lamboll, R., Nicholls, Z., Sandstad, M., Smith, C., van de Wijst, K.-I.,
+Al Khourdajie, A., Lecocq, F., Portugal-Pereira, J., Saheb, Y., Stromann, A.,
+Winkler, H., Auer, C., Brutschin, E., ... van Vuuren, D. (2022). AR6 Scenarios
+Database hosted by IIASA [Data set]. International Institute for Applied
+Systems Analysis. https://doi.org/10.5281/zenodo.5886911
+
+Scenario Explorer:
+https://data.ece.iiasa.ac.at/ar6/
+
+Citation guidance:
+https://data.ece.iiasa.ac.at/ar6/static/About.html
+
+2.3.2 PRIMAP-hist historical emissions
+
+PRIMAP-hist historical Kyoto Gases and CO2 baselines are used by
+process_ar6(...) when building harmonized AR6 climate pathways for dynamic
+carrying capacity outputs.
+
+Citation:
+Gutschow, J., Jeffery, L., Gieseke, R., Gebel, R., Stevens, D., Krapp, M., &
+Rocha, M. (2016). The PRIMAP-hist national historical emissions time series.
+Earth System Science Data, 8, 571-603.
+https://doi.org/10.5194/essd-8-571-2016
+
+2.3.3 Global Carbon Budget bunker CO2 additions
+
+The Global Carbon Budget national fossil dataset is used by process_ar6(...) to
+add bunker CO2 emissions to the historical baseline when building harmonized
+AR6 climate pathways for dynamic carrying capacity outputs.
+
+Source:
+Global Carbon Budget latest data:
+https://globalcarbonbudget.org/the-latest-gcb-data/
+
+Citation status:
+download_ar6(...) extracts the latest recommended Global Carbon Budget citation from
+the source page.
+
+2.3.4 AR6 harmonization method
+
+Emissions harmonization is used by process_ar6(...) when harmonizing
+AR6 scenario pathways to historical emissions for dynamic carrying capacities.
+
+The pyaesa implementation is documented in UNCASExt methodology and in the
+methodological_note__steady_state__dynamic_cc.pdf.
+
+Citations:
+Gidden, M. J., Fujimori, S., van den Berg, M., Klein, D., Smith, S. J.,
+van Vuuren, D. P., & Riahi, K. (2018). A methodology and implementation of
+automated emissions harmonization for use in Integrated Assessment Models.
+Environmental Modelling & Software, 105, 187-200.
+https://doi.org/10.1016/j.envsoft.2018.04.002
+
+Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
+Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
+Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
+for systematically allocating carrying capacities under uncertainty in AESA
+[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
+Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bouillass, G.,
+Yannou, B., Jankovic, M., Bol, D., & Hauschild, M. Z.
+UNCASExt -- Extending the UNCASE Framework to Quantify Uncertainties in
+Retrospective and Prospective Absolute Environmental Sustainability Assessments
+(AESA) [Manuscript submitted for publication].
+
+3. METHODOLOGICAL REFERENCES
+
+3.1 LCIA method: pb_lcia
+
+....
+Carrying capacity thresholds
+....
+
+Planetary boundaries framework
+
+Citations:
+Steffen, W., Richardson, K., Rockström, J., Cornell, S. E., Fetzer, I.,
+Bennett, E. M., Biggs, R., & de Vries, W. (2015). Planetary boundaries:
+Guiding human development on a changing planet. Science, 347(6223), Article
+1259855. https://doi.org/10.1126/science.1259855
+
+Richardson, K., Steffen, W., Lucht, W., Bendtsen, J., Cornell, S. E.,
+Donges, J. F., Drüke, M., Fetzer, I., Bala, G., von Bloh, W., Feulner, G.,
+Fiedler, S., Gerten, D., Gleeson, T., Hofmann, M., Huiskamp, W., Kummu, M.,
+Mohan, C., Nogués-Bravo, D., ... Rockström, J. (2023). Earth beyond six of
+nine planetary boundaries. Science Advances, 9(37), eadh2458.
+https://doi.org/10.1126/sciadv.adh2458
+
+Sakschewski, B., Caesar, L., Andersen, L. S., Bechthold, M., Bergfeld, L.,
+Beusen, A., Billing, M., Bodirsky, B. L., Botsyun, S., Dennis, D. P.,
+Donges, J. F., Dou, X., Eriksson, A. C., Fetzer, I., Gerten, D., Häyhä, T.,
+Hebden, S., Heckmann, T., Heilemann, A., ... Rockström, J. (2025). Planetary
+Health Check 2025: A Scientific Assessment of the State of the Planet.
+Potsdam Institute for Climate Impact Research.
+https://doi.org/10.48485/pik.2025.017
+
+....
+Characterization matrix
+....
+
+The pb_lcia characterization matrix is used by process_mrio(...),
+deterministic_io_lca(...), deterministic_asocc(...), deterministic_acc(...),
+deterministic_asr(...), and uncertainty variants when pb_lcia is selected and
+EXIOBASE LCIA characterization is required.
+
+Citations:
+Original method:
+Ryberg, M. W., Owsianiak, M., Richardson, K., & Hauschild, M. Z. (2018).
+Development of a life-cycle impact assessment methodology linked to the
+Planetary Boundaries framework. Ecological Indicators, 88, 250-262.
+https://doi.org/10.1016/j.ecolind.2017.12.065
+
+Adaptation to Exiobase:
+Yang, Q., & Paulillo, A. (2026). Quantifying environmental impacts on planetary
+boundaries: A refined and validated impact assessment method. Environmental
+Impact Assessment Review, 119, 108355.
+https://doi.org/10.1016/j.eiar.2026.108355
+
+Yang, Q., & Paulillo, A. (2025). Advancing Planetary Boundaries Allocation:
+Systematic comparison of sharing principles for national level absolute
+environmental sustainability assessments. Procedia CIRP, 135, 875-880.
+https://doi.org/10.1016/j.procir.2024.12.087
+
+Biodiversity Intactness Index method:
+Galan Martin, A., Tulus, V., Diaz, I., Pozo, C., Perez Ramirez, J., & Guillen
+Gosalbez, G. (2021). Sustainability footprints of a renewable carbon transition
+for the petrochemical sector within planetary boundaries. One Earth, 4(4),
+565-583. https://doi.org/10.1016/j.oneear.2021.04.001
+
+Vazquez, D., Galan Martin, A., Tulus, V., & Guillen Gosalbez, G. (2023). Level
+of decoupling between economic growth and environmental pressure on Earth
+system processes. Sustainable Production and Consumption, 43, 217-229.
+https://doi.org/10.1016/j.spc.2023.11.001
+
+3.2 LCIA method: gwp100_lcia
+
+....
+Carrying capacity thresholds
+....
+
+Steady state climate carrying capacity:
+The gwp100_lcia steady state climate carrying capacity is used by
+deterministic_acc(...), deterministic_asr(...), and uncertainty variants when
+lcia_method="gwp100_lcia" and static carrying capacities are selected.
+
+Citations:
+Sanyé-Mengual, E., & Sala, S. (2023). Consumption footprint and domestic
+footprint: Assessing the environmental impacts of EU consumption and
+production: Life cycle assessment to support the European Green Deal. European
+Commission, Joint Research Centre. https://doi.org/10.2760/218540
+
+Sala, S., Crenna, E., Secchi, M., & Sanyé-Mengual, E. (2020). Environmental
+sustainability of European production and consumption assessed against
+planetary boundaries. Journal of Environmental Management, 269, 110686.
+https://doi.org/10.1016/j.jenvman.2020.110686
+
+Bjørn, A., & Hauschild, M. Z. (2015). Introducing carrying capacity-based
+normalisation in LCA: Framework and development of references at midpoint
+level. The International Journal of Life Cycle Assessment, 20(7), 1005-1018.
+https://doi.org/10.1007/s11367-015-0899-2
+
+Dynamic climate carrying capacity:
+When lcia_method="gwp100_lcia" is used with dynamic climate carrying
+capacities, cite the AR6 climate pathways and harmonization method references
+of Section 2.3.
+
+....
+Characterization matrix
+....
+
+The gwp100_lcia characterization matrix is used by process_mrio(...),
+deterministic_io_lca(...), deterministic_asocc(...), deterministic_acc(...),
+deterministic_asr(...), and uncertainty variants when gwp100_lcia is selected
+and EXIOBASE LCIA characterization is required.
+
+Citations:
+Yang, Q., & Paulillo, A. (2026). Quantifying environmental impacts on planetary
+boundaries: A refined and validated impact assessment method. Environmental
+Impact Assessment Review, 119, 108355.
+https://doi.org/10.1016/j.eiar.2026.108355
+
+Yang, Q., & Paulillo, A. (2025). Advancing Planetary Boundaries Allocation:
+Systematic comparison of sharing principles for national level absolute
+environmental sustainability assessments. Procedia CIRP, 135, 875-880.
+https://doi.org/10.1016/j.procir.2024.12.087
+
+Andreasi Bassi, S., Biganzoli, F., Ferrara, N., Amadei, A., Valente, A.,
+Sala, S., & Ardente, F. (2023). Updated characterisation and normalisation
+factors for the Environmental Footprint 3.1 method. Publications Office of the
+European Union. https://doi.org/10.2760/798894
+
+3.3 Carrying capacity method: ef_3.1
+
+....
+Carrying capacity thresholds
+....
+
+ef_3.1 carrying capacities are used by deterministic_acc(...),
+deterministic_asr(...), and uncertainty variants when lcia_method="ef_3.1".
+The package currently provides ef_3.1 as a carrying capacity reference,
+not yet among available EXIOBASE LCIA characterization matrices.
+
+Citations:
+Sanyé-Mengual, E., & Sala, S. (2023). Consumption footprint and domestic
+footprint: Assessing the environmental impacts of EU consumption and
+production: Life cycle assessment to support the European Green Deal. European
+Commission, Joint Research Centre. https://doi.org/10.2760/218540
+
+Sala, S., Crenna, E., Secchi, M., & Sanyé-Mengual, E. (2020). Environmental
+sustainability of European production and consumption assessed against
+planetary boundaries. Journal of Environmental Management, 269, 110686.
+https://doi.org/10.1016/j.jenvman.2020.110686
+
+....
+Characterization matrix
+....
+
+pyaesa does not yet provide an EXIOBASE LCIA characterization matrix for ef_3.1.
+
+3.4 LCIA uncertainty source
+
+EXIOBASE carbon account coefficients of variations (CoVs) are used by
+uncertainty_io_lca(...), uncertainty_asocc(...), uncertainty_acc(...), and
+uncertainty_asr(...) when LCIA uncertainty is activated.
+
+Citation:
+Rodrigues, J. F. D., Moran, D., Wood, R., & Behrens, P. (2018). Uncertainty of
+consumption-based carbon accounts. Environmental Science & Technology, 52(13),
+7577-7586. https://doi.org/10.1021/acs.est.8b00632
+
+Puig-Samper, G., Owsianiak, M., Clavreul, J., Jeandaux, C., Prieur-Vernat, A.,
+& Gondran, N. (2025). Quantifying uncertainties in absolute environmental
+sustainability assessment: A general framework applied to French electricity
+production. Sustainable Production and Consumption, 54, 12-24.
+https://doi.org/10.1016/j.spc.2024.12.013
+
+3.5 ASOCC methods and uncertainty sources
+
+The allocation method definitions and mathematical expressions are defined by
+UNCASExt (de Bantel et al., 2026). For precise references per
+allocation method, see methodological_note__asocc_fus_allocation_methods.pdf,
+which is an abstract of the UNCASExt article. Also cite the selected input data
+sections used by the run, for example MRIO, population and GDP, LCIA methods,
+and LCIA uncertainty sources.
+
+Recommended citations:
+Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
+Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
+Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
+for systematically allocating carrying capacities under uncertainty in AESA
+[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
+Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bouillass, G.,
+Yannou, B., Jankovic, M., Bol, D., & Hauschild, M. Z.
+UNCASExt -- Extending the UNCASE Framework to Quantify Uncertainties in
+Retrospective and Prospective Absolute Environmental Sustainability Assessments
+(AESA) [Manuscript submitted for publication].
+
+Puig-Samper, G., Owsianiak, M., Clavreul, J., Jeandaux, C., Prieur-Vernat, A.,
+& Gondran, N. (2025). Quantifying uncertainties in absolute environmental
+sustainability assessment: A general framework applied to French electricity
+production. Sustainable Production and Consumption, 54, 12-24.
+https://doi.org/10.1016/j.spc.2024.12.013

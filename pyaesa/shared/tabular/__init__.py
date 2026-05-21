@@ -1,0 +1,1 @@
+"""Shared tabular primitive boundaries."""

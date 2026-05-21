@@ -1,0 +1,1 @@
+"""aSoCC output writer owners."""

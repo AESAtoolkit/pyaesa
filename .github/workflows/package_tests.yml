@@ -1,0 +1,158 @@
+name: Package Tests
+
+on:
+  pull_request:
+    branches: ["**"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: "Package test scope"
+        required: true
+        type: choice
+        default: lite
+        options:
+          - lite
+          - full
+
+concurrency:
+  group: package-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test_lite:
+    if: >-
+      github.event.repository.private == false &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.test_scope == 'lite') ||
+        (github.event_name == 'pull_request' && github.base_ref != 'main')
+      )
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run package tests
+        run: |
+          python -m pytest tests/package
+
+  test_full:
+    if: >-
+      github.event.repository.private == false &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.test_scope == 'full') ||
+        (github.event_name == 'pull_request' && github.base_ref == 'main')
+      )
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.13"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.14"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run package tests
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.14'
+        run: |
+          python -m pytest tests/package
+
+      - name: Run package tests with coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        run: |
+          python -m pytest tests/package --cov=pyaesa --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov
+
+      - name: Write coverage summary
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        shell: python
+        run: |
+          import os
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("coverage.xml").getroot()
+          lines_covered = int(root.get("lines-covered", "0"))
+          lines_valid = int(root.get("lines-valid", "0"))
+          branches_covered = int(root.get("branches-covered", "0"))
+          branches_valid = int(root.get("branches-valid", "0"))
+
+          line_rate = (lines_covered / lines_valid * 100) if lines_valid else 0.0
+          branch_rate = (
+              (branches_covered / branches_valid * 100) if branches_valid else 100.0
+          )
+
+          summary_lines = [
+              "## Coverage Summary",
+              "",
+              f"- Line coverage: {line_rate:.2f}% ({lines_covered}/{lines_valid})",
+              f"- Branch coverage: {branch_rate:.2f}% ({branches_covered}/{branches_valid})",
+              "- Artifacts: `coverage-summary.txt`, `coverage.xml`, `htmlcov/`",
+          ]
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(summary_lines) + "\n")
+
+          text_lines = [
+              "Coverage Summary",
+              "================",
+              f"Line coverage:   {line_rate:.2f}% ({lines_covered}/{lines_valid})",
+              f"Branch coverage: {branch_rate:.2f}% ({branches_covered}/{branches_valid})",
+              "",
+              "For detailed per-file inspection, open htmlcov/index.html.",
+          ]
+          with open("coverage-summary.txt", "w", encoding="utf-8") as handle:
+              handle.write("\n".join(text_lines) + "\n")
+
+      - name: Upload coverage artifacts
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+          path: |
+            coverage-summary.txt
+            coverage.xml
+            htmlcov/
