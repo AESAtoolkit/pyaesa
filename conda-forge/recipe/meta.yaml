@@ -1,5 +1,5 @@
 {% set name = "pyaesa" %}
-{% set version = "1.1.4" %}
+{% set version = "1.2.1" %}
 {% set python_min = "3.11" %}
 
 package:
@@ -8,7 +8,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: 2fd43c6e6d655090177713e2ecd39a51d6511844867a415db6cd456931b3efc5
+  sha256: b42f2af8b7e7d940887d5abbd13d49f6efc65b9e16c692a965a79c0eff9a1680
 
 build:
   noarch: python
@@ -52,7 +52,7 @@ about:
     pyaesa is a scientific Python package for absolute environmental
     sustainability assessment. It provides workspace initialization, data
     acquisition and processing utilities, deterministic assessment functions,
-    IO LCA support, uncertainty analysis, and tutorial assets for reproducible
+    IO-LCA support, uncertainty analysis, and tutorial assets for reproducible
     research workflows.
   license: GPL-3.0-only
   license_file: LICENSE
