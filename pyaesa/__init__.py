@@ -46,7 +46,7 @@ Public functions exported at package level:
 from importlib import import_module
 from typing import TYPE_CHECKING
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 _PUBLIC_EXPORT_OWNERS = {
     "set_workspace": "pyaesa.workspace_initialisation.set_workspace",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaesa"
-version = "1.2.1"
+version = "1.2.2"
 description = "pyaesa is a Python package for absolute environmental sustainability assessment (AESA), covering data download and processing, deterministic and uncertainty assessment, and figure generation."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
