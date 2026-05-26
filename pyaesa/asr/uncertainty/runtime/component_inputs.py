@@ -53,18 +53,19 @@ def initial_asr_components(
     target_runs: int,
     parent_mode: str,
     parent_max_runs: int,
-    render_subfigures: bool,
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
     acc_progress: RunProgressPrinter,
     lca_progress: RunProgressPrinter,
     finalize_component_inventory: bool = False,
+    run_id: str | None = None,
 ) -> ASRInitialComponents:
-    """Resolve the first aCC and LCA component inventories for ASR."""
+    """Resolve the first ASR aCC and LCA component inventories."""
     acc_run = acc_inventory_report(
         project_name=project_name,
         years=years,
         shared_methods=scope.shared_methods,
+        base_allocate_args=scope.base_allocate_args,
         fu_code=fu_code,
         r_p=r_p,
         s_p=s_p,
@@ -80,13 +81,13 @@ def initial_asr_components(
         target_runs=target_runs,
         parent_mode=parent_mode,
         parent_max_runs=parent_max_runs,
-        figures=render_subfigures,
+        figures=False,
         figure_options=figure_options,
         figure_format=figure_format,
-        subfigures=render_subfigures,
+        subfigures=False,
         show_progress=True,
         show_component_progress=True,
-        run_id=None,
+        run_id=run_id,
         refresh=refresh,
         progress=acc_progress,
         component_session=None,
@@ -115,7 +116,7 @@ def initial_asr_components(
             parent_mode=parent_mode,
             parent_max_runs=parent_max_runs,
         ),
-        figures=render_subfigures,
+        figures=False,
         figure_format=figure_format,
         show_progress=True,
         run_id=acc_manifest.run_id,
@@ -147,6 +148,7 @@ def acc_inventory_report(
     project_name: str,
     years: int | list[int] | range,
     shared_methods: list[str],
+    base_allocate_args: dict[str, Any],
     fu_code: str,
     r_p: str | list[str] | None,
     s_p: str | list[str] | None,
@@ -174,22 +176,20 @@ def acc_inventory_report(
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
 ) -> ComponentRun:
-    """Run or reuse the aCC component inventory for one ASR checkpoint."""
+    """Run or reuse the aCC component with the ASR aSoCC request."""
     return run_uncertainty_acc_component(
         project_name=project_name,
         source=str(mrio_scope["source"]),
-        group_reg=bool(mrio_scope["group_reg"]),
-        group_sec=bool(mrio_scope["group_sec"]),
-        group_version=(
-            "" if mrio_scope["group_version"] is None else str(mrio_scope["group_version"])
-        ),
+        agg_reg=bool(mrio_scope["agg_reg"]),
+        agg_sec=bool(mrio_scope["agg_sec"]),
+        agg_version=("" if mrio_scope["agg_version"] is None else str(mrio_scope["agg_version"])),
         years=years,
         fu_code=fu_code,
         r_p=r_p,
         s_p=s_p,
         r_c=r_c,
         r_f=r_f,
-        aggreg_indices=bool(mrio_scope["aggreg_indices"]),
+        group_indices=bool(mrio_scope["group_indices"]),
         lcia_method=shared_methods,
         base_asocc_args=asocc_config,
         external_method=external_method,
@@ -219,6 +219,7 @@ def acc_inventory_report(
         progress=progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        asocc_base_allocate_args=base_allocate_args,
     )
 
 

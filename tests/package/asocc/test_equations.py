@@ -316,21 +316,21 @@ def test_pr_equations(allocation_dummy_repo) -> None:
         _pr_hr_inputs()
     )
 
-    grouped_pre = pr_gdpcap._compute_pre_aggregated_share(
+    aggregated_pre = pr_gdpcap._compute_pre_aggregated_share(
         pop_iso=pop_iso,
         gdp_iso=gdp_iso,
         iso_to_mrio=iso_to_mrio,
         source_key="oecd_v2025",
-        group_version="demo_reg",
+        agg_version="demo_reg",
     )
-    assert list(grouped_pre.index) == ["EU", "NAM"]
+    assert list(aggregated_pre.index) == ["EU", "NAM"]
     out_pre = pr_gdpcap.compute_pr_gdpcap(
         pop_iso=pop_iso,
         gdp_iso=gdp_iso,
         iso_to_mrio=iso_to_mrio,
         year=2020,
         source_key="oecd_v2025",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         aggregation_mode="pre",
         region_label="r_f",
     )
@@ -341,7 +341,7 @@ def test_pr_equations(allocation_dummy_repo) -> None:
         iso_to_mrio=iso_to_mrio,
         year=2020,
         source_key="oecd_v2025",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         aggregation_mode="post",
         region_label="r_f",
     )
@@ -358,7 +358,7 @@ def test_pr_equations(allocation_dummy_repo) -> None:
     )
     assert "climate_parent" in parent_cum
     cache = {2019: {"climate_parent": parent_cum["climate_parent"].copy()}}
-    grouped = pr_hr.compute_pr_hr(
+    aggregated = pr_hr.compute_pr_hr(
         year=2020,
         impact_year=2020,
         population=population_by_year[2020],
@@ -368,14 +368,14 @@ def test_pr_equations(allocation_dummy_repo) -> None:
         impact_parent_map=impact_parent_map,
         available_years=available_years,
         source_key="oecd_v2025",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         aggregation_mode="post",
         region_label="r_f",
         parent_cum_cache=cache,
     )
     assert {2019, 2020}.issubset(set(cache))
-    assert grouped.index.get_level_values("r_f").unique().tolist() == ["EU", "NAM"]
-    cached_grouped = pr_hr.compute_pr_hr(
+    assert aggregated.index.get_level_values("r_f").unique().tolist() == ["EU", "NAM"]
+    cached_aggregated = pr_hr.compute_pr_hr(
         year=2020,
         impact_year=2020,
         population=population_by_year[2020],
@@ -385,12 +385,12 @@ def test_pr_equations(allocation_dummy_repo) -> None:
         impact_parent_map=impact_parent_map,
         available_years=available_years,
         source_key="oecd_v2025",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         aggregation_mode="post",
         region_label="r_f",
         parent_cum_cache=cache,
     )
-    pd.testing.assert_frame_equal(cached_grouped, grouped)
+    pd.testing.assert_frame_equal(cached_aggregated, aggregated)
 
 
 def test_ut_equations() -> None:
@@ -1074,7 +1074,7 @@ def test_pr_hr_additional_runtime_paths() -> None:
         impact_parent_map=impact_parent_map,
         available_years=[2020],
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         aggregation_mode="pre",
         region_label="r_f",
         parent_cum_cache={},
@@ -1199,7 +1199,7 @@ def test_pr_hr_rp1_fallback_and_incremental_edge_paths() -> None:
     cached_parent["climate_parent"].loc["FR"] = -1.0
     assert rp1_cache[2020]["climate_parent"].loc["FR"] == pytest.approx(2.0)
 
-    post_without_group = pr_hr.compute_pr_hr(
+    post_without_aggregate = pr_hr.compute_pr_hr(
         year=2020,
         impact_year=2020,
         population=population_by_year[2020],
@@ -1209,12 +1209,12 @@ def test_pr_hr_rp1_fallback_and_incremental_edge_paths() -> None:
         impact_parent_map=impact_parent_map,
         available_years=available_years,
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         aggregation_mode="post",
         region_label="r_f",
         parent_cum_cache={},
     )
-    assert post_without_group.index.get_level_values("r_f").tolist() == ["FR", "US"]
+    assert post_without_aggregate.index.get_level_values("r_f").tolist() == ["FR", "US"]
 
 
 def test_ut_additional_paths() -> None:
@@ -1346,19 +1346,19 @@ def test_population_and_pr_gdpcap_edges() -> None:
 
 def test_pr_gdpcap_and_pr_hr_additional_paths(allocation_dummy_repo) -> None:
     pop_iso, gdp_iso, iso_to_mrio = _pop_gdp_iso()
-    ungrouped = pr_gdpcap._compute_pre_aggregated_share(
+    unaggregated = pr_gdpcap._compute_pre_aggregated_share(
         pop_iso=pop_iso,
         gdp_iso=gdp_iso,
         iso_to_mrio=iso_to_mrio,
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
-    assert ungrouped.index.tolist() == ["FR", "US"]
+    assert unaggregated.index.tolist() == ["FR", "US"]
 
-    allocation_dummy_repo.write_group_map(
+    allocation_dummy_repo.write_agg_map(
         source="oecd_v2025",
         kind="reg",
-        group_version="demo_collapse",
+        agg_version="demo_collapse",
         mapping={"FR": "EU", "US": "EU"},
     )
     collapsed = pr_gdpcap._compute_pre_aggregated_share(
@@ -1366,7 +1366,7 @@ def test_pr_gdpcap_and_pr_hr_additional_paths(allocation_dummy_repo) -> None:
         gdp_iso=gdp_iso,
         iso_to_mrio=iso_to_mrio,
         source_key="oecd_v2025",
-        group_version="demo_collapse",
+        agg_version="demo_collapse",
     )
     assert collapsed.index.tolist() == ["EU"]
 

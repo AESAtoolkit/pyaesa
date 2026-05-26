@@ -63,7 +63,7 @@ def _build_enacting_metric_output(
     out_path = _get_enacting_metric_output_path(
         proj_base=context.proj_base,
         source=str(l1_source if level == "level_1" and l1_source is not None else context.source),
-        group_version=context.group_version,
+        agg_version=context.agg_version,
         level=level,
         key_metric=key.metric,
         key_method=key.lcia_method,

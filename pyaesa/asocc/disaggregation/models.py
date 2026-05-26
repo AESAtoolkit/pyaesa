@@ -13,29 +13,29 @@ class RunSelector:
     """Selector for one prerequisite deterministic_asocc run."""
 
     source: str
-    group_reg: bool
-    group_sec: bool
-    group_version: str | None
+    agg_reg: bool
+    agg_sec: bool
+    agg_version: str | None
     s_p: list[str]
 
 
 @dataclass(frozen=True)
 class DisaggregationSpec:
-    """One grouped to split sector mapping."""
+    """One aggregated to disaggregate sector mapping."""
 
-    grouped_sector_label: str
-    split_sector_label: str
+    agg_sector_label: str
+    disagg_sector_label: str
 
 
 @dataclass(frozen=True)
 class DisaggregationConfigModel:
     """Validated disaggregation configuration payload."""
 
-    target_grouped_run: RunSelector
-    ref_grouped_run: RunSelector
-    ref_split_run: RunSelector
+    target_agg_run: RunSelector
+    ref_agg_run: RunSelector
+    ref_disagg_run: RunSelector
     disaggregation_specs: list[DisaggregationSpec]
-    new_disaggregated_version_name: str
+    new_disagg_version_name: str
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ class DisaggregationRunPlan:
     one_step_non_lcia: list[str]
     selected_l2_methods: list[str]
     ssp_scenarios: list[str] | None
-    aggreg_indices: bool
+    group_indices: bool
     l1_reg_aggreg: str
 
 
@@ -98,7 +98,7 @@ class DisaggregationBranchReport:
     """One branch report block for disaggregate_asocc."""
 
     l1_reg_aggreg: str
-    aggreg_indices: bool
+    group_indices: bool
     summaries: list[str]
     disaggregation_audit_path: Path
     metadata_path: Path
@@ -107,9 +107,9 @@ class DisaggregationBranchReport:
 
     def format_header(self) -> str:
         """Return human readable branch header."""
-        mode = "grouped" if self.aggreg_indices else "ungrouped"
+        mode = "grouped" if self.group_indices else "ungrouped"
         return (
-            f"[disaggregate_asocc] Branch l1_reg_aggreg={self.l1_reg_aggreg}, aggreg_indices={mode}"
+            f"[disaggregate_asocc] Branch l1_reg_aggreg={self.l1_reg_aggreg}, group_indices={mode}"
         )
 
 

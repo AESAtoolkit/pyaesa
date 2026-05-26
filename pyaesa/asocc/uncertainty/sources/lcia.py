@@ -68,9 +68,9 @@ def build_lcia_plan(
     normalized_parameters = normalize_lcia_uncertainty_parameters(parameters=parameters)
     covs = load_lcia_cov_inputs(
         sector_cov_mapping=cast(dict[str, str], normalized_parameters["sector_cov_mapping"]),
-        group_reg=bool(loaded.base_asocc_args["group_reg"]),
-        group_version=cast(str | None, loaded.base_asocc_args["group_version"]),
-        aggregate_region_covs=_uses_aggregate_region_covs(loaded=loaded),
+        agg_reg=bool(loaded.base_asocc_args["agg_reg"]),
+        agg_version=cast(str | None, loaded.base_asocc_args["agg_version"]),
+        grouped_region_covs=_uses_grouped_region_covs(loaded=loaded),
     )
     rows = loaded.rows.reset_index(drop=True)
     external_rows = external_method_row_mask(frame=rows, method_labels=external_method_labels)
@@ -250,8 +250,8 @@ def _direct_lcia_mask(*, rows: pd.DataFrame, loaded: LoadedAsoccFinalRows) -> pd
     return (l1_final & l1_mask & l1_required) | (l2_mask & l2_required)
 
 
-def _uses_aggregate_region_covs(*, loaded: LoadedAsoccFinalRows) -> bool:
-    if not bool(loaded.base_asocc_args.get("aggreg_indices")):
+def _uses_grouped_region_covs(*, loaded: LoadedAsoccFinalRows) -> bool:
+    if not bool(loaded.base_asocc_args.get("group_indices")):
         return False
     return any(
         aggregate_selector_label_or_none(loaded.base_asocc_args.get(column)) is not None

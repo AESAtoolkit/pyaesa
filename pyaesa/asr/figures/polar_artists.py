@@ -2,10 +2,10 @@
 
 from typing import Any, Mapping
 
+import numpy as np
 from matplotlib import colors
 from matplotlib.collections import PolyCollection
 from matplotlib.patches import Polygon
-import numpy as np
 
 from pyaesa.asr.figures.axis import ASR_LOG_SCALE, ASRScaleMode
 from pyaesa.asr.figures.risk_style import (
@@ -23,17 +23,19 @@ WHISKER_LIGHTEN = 0.20
 EDGE_COLOR = "#2f2f2f"
 MIN_SCALE_COLOR = SAFE_COLOR
 MAX_SCALE_COLOR = MAX_RISK_COLOR
-BACKGROUND_BAND_COUNT = 1000
+BACKGROUND_BAND_COUNT = 240
 BACKGROUND_BAND_OVERLAP = 0.04
-VIOLIN_GEOM_RES = 1000
-VIOLIN_STRIP_COUNT = 1000
-VIOLIN_ARC_STEPS = 48
+VIOLIN_GEOM_RES = 240
+VIOLIN_STRIP_COUNT = 240
+VIOLIN_ARC_STEPS = 32
+POLAR_GLYPH_MAX_SECTOR_FRACTION = 0.62
 VIOLIN_BORDER_GAP_PX = 5.0
 WHISKER_THIN_HALF_PX = 2.4
 WHISKER_BOX_HALF_PX = 7.2
 WHISKER_CAP_HALF_PX = 6.8
 WHISKER_MED_HALF_PX = 11.5
 WHISKER_MED_BAND_PX = 3.0
+WHISKER_OUTLINE_WIDTH = 0.55
 MEAN_DOT_SIZE = 23.4
 MEAN_DOT_RING_SIZE = 17.55
 VIOLIN_MEDIAN_HALF_PX = 5.72
@@ -74,10 +76,10 @@ def render_threshold_arcs(
     min_color = risk_scale_rgba(SAFE_FRAC, alpha=1.0, lighten=SOS_LINE_LIGHTEN)
     max_color = risk_scale_rgba(RISK_RAMP_END, alpha=1.0, lighten=SOS_LINE_LIGHTEN)
     min_radius = _radius_from_value(1.0, scale_mode=scale_mode)
-    axis.plot(theta, np.full_like(theta, min_radius), ":", color=min_color, lw=2.5, zorder=3)
+    axis.plot(theta, np.full_like(theta, min_radius), ":", color=min_color, lw=2.5, zorder=2.2)
     y_min, y_max = axis.get_ylim()
     for theta_bound in theta_bounds:
-        axis.plot([theta_bound, theta_bound], [y_min, y_max], color="#777777", lw=1.0, zorder=40)
+        axis.plot([theta_bound, theta_bound], [y_min, y_max], color="#777777", lw=1.0, zorder=2.1)
     if not has_max_threshold:
         return
     for index in range(len(theta_bounds) - 1):
@@ -88,7 +90,7 @@ def render_threshold_arcs(
             ":",
             color=max_color,
             lw=2.5,
-            zorder=3,
+            zorder=2.2,
         )
 
 
@@ -174,6 +176,7 @@ def render_uncertainty_glyph(
             theta=theta_mid,
             r=median,
             max_ratio=max_ratio,
+            sector_width=sector_width,
             scale_mode=scale_mode,
         )
     else:
@@ -295,7 +298,7 @@ def _render_whisker(
         upper=hi,
     )
     band = _median_band(axis, theta_mid, float(median), lo, hi)
-    border = 0.5 * sector_width * 0.999
+    border = _sector_glyph_border(sector_width)
     widths = _whisker_half_widths(
         axis,
         theta_mid,
@@ -346,6 +349,7 @@ def _render_whisker(
         theta=theta_mid,
         r=float(median),
         max_ratio=max_ratio,
+        sector_width=sector_width,
         scale_mode=scale_mode,
     )
     outline = np.column_stack(
@@ -360,7 +364,7 @@ def _render_whisker(
             closed=True,
             facecolor="none",
             edgecolor=EDGE_COLOR,
-            linewidth=0.95,
+            linewidth=WHISKER_OUTLINE_WIDTH,
             joinstyle="round",
             zorder=7.5,
         )
@@ -441,7 +445,7 @@ def _violin_half_width(
     normalized_width: np.ndarray,
     sector_width: float,
 ) -> np.ndarray:
-    border = 0.5 * sector_width
+    border = _sector_glyph_border(sector_width)
     gaps = _theta_half_spans_for_px(
         axis,
         theta_mid=theta_mid,
@@ -458,6 +462,7 @@ def _render_violin_median_marker(
     theta: float,
     r: float,
     max_ratio: float,
+    sector_width: float,
     scale_mode: ASRScaleMode,
 ) -> None:
     color = risk_rgba(
@@ -466,11 +471,14 @@ def _render_violin_median_marker(
         alpha=1.0,
         lighten=0.08,
     )
-    half_width = _theta_half_span_for_px(
-        axis,
-        theta_mid=theta,
-        r_val=r,
-        half_px=VIOLIN_MEDIAN_HALF_PX,
+    half_width = min(
+        _theta_half_span_for_px(
+            axis,
+            theta_mid=theta,
+            r_val=r,
+            half_px=VIOLIN_MEDIAN_HALF_PX,
+        ),
+        _sector_glyph_border(sector_width),
     )
     half_height = _radial_half_span_for_px(axis, theta=theta, r=r, half_px=1.2)
     outer = np.asarray(
@@ -505,6 +513,7 @@ def _render_whisker_median_bar(
     theta: float,
     r: float,
     max_ratio: float,
+    sector_width: float,
     scale_mode: ASRScaleMode,
 ) -> None:
     color = risk_rgba(
@@ -513,11 +522,14 @@ def _render_whisker_median_bar(
         alpha=1.0,
         lighten=WHISKER_LIGHTEN,
     )
-    half_width = _theta_half_span_for_px(
-        axis,
-        theta_mid=theta,
-        r_val=r,
-        half_px=WHISKER_MED_HALF_PX,
+    half_width = min(
+        _theta_half_span_for_px(
+            axis,
+            theta_mid=theta,
+            r_val=r,
+            half_px=WHISKER_MED_HALF_PX,
+        ),
+        _sector_glyph_border(sector_width),
     )
     axis.plot(
         [theta - half_width, theta + half_width],
@@ -598,6 +610,11 @@ def _median_band(axis: Any, theta: float, r: float, lower: float, upper: float) 
             max(upper - lower, 1e-6),
         )
     )
+
+
+def _sector_glyph_border(sector_width: float) -> float:
+    """Return the angular half width reserved for one central polar glyph."""
+    return 0.5 * float(sector_width) * POLAR_GLYPH_MAX_SECTOR_FRACTION
 
 
 def _split_edges(

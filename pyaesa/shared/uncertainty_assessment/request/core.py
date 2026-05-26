@@ -1,15 +1,12 @@
 """Family-neutral uncertainty public request normalization."""
 
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
+from pyaesa.shared.runtime.memory import runtime_working_budget_bytes
 from pyaesa.shared.uncertainty_assessment.io.formats import normalize_uncertainty_output_format
 
-DEFAULT_UNCERTAINTY_BATCH_SIZE = 10_000
-MAX_UNCERTAINTY_BATCH_SIZE = 10_000
-UNCERTAINTY_BATCH_MEMORY_BYTES = 3_000_000_000
-UNCERTAINTY_BATCH_TEMPORARY_FACTOR = 24
 DEFAULT_CONVERGENCE_MAX_RUNS = 500_000
 DEFAULT_CONVERGENCE_RTOL = 0.05
 DEFAULT_CONVERGENCE_STABLE_RUNS = 10_000
@@ -35,7 +32,11 @@ class UncertaintyRuntimeRequest:
 
 @dataclass(frozen=True)
 class BatchMemoryBlock:
-    """One run scoped memory block used by the batch planner."""
+    """One run scoped memory block used by the batch planner.
+
+    The default block is one float64 array, matching public uncertainty value
+    arrays. Owners add named blocks when a path retains additional arrays.
+    """
 
     name: str
     row_count: int
@@ -69,7 +70,12 @@ def normalize_uncertainty_request(
         if bool(params["active"])
     )
     if len(active_modes) != 1:
-        raise ValueError("Exactly one Monte Carlo mode block must be active.")
+        active = ", ".join(active_modes) if active_modes else "none"
+        raise ValueError(
+            "mc_parameters must activate exactly one Monte Carlo mode: set either "
+            "fixed.active or convergence.active to true. Active modes: "
+            f"{active}."
+        )
     mode = active_modes[0]
 
     fixed_n_runs = _positive_int(fixed_params["n_runs"], field="fixed.n_runs")
@@ -89,13 +95,9 @@ def normalize_uncertainty_request(
     convergence_statistics = _normalize_convergence_statistics(
         convergence_params["convergence_statistics"]
     )
-    batch_size = min(
-        DEFAULT_UNCERTAINTY_BATCH_SIZE,
-        stable_runs if mode == "convergence" else n_runs,
-        n_runs,
-    )
+    batch_size = min(stable_runs, n_runs) if mode == "convergence" else n_runs
     return UncertaintyRuntimeRequest(
-        family=_non_empty_text(family, field="family"),
+        family=str(family),
         mode=mode,
         output_format=normalize_uncertainty_output_format(output_format),
         n_runs=n_runs,
@@ -110,36 +112,81 @@ def normalize_uncertainty_request(
 def memory_bounded_batch_size(
     *,
     runtime: UncertaintyRuntimeRequest,
-    row_count: int,
+    primary_block: BatchMemoryBlock,
     extra_blocks: Iterable[BatchMemoryBlock] = (),
+    memory_budget_bytes: int | None = None,
 ) -> int:
-    """Return an internal run batch size bounded by the memory target."""
-    bytes_per_run = _block_bytes_per_run(
-        BatchMemoryBlock(
-            name="primary_values",
-            row_count=int(row_count),
-            array_count=UNCERTAINTY_BATCH_TEMPORARY_FACTOR,
-        )
-    )
+    """Return an internal run batch size bounded by owner supplied memory blocks."""
+    bytes_per_run = _block_bytes_per_run(primary_block)
     bytes_per_run += sum(_block_bytes_per_run(block) for block in extra_blocks)
-    if bytes_per_run <= 0:
-        raise ValueError("At least one positive batch memory row count is required.")
-    memory_batch_size = max(1, UNCERTAINTY_BATCH_MEMORY_BYTES // bytes_per_run)
+    budget = runtime_working_budget_bytes(
+        memory_budget_bytes=memory_budget_bytes,
+        minimal_working_block_bytes=bytes_per_run,
+    )
+    memory_batch_size = max(1, budget // bytes_per_run)
     return min(
         int(runtime.n_runs),
         int(runtime.batch_size),
-        MAX_UNCERTAINTY_BATCH_SIZE,
         int(memory_batch_size),
     )
 
 
+def sparse_selected_run_memory_blocks(
+    *,
+    prefix: str,
+    public_row_count: int,
+    summary_row_count: int,
+    filters_and_sorts_output: bool,
+) -> tuple[BatchMemoryBlock, ...]:
+    """Return common retained memory blocks for sparse selected run outputs."""
+    sparse_columns = ("run_index", "public_row_id", "value")
+    sparse_column_count = len(sparse_columns)
+    summary_arrays = ("sum", "count", "value")
+    blocks = [
+        BatchMemoryBlock(
+            f"{prefix}_sparse_source_window_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_source_decoded_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_source_reader_work_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_source_reader_masks",
+            public_row_count,
+            len(("ready", "pending", "range")),
+            dtype_bytes=1,
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_output_window_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_output_concat_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(
+            f"{prefix}_sparse_output_render_columns", public_row_count, sparse_column_count
+        ),
+        BatchMemoryBlock(f"{prefix}_sparse_summary_source_positions", public_row_count),
+        BatchMemoryBlock(f"{prefix}_sparse_summary_group_ids", public_row_count),
+        BatchMemoryBlock(f"{prefix}_sparse_summary_values", summary_row_count, len(summary_arrays)),
+    ]
+    if filters_and_sorts_output:
+        blocks.extend(
+            [
+                BatchMemoryBlock(f"{prefix}_sparse_output_finite_mask", public_row_count, 1, 1),
+                BatchMemoryBlock(f"{prefix}_sparse_output_sort_order", public_row_count),
+                BatchMemoryBlock(
+                    f"{prefix}_sparse_output_sorted_columns",
+                    public_row_count,
+                    sparse_column_count,
+                ),
+            ]
+        )
+    return tuple(blocks)
+
+
 def _block_bytes_per_run(block: BatchMemoryBlock) -> int:
-    if int(block.row_count) <= 0:
-        return 0
-    if int(block.array_count) <= 0:
-        raise ValueError(f"Batch memory block '{block.name}' must use a positive array count.")
-    if int(block.dtype_bytes) <= 0:
-        raise ValueError(f"Batch memory block '{block.name}' must use a positive dtype size.")
     return int(block.row_count) * int(block.array_count) * int(block.dtype_bytes)
 
 
@@ -182,7 +229,7 @@ def _normalize_mode_parameters(
         },
     )
     if params:
-        raise ValueError(f"Unsupported Monte Carlo parameter keys: {sorted(params)}.")
+        raise ValueError(f"Unsupported top level mc_parameters keys: {sorted(params)}.")
     return fixed, convergence
 
 
@@ -197,7 +244,7 @@ def _normalize_mode_block(
     block = {**defaults, **value}
     unsupported = sorted(set(block) - set(defaults))
     if unsupported:
-        raise ValueError(f"Unsupported Monte Carlo parameter keys: {unsupported}.")
+        raise ValueError(f"Unsupported mc_parameters.{mode} keys: {unsupported}.")
     active = block["active"]
     if not isinstance(active, bool):
         raise ValueError(f"mc_parameters.{mode}.active must be a boolean.")
@@ -205,10 +252,13 @@ def _normalize_mode_block(
 
 
 def _positive_int(value: Any, *, field: str) -> int:
-    if isinstance(value, bool):
-        raise ValueError(f"{field} must be a positive integer.")
-    parsed = int(value)
-    if parsed <= 0:
+    parsed: int | None = None
+    if not isinstance(value, bool):
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = None
+    if parsed is None or parsed <= 0:
         raise ValueError(f"{field} must be a positive integer.")
     return parsed
 
@@ -223,12 +273,6 @@ def _normalize_convergence_statistics(value: object) -> tuple[str, ...]:
     normalized = tuple(str(item).strip() for item in values)
     unsupported = sorted(set(normalized) - set(CONVERGENCE_STATISTICS))
     if unsupported or not normalized:
-        raise ValueError("convergence_statistics must use mean only.")
+        allowed = ", ".join(CONVERGENCE_STATISTICS)
+        raise ValueError(f"convergence_statistics must use supported statistics: {allowed}.")
     return normalized
-
-
-def _non_empty_text(value: object, *, field: str) -> str:
-    text = str(value).strip()
-    if not text:
-        raise ValueError(f"{field} must be a non-empty string.")
-    return text

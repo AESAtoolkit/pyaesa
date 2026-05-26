@@ -698,6 +698,47 @@ def test_external_monte_carlo_compact_matrix_reports_empty_requested_year(
         monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
 
 
+def test_external_monte_carlo_compact_matrix_materializes_selected_rows(
+    project_repo: Path,
+) -> None:
+    selection = _selection()
+    directory = get_asocc_external_method_level_dir(
+        proj_base=project_repo,
+        storage_mode="monte_carlo",
+        level=selection.level,
+    )
+    compact_dir = directory / "l1_CO(S)_l2_UT(FD)"
+    compact_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "public_row_id": [0, 1],
+            "year": [2019, 2020],
+            ASOCC_SSP_SCENARIO_COLUMN: [None, None],
+            **_selectors(2),
+        }
+    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    pd.DataFrame(
+        {
+            "run_index": [0, 1],
+            "0": [0.42, 0.52],
+            "1": [0.43, 0.53],
+        }
+    ).to_csv(compact_dir / "asocc_runs.csv", index=False)
+    source = monte_carlo_mod.resolve_external_monte_carlo_source(
+        proj_base=project_repo,
+        selection=selection,
+        years=[2020],
+        lcia_methods=None,
+        ssp_scenario_options_by_year=None,
+    )
+    assert source is not None
+
+    materialized = monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
+
+    assert materialized.run_matrix.template["year"].tolist() == [2020]
+    np.testing.assert_allclose(materialized.run_matrix.values, [[0.43], [0.53]])
+
+
 def test_external_monte_carlo_matrix_materializes_frame_scenario_identities(
     project_repo: Path,
 ) -> None:

@@ -1,10 +1,11 @@
-"""Shared exact summary kernels for uncertainty run values."""
+"""Shared summary kernels for uncertainty run values."""
+
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
 
-from pyaesa.shared.uncertainty_assessment.io.formats import is_csv_compact_output
-from pyaesa.shared.uncertainty_assessment.request.core import UNCERTAINTY_BATCH_MEMORY_BYTES
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 
 SUMMARY_STATISTICS: tuple[str, ...] = (
     "mean",
@@ -17,29 +18,42 @@ SUMMARY_STATISTICS: tuple[str, ...] = (
     "p95",
     "max",
 )
-SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK = 1_000_000
-CSV_COMPACT_SUMMARY_WORKING_ARRAYS = 4
 
 
-def summary_scan_max_numeric_cells(*, output_format: str) -> int:
-    """Return the cell budget for one exact public summary scan."""
-    if is_csv_compact_output(output_format):
-        return max(
-            SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK,
-            UNCERTAINTY_BATCH_MEMORY_BYTES
-            // (CSV_COMPACT_SUMMARY_WORKING_ARRAYS * np.dtype(np.float64).itemsize),
-        )
-    return SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK
+def summary_scan_max_numeric_cells(
+    *,
+    output_format: str,
+    memory_budget_bytes: int | None = None,
+) -> int:
+    """Return the cell budget for one public summary scan."""
+    del output_format
+    return memory_bounded_rows(
+        bytes_per_row=_summary_scan_bytes_per_cell(),
+        memory_budget_bytes=memory_budget_bytes,
+    )
+
+
+def _summary_scan_bytes_per_cell() -> int:
+    float_bytes = np.dtype(np.float64).itemsize * len(
+        ("input_values", "clean_values", "statistic_workspace", "quantile_workspace")
+    )
+    mask_bytes = np.dtype(np.bool_).itemsize * len(("valid_mask",))
+    return float_bytes + mask_bytes
 
 
 def column_block_width(
     *,
     run_count: int,
     row_count: int,
-    max_numeric_cells_per_block: int = SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK,
+    max_numeric_cells_per_block: int | None = None,
 ) -> int:
     """Return a summary scan column width bounded by the shared cell budget."""
-    return max(1, min(int(row_count), int(max_numeric_cells_per_block) // max(1, run_count)))
+    max_cells = (
+        summary_scan_max_numeric_cells(output_format="parquet")
+        if max_numeric_cells_per_block is None
+        else int(max_numeric_cells_per_block)
+    )
+    return max(1, min(int(row_count), int(max_cells) // max(1, run_count)))
 
 
 def public_row_groups_are_identity_ordered(
@@ -57,14 +71,19 @@ def group_block_stop(
     groups: tuple[tuple[str, ...], ...],
     start: int,
     run_count: int,
-    max_numeric_cells_per_block: int = SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK,
+    max_numeric_cells_per_block: int | None = None,
 ) -> int:
-    """Return the exclusive group block stop for an exact grouped scan."""
+    """Return the exclusive group block stop for a grouped scan."""
+    max_cells = (
+        summary_scan_max_numeric_cells(output_format="parquet")
+        if max_numeric_cells_per_block is None
+        else int(max_numeric_cells_per_block)
+    )
     total_columns = 0
     stop = start
     while stop < len(groups):
         next_total = total_columns + len(groups[stop])
-        if stop > start and next_total * int(run_count) > int(max_numeric_cells_per_block):
+        if stop > start and next_total * int(run_count) > int(max_cells):
             break
         total_columns = next_total
         stop += 1
@@ -72,9 +91,46 @@ def group_block_stop(
 
 
 def assign_summary_columns(*, summary: pd.DataFrame, values: np.ndarray) -> None:
-    """Assign exact summary statistic columns for a run by row value block."""
+    """Assign summary statistic columns for a run by row value block."""
     for statistic, data in summary_arrays(values=values).items():
         summary[statistic] = data
+
+
+def observed_group_summary_arrays(
+    *,
+    group_count: int,
+    value_groups: Iterable[tuple[int, np.ndarray]],
+    frequency_threshold: float | None = None,
+) -> tuple[dict[str, np.ndarray], np.ndarray]:
+    """Return statistics from sparse observed values grouped by summary row."""
+    stats = {
+        statistic: np.full(int(group_count), np.nan, dtype=np.float64)
+        for statistic in SUMMARY_STATISTICS
+    }
+    frequency = (
+        np.full(int(group_count), np.nan, dtype=np.float64)
+        if frequency_threshold is not None
+        else np.empty(0, dtype=np.float64)
+    )
+    for group_index, values in value_groups:
+        group_values = np.asarray(values, dtype=np.float64)
+        nan_mask = np.isnan(group_values)
+        observed = group_values[~nan_mask] if bool(nan_mask.any()) else group_values
+        stats["mean"][group_index] = np.mean(observed)
+        stats["std"][group_index] = np.std(observed, ddof=1) if observed.size > 1 else 0.0
+        stats["min"][group_index] = np.min(observed)
+        stats["max"][group_index] = np.max(observed)
+        quantiles = _linear_quantiles_1d(values=observed)
+        stats["p5"][group_index] = quantiles[0]
+        stats["p25"][group_index] = quantiles[1]
+        stats["median"][group_index] = quantiles[2]
+        stats["p75"][group_index] = quantiles[3]
+        stats["p95"][group_index] = quantiles[4]
+        if frequency_threshold is not None:
+            frequency[group_index] = np.count_nonzero(observed <= float(frequency_threshold)) / len(
+                observed
+            )
+    return stats, frequency
 
 
 def collapse_grouped_run_values(
@@ -108,7 +164,7 @@ def collapse_grouped_run_values(
 
 
 def summary_arrays(*, values: np.ndarray) -> dict[str, np.ndarray]:
-    """Return exact summary statistic arrays for each value column."""
+    """Return summary statistic arrays for each value column."""
     nan_mask = np.isnan(values)
     if not bool(nan_mask.any()):
         return _finite_summary_arrays(values=values)
@@ -175,7 +231,7 @@ def _linear_quantiles_from_sorted_columns(
     values: np.ndarray,
     counts: np.ndarray,
 ) -> np.ndarray:
-    """Return exact default NumPy linear quantiles using in place column sorting."""
+    """Return default NumPy linear quantiles using in place column sorting."""
     values.sort(axis=0)
     positions = np.array([0.05, 0.25, 0.5, 0.75, 0.95]).reshape(-1, 1) * (counts - 1)
     lower = np.floor(positions).astype(np.int64)
@@ -183,3 +239,13 @@ def _linear_quantiles_from_sorted_columns(
     weight = positions - lower
     columns = np.arange(values.shape[1])
     return values[lower, columns] * (1.0 - weight) + values[upper, columns] * weight
+
+
+def _linear_quantiles_1d(*, values: np.ndarray) -> np.ndarray:
+    """Return default NumPy linear quantiles for one observed vector."""
+    values.sort()
+    positions = np.array([0.05, 0.25, 0.5, 0.75, 0.95]) * (len(values) - 1)
+    lower = np.floor(positions).astype(np.int64)
+    upper = np.ceil(positions).astype(np.int64)
+    weight = positions - lower
+    return values[lower] * (1.0 - weight) + values[upper] * weight

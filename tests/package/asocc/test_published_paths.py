@@ -9,7 +9,7 @@ def _common(tmp_path):
     return {
         "proj_base": tmp_path,
         "source": "oecd_v2025",
-        "group_version": None,
+        "agg_version": None,
     }
 
 
@@ -17,7 +17,7 @@ def _scope_root_args(common: dict) -> dict:
     return {
         "proj_base": common["proj_base"],
         "source": common["source"],
-        "group_version": common["group_version"],
+        "agg_version": common["agg_version"],
     }
 
 
@@ -26,7 +26,7 @@ def test_published_path_cover_scope_and_level_validation(tmp_path) -> None:
     family_root = _get_asocc_root(proj_base=tmp_path)
     source_token = asocc_source_version_token(
         source=common["source"],
-        group_version=common["group_version"],
+        agg_version=common["agg_version"],
     )
     assert paths_mod._owning_fu_level_for_code(fu_code=None) == "level_1"  # noqa: SLF001
     assert paths_mod._owning_fu_level_for_code(fu_code="L2.a.a") == "level_2"  # noqa: SLF001
@@ -58,7 +58,7 @@ def test_published_path_cover_scope_and_level_validation(tmp_path) -> None:
     disagg_scope_root = paths_mod._asocc_deterministic_scope_root(  # noqa: SLF001
         proj_base=tmp_path,
         source="disagg_oecd",
-        group_version="elec",
+        agg_version="elec",
     )
     assert disagg_scope_root == family_root / "disagg_oecd" / "deterministic"
 

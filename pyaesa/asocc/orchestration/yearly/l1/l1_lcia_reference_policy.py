@@ -3,9 +3,9 @@
 import pandas as pd
 
 from ....data.reference_payloads import load_reference_lcia_reg
-from ....data.source_schema import default_historical_cutoff_for_source
 from ...method_scope import _max_historical_mrio_year
 from ...common_formatting import format_year_scope
+from ..shared.reference_years import ar_reference_year_candidates
 from ..shared.scenario_routing import emit_notice
 from .l1_types import _L1RunContext, _LciaMethodInputs
 
@@ -19,7 +19,7 @@ def resolve_latest_lcia_year_for_method_kind(
 ) -> tuple[int | None, pd.DataFrame | None, str | None]:
     """Return latest year<=studied year with available LCIA for one method/kind."""
     last_error: str | None = None
-    group_version = None if use_original_domain else run.context.group_version
+    agg_version = None if use_original_domain else run.context.agg_version
     candidates = sorted(
         (y for y in run.context.historical_years if y <= run.year),
         reverse=True,
@@ -32,7 +32,7 @@ def resolve_latest_lcia_year_for_method_kind(
                 ref_year=int(candidate_year),
                 lcia_method=lcia_method,
                 lcia_kind=lcia_kind,
-                group_version=group_version,
+                agg_version=agg_version,
             )
             return int(candidate_year), lcia_reg, None
         except ValueError as exc:
@@ -104,18 +104,18 @@ def resolve_reference_years_for_ar(
     use_original_domain: bool,
 ) -> list[int]:
     """Return AR reference years clipped to available LCIA years."""
-    default_cutoff = default_historical_cutoff_for_source(run.context.source)
-    refs_raw = run.context.reference_years or [
-        y
-        for y in run.context.historical_years
-        if default_cutoff is None or int(y) <= default_cutoff
-    ]
-    group_version = None if use_original_domain else run.context.group_version
+    refs_raw = ar_reference_year_candidates(
+        source=run.context.source,
+        historical_years=run.context.historical_years,
+        reference_years=run.context.reference_years,
+        year=run.year,
+    )
+    agg_version = None if use_original_domain else run.context.agg_version
     cache_key = (
         str(lcia_inputs.lcia_method),
         str(lcia_inputs.lcia_kind),
         bool(use_original_domain),
-        group_version,
+        agg_version,
         tuple(int(y) for y in refs_raw),
     )
     cached = run.state.ar_valid_refs_cache.get(cache_key)
@@ -130,7 +130,7 @@ def resolve_reference_years_for_ar(
                     ref_year=int(ref_year),
                     lcia_method=lcia_inputs.lcia_method,
                     lcia_kind=lcia_inputs.lcia_kind,
-                    group_version=group_version,
+                    agg_version=agg_version,
                 )
                 refs_valid.append(int(ref_year))
             except ValueError as exc:

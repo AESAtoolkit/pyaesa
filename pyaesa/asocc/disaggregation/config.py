@@ -24,11 +24,11 @@ from pyaesa.asocc.methods.registry.model.types import normalize_fu_code
 from pyaesa.asocc.runtime.request.defaults import DISAGGREGATION_BASE_ALLOCATE_DEFAULTS
 
 _REQUIRED_CONFIG_KEYS = {
-    "target_grouped_run",
-    "ref_grouped_run",
-    "ref_split_run",
+    "target_agg_run",
+    "ref_agg_run",
+    "ref_disagg_run",
     "disaggregation_specs",
-    "new_disaggregated_version_name",
+    "new_disagg_version_name",
 }
 _ALLOWED_CONFIG_KEYS = set(_REQUIRED_CONFIG_KEYS)
 _ALLOWED_BASE_ALLOCATE_ARGS = {
@@ -38,7 +38,7 @@ _ALLOWED_BASE_ALLOCATE_ARGS = {
     "r_p",
     "r_c",
     "r_f",
-    "aggreg_indices",
+    "group_indices",
     "method_plan",
     "l1_methods",
     "one_step_methods",
@@ -52,9 +52,9 @@ _ALLOWED_BASE_ALLOCATE_ARGS = {
 }
 _FORBIDDEN_BASE_ALLOCATE_ARGS = {
     "source",
-    "group_reg",
-    "group_sec",
-    "group_version",
+    "agg_reg",
+    "agg_sec",
+    "agg_version",
     "s_p",
     "lcia_method",
     "reference_years",
@@ -64,8 +64,8 @@ _FORBIDDEN_BASE_ALLOCATE_ARGS = {
 }
 _BASE_ALLOCATE_REQUIRED_KEYS = {"project_name", "fu_code"}
 _BASE_ALLOCATE_ARG_DEFAULTS = dict(DISAGGREGATION_BASE_ALLOCATE_DEFAULTS)
-_ALLOWED_SELECTOR_KEYS = {"source", "group_reg", "group_sec", "group_version", "s_p"}
-_ALLOWED_SPEC_KEYS = {"grouped_sector_label", "split_sector_label"}
+_ALLOWED_SELECTOR_KEYS = {"source", "agg_reg", "agg_sec", "agg_version", "s_p"}
+_ALLOWED_SPEC_KEYS = {"agg_sector_label", "disagg_sector_label"}
 _ALLOWED_SOURCES = {"oecd_v2025", "exiobase_396_ixi", "exiobase_3102_ixi"}
 
 
@@ -127,7 +127,7 @@ def parse_selector(name: str, raw: Any) -> RunSelector:
     if unknown:
         raise ValueError(
             f"Unknown selector key(s) in 'disaggregation_config.{name}': {unknown}. "
-            "Supported keys are 'source', 'group_reg', 'group_sec', 'group_version', and 's_p'."
+            "Supported keys are 'source', 'agg_reg', 'agg_sec', 'agg_version', and 's_p'."
         )
     source = normalize_non_empty_str(raw.get("source"), name=f"{name}.source").lower()
     if source not in _ALLOWED_SOURCES:
@@ -135,39 +135,39 @@ def parse_selector(name: str, raw: Any) -> RunSelector:
             f"Unsupported source in 'disaggregation_config.{name}.source': '{source}'. "
             f"Use one of {sorted(_ALLOWED_SOURCES)}."
         )
-    group_reg = _parse_optional_bool(raw.get("group_reg"), name=f"{name}.group_reg")
-    group_sec = _parse_optional_bool(raw.get("group_sec"), name=f"{name}.group_sec")
-    group_version_raw = raw.get("group_version")
-    group_version = (
-        normalize_non_empty_str(group_version_raw, name=f"{name}.group_version")
-        if (group_reg or group_sec)
+    agg_reg = _parse_optional_bool(raw.get("agg_reg"), name=f"{name}.agg_reg")
+    agg_sec = _parse_optional_bool(raw.get("agg_sec"), name=f"{name}.agg_sec")
+    agg_version_raw = raw.get("agg_version")
+    agg_version = (
+        normalize_non_empty_str(agg_version_raw, name=f"{name}.agg_version")
+        if (agg_reg or agg_sec)
         else None
     )
-    if not (group_reg or group_sec) and group_version_raw not in {None, ""}:
+    if not (agg_reg or agg_sec) and agg_version_raw not in {None, ""}:
         raise ValueError(
-            f"'disaggregation_config.{name}.group_version' must be omitted when "
-            f"'disaggregation_config.{name}.group_reg' and "
-            f"'disaggregation_config.{name}.group_sec' are both False."
+            f"'disaggregation_config.{name}.agg_version' must be omitted when "
+            f"'disaggregation_config.{name}.agg_reg' and "
+            f"'disaggregation_config.{name}.agg_sec' are both False."
         )
     s_p = _normalize_non_empty_str_list(raw.get("s_p"), name=f"{name}.s_p")
     return RunSelector(
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         s_p=s_p,
     )
 
 
 def parse_specs(raw_specs: Any) -> list[DisaggregationSpec]:
-    """Parse disaggregation specs and validate grouped-to-split cardinality."""
+    """Parse disaggregation specs and validate aggregated-to-disaggregate cardinality."""
     if not isinstance(raw_specs, list) or not raw_specs:
         raise ValueError(
             "'disaggregation_config.disaggregation_specs' must be a non-empty list of "
-            "{'grouped_sector_label', 'split_sector_label'} mappings."
+            "{'agg_sector_label', 'disagg_sector_label'} mappings."
         )
     specs: list[DisaggregationSpec] = []
-    split_to_grouped: dict[str, str] = {}
+    disaggregate_to_aggregated: dict[str, str] = {}
     for idx, raw in enumerate(raw_specs):
         if not isinstance(raw, dict):
             raise ValueError(
@@ -177,28 +177,29 @@ def parse_specs(raw_specs: Any) -> list[DisaggregationSpec]:
         if unknown:
             raise ValueError(
                 f"'disaggregation_config.disaggregation_specs[{idx}]' contains unknown "
-                f"key(s): {unknown}. Provide only 'grouped_sector_label' and "
-                "'split_sector_label'."
+                f"key(s): {unknown}. Provide only 'agg_sector_label' and "
+                "'disagg_sector_label'."
             )
-        grouped = normalize_non_empty_str(
-            raw.get("grouped_sector_label"),
-            name=f"disaggregation_specs[{idx}].grouped_sector_label",
+        aggregated = normalize_non_empty_str(
+            raw.get("agg_sector_label"),
+            name=f"disaggregation_specs[{idx}].agg_sector_label",
         )
-        split = normalize_non_empty_str(
-            raw.get("split_sector_label"),
-            name=f"disaggregation_specs[{idx}].split_sector_label",
+        disaggregate = normalize_non_empty_str(
+            raw.get("disagg_sector_label"),
+            name=f"disaggregation_specs[{idx}].disagg_sector_label",
         )
-        existing = split_to_grouped.get(split)
-        if existing is not None and existing != grouped:
+        existing = disaggregate_to_aggregated.get(disaggregate)
+        if existing is not None and existing != aggregated:
             raise ValueError(
-                "One split sector can map to exactly one grouped sector. "
-                f"Split '{split}' is mapped to both '{existing}' and '{grouped}'."
+                "One disaggregate sector can map to exactly one aggregated sector. "
+                f"Disaggregate sector '{disaggregate}' is mapped to both '{existing}' and "
+                f"'{aggregated}'."
             )
-        split_to_grouped[split] = grouped
+        disaggregate_to_aggregated[disaggregate] = aggregated
         specs.append(
             DisaggregationSpec(
-                grouped_sector_label=grouped,
-                split_sector_label=split,
+                agg_sector_label=aggregated,
+                disagg_sector_label=disaggregate,
             )
         )
     return specs
@@ -206,34 +207,34 @@ def parse_specs(raw_specs: Any) -> list[DisaggregationSpec]:
 
 def validate_specs_against_selectors(
     *,
-    target_grouped_run: RunSelector,
-    ref_grouped_run: RunSelector,
-    ref_split_run: RunSelector,
+    target_agg_run: RunSelector,
+    ref_agg_run: RunSelector,
+    ref_disagg_run: RunSelector,
     specs: list[DisaggregationSpec],
 ) -> None:
     """Validate selector sector lists against the disaggregation specs."""
-    grouped_labels = {spec.grouped_sector_label for spec in specs}
-    split_labels = {spec.split_sector_label for spec in specs}
-    if set(target_grouped_run.s_p) != grouped_labels:
+    aggregated_labels = {spec.agg_sector_label for spec in specs}
+    disaggregate_labels = {spec.disagg_sector_label for spec in specs}
+    if set(target_agg_run.s_p) != aggregated_labels:
         raise ValueError(
-            "'disaggregation_config.target_grouped_run.s_p' must exactly match the grouped "
+            "'disaggregation_config.target_agg_run.s_p' must exactly match the aggregated "
             "labels declared in 'disaggregation_config.disaggregation_specs'."
         )
-    if set(ref_grouped_run.s_p) != grouped_labels:
+    if set(ref_agg_run.s_p) != aggregated_labels:
         raise ValueError(
-            "'disaggregation_config.ref_grouped_run.s_p' must exactly match the grouped "
+            "'disaggregation_config.ref_agg_run.s_p' must exactly match the aggregated "
             "labels declared in 'disaggregation_config.disaggregation_specs'."
         )
-    if set(ref_split_run.s_p) != split_labels:
+    if set(ref_disagg_run.s_p) != disaggregate_labels:
         raise ValueError(
-            "'disaggregation_config.ref_split_run.s_p' must exactly match the split "
+            "'disaggregation_config.ref_disagg_run.s_p' must exactly match the disaggregate "
             "labels declared in 'disaggregation_config.disaggregation_specs'."
         )
-    if ref_grouped_run.source != ref_split_run.source:
+    if ref_agg_run.source != ref_disagg_run.source:
         raise ValueError(
-            "'disaggregation_config.ref_grouped_run.source' and "
-            "'disaggregation_config.ref_split_run.source' must be identical because the "
-            "reference grouped and split runs must come from the same MRIO domain."
+            "'disaggregation_config.ref_agg_run.source' and "
+            "'disaggregation_config.ref_disagg_run.source' must be identical because the "
+            "reference aggregated and disaggregate runs must come from the same MRIO domain."
         )
 
 
@@ -302,15 +303,15 @@ def parse_disaggregate_args(
     """Validate public disaggregate_asocc arguments."""
     if not isinstance(disaggregation_config, dict):
         raise ValueError(
-            "'disaggregation_config' must be a dictionary describing the grouped and split "
-            "deterministic prerequisite runs."
+            "'disaggregation_config' must be a dictionary describing the "
+            "aggregated and disaggregate deterministic prerequisite runs."
         )
     missing = sorted(_REQUIRED_CONFIG_KEYS - set(disaggregation_config))
     if missing:
         raise ValueError(
             f"'disaggregation_config' is missing required key(s): {missing}. "
-            "Provide 'target_grouped_run', 'ref_grouped_run', 'ref_split_run', "
-            "'disaggregation_specs', and 'new_disaggregated_version_name'."
+            "Provide 'target_agg_run', 'ref_agg_run', 'ref_disagg_run', "
+            "'disaggregation_specs', and 'new_disagg_version_name'."
         )
     unknown = sorted(set(disaggregation_config) - _ALLOWED_CONFIG_KEYS)
     if unknown:
@@ -318,21 +319,19 @@ def parse_disaggregate_args(
             f"'disaggregation_config' contains unknown key(s): {unknown}. "
             "Use only the documented disaggregation envelope keys."
         )
-    target_grouped_run = parse_selector(
-        "target_grouped_run", disaggregation_config["target_grouped_run"]
-    )
-    ref_grouped_run = parse_selector("ref_grouped_run", disaggregation_config["ref_grouped_run"])
-    ref_split_run = parse_selector("ref_split_run", disaggregation_config["ref_split_run"])
+    target_agg_run = parse_selector("target_agg_run", disaggregation_config["target_agg_run"])
+    ref_agg_run = parse_selector("ref_agg_run", disaggregation_config["ref_agg_run"])
+    ref_disagg_run = parse_selector("ref_disagg_run", disaggregation_config["ref_disagg_run"])
     specs = parse_specs(disaggregation_config["disaggregation_specs"])
     validate_specs_against_selectors(
-        target_grouped_run=target_grouped_run,
-        ref_grouped_run=ref_grouped_run,
-        ref_split_run=ref_split_run,
+        target_agg_run=target_agg_run,
+        ref_agg_run=ref_agg_run,
+        ref_disagg_run=ref_disagg_run,
         specs=specs,
     )
     new_label = normalize_non_empty_str(
-        disaggregation_config["new_disaggregated_version_name"],
-        name="disaggregation_config.new_disaggregated_version_name",
+        disaggregation_config["new_disagg_version_name"],
+        name="disaggregation_config.new_disagg_version_name",
     )
     output_format_norm = normalize_allocate_output_format(output_format)
     figures_norm = _require_bool(figures, name="figures")
@@ -345,11 +344,11 @@ def parse_disaggregate_args(
     if figure_external_method is not None and not figures_norm:
         raise ValueError("figure_external_method is only valid when figures=True.")
     parsed = DisaggregationConfigModel(
-        target_grouped_run=target_grouped_run,
-        ref_grouped_run=ref_grouped_run,
-        ref_split_run=ref_split_run,
+        target_agg_run=target_agg_run,
+        ref_agg_run=ref_agg_run,
+        ref_disagg_run=ref_disagg_run,
         disaggregation_specs=specs,
-        new_disaggregated_version_name=new_label,
+        new_disagg_version_name=new_label,
     )
     parsed_base_allocate_args = _parse_base_allocate_args(base_allocate_args)
     return ParsedArgs(

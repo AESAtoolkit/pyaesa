@@ -20,7 +20,7 @@ from pyaesa.asocc.orchestration.setup.loading.loading import (
 )
 from pyaesa.asocc.orchestration.setup.request.types import (
     PrepareContextRequest,
-    _GroupingBundle,
+    _AggregationBundle,
     _SelectionBundle,
     _YearBundle,
 )
@@ -43,7 +43,7 @@ def _resolve_year_plan(
     request: PrepareContextRequest,
     source: str,
     source_is_iso3: bool,
-    grouping: _GroupingBundle,
+    aggregation: _AggregationBundle,
     selection: _SelectionBundle,
     lcia_methods: list[str] | None,
     fu_code_norm: str,
@@ -78,9 +78,9 @@ def _resolve_year_plan(
         requested_year_bundle = _resolve_years(
             years=requested_years_input,
             source=source,
-            group_version=request.group_version,
-            group_reg=grouping.apply_group_reg,
-            group_sec=grouping.apply_group_sec,
+            agg_version=request.agg_version,
+            agg_reg=aggregation.apply_agg_reg,
+            agg_sec=aggregation.apply_agg_sec,
             historical_year_cap=request.historical_year_cap,
         )
         year_bundle = (
@@ -89,9 +89,9 @@ def _resolve_year_plan(
             else _resolve_years(
                 years=compute_years_input,
                 source=source,
-                group_version=request.group_version,
-                group_reg=grouping.apply_group_reg,
-                group_sec=grouping.apply_group_sec,
+                agg_version=request.agg_version,
+                agg_reg=aggregation.apply_agg_reg,
+                agg_sec=aggregation.apply_agg_sec,
                 historical_year_cap=request.historical_year_cap,
             )
         )
@@ -102,9 +102,9 @@ def _resolve_year_plan(
         )
     _validate_bundle_for_selection(
         source=source,
-        group_version=request.group_version,
-        group_reg=grouping.apply_group_reg,
-        group_sec=grouping.apply_group_sec,
+        agg_version=request.agg_version,
+        agg_reg=aggregation.apply_agg_reg,
+        agg_sec=aggregation.apply_agg_sec,
         selection=selection,
         lcia_methods=lcia_methods,
         historical_years=year_bundle.historical_years,
@@ -115,9 +115,9 @@ def _resolve_year_plan(
         reference_years=request.reference_years,
         historical_years=year_bundle.historical_years,
         source=source,
-        group_version=request.group_version,
-        group_reg=grouping.apply_group_reg,
-        group_sec=grouping.apply_group_sec,
+        agg_version=request.agg_version,
+        agg_reg=aggregation.apply_agg_reg,
+        agg_sec=aggregation.apply_agg_sec,
     )
     requested_years = list(requested_year_bundle.resolved_years)
     ssp_scenario_options_requested = _resolve_ssp_scenarios(
@@ -153,7 +153,7 @@ def _expand_year_plan_for_projection(
     request: PrepareContextRequest,
     source: str,
     source_is_iso3: bool,
-    grouping: _GroupingBundle,
+    aggregation: _AggregationBundle,
     selection: _SelectionBundle,
     lcia_methods: list[str] | None,
     fu_code_norm: str,
@@ -174,7 +174,7 @@ def _expand_year_plan_for_projection(
         request=request,
         source=source,
         source_is_iso3=source_is_iso3,
-        grouping=grouping,
+        aggregation=aggregation,
         selection=selection,
         lcia_methods=lcia_methods,
         fu_code_norm=fu_code_norm,

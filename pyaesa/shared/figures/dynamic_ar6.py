@@ -54,7 +54,9 @@ def model_scenario_pair_label(
 
 
 def model_scenario_sampling_method(frame: Any) -> str | None:
-    """Return the sampling method attached to dynamic AR6 figure rows."""
+    """Return sampled pathway method metadata when figure rows carry it."""
+    if MODEL_SCENARIO_SAMPLING_METHOD_COLUMN not in frame:
+        return None
     values = frame[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN].dropna()
     if values.empty:
         return None

@@ -103,7 +103,7 @@ def test_deterministic_asocc_skips_missing_year_directory_and_keeps_processed_ou
     missing_year_dir = _get_mrio_year_dir(
         source="exiobase_396_ixi",
         year=2006,
-        group_version=None,
+        agg_version=None,
     )
     for child in sorted(missing_year_dir.rglob("*"), reverse=True):
         if child.is_file():

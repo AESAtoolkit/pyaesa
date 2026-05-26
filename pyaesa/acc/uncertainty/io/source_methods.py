@@ -8,7 +8,7 @@ import pandas as pd
 from pyaesa.acc.uncertainty.runtime.models import ACCAsoccInput, ACCDynamicCCInput
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent
 from pyaesa.shared.runtime.text import join_user_text_lines
-from pyaesa.shared.uncertainty_assessment.io.tables import public_run_artifact_readme_lines
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_readme_lines
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
 

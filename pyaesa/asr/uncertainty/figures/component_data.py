@@ -294,9 +294,9 @@ def _deterministic_io_lca_component_rows(*, context: FigureContext) -> pd.DataFr
     args = cast(dict[str, object], context.manifest.arguments)
     paths = resolve_io_lca_paths(
         project_name=str(args["project_name"]),
-        group_reg=bool(args["group_reg"]),
-        group_sec=bool(args["group_sec"]),
-        group_version=cast(str | None, args["group_version"]),
+        agg_reg=bool(args["agg_reg"]),
+        agg_sec=bool(args["agg_sec"]),
+        agg_version=cast(str | None, args["agg_version"]),
     )
     output_format = str(item["output_format"])
     extension = table_extension_for_output(output_format)
@@ -474,10 +474,10 @@ def _base_allocate_args(*, context: FigureContext) -> dict:
         r_c=cast(str | list[str] | None, args["r_c"]),
         r_f=cast(str | list[str] | None, args["r_f"]),
         source=str(args["source"]),
-        group_reg=bool(args["group_reg"]),
-        group_sec=bool(args["group_sec"]),
-        group_version=cast(str | None, args["group_version"]),
-        aggreg_indices=bool(args["aggreg_indices"]),
+        agg_reg=bool(args["agg_reg"]),
+        agg_sec=bool(args["agg_sec"]),
+        agg_version=cast(str | None, args["agg_version"]),
+        group_indices=bool(args["group_indices"]),
         base_asocc_args=cast(dict, args["base_asocc_args"]),
     )
 

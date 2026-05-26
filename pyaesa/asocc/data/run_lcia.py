@@ -23,7 +23,7 @@ from ..methods.lcia_inputs import (
 from ..methods.lcia_key_selection import required_lcia_metric_keys_for_context
 from ..methods.registry.registry import REGISTRY
 
-_USE_CONTEXT_GROUP_VERSION = object()
+_USE_CONTEXT_AGG_VERSION = object()
 
 
 def _emit_lcia_notice(*, context, state, key: str, message: str) -> None:
@@ -103,7 +103,7 @@ def _available_lcia_years_for_method(
         y_saved_dir = _get_mrio_year_dir(
             source=context.source,
             year=y,
-            group_version=matrix_version,
+            agg_version=matrix_version,
         )
         if y_saved_dir.exists():
             available_years.append(int(y))
@@ -119,7 +119,7 @@ def _load_lcia_for_year(
     state,
     year: int,
     saved_dir,
-    group_version_override: str | None | object = _USE_CONTEXT_GROUP_VERSION,
+    agg_version_override: str | None | object = _USE_CONTEXT_AGG_VERSION,
     allow_method_year_fallback: bool = False,
     selected_lcia_methods: list[str] | None = None,
     method_year_out: dict[str, int] | None = None,
@@ -138,10 +138,10 @@ def _load_lcia_for_year(
     if not context.needs_lcia:
         return None
 
-    if group_version_override is _USE_CONTEXT_GROUP_VERSION:
-        matrix_version: str | None = context.group_version
+    if agg_version_override is _USE_CONTEXT_AGG_VERSION:
+        matrix_version: str | None = context.agg_version
     else:
-        matrix_version = cast(str | None, group_version_override)
+        matrix_version = cast(str | None, agg_version_override)
     meta, meta_path = _metadata_for_matrix_version(
         context=context,
         state=state,
@@ -190,7 +190,7 @@ def _load_lcia_for_year(
                 load_saved_dir = _get_mrio_year_dir(
                     source=context.source,
                     year=loaded_year,
-                    group_version=matrix_version,
+                    agg_version=matrix_version,
                 )
                 selected_year_entry = _get_year_entry(meta, loaded_year)
                 available = True

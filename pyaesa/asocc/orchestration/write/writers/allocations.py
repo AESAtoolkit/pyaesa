@@ -217,7 +217,7 @@ def write_l1_outputs(
     base = _get_asocc_l1_dir(
         proj_base=context.proj_base,
         source=str(l1_source if l1_source is not None else context.source),
-        group_version=context.group_version,
+        agg_version=context.agg_version,
         lcia_sub=None,
         owning_fu_level=_owning_fu_level_for_code(fu_code=context.fu_code),
     )
@@ -227,7 +227,7 @@ def write_l1_outputs(
             output_spec=output_spec,
             frames=frames,
             filters=context.filters,
-            aggreg_indices=context.aggreg_indices,
+            group_indices=context.group_indices,
             persisted_years=output_years,
         )
         artifact = build_l1_artifact(
@@ -266,13 +266,13 @@ def write_l2_outputs(
             output_spec=output_spec,
             frames=frames,
             filters=context.filters,
-            aggreg_indices=context.aggreg_indices,
+            group_indices=context.group_indices,
             persisted_years=output_years,
         )
         base = _get_asocc_l2_dir(
             proj_base=context.proj_base,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
             bucket=bucket,
             lcia_sub=output_spec.route.projection_subfolder,
         )

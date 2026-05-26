@@ -2,10 +2,8 @@
 
 from typing import Any
 
-from pyaesa.shared.uncertainty_assessment.io.tables import (
-    public_run_artifact_contract,
-    uncertainty_table_columns,
-)
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_contract
+from pyaesa.shared.uncertainty_assessment.io.tables import uncertainty_table_columns
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 
 

@@ -3,14 +3,14 @@
 import numpy as np
 import pandas as pd
 
-from pyaesa.asr.uncertainty.evaluation.scenario_groups import (
+from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
     scenario_identity_groups_from_excluded_columns,
 )
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     run_positions_in_window,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 def cumulative_period_identity_groups(
@@ -32,12 +32,32 @@ def evaluate_asr_cumulative_value_matrix(
     plan: ASRUncertaintyPlan,
 ) -> np.ndarray:
     """Evaluate cumulative ASR from cumulative LCA and ACC run components."""
-    numerator = lca_values[:, plan.lca_positions] * plan.lca_unit_factors[None, :]
-    denominator = acc_values[:, plan.acc_positions]
+    return evaluate_asr_cumulative_value_matrix_for_groups(
+        acc_values=acc_values,
+        lca_values=lca_values,
+        acc_positions=plan.acc_positions,
+        lca_positions=plan.lca_positions,
+        lca_unit_factors=plan.lca_unit_factors,
+        public_row_groups=plan.cumulative_public_row_groups,
+    )
+
+
+def evaluate_asr_cumulative_value_matrix_for_groups(
+    *,
+    acc_values: np.ndarray,
+    lca_values: np.ndarray,
+    acc_positions: np.ndarray,
+    lca_positions: np.ndarray,
+    lca_unit_factors: np.ndarray,
+    public_row_groups: tuple[tuple[str, ...], ...],
+) -> np.ndarray:
+    """Evaluate cumulative ASR for explicit yearly public row groups."""
+    numerator = lca_values[:, lca_positions] * lca_unit_factors[None, :]
+    denominator = acc_values[:, acc_positions]
     return _cumulative_asr_from_components(
         numerator=numerator,
         denominator=denominator,
-        plan=plan,
+        public_row_groups=public_row_groups,
     )
 
 
@@ -82,23 +102,49 @@ def _cumulative_asr_from_components(
     *,
     numerator: np.ndarray,
     denominator: np.ndarray,
-    plan: ASRUncertaintyPlan,
+    public_row_groups: tuple[tuple[str, ...], ...],
 ) -> np.ndarray:
+    member_public_row_id, member_group_id = _cumulative_membership_arrays(
+        public_row_groups=public_row_groups,
+    )
     run_positions = np.repeat(
         np.arange(numerator.shape[0], dtype=np.int64),
-        len(plan.cumulative_member_public_row_id),
+        len(member_public_row_id),
     )
-    group_positions = np.tile(plan.cumulative_member_group_id, numerator.shape[0])
-    nums = np.zeros((numerator.shape[0], len(plan.cumulative_public_row_groups)), dtype=np.float64)
-    dens = np.zeros((numerator.shape[0], len(plan.cumulative_public_row_groups)), dtype=np.float64)
-    public_ids = plan.cumulative_member_public_row_id
-    np.add.at(nums, (run_positions, group_positions), numerator[:, public_ids].reshape(-1))
-    np.add.at(dens, (run_positions, group_positions), denominator[:, public_ids].reshape(-1))
+    group_positions = np.tile(member_group_id, numerator.shape[0])
+    nums = np.zeros((numerator.shape[0], len(public_row_groups)), dtype=np.float64)
+    dens = np.zeros((numerator.shape[0], len(public_row_groups)), dtype=np.float64)
+    np.add.at(
+        nums,
+        (run_positions, group_positions),
+        numerator[:, member_public_row_id].reshape(-1),
+    )
+    np.add.at(
+        dens,
+        (run_positions, group_positions),
+        denominator[:, member_public_row_id].reshape(-1),
+    )
     return np.divide(
         nums,
         dens,
         out=np.full(nums.shape, np.nan, dtype=np.float64),
         where=dens != 0.0,
+    )
+
+
+def _cumulative_membership_arrays(
+    *,
+    public_row_groups: tuple[tuple[str, ...], ...],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return public row ids and target group ids for cumulative reductions."""
+    public_row_ids: list[int] = []
+    group_ids: list[int] = []
+    for index, group in enumerate(public_row_groups):
+        public_row_ids.extend(int(public_row_id) for public_row_id in group)
+        group_ids.extend([index] * len(group))
+    return (
+        np.asarray(public_row_ids, dtype=np.int64),
+        np.asarray(group_ids, dtype=np.int64),
     )
 
 

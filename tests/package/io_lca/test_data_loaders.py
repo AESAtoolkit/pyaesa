@@ -76,15 +76,15 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
 ) -> None:
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     spec = resolve_fu_spec(fu_code="L1.a")
 
     available_payload, unavailable_reason = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata,
         metadata_path=metadata_path,
         year=2019,
@@ -98,9 +98,9 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
 
     skipped_payload, skipped_reason = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata,
         metadata_path=metadata_path,
         year=2020,
@@ -111,10 +111,10 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
     assert skipped_reason == "extension missing"
 
     missing_dir_candidates = [
-        (io_lca_dummy_repo.source, 2019, "missing_group"),
-        (io_lca_dummy_repo.source, 2019, "missing_group_alt"),
+        (io_lca_dummy_repo.source, 2019, "missing_aggregate"),
+        (io_lca_dummy_repo.source, 2019, "missing_agg_alt"),
     ]
-    missing_source, missing_year, missing_group_version = next(
+    missing_source, missing_year, missing_agg_version = next(
         candidate
         for candidate in missing_dir_candidates
         if not _get_year_saved_path(
@@ -126,9 +126,9 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
     with pytest.raises(ValueError):
         load_main_payload(
             source=missing_source,
-            group_version=missing_group_version,
-            group_reg=False,
-            group_sec=False,
+            agg_version=missing_agg_version,
+            agg_reg=False,
+            agg_sec=False,
             metadata=metadata,
             metadata_path=metadata_path,
             year=missing_year,
@@ -150,9 +150,9 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
     with pytest.raises(ValueError):
         load_main_payload(
             source=io_lca_dummy_repo.source,
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
             metadata=missing_metric_metadata,
             metadata_path=metadata_path,
             year=missing_metric_year,
@@ -164,16 +164,16 @@ def test_load_main_payload_covers_available_and_missing_contract_paths(
 def test_load_main_payload_rejects_missing_year_entry(io_lca_dummy_repo) -> None:
     _metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     spec = resolve_fu_spec(fu_code="L1.a")
 
     with pytest.raises(ValueError):
         load_main_payload(
             source=io_lca_dummy_repo.source,
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
             metadata={"years": {}},
             metadata_path=metadata_path,
             year=2019,
@@ -185,7 +185,7 @@ def test_load_main_payload_rejects_missing_year_entry(io_lca_dummy_repo) -> None
 def test_load_main_payload_covers_l2_metric_branch(io_lca_dummy_repo) -> None:
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     year = 2024
     saved_dir = _get_year_saved_dir(io_lca_dummy_repo.source, year, matrix_version=None)
@@ -226,9 +226,9 @@ def test_load_main_payload_covers_l2_metric_branch(io_lca_dummy_repo) -> None:
     )
     payload, unavailable_reason = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata_for_year,
         metadata_path=metadata_path,
         year=year,
@@ -263,7 +263,7 @@ def test_align_matrix_axis_names_to_driver_leaves_unmatched_axes_unchanged() -> 
     assert plain_aligned.columns.name == "col"
 
 
-def test_load_upstream_payload_covers_x_to_rc_and_multiindex_fy_grouping(
+def test_load_upstream_payload_covers_x_to_rc_and_multiindex_fy_aggregation(
     io_lca_dummy_repo,
 ) -> None:
     year = 2025

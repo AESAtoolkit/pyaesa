@@ -1,6 +1,6 @@
 """Shared figure title and selector display contract."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 
 import pandas as pd
@@ -64,19 +64,18 @@ def prospective_scenario_values(frame: pd.DataFrame) -> list[str]:
 
 def prospective_scope_slices(
     frame: pd.DataFrame,
-) -> list[tuple[str, str | None, pd.DataFrame]]:
-    """Return figure slices scoped to one prospective scenario."""
+) -> Iterator[tuple[str, str | None, pd.DataFrame]]:
+    """Yield figure slices scoped to one prospective scenario."""
     series = deterministic_prospective_series(frame)
     values = sorted({value for value in series.tolist() if value is not None})
     if values:
         generic_mask = series.isna()
-        slices: list[tuple[str, str | None, pd.DataFrame]] = []
         for value in values:
             scoped = frame.loc[series.eq(str(value)) | generic_mask].copy()
             token = f"prospective_{sanitize_token(value)}"
-            slices.append((token, f"Prospective: {value}", scoped.reset_index(drop=True)))
-        return slices
-    return [("all", None, frame.copy())]
+            yield token, f"Prospective: {value}", scoped.reset_index(drop=True)
+        return
+    yield "all", None, frame.copy()
 
 
 def format_selector_axis(

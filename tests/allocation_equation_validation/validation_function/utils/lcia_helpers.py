@@ -18,8 +18,8 @@ class LciaWeightingRequest(NamedTuple):
 
     validation_project_name_root: str
     source: str
-    group_reg: bool | None
-    aggreg_indices: bool
+    agg_reg: bool | None
+    group_indices: bool
     l1_mode: str
     output_format: str
     l1_method: str
@@ -177,9 +177,9 @@ def weighted_l1_fy_global_share(
         L1RegionWeightRequest(
             validation_project_name_root=request.validation_project_name_root,
             source=request.source,
-            group_version=request.matrix_version,
-            group_reg=request.group_reg,
-            aggreg_indices=request.aggreg_indices,
+            agg_version=request.matrix_version,
+            agg_reg=request.agg_reg,
+            group_indices=request.group_indices,
             l1_mode=request.l1_mode,
             output_format=request.output_format,
             l1_method=request.l1_method,
@@ -225,9 +225,9 @@ def l1_weight_coverage_for_lcia_global(
         L1RegionWeightRequest(
             validation_project_name_root=request.validation_project_name_root,
             source=request.source,
-            group_version=request.matrix_version,
-            group_reg=request.group_reg,
-            aggreg_indices=request.aggreg_indices,
+            agg_version=request.matrix_version,
+            agg_reg=request.agg_reg,
+            group_indices=request.group_indices,
             l1_mode=request.l1_mode,
             output_format=request.output_format,
             l1_method=request.l1_method,

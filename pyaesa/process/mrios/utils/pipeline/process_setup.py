@@ -6,8 +6,12 @@ from typing import Optional, Sequence, cast
 import numpy as np
 import pandas as pd
 
-from pyaesa.process.mrios.utils.grouping.grouping import read_group_map
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path
+from pyaesa.process.mrios.utils.aggregation.aggregation import (
+    WEIGHT_COLUMN,
+    agg_map_fingerprint,
+    read_agg_map,
+)
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
     _build_characterization_jobs,
@@ -36,44 +40,52 @@ def _normalize_lcia_methods(
     return cleaned or None
 
 
-def _resolve_grouping_inputs(
+def _resolve_aggregation_inputs(
     *,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: Optional[str],
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: Optional[str],
 ) -> tuple[Optional[Path], Optional[Path], Optional[pd.DataFrame], Optional[pd.DataFrame], dict]:
-    """Resolve grouping file paths, loaded maps, and grouping metadata payload."""
-    group_reg_path: Optional[Path] = None
-    group_sec_path: Optional[Path] = None
-    group_reg_df: Optional[pd.DataFrame] = None
-    group_sec_df: Optional[pd.DataFrame] = None
-    group_version_required = cast(str, group_version)
+    """Resolve aggregation files, loaded maps, and metadata payload."""
+    agg_reg_path: Optional[Path] = None
+    agg_sec_path: Optional[Path] = None
+    agg_reg_df: Optional[pd.DataFrame] = None
+    agg_sec_df: Optional[pd.DataFrame] = None
+    agg_version_required = cast(str, agg_version)
 
-    if group_reg:
-        group_reg_path = _get_group_map_path(
-            source, kind="reg", group_version=group_version_required
-        )
-        if not group_reg_path.exists():
-            raise FileNotFoundError(f"Region grouping file not found: {group_reg_path}")
-        group_reg_df = read_group_map(group_reg_path)
+    if agg_reg:
+        agg_reg_path = _get_agg_map_path(source, kind="reg", agg_version=agg_version_required)
+        if not agg_reg_path.exists():
+            raise FileNotFoundError(
+                f"Region MRIO aggregation and disaggregation file not found: {agg_reg_path}"
+            )
+        agg_reg_df = read_agg_map(agg_reg_path)
 
-    if group_sec:
-        group_sec_path = _get_group_map_path(
-            source, kind="sec", group_version=group_version_required
-        )
-        if not group_sec_path.exists():
-            raise FileNotFoundError(f"Sector grouping file not found: {group_sec_path}")
-        group_sec_df = read_group_map(group_sec_path)
+    if agg_sec:
+        agg_sec_path = _get_agg_map_path(source, kind="sec", agg_version=agg_version_required)
+        if not agg_sec_path.exists():
+            raise FileNotFoundError(
+                f"Sector MRIO aggregation and disaggregation file not found: {agg_sec_path}"
+            )
+        agg_sec_df = read_agg_map(agg_sec_path)
 
-    grouping_payload = {
-        "group_reg": bool(group_reg),
-        "group_sec": bool(group_sec),
-        "group_version": group_version,
-        "group_reg_file": str(group_reg_path) if group_reg else None,
-        "group_sec_file": str(group_sec_path) if group_sec else None,
+    aggregation_payload = {
+        "agg_reg": bool(agg_reg),
+        "agg_sec": bool(agg_sec),
+        "agg_version": agg_version,
+        "agg_reg_file": str(agg_reg_path) if agg_reg else None,
+        "agg_sec_file": str(agg_sec_path) if agg_sec else None,
+        "agg_reg_weighted": bool(agg_reg_df is not None and WEIGHT_COLUMN in agg_reg_df),
+        "agg_sec_weighted": bool(agg_sec_df is not None and WEIGHT_COLUMN in agg_sec_df),
+        "agg_reg_fingerprint": (
+            agg_map_fingerprint(agg_reg_df) if agg_reg_df is not None else None
+        ),
+        "agg_sec_fingerprint": (
+            agg_map_fingerprint(agg_sec_df) if agg_sec_df is not None else None
+        ),
     }
-    return group_reg_path, group_sec_path, group_reg_df, group_sec_df, grouping_payload
+    return agg_reg_path, agg_sec_path, agg_reg_df, agg_sec_df, aggregation_payload
 
 
 def _resolve_year_characterization_jobs(

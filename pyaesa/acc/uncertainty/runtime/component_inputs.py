@@ -77,7 +77,6 @@ def initial_acc_components(
     target_runs: int,
     parent_mode: str,
     parent_max_runs: int,
-    component_figures: bool,
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
     current_run_id: str | None,
@@ -92,14 +91,14 @@ def initial_acc_components(
     asocc_component = initial_asocc_input(
         phase=phase,
         base_allocate_args=scope.base_allocate_args,
-        external_lcia_methods=scope.shared_methods,
+        external_lcia_methods=scope.asocc_lcia_methods,
         config=config,
         external_method=external_method,
         output_format=output_format,
         target_runs=target_runs,
         parent_mode=parent_mode,
         parent_max_runs=parent_max_runs,
-        figures=component_figures,
+        figures=False,
         figure_options=figure_options,
         figure_format=figure_format,
         progress=asocc_progress,
@@ -119,7 +118,6 @@ def initial_acc_components(
         target_runs=target_runs,
         parent_mode=parent_mode,
         parent_max_runs=parent_max_runs,
-        component_figures=component_figures,
         figure_format=figure_format,
         progress=dynamic_cc_progress,
         run_id=run_id,
@@ -143,7 +141,7 @@ def initial_asocc_input(
     *,
     phase: PhasePrinter,
     base_allocate_args: dict[str, Any],
-    external_lcia_methods: list[str],
+    external_lcia_methods: list[str] | None,
     config: dict[str, Any],
     external_method: dict[str, Any] | None,
     output_format: str,
@@ -212,7 +210,7 @@ def deterministic_asocc_input(
     *,
     phase: Any,
     base_asocc_args: dict[str, Any],
-    external_lcia_methods: list[str],
+    external_lcia_methods: list[str] | None,
     external_method: dict[str, Any] | None,
     figures: bool,
     figure_options: dict[str, Any] | None,
@@ -274,7 +272,7 @@ def deterministic_asocc_input(
 def asocc_inventory_report(
     *,
     base_allocate_args: dict[str, Any],
-    external_lcia_methods: list[str],
+    external_lcia_methods: list[str] | None,
     config: dict[str, Any],
     external_method: dict[str, Any] | None,
     output_format: str,
@@ -334,7 +332,6 @@ def _initial_dynamic_cc_input(
     target_runs: int,
     parent_mode: str,
     parent_max_runs: int,
-    component_figures: bool,
     figure_format: dict[str, Any] | None,
     progress: RunProgressPrinter,
     run_id: str | None,
@@ -342,7 +339,7 @@ def _initial_dynamic_cc_input(
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
 ) -> ComponentInput[ACCDynamicCCInput | None]:
-    if not scope.dynamic_branches:
+    if scope.dynamic_branch is None:
         return ComponentInput(input=None, session=None)
     phase.expect_visible(PHASE_B1_AR6_DYNAMIC_CC)
     source_parameters = dynamic_cc_source_parameters(config.get(AR6_DYNAMIC_CC_SOURCE))
@@ -350,14 +347,14 @@ def _initial_dynamic_cc_input(
         phase.announce(PHASE_B1_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
     try:
         dynamic_input = dynamic_cc_input(
-            branch=scope.dynamic_branches[0],
+            branch=scope.dynamic_branch,
             years=years,
             config=config,
             output_format=output_format,
             target_runs=target_runs,
             parent_mode=parent_mode,
             parent_max_runs=parent_max_runs,
-            figures=component_figures,
+            figures=False,
             figure_format=figure_format,
             show_progress=False,
             progress=progress,

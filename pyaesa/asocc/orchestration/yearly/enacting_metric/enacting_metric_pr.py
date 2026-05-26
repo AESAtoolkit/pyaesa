@@ -12,7 +12,7 @@ def record_pr_enacting_metrics(
     state: RunState,
     year: int,
     ssp_scenario: str | None,
-    reg_group_map: dict[str, str],
+    reg_agg_map: dict[str, str],
     pop_iso: pd.Series,
     gdp_iso: pd.Series,
     iso_to_mrio: pd.Series,
@@ -47,8 +47,8 @@ def record_pr_enacting_metrics(
     iso_idx = _build_pr_index(
         pop_index=pop_iso.index,
         iso_to_mrio=iso_to_mrio,
-        reg_group_map=reg_group_map,
-        include_grouped_col=bool(context.group_version_reg),
+        reg_agg_map=reg_agg_map,
+        include_aggregated_col=bool(context.agg_version_reg),
     )
     pop_iso_series = pd.Series(pop_iso.to_numpy(), index=iso_idx)
     gdpcap_series = pd.Series(gdpcap_iso.to_numpy(), index=iso_idx)
@@ -74,8 +74,8 @@ def _build_pr_index(
     *,
     pop_index: pd.Index,
     iso_to_mrio: pd.Series,
-    reg_group_map: dict[str, str],
-    include_grouped_col: bool,
+    reg_agg_map: dict[str, str],
+    include_aggregated_col: bool,
 ) -> pd.MultiIndex:
     """Build canonical PR enacting metric index."""
     iso_index = pop_index.astype(str)
@@ -93,20 +93,21 @@ def _build_pr_index(
             f"Missing iso3 labels (sample): {sample}"
         )
     mrio_codes_original = pd.Index(mrio_mapped.astype(str), name="mrio_code")
-    if include_grouped_col and reg_group_map:
-        missing = sorted({str(code) for code in mrio_codes_original if code not in reg_group_map})
+    if include_aggregated_col and reg_agg_map:
+        missing = sorted({str(code) for code in mrio_codes_original if code not in reg_agg_map})
         if missing:
             raise ValueError(
-                "Regional grouping map is missing MRIO labels referenced by PR inputs. "
+                "Regional MRIO aggregation and disaggregation map is missing MRIO "
+                "labels referenced by PR inputs. "
                 f"Missing labels (sample): {missing[:10]}"
             )
-        mrio_codes_grouped = pd.Index(
-            [reg_group_map[str(code)] for code in mrio_codes_original],
-            name="grouped_mrio_code",
+        mrio_codes_aggregated = pd.Index(
+            [reg_agg_map[str(code)] for code in mrio_codes_original],
+            name="aggregated_mrio_code",
         ).astype(str)
         return pd.MultiIndex.from_arrays(
-            [iso_index, mrio_codes_original, mrio_codes_grouped],
-            names=["iso3_code", "mrio_code", "grouped_mrio_code"],
+            [iso_index, mrio_codes_original, mrio_codes_aggregated],
+            names=["iso3_code", "mrio_code", "aggregated_mrio_code"],
         )
     return pd.MultiIndex.from_arrays(
         [iso_index, mrio_codes_original],

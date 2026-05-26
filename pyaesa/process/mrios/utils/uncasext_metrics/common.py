@@ -16,7 +16,7 @@ _PREPARED_ATTR = "_uncasext_prepared_inputs"
 
 @dataclass
 class _PreparedUncasextInputs:
-    """Cached clipped/regrouped inputs reused across UNCASExt metric builders."""
+    """Cached clipped/reaggregated inputs reused across UNCASExt metric builders."""
 
     x_vec: pd.Series
     y_fd_raw: pd.DataFrame
@@ -204,7 +204,7 @@ def _get_prepared_uncasext_inputs(
     matrix_version: str | None = None,
     saved_dir: Path | None = None,
 ) -> _PreparedUncasextInputs:
-    """Return cached clipped/regrouped inputs, computing them once per IOSystem."""
+    """Return cached clipped/reaggregated inputs, computing them once per IOSystem."""
     prepared = getattr(iosys, _PREPARED_ATTR, None)
     if not isinstance(prepared, _PreparedUncasextInputs):
         prepared = _build_prepared_uncasext_inputs(iosys)

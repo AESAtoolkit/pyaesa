@@ -157,8 +157,8 @@ def _run(
 ) -> types_mod._L2RunContext:
     context: Any = SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
-        aggreg_indices=False,
+        agg_version=None,
+        group_indices=False,
         needs_lcia=True,
         lcia_methods=["gwp100_lcia"],
         logger=SimpleNamespace(warning=lambda _message: None),

@@ -20,8 +20,10 @@ from pyaesa.asocc.uncertainty.schema.public_rows import (
 )
 from pyaesa.asocc.uncertainty.sources.inter_mrio import (
     INTER_MRIO_SOURCE,
+    InterMrioInterpolationMatches,
     InterMrioPlan,
     apply_inter_mrio_uncertainty_to_matrix,
+    inter_mrio_interpolation_matches,
 )
 from pyaesa.asocc.uncertainty.sources.lcia import (
     LCIA_SOURCE,
@@ -33,6 +35,7 @@ from pyaesa.asocc.uncertainty.sources.projection import (
     PROJECTION_SOURCE,
     ProjectionPlan,
     apply_projection_uncertainty_to_matrix,
+    collapse_projection_public_template,
     projection_indices_for_l2_reuse_years,
     projection_public_row_template,
     projection_value_matrix_for_indices,
@@ -60,6 +63,7 @@ def sample_compact_batch(
     source_units: SourceUnitIntervalSamples | None = None,
     external_run_indices_by_label: dict[str, np.ndarray] | None = None,
     lcia_public_axis: Any = None,
+    inter_mrio_matches: InterMrioInterpolationMatches | None = None,
 ) -> tuple[Any, Any, Any]:
     """Return public identity, run indices, and compact value matrix for one batch."""
     if (
@@ -115,6 +119,7 @@ def sample_compact_batch(
             unit_values=None
             if source_units is None
             else source_units.values_for(INTER_MRIO_SOURCE),
+            matches=inter_mrio_matches,
         )
     template, values = append_external_monte_carlo_matrix(
         template=template,
@@ -145,6 +150,45 @@ def sample_compact_batch(
         value_column=ASOCC_VALUE_COLUMN,
     )
     return identity, batch.run_indices(), values
+
+
+def compact_batch_inter_mrio_matches(
+    *,
+    loaded,
+    inter_mrio_plan: InterMrioPlan | None,
+    lcia_plan: LCIAPlan | None,
+    projection_plan: ProjectionPlan | None,
+) -> InterMrioInterpolationMatches | None:
+    """Return reusable inter-MRIO row matches for stable compact batch templates."""
+    if inter_mrio_plan is None:
+        return None
+    return inter_mrio_interpolation_matches(
+        template=_compact_inter_mrio_input_template(
+            loaded=loaded,
+            lcia_plan=lcia_plan,
+            projection_plan=projection_plan,
+        ),
+        plan=inter_mrio_plan,
+    )
+
+
+def _compact_inter_mrio_input_template(
+    *,
+    loaded,
+    lcia_plan: LCIAPlan | None,
+    projection_plan: ProjectionPlan | None,
+):
+    """Return the public row template that reaches inter-MRIO interpolation."""
+    if lcia_plan is not None:
+        template = lcia_public_row_template(plan=lcia_plan)
+        return (
+            collapse_projection_public_template(template=template)
+            if projection_plan is not None
+            else template
+        )
+    if projection_plan is not None:
+        return projection_public_row_template(plan=projection_plan)
+    return loaded.rows
 
 
 def _stable_value_matrix(*, loaded, batch) -> Any:

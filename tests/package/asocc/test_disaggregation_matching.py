@@ -37,14 +37,14 @@ class _Scope:
 def _signature(**overrides) -> dict:
     signature = {
         "source": "oecd_v2025",
-        "group_version": None,
-        "group_reg": False,
-        "group_sec": False,
+        "agg_version": None,
+        "agg_reg": False,
+        "agg_sec": False,
         "fu_code": "L2.a.a",
         "studied_indices_tag": "demo",
         "l1_reg_aggreg": "post",
         "variant_tag": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "projection_mode": None,
         "reg_window": None,
         "lcia_methods": ["gwp100_lcia"],
@@ -62,9 +62,9 @@ def _request() -> PrepareContextRequest:
     return PrepareContextRequest(
         project_name="disaggregation_matching",
         source="oecd_v2025",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         years=[2005],
         historical_year_cap=None,
         refresh=False,
@@ -84,7 +84,7 @@ def _request() -> PrepareContextRequest:
         l2_reuse_years=None,
         l1_reg_aggreg="post",
         variant_tag=None,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         intermediate_outputs=False,
         output_source_label=None,
@@ -138,11 +138,11 @@ def test_pick_scope_prefers_exact_minimal_scope_and_reports_missing_years() -> N
 def test_build_user_rerun_message_carries_selector_scope() -> None:
     request = SimpleNamespace(
         source="oecd_v2025",
-        group_reg=False,
-        group_sec=True,
-        group_version="elec",
+        agg_reg=False,
+        agg_sec=True,
+        agg_version="elec",
         s_p=["Electricity"],
-        aggreg_indices=False,
+        group_indices=False,
         l1_reg_aggreg="post",
     )
     message = mod._build_user_rerun_message(  # noqa: SLF001
@@ -157,21 +157,21 @@ def test_build_user_rerun_message_carries_selector_scope() -> None:
     assert "2006" in message
     assert "2008" in message
 
-    ungrouped_message = mod._build_user_rerun_message(  # noqa: SLF001
+    grouped_message = mod._build_user_rerun_message(  # noqa: SLF001
         selector_name="target",
         request=SimpleNamespace(
             source="oecd_v2025",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
             s_p=["D"],
-            aggreg_indices=True,
+            group_indices=True,
             l1_reg_aggreg="post",
         ),
         missing_years=[2005],
     )
-    assert ungrouped_message
-    assert "grouped" in ungrouped_message
+    assert grouped_message
+    assert "grouped" in grouped_message
 
 
 def test_match_selector_scope_reports_missing_metadata(allocation_dummy_repo) -> None:

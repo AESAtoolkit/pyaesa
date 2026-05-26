@@ -33,7 +33,7 @@ def compute_ut_td_l2(
         stacked = _stack_frame_to_series(x_to_rc)
         out = _safe_divide_series(stacked, fd_global)
     else:
-        grouped = cast(pd.DataFrame, x_to_rc.groupby(level="s_p").sum(min_count=1))
-        stacked = _stack_frame_to_series(grouped.T)
+        aggregated = cast(pd.DataFrame, x_to_rc.groupby(level="s_p").sum(min_count=1))
+        stacked = _stack_frame_to_series(aggregated.T)
         out = _safe_divide_series(stacked, fd_global)
     return out.to_frame(int(year))

@@ -10,7 +10,7 @@ from pyaesa.ar6_cc.uncertainty.runtime.models import (
 )
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent, write_via_atomic_temp
 from pyaesa.shared.runtime.text import join_user_text_lines
-from pyaesa.shared.uncertainty_assessment.io.tables import public_run_artifact_readme_lines
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_readme_lines
 
 
 def write_ar6_cc_source_methods(*, path: Path, rows: pd.DataFrame) -> None:

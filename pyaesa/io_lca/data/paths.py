@@ -41,16 +41,16 @@ class IOLCAPaths:
 def resolve_io_lca_paths(
     *,
     project_name: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
 ) -> IOLCAPaths:
     """Resolve deterministic project paths for IO-LCA and figures."""
-    grouped = bool(group_reg or group_sec)
+    aggregated = bool(agg_reg or agg_sec)
     project_base = project_outputs_root(project_name=project_name)
     source_version_token = (
-        _sanitize_piece(str(group_version))
-        if grouped and str(group_version).strip()
+        _sanitize_piece(str(agg_version))
+        if aggregated and str(agg_version).strip()
         else "original_version"
     )
     return IOLCAPaths(

@@ -355,7 +355,7 @@ https://doi.org/10.1016/j.spc.2024.12.013
 3.5 ASOCC methods and uncertainty sources
 
 The allocation method definitions and mathematical expressions are defined by
-UNCASExt (de Bantel et al., 2026). For precise references per
+the UNCASExt framework (de Bantel et al., 2026). For precise references per
 allocation method, see methodological_note__asocc_fus_allocation_methods.pdf,
 which is an abstract of the UNCASExt article. Also cite the selected input data
 sections used by the run, for example MRIO, population and GDP, LCIA methods,

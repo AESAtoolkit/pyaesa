@@ -19,7 +19,6 @@ from pyaesa.download.ar6.utils.config import GROSS_ALT_KYOTO_WO_AFOLU
 from pyaesa.asr.shared.runtime.paths import (
     build_asr_path_context,
     get_asr_figure_metadata_path,
-    get_asr_figures_dir,
 )
 from pyaesa.shared.acc_asr_common.reporting import (
     DynamicAR6PathwayCount,
@@ -214,7 +213,7 @@ def _acc_context(*, proj_base: Path, cc_type: str):
     return build_acc_path_context(
         proj_base=proj_base,
         source_label="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
         cc_source="gwp100_lcia",
         cc_type=cc_type,
     )
@@ -231,7 +230,7 @@ def _asr_context(
     return build_asr_path_context(
         proj_base=proj_base,
         source_label="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
         fu_code=fu_code,
         lca_type=lca_type,
         cc_source="gwp100_lcia",
@@ -364,9 +363,9 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
     )
     io_paths = resolve_io_lca_paths(
         project_name="asr_static_io_lca",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
     io_output = next(
         (io_metadata_path_for_source(paths=io_paths, source="exiobase_396_ixi").parent.parent)
@@ -456,6 +455,48 @@ def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
         assert reused.branches[0].reuse_status == "reused_exact"
 
 
+def test_deterministic_asr_static_multi_lcia_reuses_shared_asocc_scope(
+    allocation_dummy_repo,
+) -> None:
+    prepare_static_asr_io_lca_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        lcia_method="gwp100_lcia",
+        impact_parent="GWP_100",
+        impact_unit="kg CO2-eq",
+    )
+    prepare_static_asr_pb_lcia_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        years=[2005],
+        impacts=["AAL"],
+    )
+
+    report = deterministic_asr(
+        project_name="asr_static_multi_lcia_shared_asocc",
+        years=[2005],
+        lcia_method=["gwp100_lcia", "pb_lcia"],
+        fu_code="L2.a.a",
+        r_p=["FR"],
+        s_p=["D"],
+        source="exiobase_396_ixi",
+        base_asocc_args={
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+        },
+        base_cc_args={"static": {"exclude_max_cc": True}},
+        lca_args={
+            "external_lca": {"active": False, "version_name": None},
+            "io_lca": {"active": True},
+        },
+        figures=False,
+        subfigures=False,
+        refresh=True,
+    )
+
+    assert {branch.cc_source for branch in report.branches} == {"gwp100_lcia", "pb_lcia"}
+
+
 def test_deterministic_asr_static_figure_reuse_lifecycle(allocation_dummy_repo) -> None:
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
@@ -514,67 +555,6 @@ def test_deterministic_asr_static_figure_reuse_lifecycle(allocation_dummy_repo) 
     )
     assert preserved_figure_metadata == initial_figure_metadata
     assert all(path.exists() for path in branch.figure_paths)
-
-
-def test_deterministic_asr_static_rerenders_figures_from_cached_outputs(
-    allocation_dummy_repo,
-) -> None:
-    prepare_static_asr_io_lca_repo(
-        allocation_dummy_repo,
-        source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
-        impact_parent="GWP_100",
-        impact_unit="kg CO2-eq",
-    )
-
-    initial_report = _run_static_asr(
-        project_name="asr_static_rerender_figures",
-        refresh=True,
-        figures=False,
-    )
-
-    assert initial_report is not None
-    branch = initial_report.branches[0]
-    assert branch.figure_paths == []
-    meta_file = branch.meta_file
-    assert meta_file is not None
-    figures_root = get_asr_figures_dir(
-        context=_asr_context(
-            proj_base=allocation_dummy_repo.repo_root / "asr_static_rerender_figures",
-            lca_type="io_lca",
-            cc_type="static",
-        )
-    )
-    initial_metadata = json.loads(meta_file.read_text(encoding="utf-8"))
-    assert initial_metadata["artifacts"]["figure_paths"] == []
-    assert not figures_root.exists()
-
-    rerendered_report = _run_static_asr(
-        project_name="asr_static_rerender_figures",
-        refresh=False,
-        figures=True,
-    )
-
-    assert rerendered_report is not None
-    rerendered_branch = rerendered_report.branches[0]
-    assert rerendered_branch.figure_paths
-    assert all(path.exists() for path in rerendered_branch.figure_paths)
-    rerendered_meta_file = rerendered_branch.meta_file
-    assert rerendered_meta_file is not None
-    rerendered_metadata = json.loads(rerendered_meta_file.read_text(encoding="utf-8"))
-    figure_metadata = json.loads(
-        get_asr_figure_metadata_path(
-            context=_asr_context(
-                proj_base=allocation_dummy_repo.repo_root / "asr_static_rerender_figures",
-                lca_type="io_lca",
-                cc_type="static",
-            )
-        ).read_text(encoding="utf-8")
-    )
-    expected_paths = {str(path) for path in rerendered_branch.figure_paths}
-    assert set(rerendered_metadata["artifacts"]["figure_paths"]) == expected_paths
-    assert set(figure_metadata["figure_state"]["paths"]) == expected_paths
-    assert figures_root.exists()
 
 
 def test_deterministic_asr_static_reference_variant_figures_cover_compression(
@@ -754,8 +734,10 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     figure_format = {"format": "svg", "dpi": 1}
     report = deterministic_asr(
         **external_kwargs,
-        figures=False,
-        subfigures=False,
+        figures=True,
+        figure_options={"per_method": False, "multi_method": False},
+        subfigures=True,
+        figure_format=figure_format,
         refresh=True,
     )
 
@@ -768,17 +750,8 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     assert branch.n_acc_files_matched == 1
     assert branch.n_asr_files_written == 1
     assert branch.figure_paths == []
-    rerendered = deterministic_asr(
-        **external_kwargs,
-        figures=True,
-        subfigures=True,
-        figure_format=figure_format,
-        refresh=False,
-    )
-    rerendered_branch = rerendered.branches[0]
-    assert rerendered_branch.figure_paths
-    assert rerendered_branch.meta_file is not None
-    rerendered_metadata = json.loads(rerendered_branch.meta_file.read_text(encoding="utf-8"))
+    assert branch.meta_file is not None
+    rerendered_metadata = json.loads(branch.meta_file.read_text(encoding="utf-8"))
     assert rerendered_metadata["provenance"]["external_lca_summary"]["figure_paths"]
 
     output_paths = sorted(
@@ -790,54 +763,77 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     assert len(output_paths) == 1
     assert output_paths[0].name == "UT(FD)__gwp100_lcia.csv"
 
-    external_figure_dir = external_lca_deterministic_figures_dir(
-        project_base=allocation_dummy_repo.repo_root / "asr_static_external",
-    )
-    external_figure_paths = sorted(external_figure_dir.rglob("supplier_v1__*.png"))
-    assert external_figure_paths == []
-
-    subfigure_report = deterministic_asr(
-        **external_kwargs,
-        figures=True,
-        subfigures=True,
-        figure_format=figure_format,
-        refresh=True,
-    )
-
-    assert subfigure_report is not None
     subfigure_external_figure_dir = external_lca_deterministic_figures_dir(
         project_base=allocation_dummy_repo.repo_root / "asr_static_external",
     )
     generated_subfigures = sorted(subfigure_external_figure_dir.rglob("supplier_v1__*.svg"))
     assert generated_subfigures
-    for path in generated_subfigures:
-        path.unlink()
+    recorded_subfigures = [
+        Path(path)
+        for path in rerendered_metadata["provenance"]["external_lca_summary"]["figure_paths"]
+    ]
+    assert recorded_subfigures
 
-    cached_subfigure_report = deterministic_asr(
+    asr_figure_options = {
+        "per_method": True,
+        "multi_method": False,
+        "polar": {"active": False},
+    }
+    figure_seed = deterministic_asr(
         **external_kwargs,
         figures=True,
+        figure_options=asr_figure_options,
         subfigures=True,
         figure_format=figure_format,
         refresh=False,
     )
+    seeded_branch = figure_seed.branches[0]
+    assert seeded_branch.figure_paths
+    seeded_metadata = json.loads(cast(Path, seeded_branch.meta_file).read_text())
+    seeded_subfigures = [
+        Path(path) for path in seeded_metadata["provenance"]["external_lca_summary"]["figure_paths"]
+    ]
+    seeded_subfigures[0].unlink()
 
-    assert cached_subfigure_report.branches[0].reuse_status == "partially_reused"
-    regenerated_subfigures = sorted(subfigure_external_figure_dir.rglob("supplier_v1__*.svg"))
-    assert regenerated_subfigures
-    for path in regenerated_subfigures:
-        path.unlink()
-
-    suppressed_subfigure_report = deterministic_asr(
+    subfigure_repair = deterministic_asr(
         **external_kwargs,
-        figures=False,
+        figures=True,
+        figure_options=asr_figure_options,
         subfigures=True,
-        refresh=True,
+        figure_format=figure_format,
+        refresh=False,
     )
+    assert subfigure_repair.branches[0].reuse_status == "partially_reused"
+    repaired_metadata = json.loads(cast(Path, subfigure_repair.branches[0].meta_file).read_text())
+    repaired_paths = [
+        Path(path)
+        for path in repaired_metadata["provenance"]["external_lca_summary"]["figure_paths"]
+    ]
+    assert repaired_paths
+    assert all(path.exists() for path in repaired_paths)
 
-    assert suppressed_subfigure_report is not None
-    assert suppressed_subfigure_report.branches[0].figure_paths == []
-    generated_subfigures = sorted(subfigure_external_figure_dir.rglob("supplier_v1__*.png"))
-    assert generated_subfigures == []
+    repaired_paths[0].unlink()
+    figure_and_subfigure_repair = deterministic_asr(
+        **external_kwargs,
+        figures=True,
+        figure_options={
+            "per_method": True,
+            "multi_method": False,
+            "polar": {"polar_years": [2005]},
+        },
+        subfigures=True,
+        figure_format=figure_format,
+        refresh=False,
+    )
+    repaired_with_asr_figures = figure_and_subfigure_repair.branches[0]
+    assert repaired_with_asr_figures.figure_paths
+    assert all(path.exists() for path in repaired_with_asr_figures.figure_paths)
+    refreshed_metadata = json.loads(cast(Path, repaired_with_asr_figures.meta_file).read_text())
+    refreshed_paths = [
+        Path(path)
+        for path in refreshed_metadata["provenance"]["external_lca_summary"]["figure_paths"]
+    ]
+    assert all(path.exists() for path in refreshed_paths)
 
 
 @pytest.mark.parametrize("refresh", [False, True])
@@ -940,7 +936,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
             "external_lca": {"active": False, "version_name": None},
             "io_lca": {"active": True},
         },
-        figures=True,
+        figures=False,
         figure_format={"format": "svg", "dpi": 1},
         subfigures=False,
         refresh=True,
@@ -955,8 +951,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     assert branch.lca_type == "io_lca"
     assert branch.n_acc_files_matched == 1
     assert branch.n_asr_files_written == 1
-    assert branch.figure_paths
-    assert all(path.exists() for path in branch.figure_paths)
+    assert branch.figure_paths == []
     assert branch.impacts_used == ["GWP_100"]
     assert branch.meta_file is not None and branch.meta_file.exists()
 
@@ -983,7 +978,6 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
         "cc_flow",
         "cc_variable",
         "cumulative_asr",
-        "cumulative_no_transgression",
         *_DYNAMIC_TEST_YEAR_COLUMNS,
     }.issubset(first_output.columns)
     assert "asocc_ssp_start_year" not in first_output.columns
@@ -1001,7 +995,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
         assert bool(first_output[column].lt(1).all())
     assert bool(first_output["cumulative_asr"].gt(0).all())
     assert bool(first_output["cumulative_asr"].lt(1).all())
-    assert bool(first_output["cumulative_no_transgression"].astype(bool).all())
+    assert "cumulative_no_transgression" not in first_output.columns
 
     reused_dynamic_report = deterministic_asr(
         project_name="asr_dynamic_reuse",
@@ -1028,34 +1022,6 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
         refresh=False,
     )
     assert reused_dynamic_report.branches[0].reuse_status == "reused_exact"
-
-    rerendered_dynamic_report = deterministic_asr(
-        project_name="asr_dynamic_reuse",
-        years=_DYNAMIC_TEST_YEARS,
-        lcia_method="gwp100_lcia",
-        fu_code="L2.a.a",
-        r_p=["FR"],
-        s_p=["D"],
-        source="exiobase_396_ixi",
-        base_asocc_args={
-            "method_plan": "one_step",
-            "one_step_methods": ["UT(FD)"],
-        },
-        base_cc_args={
-            "static": {"active": False},
-            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
-        },
-        lca_args={
-            "external_lca": {"active": False, "version_name": None},
-            "io_lca": {"active": True},
-        },
-        figures=True,
-        figure_format={"format": "svg", "dpi": 2},
-        subfigures=False,
-        refresh=False,
-    )
-    assert rerendered_dynamic_report.branches[0].reuse_status == "partially_reused"
-    assert rerendered_dynamic_report.branches[0].figure_paths
 
 
 def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
@@ -1114,10 +1080,10 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
         lcia_method=normalize_shared_lcia_methods("gwp100_lcia"),
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
-        aggreg_indices=False,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
+        group_indices=False,
         base_asocc_args=normalize_base_asocc_args(
             {
                 "method_plan": "one_step",

@@ -10,14 +10,13 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 
 from ....runtime.output.contracts import IdentifierSchema
 from pyaesa.asocc.orchestration.write.tables.wide_validation import (
     normalize_existing_wide_table,
     validate_wide_frame,
 )
-
-_CSV_WRITE_ROWS_PER_CHUNK = 50_000
 
 
 def _format_csv_float_block(values: np.ndarray) -> np.ndarray:
@@ -28,7 +27,7 @@ def _format_csv_float_block(values: np.ndarray) -> np.ndarray:
     present = ~missing
     present_values = values[present]
     out[present] = np.fromiter(
-        (format(float(value), ".12g") for value in present_values),
+        (format(float(value), ".17g") for value in present_values),
         dtype=object,
         count=int(present_values.size),
     )
@@ -41,11 +40,15 @@ def _write_csv_table(path: Path, frame: pd.DataFrame) -> None:
     year_positions = [idx for idx, column in enumerate(columns) if column.isdigit()]
     id_positions = [idx for idx, column in enumerate(columns) if not column.isdigit()]
     row_count = len(frame)
+    chunk_rows = _wide_csv_write_chunk_rows(
+        id_column_count=len(id_positions),
+        year_column_count=len(year_positions),
+    )
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(columns)
-        for start in range(0, row_count, _CSV_WRITE_ROWS_PER_CHUNK):
-            stop = min(start + _CSV_WRITE_ROWS_PER_CHUNK, row_count)
+        for start in range(0, row_count, chunk_rows):
+            stop = min(start + chunk_rows, row_count)
             id_values = frame.iloc[start:stop, id_positions].to_numpy(dtype=object, copy=True)
             id_values[pd.isna(id_values)] = ""
             year_values = (
@@ -56,6 +59,13 @@ def _write_csv_table(path: Path, frame: pd.DataFrame) -> None:
                 (*identifier_row, *year_row)
                 for identifier_row, year_row in zip(id_values, year_text, strict=True)
             )
+
+
+def _wide_csv_write_chunk_rows(*, id_column_count: int, year_column_count: int) -> int:
+    object_bytes = np.dtype(object).itemsize * (int(id_column_count) + int(year_column_count))
+    numeric_bytes = np.dtype(np.float64).itemsize * int(year_column_count)
+    mask_bytes = np.dtype(np.bool_).itemsize * int(year_column_count)
+    return memory_bounded_rows(bytes_per_row=max(1, object_bytes + numeric_bytes + mask_bytes))
 
 
 def _write_parquet_table(path: Path, frame: pd.DataFrame) -> None:

@@ -51,9 +51,9 @@ def prepare_io_lca_deterministic_prerequisite(
     report = deterministic_io_lca(**deterministic_args)
     paths = resolve_io_lca_paths(
         project_name=request.project_name,
-        group_reg=request.group_reg,
-        group_sec=request.group_sec,
-        group_version=request.group_version,
+        agg_reg=request.agg_reg,
+        agg_sec=request.agg_sec,
+        agg_version=request.agg_version,
     )
     metadata_path = io_metadata_path_for_source(paths=paths, source=request.source)
     payload = load_scope_manifest(path=metadata_path, function_name="deterministic_io_lca")
@@ -61,9 +61,9 @@ def prepare_io_lca_deterministic_prerequisite(
     signature = build_io_lca_signature(
         project_name=request.project_name,
         source=request.source,
-        group_reg=request.group_reg,
-        group_sec=request.group_sec,
-        group_version=request.group_version,
+        agg_reg=request.agg_reg,
+        agg_sec=request.agg_sec,
+        agg_version=request.agg_version,
         years=request.years,
         methods=request.lcia_methods,
         fu_code=request.fu_spec.fu_code,
@@ -72,7 +72,7 @@ def prepare_io_lca_deterministic_prerequisite(
         },
         upstream_analysis=False,
         upstream_stages=3,
-        aggreg_indices=request.aggreg_indices,
+        group_indices=request.group_indices,
         output_format=output_format,
     )
     _scope_key, scope = get_scope(payload=payload, signature=signature)

@@ -7,12 +7,16 @@ import pandas as pd
 import pytest
 
 from pyaesa import uncertainty_io_lca
+from pyaesa.io_lca.uncertainty.runner import run_uncertainty_io_lca_component
 from pyaesa.process.mrios.utils.io.paths import (
-    _get_group_map_path,
+    _get_agg_map_path,
     _get_metadata_path,
     _get_year_saved_dir,
 )
 from pyaesa.shared.lcia.paths import carbon_account_cov_path
+from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import component_inventory_payload
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import iter_compact_run_matrix
+from tests.package.helpers.io_lca_dummy_repo import add_io_lca_dummy_method
 
 
 @pytest.mark.parametrize(
@@ -34,19 +38,19 @@ def test_uncertainty_io_lca_rejects_invalid_public_mc_parameter_blocks(
         )
 
 
-def _write_sector_group_map(*, io_lca_dummy_repo, rows: list[tuple[str, str]]) -> None:
-    group_map_path = _get_group_map_path(
+def _write_sector_agg_map(*, io_lca_dummy_repo, rows: list[tuple[str, str]]) -> None:
+    agg_map_path = _get_agg_map_path(
         io_lca_dummy_repo.source,
         kind="sec",
-        group_version="elec",
+        agg_version="elec",
     )
-    group_map_path.parent.mkdir(parents=True, exist_ok=True)
+    agg_map_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
             "original_classification": [row[0] for row in rows],
-            "grouped_mrio": [row[1] for row in rows],
+            "aggregated_mrio": [row[1] for row in rows],
         }
-    ).to_csv(group_map_path, index=False)
+    ).to_csv(agg_map_path, index=False)
 
 
 def _append_country_cov(
@@ -70,9 +74,23 @@ def _append_country_cov(
     ).to_csv(path, index=False)
 
 
-def _add_grouped_sector_scope(*, io_lca_dummy_repo, year: int | None = None) -> None:
+def _read_csv_compact_run_matrix(*, path: str | Path, column_count: int) -> pd.DataFrame:
+    chunks: list[pd.DataFrame] = []
+    columns = [str(index) for index in range(column_count)]
+    for run_indices, values in iter_compact_run_matrix(
+        path=Path(path),
+        output_format="csv_compact",
+        column_count=column_count,
+    ):
+        chunk = pd.DataFrame(values, columns=columns)
+        chunk.insert(0, "run_index", run_indices)
+        chunks.append(chunk)
+    return pd.concat(chunks, ignore_index=True)
+
+
+def _add_aggregated_sector_scope(*, io_lca_dummy_repo, year: int | None = None) -> None:
     effective_year = io_lca_dummy_repo.available_year if year is None else int(year)
-    _write_sector_group_map(
+    _write_sector_agg_map(
         io_lca_dummy_repo=io_lca_dummy_repo,
         rows=[("A", "Electricity"), ("B", "Electricity")],
     )
@@ -111,12 +129,12 @@ def _add_grouped_sector_scope(*, io_lca_dummy_repo, year: int | None = None) -> 
         ),
         encoding="utf-8",
     )
-    grouped_dir = _get_year_saved_dir(
+    aggregated_dir = _get_year_saved_dir(
         io_lca_dummy_repo.source,
         effective_year,
         matrix_version="elec",
     )
-    target_dir = grouped_dir / "enacting_metrics" / "level_2" / io_lca_dummy_repo.lcia_method
+    target_dir = aggregated_dir / "enacting_metrics" / "level_2" / io_lca_dummy_repo.lcia_method
     target_dir.mkdir(parents=True, exist_ok=True)
     impacts = pd.Index(["AAL", "BI FD GHG"], name="impact")
     columns = pd.MultiIndex.from_tuples([("FR", "Electricity")], names=["r_c", "s_p"])
@@ -127,19 +145,19 @@ def _add_grouped_sector_scope(*, io_lca_dummy_repo, year: int | None = None) -> 
     ).to_pickle(target_dir / "e_cba_td_rc_sp.pickle")
 
 
-def _add_grouped_region_scope(*, io_lca_dummy_repo, include_2020: bool = False) -> None:
-    group_map_path = _get_group_map_path(
+def _add_aggregated_region_scope(*, io_lca_dummy_repo, include_2020: bool = False) -> None:
+    agg_map_path = _get_agg_map_path(
         io_lca_dummy_repo.source,
         kind="reg",
-        group_version="eu27",
+        agg_version="eu27",
     )
-    group_map_path.parent.mkdir(parents=True, exist_ok=True)
+    agg_map_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
             "original_classification": ["FR", "DE"],
-            "grouped_mrio": ["EU27", "EU27"],
+            "aggregated_mrio": ["EU27", "EU27"],
         }
-    ).to_csv(group_map_path, index=False)
+    ).to_csv(agg_map_path, index=False)
     metadata_path = _get_metadata_path(io_lca_dummy_repo.source, matrix_version="eu27")
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     years_payload = {
@@ -179,12 +197,12 @@ def _add_grouped_region_scope(*, io_lca_dummy_repo, include_2020: bool = False) 
         encoding="utf-8",
     )
     for year in [2019, 2020] if include_2020 else [2019]:
-        grouped_dir = _get_year_saved_dir(
+        aggregated_dir = _get_year_saved_dir(
             io_lca_dummy_repo.source,
             year,
             matrix_version="eu27",
         )
-        target_dir = grouped_dir / "enacting_metrics" / "level_1" / io_lca_dummy_repo.lcia_method
+        target_dir = aggregated_dir / "enacting_metrics" / "level_1" / io_lca_dummy_repo.lcia_method
         target_dir.mkdir(parents=True, exist_ok=True)
         impacts = pd.Index(["AAL", "BI FD GHG"], name="impact")
         pd.DataFrame(
@@ -258,7 +276,10 @@ def test_uncertainty_io_lca_fixed_outputs_and_reuse(
         "r_f",
         "impact_unit",
     ]
-    runs = pd.read_csv(manifest.artifacts["lca_runs"])
+    runs = _read_csv_compact_run_matrix(
+        path=manifest.artifacts["lca_runs"],
+        column_count=len(identity),
+    )
     assert runs.columns.tolist() == ["run_index", "0", "1", "2", "3"]
     assert runs["run_index"].tolist() == [0, 1, 2, 3]
     summary = pd.read_csv(manifest.artifacts["summary_stats_runs"])
@@ -321,6 +342,75 @@ def test_uncertainty_io_lca_fixed_outputs_and_reuse(
     assert refreshed.status == "complete"
     assert not stale_run_file.exists()
     assert not stale_upstream_file.exists()
+
+
+def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
+    io_lca_dummy_repo,
+) -> None:
+    add_io_lca_dummy_method(
+        io_lca_dummy_repo,
+        lcia_method="gwp100_lcia",
+        impacts=["GWP_100"],
+        parent_by_impact={"GWP_100": "GWP_100"},
+    )
+    inventory = component_inventory_payload(
+        composite_family="asr",
+        component_name="io_lca",
+        target_runs=2,
+        parent_mode="fixed",
+        parent_max_runs=2,
+    )
+    kwargs = {
+        "uncertainty_config": _uncertainty_config(
+            {"fixed": {"active": True, "n_runs": 2}, "convergence": {"active": False}}
+        ),
+        "output_format": "csv_compact",
+        "figures": False,
+        "figure_options": None,
+        "figure_format": None,
+        "phase": None,
+        "component_inventory": inventory,
+        "run_id": "mc_shared_component",
+        "show_progress": False,
+        "progress": None,
+        "finalize_component_inventory": True,
+    }
+    first = run_uncertainty_io_lca_component(
+        base_io_lca_args={
+            **_base_args(
+                io_lca_dummy_repo=io_lca_dummy_repo,
+                project_name="uncertainty_io_lca_component_method_scope",
+            ),
+            "years": [io_lca_dummy_repo.available_year],
+            "r_f": ["FR"],
+        },
+        refresh=True,
+        **cast(Any, kwargs),
+    ).report.manifest
+
+    second = run_uncertainty_io_lca_component(
+        base_io_lca_args={
+            **_base_args(
+                io_lca_dummy_repo=io_lca_dummy_repo,
+                project_name="uncertainty_io_lca_component_method_scope",
+            ),
+            "lcia_method": "gwp100_lcia",
+            "years": [io_lca_dummy_repo.available_year],
+            "r_f": ["FR"],
+        },
+        refresh=False,
+        **cast(Any, kwargs),
+    ).report.manifest
+
+    assert first.run_id == "mc_shared_component"
+    assert second.run_id != first.run_id
+    assert first.artifacts is not None
+    assert second.artifacts is not None
+    first_identity = pd.read_csv(first.artifacts["public_row_identity"])
+    second_identity = pd.read_csv(second.artifacts["public_row_identity"])
+    assert first_identity["lcia_method"].drop_duplicates().tolist() == ["pb_lcia"]
+    assert second_identity["lcia_method"].drop_duplicates().tolist() == ["gwp100_lcia"]
+    assert second_identity["impact"].drop_duplicates().tolist() == ["GWP_100"]
 
 
 def test_uncertainty_io_lca_writes_parquet_outputs(io_lca_dummy_repo) -> None:
@@ -494,7 +584,7 @@ def test_uncertainty_io_lca_convergence_can_reach_stability(io_lca_dummy_repo) -
 def test_uncertainty_io_lca_l1_aggregated_rows_use_aggregate_country_cov(
     io_lca_dummy_repo,
 ) -> None:
-    _append_country_cov("DE, FR", asset_name="reg_cbca_covs_aggreg_indices.csv")
+    _append_country_cov("DE, FR", asset_name="reg_cbca_covs_group_indices.csv")
     manifest = uncertainty_io_lca(
         base_io_lca_args={
             "project_name": "uncertainty_io_lca_aggregated_l1",
@@ -503,7 +593,7 @@ def test_uncertainty_io_lca_l1_aggregated_rows_use_aggregate_country_cov(
             "lcia_method": io_lca_dummy_repo.lcia_method,
             "fu_code": "L1.b",
             "r_p": ["FR", "DE"],
-            "aggreg_indices": True,
+            "group_indices": True,
         },
         uncertainty_config=_uncertainty_config(
             {"fixed": {"active": True, "n_runs": 3}, "convergence": {"active": False}}
@@ -526,7 +616,10 @@ def test_uncertainty_io_lca_l1_aggregated_rows_use_aggregate_country_cov(
     assert identity["r_p"].unique().tolist() == ["DE, FR"]
     methods = pd.read_csv(manifest.artifacts["source_methods"])
     assert methods["primary_cov_key"].tolist() == ["DE, FR"]
-    runs = pd.read_csv(manifest.artifacts["lca_runs"])
+    runs = _read_csv_compact_run_matrix(
+        path=manifest.artifacts["lca_runs"],
+        column_count=len(identity),
+    )
     assert runs.shape == (3, 3)
     figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
     assert figure_paths
@@ -576,17 +669,17 @@ def test_uncertainty_io_lca_l2_requires_and_uses_sector_mapping(io_lca_dummy_rep
     assert methods["primary_cov_key"].tolist() == ["Electricity"]
 
 
-def test_uncertainty_io_lca_grouped_sector_uses_grouped_public_cov(
+def test_uncertainty_io_lca_aggregated_sector_uses_aggregated_public_cov(
     io_lca_dummy_repo,
 ) -> None:
-    _add_grouped_sector_scope(io_lca_dummy_repo=io_lca_dummy_repo)
+    _add_aggregated_sector_scope(io_lca_dummy_repo=io_lca_dummy_repo)
 
     manifest = uncertainty_io_lca(
         base_io_lca_args={
-            "project_name": "uncertainty_io_lca_grouped_sector",
+            "project_name": "uncertainty_io_lca_aggregated_sector",
             "source": io_lca_dummy_repo.source,
-            "group_sec": True,
-            "group_version": "elec",
+            "agg_sec": True,
+            "agg_version": "elec",
             "years": [io_lca_dummy_repo.available_year],
             "lcia_method": io_lca_dummy_repo.lcia_method,
             "fu_code": "L2.c.b",
@@ -608,21 +701,24 @@ def test_uncertainty_io_lca_grouped_sector_uses_grouped_public_cov(
     assert identity["s_p"].tolist() == ["Electricity", "Electricity"]
     methods = pd.read_csv(manifest.artifacts["source_methods"])
     assert methods["primary_cov_key"].tolist() == ["Electricity"]
-    runs = pd.read_csv(manifest.artifacts["lca_runs"])
+    runs = _read_csv_compact_run_matrix(
+        path=manifest.artifacts["lca_runs"],
+        column_count=len(identity),
+    )
     assert runs.shape == (2, 3)
 
 
-def test_uncertainty_io_lca_grouped_region_uses_group_cov(
+def test_uncertainty_io_lca_aggregated_region_uses_agg_cov(
     io_lca_dummy_repo,
 ) -> None:
-    _add_grouped_region_scope(io_lca_dummy_repo=io_lca_dummy_repo)
+    _add_aggregated_region_scope(io_lca_dummy_repo=io_lca_dummy_repo)
 
     manifest = uncertainty_io_lca(
         base_io_lca_args={
-            "project_name": "uncertainty_io_lca_grouped_region",
+            "project_name": "uncertainty_io_lca_aggregated_region",
             "source": io_lca_dummy_repo.source,
-            "group_reg": True,
-            "group_version": "eu27",
+            "agg_reg": True,
+            "agg_version": "eu27",
             "years": [io_lca_dummy_repo.available_year],
             "lcia_method": io_lca_dummy_repo.lcia_method,
             "fu_code": "L1.a",
@@ -663,7 +759,7 @@ def test_uncertainty_io_lca_validation_errors_are_public(io_lca_dummy_repo) -> N
                     io_lca_dummy_repo=io_lca_dummy_repo,
                     project_name="uncertainty_io_lca_bad_bool",
                 ),
-                "group_reg": "false",
+                "agg_reg": "false",
             },
             uncertainty_config=_uncertainty_config(
                 {"fixed": {"active": True, "n_runs": 2}, "convergence": {"active": False}}

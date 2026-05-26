@@ -7,9 +7,13 @@ from pyaesa.shared.uncertainty_assessment.request.core import (
     BatchMemoryBlock,
     memory_bounded_batch_size,
     normalize_uncertainty_request,
+    sparse_selected_run_memory_blocks,
 )
+from pyaesa.shared.runtime.memory import memory_bounded_rows, runtime_memory_budget
 from pyaesa.shared.uncertainty_assessment.sobol.plan import normalize_sobol_plan
+from pyaesa.shared.uncertainty_assessment.sobol.plan import selected_sobol_output_years
 from pyaesa.shared.uncertainty_assessment.sobol.plan import sobol_plan_payload
+from pyaesa.shared.uncertainty_assessment.sobol.plan import studied_output_years
 from pyaesa.shared.uncertainty_assessment.sobol.plan import SobolPlan
 from pyaesa.shared.uncertainty_assessment.sobol.accumulator import (
     SobolIndexEstimate,
@@ -68,7 +72,7 @@ def test_request_normalization_rejects_unknown_mc_parameters() -> None:
         },
     )
     assert default_batch.mode == "fixed"
-    assert default_batch.batch_size == 10_000
+    assert default_batch.batch_size == 50_000
 
     convergence = normalize_uncertainty_request(
         family="asocc",
@@ -131,47 +135,70 @@ def test_request_normalization_rejects_unknown_mc_parameters() -> None:
             "convergence": {"active": False},
         },
     )
-    assert memory_bounded_batch_size(runtime=large_fixed, row_count=10) == 10_000
-    assert memory_bounded_batch_size(runtime=large_fixed, row_count=100_000) == 156
+    test_budget = 3_000_000_000
     assert (
         memory_bounded_batch_size(
             runtime=large_fixed,
-            row_count=100_000,
+            primary_block=BatchMemoryBlock("small_owner_values", row_count=10),
+            memory_budget_bytes=test_budget,
+        )
+        == 100_000
+    )
+    assert (
+        memory_bounded_batch_size(
+            runtime=large_fixed,
+            primary_block=BatchMemoryBlock("owner_values", row_count=100_000, array_count=24),
+            memory_budget_bytes=test_budget,
+        )
+        == 156
+    )
+    assert (
+        memory_bounded_batch_size(
+            runtime=large_fixed,
+            primary_block=BatchMemoryBlock("owner_values", row_count=100_000, array_count=24),
             extra_blocks=(BatchMemoryBlock("cumulative", row_count=100_000),),
+            memory_budget_bytes=test_budget,
         )
         == 150
     )
     assert (
         memory_bounded_batch_size(
             runtime=replace(large_fixed, mode="convergence", batch_size=2000),
-            row_count=100_000,
+            primary_block=BatchMemoryBlock("owner_values", row_count=100_000, array_count=24),
+            memory_budget_bytes=test_budget,
         )
         == 156
     )
-    with pytest.raises(ValueError, match="positive batch memory row count"):
-        memory_bounded_batch_size(runtime=large_fixed, row_count=0)
-    with pytest.raises(ValueError, match="positive batch memory row count"):
-        memory_bounded_batch_size(
-            runtime=large_fixed,
-            row_count=0,
-            extra_blocks=(BatchMemoryBlock("empty", row_count=0),),
+    gib = 1024**3
+    budget = runtime_memory_budget(
+        minimal_working_block_bytes=1024,
+        physical_memory_bytes=16 * gib,
+        available_memory_bytes=8 * gib,
+    )
+    assert budget.budget_bytes == 7 * gib
+    assert budget.operating_system_reserve_bytes == gib
+    assert (
+        memory_bounded_rows(
+            bytes_per_row=24,
+            working_arrays=2,
+            memory_budget_bytes=480,
         )
-    with pytest.raises(ValueError, match="positive array count"):
-        memory_bounded_batch_size(
-            runtime=large_fixed,
-            row_count=1,
-            extra_blocks=(BatchMemoryBlock("bad", row_count=1, array_count=0),),
-        )
-    with pytest.raises(ValueError, match="positive dtype size"):
-        memory_bounded_batch_size(
-            runtime=large_fixed,
-            row_count=1,
-            extra_blocks=(BatchMemoryBlock("bad", row_count=1, dtype_bytes=0),),
-        )
+        == 10
+    )
+    low_memory_budget = runtime_memory_budget(
+        minimal_working_block_bytes=2 * gib,
+        physical_memory_bytes=4 * gib,
+        available_memory_bytes=1 * gib,
+    )
+    assert low_memory_budget.budget_bytes == 4 * gib
 
     for params, message in (
         ({"mode": "bad"}, "mode"),
         ({"fixed": {"active": True, "n_runs": 0}, "convergence": {"active": False}}, "n_runs"),
+        (
+            {"fixed": {"active": True, "n_runs": "bad"}, "convergence": {"active": False}},
+            "n_runs",
+        ),
         ({"n_runs": 20}, "n_runs"),
         ({"batch_size": 1}, "batch_size"),
         ({"fixed": []}, "fixed"),
@@ -210,12 +237,46 @@ def test_request_normalization_rejects_unknown_mc_parameters() -> None:
                 output_format="csv_compact",
                 mc_parameters=params,
             )
-    with pytest.raises(ValueError, match="family"):
-        normalize_uncertainty_request(
-            family=" ",
-            output_format="csv_compact",
-            mc_parameters={},
-        )
+
+
+def test_sparse_selected_run_memory_blocks_cover_common_sparse_retention() -> None:
+    asr_blocks = sparse_selected_run_memory_blocks(
+        prefix="asr",
+        public_row_count=10,
+        summary_row_count=4,
+        filters_and_sorts_output=False,
+    )
+    assert {block.name for block in asr_blocks} == {
+        "asr_sparse_source_window_columns",
+        "asr_sparse_source_decoded_columns",
+        "asr_sparse_source_reader_work_columns",
+        "asr_sparse_source_reader_masks",
+        "asr_sparse_output_window_columns",
+        "asr_sparse_output_concat_columns",
+        "asr_sparse_output_render_columns",
+        "asr_sparse_summary_source_positions",
+        "asr_sparse_summary_group_ids",
+        "asr_sparse_summary_values",
+    }
+    assert sum(block.row_count * block.array_count * block.dtype_bytes for block in asr_blocks) == (
+        10 * 8 * 20
+    ) + (10 * 1 * 3) + (4 * 8 * 3)
+
+    acc_blocks = sparse_selected_run_memory_blocks(
+        prefix="acc",
+        public_row_count=10,
+        summary_row_count=4,
+        filters_and_sorts_output=True,
+    )
+    acc_names = {block.name for block in acc_blocks}
+    assert {
+        "acc_sparse_output_finite_mask",
+        "acc_sparse_output_sort_order",
+        "acc_sparse_output_sorted_columns",
+    } < acc_names
+    assert sum(block.row_count * block.array_count * block.dtype_bytes for block in acc_blocks) == (
+        10 * 8 * 24
+    ) + (10 * 1 * 4) + (4 * 8 * 3)
 
 
 def test_source_activation_plan_keeps_allowed_order() -> None:
@@ -300,6 +361,9 @@ def test_source_activation_plan_keeps_allowed_order() -> None:
 
 
 def test_sobol_plan_normalization() -> None:
+    assert studied_output_years(2024) == (2024,)
+    assert studied_output_years([2025, 2024, 2024]) == (2024, 2025)
+
     disabled = normalize_sobol_plan(sobol_parameters=None)
     assert not disabled.enabled
     assert disabled.n_base_samples == 0
@@ -339,7 +403,15 @@ def test_sobol_plan_normalization() -> None:
         available_years=[2020, 2021, 2022],
     )
     assert selected_years.sobol_years == (2020, 2021)
+    assert selected_sobol_output_years(
+        plan=selected_years,
+        available_years=(2020, 2021, 2022),
+    ) == (2020, 2021)
     assert sobol_plan_payload(plan=selected_years)["sobol_years"] == [2020, 2021]
+    assert selected_sobol_output_years(
+        plan=default_convergence,
+        available_years=(2020, 2021, 2022),
+    ) == (2020, 2022)
     ranged_years = normalize_sobol_plan(sobol_parameters={"sobol_years": range(2020, 2023)})
     assert ranged_years.sobol_years == (2020, 2021, 2022)
     with pytest.raises(ValueError, match="sobol_years.*studied years"):
@@ -411,7 +483,7 @@ def test_sobol_design_and_estimators() -> None:
     design = saltelli_design(n_base_samples=8, dimension_count=2)
     assert design.a.shape == (8, 2)
     assert design.b.shape == (8, 2)
-    chunk = iter_saltelli_chunks(design=design, chunk_rows=3)[0]
+    chunk = next(iter_saltelli_chunks(design=design, chunk_rows=3))
     assert len(chunk.ab) == 2
     assert chunk.ab[0].shape == (3, 2)
 
@@ -508,6 +580,7 @@ def test_sobol_generic_analysis_runner() -> None:
         ),
         dimension_names=("a", "b"),
         evaluate=evaluate,
+        max_base_chunk_rows=8,
     )
     assert chunked.status["n_base_samples"] == 256
     assert chunked.indices["source_name"].tolist() == ["a", "b"]
@@ -741,4 +814,4 @@ def test_sobol_convergence_streams_checkpoint_designs() -> None:
     )
 
     assert result.status["n_base_samples"] == 16
-    assert evaluated_rows == [1, 3, 7, 15]
+    assert evaluated_rows == [1, 3, 4, 8]

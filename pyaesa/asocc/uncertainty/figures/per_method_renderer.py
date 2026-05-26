@@ -1,6 +1,6 @@
 """Per method aSoCC uncertainty figure job planning."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -30,9 +30,8 @@ def plan_per_method_jobs(
     context: FigureContext,
     plotter: Callable[..., list[Path]],
     kind: str,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     """Plan one uncertainty figure per method and final scope."""
-    jobs: list[PlannedFigureJob] = []
     for method in _methods(rows):
         method_rows = rows.loc[rows["__method"].astype(str).eq(method)].copy()
         for scoped_rows in figure_ssp_slices(method_rows, context=context):
@@ -55,27 +54,24 @@ def plan_per_method_jobs(
                         selector_title=selector_title,
                         studied_year=single_requested_year(context),
                     )
-                    jobs.append(
-                        PlannedFigureJob(
-                            kind=kind,
-                            label=output_base.name,
-                            render=_planned_plot(
-                                plotter=plotter,
-                                frame=selector_rows,
-                                output_stem=output_base,
-                                title=title,
-                                context=context,
-                                group_legend=False,
-                                include_impact_in_label=True,
-                                include_method_in_label=False,
-                            ),
+                    yield PlannedFigureJob(
+                        kind=kind,
+                        label=output_base.name,
+                        render=_planned_plot(
+                            plotter=plotter,
+                            frame=selector_rows,
+                            output_stem=output_base,
+                            title=title,
+                            context=context,
+                            group_legend=False,
+                            include_impact_in_label=True,
+                            include_method_in_label=False,
                         ),
                     )
-    return jobs
 
 
-def figure_ssp_slices(frame: pd.DataFrame, *, context: FigureContext) -> list[pd.DataFrame]:
-    """Return final SSP slices from a prepared figure frame."""
+def figure_ssp_slices(frame: pd.DataFrame, *, context: FigureContext) -> Iterator[pd.DataFrame]:
+    """Yield final SSP slices from a prepared figure frame."""
     if "__figure_ssp_scope" in frame.columns:
         return preplanned_scenario_scope_slices(
             frame,
@@ -96,15 +92,19 @@ def _ssp_scope_identity_exclusions() -> set[str]:
     return {*SUMMARY_STAT_COLUMNS, VALUE_ARRAY_COLUMN}
 
 
-def lcia_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
-    """Return per method LCIA method slices."""
+def lcia_slices(frame: pd.DataFrame) -> Iterator[pd.DataFrame]:
+    """Yield per method LCIA method slices."""
     values = visible_values(frame, "lcia_method")
     if not values:
-        return [frame.copy()]
-    return [frame.loc[frame["lcia_method"].astype(str).eq(value)].copy() for value in values]
+        yield frame.copy()
+        return
+    for value in values:
+        yield frame.loc[frame["lcia_method"].astype(str).eq(value)].copy()
 
 
-def _per_method_lcia_slices(frame: pd.DataFrame, *, context: FigureContext) -> list[pd.DataFrame]:
+def _per_method_lcia_slices(
+    frame: pd.DataFrame, *, context: FigureContext
+) -> Iterator[pd.DataFrame]:
     del context
     return lcia_slices(frame)
 

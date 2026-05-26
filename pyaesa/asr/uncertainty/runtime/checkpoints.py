@@ -25,11 +25,7 @@ from pyaesa.shared.runtime.reporting.run_progress import (
     monte_carlo_run_progress,
 )
 from pyaesa.shared.runtime.reporting.composite_phase_index import PHASE_A_LCA, PHASE_B2_ACC
-from pyaesa.shared.uncertainty_assessment.orchestration import (
-    final_component_figures_required,
-    progress_begin,
-    progress_complete,
-)
+from pyaesa.shared.uncertainty_assessment.orchestration import progress_begin, progress_complete
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
@@ -77,8 +73,6 @@ def run_asr_checkpoints(
     base_allocate_args: dict[str, Any],
     output_format: str,
     phase: PhasePrinter,
-    render_subfigures: bool,
-    subfigures: bool,
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
     run_id: str | None,
@@ -111,6 +105,7 @@ def run_asr_checkpoints(
                     r_f=r_f,
                     mrio_scope=mrio_scope,
                     asocc_config=asocc_config,
+                    base_allocate_args=base_allocate_args,
                     base_cc_args=base_cc_args,
                     source_config=source_config.acc_config,
                     external_method=external_method,
@@ -119,8 +114,8 @@ def run_asr_checkpoints(
                     target_runs=checkpoint,
                     parent_mode=runtime.mode,
                     parent_max_runs=runtime.n_runs,
-                    figures=render_subfigures,
-                    subfigures=render_subfigures,
+                    figures=False,
+                    subfigures=False,
                     figure_options=figure_options,
                     figure_format=figure_format,
                     run_id=run_id,
@@ -143,7 +138,7 @@ def run_asr_checkpoints(
                     target_runs=checkpoint,
                     parent_mode=runtime.mode,
                     parent_max_runs=runtime.n_runs,
-                    figures=render_subfigures,
+                    figures=False,
                     figure_format=figure_format,
                     run_id=run_id,
                     lca_progress=lca_progress,
@@ -174,20 +169,15 @@ def run_asr_checkpoints(
                 completed=state.completed_runs,
                 max_runs=progress_max_runs,
                 mode=progress_mode,
-                persistent=str(progress_mode) == "fixed",
                 component=progress_component,
             )
             if convergence is not None and bool(convergence.get("reached")):
                 break
         finalize_components = state.completed_runs > 0 and (
-            _live_component_session(acc_session) or _live_component_session(lca_session)
+            (acc_session is not None and acc_session.requires_finalization())
+            or (lca_session is not None and lca_session.requires_finalization())
         )
-        render_final_figures = final_component_figures_required(
-            runtime_mode=runtime.mode,
-            subfigures=subfigures,
-            completed_runs=state.completed_runs,
-        )
-        if finalize_components or render_final_figures:
+        if finalize_components:
             silent_phase: Any = NullPhasePrinter()
             silent_acc_progress = monte_carlo_run_progress(
                 source="uncertainty_acc",
@@ -208,6 +198,7 @@ def run_asr_checkpoints(
                 r_f=r_f,
                 mrio_scope=mrio_scope,
                 asocc_config=asocc_config,
+                base_allocate_args=base_allocate_args,
                 base_cc_args=base_cc_args,
                 source_config=source_config.acc_config,
                 external_method=external_method,
@@ -216,8 +207,8 @@ def run_asr_checkpoints(
                 target_runs=state.completed_runs,
                 parent_mode=runtime.mode,
                 parent_max_runs=runtime.n_runs,
-                figures=render_final_figures,
-                subfigures=render_final_figures,
+                figures=False,
+                subfigures=False,
                 figure_options=figure_options,
                 figure_format=figure_format,
                 run_id=run_id,
@@ -240,7 +231,7 @@ def run_asr_checkpoints(
                 target_runs=state.completed_runs,
                 parent_mode=runtime.mode,
                 parent_max_runs=runtime.n_runs,
-                figures=render_final_figures,
+                figures=False,
                 figure_format=figure_format,
                 run_id=run_id,
                 lca_progress=silent_lca_progress,
@@ -273,6 +264,7 @@ def _checkpoint_acc(
     r_f: str | list[str] | None,
     mrio_scope: dict[str, Any],
     asocc_config: dict[str, Any],
+    base_allocate_args: dict[str, Any],
     base_cc_args: dict[str, Any],
     source_config: dict[str, Any],
     external_method: dict[str, Any] | None,
@@ -290,6 +282,7 @@ def _checkpoint_acc(
     component_session: Any | None,
     finalize_component_inventory: bool,
 ) -> tuple[UncertaintyManifest, Any | None]:
+    """Run or reuse the aCC component at one ASR checkpoint."""
     phase.announce(PHASE_B2_ACC, "uncertainty_acc")
     report = acc_inventory_report(
         project_name=project_name,
@@ -302,6 +295,7 @@ def _checkpoint_acc(
         r_f=r_f,
         mrio_scope=mrio_scope,
         asocc_config=asocc_config,
+        base_allocate_args=base_allocate_args,
         base_cc_args=base_cc_args,
         source_config=source_config,
         external_method=external_method,
@@ -323,16 +317,6 @@ def _checkpoint_acc(
         finalize_component_inventory=finalize_component_inventory,
     )
     return report.report.manifest, report.session
-
-
-def _live_component_session(session: Any | None) -> bool:
-    return bool(
-        session is not None
-        and (
-            getattr(session, "output_state", None) is not None
-            or getattr(session, "output_states", None) is not None
-        )
-    )
 
 
 def _checkpoint_lca(
@@ -358,6 +342,7 @@ def _checkpoint_lca(
     component_session: Any | None,
     finalize_component_inventory: bool,
 ) -> tuple[LCAUncertaintyInput, Any | None]:
+    """Run or reuse the LCA component at one ASR checkpoint."""
     # External LCA inventories are immutable within one ASR run; IO-LCA owns
     # checkpoint scoped component execution.
     if lca_type != IO_LCA_FAMILY and not figures:

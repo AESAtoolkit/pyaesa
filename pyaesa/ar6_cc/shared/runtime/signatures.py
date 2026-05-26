@@ -1,5 +1,9 @@
 """Canonical AR6 CC selector normalization and scope-signature ownership."""
 
+from pyaesa.download.ar6.utils.config import (
+    RECOMMENDED_AR6_CATEGORIES,
+    normalize_ar6_categories,
+)
 from pyaesa.shared.selectors.scenarios import DEFAULT_SSP_SCENARIOS, normalize_ssp_tokens
 
 from pyaesa.ar6_cc.deterministic.request.contracts import (
@@ -8,18 +12,12 @@ from pyaesa.ar6_cc.deterministic.request.contracts import (
 )
 
 AR6_CC_OUTPUT_CONTRACT = "study_period_table_with_post_study_period_companion_v1"
-DEFAULT_AR6_CATEGORIES: list[str] = ["C1", "C2", "C3", "C4"]
+DEFAULT_AR6_CATEGORIES: list[str] = list(RECOMMENDED_AR6_CATEGORIES)
 
 
 def normalize_cc_category(category: str | list[str] | None) -> list[str]:
     """Normalize an AR6 category selector, applying the public default when omitted."""
-    if category is None:
-        return list(DEFAULT_AR6_CATEGORIES)
-    values = [category] if isinstance(category, str) else category
-    cats = [str(item).strip() for item in values]
-    if not cats or any(not item for item in cats):
-        raise ValueError("category must be a non empty category string or list.")
-    return sorted(cats)
+    return normalize_ar6_categories(category)
 
 
 def normalize_cc_ssp_scenario(ssp_scenario: str | list[str] | None) -> list[str]:

@@ -92,7 +92,7 @@ def with_validation_method_column(
     """Return frame with one canonical internal method label column.
 
     The validation suite consumes current deterministic aSoCC outputs, where
-    method identity is published through ``l1_l2_method`` plus optional split
+    method identity is published through ``l1_l2_method`` plus optional separate
     columns such as ``l1_method`` and ``l2_method``. This helper centralizes
     that schema into one internal label used across all validators.
     """

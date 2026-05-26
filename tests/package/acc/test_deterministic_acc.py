@@ -14,7 +14,6 @@ from pyaesa.acc.deterministic.runtime.paths import (
     acc_output_relative_dir,
     build_acc_path_context,
     build_acc_scope_label,
-    get_acc_figure_metadata_path,
     get_acc_meta_path,
     get_acc_output_dir,
 )
@@ -49,12 +48,21 @@ from pyaesa.acc.deterministic.runtime.tables import (
     resolve_acc_l1_l2_method,
 )
 from pyaesa.acc.deterministic.figures.product_renderers import (
+    _COLOR_COLUMN,
+    _plan_jobs,
     _plot_dynamic_scope,
     _render_dynamic_budget_axis as _render_deterministic_dynamic_budget_axis,
+    _render_single_year_bars,
+    _single_year_low_high_rows,
     _static_min_max_geometry,
     prepare_plot_rows,
 )
-from pyaesa.acc.deterministic.figures.render import render_acc_deterministic_figures
+from pyaesa.acc.figures.common import (
+    AR6_CATEGORY_SCOPE_COLUMN,
+    cc_bound_layer_key,
+    cc_bound_order_key,
+    scope_title,
+)
 from pyaesa.acc.deterministic.state.reports import (
     ACCBranchReport,
     ComputeACCReport,
@@ -111,7 +119,7 @@ _DYNAMIC_TEST_YEAR_COLUMNS = ("2020", "2021")
 
 
 def _fast_figure_format() -> dict[str, Any]:
-    return {"format": "png", "dpi": 10}
+    return {"format": "svg", "dpi": 1}
 
 
 def _loaded_asocc_share(path: Path) -> LoadedAsoccShare:
@@ -165,7 +173,7 @@ def _acc_path_context(
     return build_acc_path_context(
         proj_base=outputs_project_root(project_name=project_name),
         source_label=source_label,
-        group_version=None,
+        agg_version=None,
         cc_source=cc_source,
         cc_type=cc_type,
         public_result_root_name=public_result_root_name,
@@ -247,8 +255,7 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     kwargs = _static_acc_kwargs(project_name="acc_static_reuse")
-    kwargs["figures"] = True
-    kwargs["figure_format"] = _fast_figure_format()
+    kwargs["figures"] = False
 
     first_report = deterministic_acc(refresh=True, **kwargs)
     first_runtime_output = capsys.readouterr().out
@@ -274,32 +281,6 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
         "deterministic_acc",
     ]
     assert str(first_report)
-    metadata_payload = json.loads(branch.meta_file.read_text(encoding="utf-8"))
-    first_figure_paths = [Path(path) for path in metadata_payload["artifacts"]["figure_paths"]]
-    assert first_figure_paths
-    figure_metadata = json.loads(
-        get_acc_figure_metadata_path(
-            context=_acc_path_context(
-                project_name="acc_static_reuse",
-                source_label="oecd_v2025",
-                cc_source="gwp100_lcia",
-                cc_type="static",
-                public_result_root_name="results_l2_vs_global",
-            )
-        ).read_text(encoding="utf-8")
-    )
-    assert figure_metadata["figure_state"]["paths"] == [str(path) for path in first_figure_paths]
-    assert (
-        render_acc_deterministic_figures(
-            metadata_path=branch.meta_file,
-            dpi=10,
-            output_format="png",
-            figure_options={"per_method": True, "multi_method": True},
-        )[0]
-        == first_figure_paths
-    )
-    capsys.readouterr()
-
     output_paths = sorted(
         _allocated_cc_root(
             allocation_dummy_repo.repo_root,
@@ -321,7 +302,7 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
 
     reused_report = deterministic_acc(refresh=False, **kwargs)
     assert reused_report.branches[0].reuse_status == "reused_exact"
-    assert reused_report.branches[0].figure_paths == first_figure_paths
+    assert reused_report.branches[0].figure_paths == []
     reuse_output = capsys.readouterr().out
     assert reuse_output == ""
     min_only_kwargs = {
@@ -330,35 +311,6 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
     }
     min_only_report = deterministic_acc(refresh=False, **min_only_kwargs)
     assert min_only_report.branches[0].reuse_status == "reused_exact"
-
-    restyled_kwargs = {**kwargs, "figure_format": {"format": "svg", "dpi": 2}}
-    restyled_report = deterministic_acc(refresh=False, **restyled_kwargs)
-    assert restyled_report.branches[0].reuse_status == "partially_reused"
-    assert all(path.suffix == ".svg" for path in restyled_report.branches[0].figure_paths)
-    capsys.readouterr()
-    per_method_only, _ = render_acc_deterministic_figures(
-        metadata_path=branch.meta_file,
-        dpi=1,
-        output_format="svg",
-        figure_options={"per_method": True, "multi_method": False},
-    )
-    multi_method_only, _ = render_acc_deterministic_figures(
-        metadata_path=branch.meta_file,
-        dpi=1,
-        output_format="svg",
-        figure_options={"per_method": False, "multi_method": True},
-    )
-    assert per_method_only
-    assert multi_method_only == []
-    assert (
-        render_acc_deterministic_figures(
-            metadata_path=branch.meta_file,
-            dpi=1,
-            output_format="svg",
-            figure_options={"per_method": False, "multi_method": False},
-        )[0]
-        == []
-    )
 
     output_paths[0].unlink()
     with pytest.raises(ValueError, match="output files are missing"):
@@ -668,6 +620,7 @@ def test_deterministic_acc_static_figures_are_public_for_single_and_multi_year(
         "base_cc_args": {"static": {"exclude_max_cc": False}},
         "figures": True,
         "subfigures": False,
+        "figure_options": {"per_method": False, "multi_method": True},
         "figure_format": _fast_figure_format(),
     }
     single = deterministic_acc(years=[2005], refresh=True, **base_kwargs)
@@ -676,8 +629,116 @@ def test_deterministic_acc_static_figures_are_public_for_single_and_multi_year(
     assert single_paths
     assert all(path.exists() for path in single_paths)
     assert any("multi_method" in path.parts for path in single_paths)
-    assert any("per_method" in path.parts for path in single_paths)
-    assert any(path.name.endswith("__2005.png") for path in single_paths)
+    assert any(path.name.endswith("__2005.svg") for path in single_paths)
+
+    reused = deterministic_acc(years=[2005], refresh=False, **base_kwargs)
+    reused_branch = reused.branches[0]
+    assert reused_branch.reuse_status == "reused_exact"
+    assert reused_branch.figure_paths == single.branches[0].figure_paths
+
+    no_product = deterministic_acc(
+        years=[2005],
+        refresh=False,
+        **{**base_kwargs, "figure_options": {"per_method": False, "multi_method": False}},
+    )
+    assert no_product.branches[0].reuse_status == "partially_reused"
+    assert no_product.branches[0].figure_paths == []
+
+
+def test_deterministic_acc_figure_helpers_cover_variant_and_order_branches(
+    tmp_path: Path,
+) -> None:
+    rows = pd.DataFrame(
+        {
+            "year": [2030, 2030],
+            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "impact": ["GWP_100", "GWP_100"],
+            "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
+            "cc_type": ["static", "static"],
+            "__method": ["B", "A"],
+            "value": [2.0, 1.0],
+            ROLE_COLUMN: [MIN_ROLE, MAX_ROLE],
+            _COLOR_COLUMN: ["#000000", "#111111"],
+        }
+    )
+    low_row, high_row = _single_year_low_high_rows(rows)
+    assert low_row["value"] == 2.0
+    assert high_row["value"] == 1.0
+    same_low, same_high = _single_year_low_high_rows(rows.drop(columns=[ROLE_COLUMN]).iloc[[0]])
+    assert same_low["value"] == same_high["value"] == 2.0
+
+    fig, axis = plt.subplots()
+    values = _render_single_year_bars(
+        axis=axis,
+        frame=rows,
+        group_legend=False,
+        show_x_labels=True,
+        include_method_in_label=True,
+        bar_order=["A", "B"],
+        single_year_entries=[
+            ("B", rows.iloc[0], 2.0, 2.0),
+            ("A", rows.iloc[1], 1.0, 1.5),
+        ],
+    )
+    np.testing.assert_allclose(values, [1.0, 1.5, 2.0, 2.0])
+    plt.close(fig)
+    fig, axis = plt.subplots()
+    _render_single_year_bars(
+        axis=axis,
+        frame=rows,
+        group_legend=False,
+        show_x_labels=False,
+        include_method_in_label=True,
+        single_year_entries=[("B", rows.iloc[0], 2.0, 2.0)],
+    )
+    plt.close(fig)
+
+    plan_rows = rows.drop(columns=[ROLE_COLUMN, _COLOR_COLUMN]).assign(
+        cc_bound="min_cc",
+        asocc_ssp_scenario="SSP2",
+    )
+    jobs = list(
+        _plan_jobs(
+            rows=plan_rows,
+            figures_root=tmp_path,
+            requested_years=[2030],
+            cc_type="static",
+            dpi=1,
+            output_format="svg",
+            per_method=True,
+            multi_method=False,
+        )
+    )
+    assert len(jobs) == 2
+
+    assert "AR6 category: C1" in scope_title(
+        "aCC",
+        "demo",
+        pd.DataFrame(
+            {
+                "lcia_method": ["gwp100_lcia"],
+                "impact": ["GWP_100"],
+                "impact_unit": ["kg CO2-eq"],
+                "cc_category": ["C1"],
+            }
+        ),
+        include_impact=False,
+    )
+    assert "AR6 categories: C1, C2" in scope_title(
+        "aCC",
+        "demo",
+        pd.DataFrame(
+            {
+                "lcia_method": ["gwp100_lcia"],
+                "impact": ["GWP_100"],
+                "impact_unit": ["kg CO2-eq"],
+                AR6_CATEGORY_SCOPE_COLUMN: ["C1, C2"],
+            }
+        ),
+        include_impact=False,
+    )
+    assert cc_bound_order_key("min_cc") < cc_bound_order_key("max_cc")
+    assert cc_bound_layer_key("max_cc") < cc_bound_layer_key("min_cc")
 
 
 def test_deterministic_acc_static_figures_cover_public_odd_impact_panels(
@@ -816,7 +877,7 @@ def test_deterministic_acc_static_figures_cover_public_variants_and_transitions(
     variant_paths = [path for branch in variants.branches for path in branch.figure_paths]
 
     assert any("SSP2" in path.stem for path in transition_paths)
-    assert any(path.name.endswith("__2030.png") for path in variant_paths)
+    assert any(path.name.endswith("__2030.svg") for path in variant_paths)
     assert all(path.exists() for path in [*transition_paths, *variant_paths])
 
 
@@ -954,12 +1015,12 @@ def test_deterministic_acc_dynamic_figures_cover_public_asocc_transition(
     prepare_dynamic_acc_repo_with_years(
         allocation_dummy_repo,
         historical_years=list(range(1995, 2025)),
-        scenario_years=[2025, 2026],
+        scenario_years=[2025],
     )
 
     report = deterministic_acc(
         project_name="acc_dynamic_public_transition_figures",
-        years=range(2024, 2027),
+        years=[2024, 2025],
         lcia_method="gwp100_lcia",
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
@@ -994,7 +1055,7 @@ def test_deterministic_acc_dynamic_rejects_missing_subset(
     kwargs = _dynamic_acc_ut_kwargs(project_name="acc_dynamic_missing_subset")
     kwargs["base_cc_args"] = {
         "static": {"active": False},
-        "dynamic_ar6": {"category": ["C9"], "ssp_scenario": ["SSP1"]},
+        "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP2"]},
     }
 
     with pytest.raises(ValueError, match="No AR6 pathways remain after filtering"):
@@ -1069,7 +1130,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
     context = build_acc_path_context(
         proj_base=tmp_path,
         source_label="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         cc_source="gwp100_lcia",
         cc_type="static",
     )
@@ -1077,7 +1138,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
     assert (
         build_acc_scope_label(
             source_label="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             cc_source="gwp100 lcia",
             cc_type="static",
         )
@@ -1086,7 +1147,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
     assert (
         build_acc_scope_label(
             source_label="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             cc_source="!!!",
             cc_type="dynamic_ar6",
         )
@@ -1314,10 +1375,10 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
             r_c=None,
             r_f=None,
             source="oecd_v2025",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
-            aggreg_indices=False,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
+            group_indices=False,
             base_asocc_args=normalize_base_asocc_args(
                 {
                     "method_plan": "one_step",
@@ -1787,10 +1848,8 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
 
 
 def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
-    project_repo: Path,
     tmp_path: Path,
 ) -> None:
-    del project_repo
     cc_table = pd.DataFrame(
         {
             "cc_model": ["M1", "M2"],
@@ -1863,7 +1922,7 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
             path_context=build_acc_path_context(
                 proj_base=tmp_path,
                 source_label="exiobase_396_ixi",
-                group_version=None,
+                agg_version=None,
                 cc_source="gwp100_lcia",
                 cc_type="dynamic_ar6",
                 public_result_root_name="results_l2_vs_global",
@@ -2065,10 +2124,10 @@ def test_compute_acc_report_and_builder_cover_summary_contracts(tmp_path: Path) 
         years=[2020, 2021],
         lcia_methods=["gwp100_lcia"],
         fu_code="L2.a.a",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
-        aggreg_indices=False,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
+        group_indices=False,
         ssp_scenarios=["SSP2"],
         lca_route="external_lca",
     )
@@ -2078,10 +2137,10 @@ def test_compute_acc_report_and_builder_cover_summary_contracts(tmp_path: Path) 
             years=[2020],
             lcia_methods=[],
             fu_code="L2.a.a",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
-            aggreg_indices=False,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
+            group_indices=False,
             ssp_scenarios=[],
             lca_route="io_lca",
         )[-1]

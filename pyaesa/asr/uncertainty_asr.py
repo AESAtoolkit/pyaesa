@@ -10,16 +10,16 @@ def uncertainty_asr(
     *,
     project_name: str,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     years: int | list[int] | range,
     fu_code: str,
     s_p: str | list[str] | None = None,
     r_p: str | list[str] | None = None,
     r_c: str | list[str] | None = None,
     r_f: str | list[str] | None = None,
-    aggreg_indices: bool = False,
+    group_indices: bool = False,
     lcia_method: str | list[str],
     base_asocc_args: dict[str, Any] = {
         "method_plan": "default",
@@ -84,7 +84,7 @@ def uncertainty_asr(
         },
     },
     sobol_parameters: dict[str, Any] = {
-        "active": True,
+        "active": False,
         "fixed": {"active": False, "n_base_samples": 128},
         "convergence": {
             "active": True,
@@ -122,19 +122,30 @@ def uncertainty_asr(
             ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
             ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
             for ISO3 only mode (L1 EG/PR(GDPcap) only).
-        group_reg: If ``True``, aggregate regions using a grouping file.
+        agg_reg: If ``True``, reclassify MRIO regions with the
+            ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native regions
+            into one target label, or disaggregate one native region across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source regions.
-        group_sec: If ``True``, aggregate sectors using a grouping file.
+        agg_sec: If ``True``, reclassify MRIO sectors with the
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native sectors
+            into one target label, or disaggregate one native sector across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source sectors.
-        group_version: Grouping version tag used to resolve the region/sector
-            mapping CSVs. Required when ``group_reg`` or ``group_sec`` is True.
-            Defaults to an empty string for ungrouped processing. Follow
-            ``README_grouping.txt`` in the active
-            ``data_raw/mrio/<source>/grouping`` folder to name grouping
-            versions and place the matching mapping CSVs.
+        agg_version: Name token used to resolve the matching
+            ``agg_reg_<agg_version>.csv`` and/or
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+            mapping files in ``data_raw/mrio/<source>/aggregation``.
+            Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+            an empty string for native source classification. Use the same
+            token in downstream calls that should reuse the processed
+            classification. When a mapping file has a ``weight``
+            column, weights must sum to ``1`` for each original label.
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
-            years for the selected source/group version are used.
+            years for the selected source and ``agg_version`` are used.
         lcia_method: Required LCIA method name or list of names. When upstream
             static carrying capacity (CC) is active, the denominator requires
             a matching carrying capacity CSV. The package includes static CC files for
@@ -142,9 +153,10 @@ def uncertainty_asr(
             ``"ef_3.1"`` is the default carrying capacity method that
             currently has no MRIO LCIA characterization matrix. It is still
             dynamic AR6 compatible for its ``"GWP_100"`` impact category.
-            Dynamic AR6 CC is supported for ``"gwp100_lcia"`` and for
-            ``"ef_3.1"`` impact ``"GWP_100"`` only. Custom static CC methods
-            also require a matching file in
+            Dynamic AR6 CC is available for any selected method whose static
+            carrying capacity CSV contains an impact row equal to
+            ``"GWP_100"``. Custom static CC methods also require a matching
+            file in
             ``data_raw/carrying_capacities/``; follow
             ``README_add_custom_carrying_capacities.txt``. When upstream
             allocated shares of carrying capacities (aSoCC) LCIA based methods
@@ -163,16 +175,17 @@ def uncertainty_asr(
             ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
-        aggreg_indices: Whether multiple selected region/sector indices are
-            reported as separate rows or summed into one row after the
-            selected MRIO scope is computed.
+        group_indices: Whether multiple selected region or sector filter values
+            are kept as separate result rows or summed into one result row after
+            the function calculation has been performed.
             - ``False`` (default): keep selected values as independent rows.
-            - ``True``: sum selected values into one row.
-            Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-            aggregating CBA total demand system boundaries can double count.
-            For these functional units, define the aggregation from
-            ``process_mrio(...)`` onward with
-            ``group_reg``/``group_sec``/``group_version``.
+            - ``True``: sum selected values into one result row.
+            The function refuses to run when ``group_indices=True`` is used
+            with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+            rows for CBA total demand boundaries can double count. For these
+            functional units, change the upstream MRIO aggregation and disaggregation
+            scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+            running the study.
         base_cc_args: Carrying capacity family envelope. The package default
             is static active and dynamic AR6 inactive. Provide a
             ``dynamic_ar6`` block to add dynamic AR6 carrying capacities. Set
@@ -207,8 +220,10 @@ def uncertainty_asr(
                 only supported value is currently ``"offset"``. Ignored when
                 ``harmonization=False``.
               - ``category``: AR6 category classification selector for global
-                warming trajectories, as a string or list, such as ``"C2"``
-                or ``["C1", "C2"]``. Defaults to C1 to C4.
+                warming trajectories, as a string or list, such as ``"C3"``
+                or ``["C1", "C2"]``. Valid values are C1 through C8.
+                Defaults to C1 to C4, the categories aligned with the
+                2015 Paris Agreement.
               - ``ssp_scenario``: Canonical SSP selector as a string, list,
                 or ``None``, such as ``"SSP2"`` or ``["SSP1", "SSP2"]``.
                 Defaults to SSP1 to SSP5.
@@ -216,18 +231,20 @@ def uncertainty_asr(
                 are ``"kyoto_gases"`` (default) and ``"co2"``.
                 ``emission_type="kyoto_gases"`` uses the GWP100 Kyoto Gases
                 aggregate; ``emission_type="co2"`` uses direct CO2 pathways.
-              - ``include_afolu``: Whether AFOLU is included inside the
-                selected ``emission_type``. Defaults to ``False``.
+              - ``include_afolu``: Whether AFOLU emissions are included inside
+                the selected ``emission_type``. Defaults to ``False``.
               - ``emissions_mode``: Dynamic AR6 emissions mode. Accepted
                 values are ``"net"``, ``"gross"``, and ``"gross_alt"``.
-                Defaults to ``"gross_alt"``. Gross modes write positive
-                emissions denominator rows and signed negative sequestration
-                companion rows; downstream aCC and ASR consume only the
-                denominator gross positive rows. ``"gross"`` removes all
-                sequestration sources from net emissions. ``"gross_alt"``
-                removes all sequestration sources except CCS, as it does not
-                directly capture CO2 from the atmosphere; IPCC AR6 recommends
-                treating CCS separately from net negative sequestration. See
+                Defaults to ``"gross_alt"``. ``"net"`` uses net AR6 emissions
+                pathways directly. ``"gross"`` removes all sequestration
+                sources from net emissions. ``"gross_alt"`` removes all
+                sequestration sources except CCS. CCS is retained because IPCC
+                AR6 treats CCS as capture at fossil or industrial point
+                sources rather than direct removal of CO2 from the atmosphere,
+                so it is kept separate from net negative sequestration. Gross
+                modes write positive emissions rows and signed negative
+                sequestration companion rows; downstream aCC and ASR consume
+                only the positive emissions rows. See
                 ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
                 for the methodological explanation.
               - ``subset_version``: Optional selector for a subset of AR6
@@ -258,12 +275,12 @@ def uncertainty_asr(
 
               - ``active``: Whether IO-LCA generation is used.
         uncertainty_config: Monte Carlo configuration dictionary. The default
-            signature activates projection, reference year, and inter method
+            signature activates projection, reference year, and inter-method
             uncertainty for the aSoCC denominator, and dynamic AR6 CC
             uncertainty for dynamic carrying capacity branches. LCIA
             uncertainty is inactive by default because L2 LCIA rows require
             ``sector_cov_mapping``: keys are output ``s_p`` labels and values
-            are sector CoV codes from ``sec_cbca_covs.csv``. Inter MRIO
+            are sector CoV codes from ``sec_cbca_covs.csv``. Inter-MRIO
             uncertainty is inactive by default because it requires an
             alternate published disaggregated aSoCC source. IO-LCA LCIA
             uncertainty is inactive until requested. Source blocks
@@ -324,17 +341,18 @@ def uncertainty_asr(
                 Users can inspect ``sec_cbca_covs.csv`` for sector CoV codes
                 before choosing ``sector_cov_mapping`` values. CoV keys must
                 match the LCIA uncertainty output domain. If
-                ``group_reg=True``, region keys use
-                ``reg_cbca_covs_group_<group_version>.csv``; otherwise they
-                use ``reg_cbca_covs.csv``. If ``aggreg_indices=True``
-                collapses a region axis, put the full aggregate region label
-                in
-                ``reg_cbca_covs_group_<group_version>_aggreg_indices.csv``
-                when grouped, otherwise ``reg_cbca_covs_aggreg_indices.csv``.
-                If ``group_sec=True`` or ``aggreg_indices=True``, use the
-                corresponding grouped or aggregate ``s_p`` labels as
+                ``agg_reg=True``, region keys use
+                ``reg_cbca_covs_agg_<agg_version>.csv``; otherwise they
+                use ``reg_cbca_covs.csv``. If ``group_indices=True`` sums a
+                region selector axis after calculation, put the full combined
+                output region label in
+                ``reg_cbca_covs_agg_<agg_version>_group_indices.csv``
+                when ``agg_reg=True``, otherwise
+                ``reg_cbca_covs_group_indices.csv``. If ``agg_sec=True`` or
+                ``group_indices=True``, use the corresponding ``agg_sec`` output
+                labels or combined output ``s_p`` labels as
                 ``sector_cov_mapping`` keys. For
-                example, with ``aggreg_indices=True`` and ``s_p=["A", "B"]``,
+                example, with ``group_indices=True`` and ``s_p=["A", "B"]``,
                 write ``sector_cov_mapping={"A, B": "Electricity"}`` when
                 ``Electricity`` is the sector CoV code selected from
                 ``sec_cbca_covs.csv``.
@@ -380,7 +398,7 @@ def uncertainty_asr(
 
                 Nested keys:
 
-                - ``active``: Whether inter MRIO uncertainty is active.
+                - ``active``: Whether inter-MRIO uncertainty is active.
                 - ``alternate_source``: Published disaggregated aSoCC source
                   label used as the alternate MRIO source.
 
@@ -401,8 +419,8 @@ def uncertainty_asr(
 
                 Nested keys:
 
-                - ``active``: Whether inter method uncertainty is active.
-                - ``mode``: Inter method sampling mode. Accepted values are
+                - ``active``: Whether inter-method uncertainty is active.
+                - ``mode``: Inter-method sampling mode. Accepted values are
                   ``"equal_weight"`` and ``"custom"``.
                 - ``version_name``: Custom weight version used when
                   ``mode="custom"``.
@@ -459,17 +477,18 @@ def uncertainty_asr(
                 Users can inspect ``sec_cbca_covs.csv`` for sector CoV codes
                 before choosing ``sector_cov_mapping`` values. CoV keys must
                 match the LCIA uncertainty output domain. If
-                ``group_reg=True``, region keys use
-                ``reg_cbca_covs_group_<group_version>.csv``; otherwise they
-                use ``reg_cbca_covs.csv``. If ``aggreg_indices=True``
-                collapses a region axis, put the full aggregate region label
-                in
-                ``reg_cbca_covs_group_<group_version>_aggreg_indices.csv``
-                when grouped, otherwise ``reg_cbca_covs_aggreg_indices.csv``.
-                If ``group_sec=True`` or ``aggreg_indices=True``, use the
-                corresponding grouped or aggregate ``s_p`` labels as
+                ``agg_reg=True``, region keys use
+                ``reg_cbca_covs_agg_<agg_version>.csv``; otherwise they
+                use ``reg_cbca_covs.csv``. If ``group_indices=True`` sums a
+                region selector axis after calculation, put the full combined
+                output region label in
+                ``reg_cbca_covs_agg_<agg_version>_group_indices.csv``
+                when ``agg_reg=True``, otherwise
+                ``reg_cbca_covs_group_indices.csv``. If ``agg_sec=True`` or
+                ``group_indices=True``, use the corresponding ``agg_sec`` output
+                labels or combined output ``s_p`` labels as
                 ``sector_cov_mapping`` keys. For
-                example, with ``aggreg_indices=True`` and ``s_p=["A", "B"]``,
+                example, with ``group_indices=True`` and ``s_p=["A", "B"]``,
                 write ``sector_cov_mapping={"A, B": "Electricity"}`` when
                 ``Electricity`` is the sector CoV code selected from
                 ``sec_cbca_covs.csv``.
@@ -483,7 +502,7 @@ def uncertainty_asr(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing sectors. To identify valid sector
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/.../group_sec_template.csv`` file. For
+            ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv`` file. For
             EXIOBASE sector definitions, see
             ``data_raw/mrio/exiobase_3/sector_classification.xlsx``; EXIOBASE
             ixi and pxp use different sector lists.
@@ -491,17 +510,17 @@ def uncertainty_asr(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_c: Consuming region filter(s), single string or list. If this is a
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid consuming regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_f: Final demand region filter(s), single string or list. If this is
             a required axis for ``fu_code`` and the argument is omitted, the
             run expands to all valid final demand regions. To identify valid
             region names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         base_asocc_args: Optional aSoCC denominator envelope. Write nested
             arguments as ``base_asocc_args={"method_plan": "default"}``.
             Accepted keys are method and projection controls only. Omit the
@@ -582,8 +601,12 @@ def uncertainty_asr(
         sobol_parameters: Sobol sensitivity settings. Sobol analysis estimates
             the contribution of active uncertainty sources to output variance
             and writes ``README_sobol.txt`` under ``results/sobol/`` for
-            interpretation. The default has ``active=True`` and runs Sobol in
-            convergence mode. Sobol base sizes must be powers of two.
+            interpretation. The default has ``active=False`` and writes no
+            Sobol artifacts. To run Sobol, set ``active=True``. With the
+            default mode blocks, enabled Sobol uses convergence mode. To run
+            a fixed Sobol design, set ``fixed.active=True`` and
+            ``convergence.active=False``. Sobol base sizes must be powers of
+            two.
 
             Nested keys:
 
@@ -605,9 +628,12 @@ def uncertainty_asr(
               - ``active``: Whether fixed mode is active.
               - ``n_base_samples``: Exact Sobol base size.
 
-            - ``sobol_years``: Studied output years evaluated by Sobol. When
-              omitted, Sobol evaluates only the first and last studied years
-              in the requested studied year set.
+            - ``sobol_years``: Studied output years evaluated by Sobol for
+              static carrying capacity branches. When omitted, static Sobol
+              evaluates only the first and last studied years in the requested
+              studied year set. Dynamic AR6 carrying capacity Sobol ignores
+              this yearly selector and evaluates cumulative ASR over the full
+              studied period.
         figures: Whether to render figures.
             Default is ``True``.
         figure_options: ASR figure options. Defaults to
@@ -622,11 +648,11 @@ def uncertainty_asr(
             - ``multi_method``: Whether to render cross method comparison
               figures, with multiple allocation methods shown in the same
               figure.
-            - ``inter_method``: Whether to render inter method uncertainty
+            - ``inter_method``: Whether to render inter-method uncertainty
               figures. These figures use the same method specific layout as
               ``per_method``, but represent uncertainty induced by the inter
               method uncertainty setting rather than comparing individual
-              allocation methods. This option is ignored when inter method
+              allocation methods. This option is ignored when inter-method
               uncertainty is inactive.
             - ``polar``: Nested polar figure selector. The block is optional
               and defaults to ``{"active": True, "polar_years": None,
@@ -647,8 +673,8 @@ def uncertainty_asr(
             - ``dpi``: Positive integer figure resolution used for raster
               outputs.
         subfigures: Whether prerequisite aCC and IO-LCA uncertainty calls
-            render their own figures when ``figures=True``.
-            Default is ``True``.
+            render their own figures when ``figures=True``. Default is
+            ``True``.
 
         refresh: If ``True``, refresh the resolved ASR Monte Carlo outputs and
             every upstream component output scope called by this ASR
@@ -721,16 +747,16 @@ def uncertainty_asr(
     return run_uncertainty_asr(
         project_name=project_name,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         years=years,
         fu_code=fu_code,
         r_p=r_p,
         s_p=s_p,
         r_c=r_c,
         r_f=r_f,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         lcia_method=lcia_method,
         base_asocc_args=base_asocc_args,
         external_method=external_method,

@@ -21,6 +21,7 @@ from pyaesa.shared.runtime.reporting.output_roots import public_output_root_from
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
 from pyaesa.shared.runtime.reporting.progress import StatusProgressPrinter, YearProgressPrinter
 from pyaesa.shared.runtime.reporting.run_progress import (
+    monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
     monte_carlo_run_progress_label,
     monte_carlo_run_progress,
@@ -37,7 +38,10 @@ from pyaesa.shared.runtime.reporting.values import (
 )
 from pyaesa.shared.runtime.reporting.year_ranges import format_year_ranges
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest, write_manifest
-from pyaesa.shared.uncertainty_assessment.orchestration import complete_uncertainty_manifest_phase
+from pyaesa.shared.uncertainty_assessment.orchestration import (
+    complete_uncertainty_manifest_phase,
+    progress_complete,
+)
 from pyaesa.shared.uncertainty_assessment.run_state.report_dependencies import dependency_section
 from pyaesa.shared.uncertainty_assessment.run_state.report import uncertainty_report
 
@@ -56,10 +60,10 @@ def _write_io_lca_dependency_manifest(
     path.parent.mkdir(parents=True, exist_ok=True)
     figure_path = path.parent / "figures" / "diagnostic.png"
     arguments = {
-        "group_reg": False,
-        "group_sec": True,
-        "group_version": "ixi",
-        "aggreg_indices": False,
+        "agg_reg": False,
+        "agg_sec": True,
+        "agg_version": "ixi",
+        "group_indices": False,
     }
     if include_source:
         arguments["source"] = "exiobase_3"
@@ -146,10 +150,10 @@ def test_uncertainty_report_writes_summary_log(tmp_path: Path) -> None:
             {
                 "arguments": {
                     "source": "exiobase_3",
-                    "group_reg": True,
-                    "group_sec": False,
-                    "group_version": "ixi",
-                    "aggreg_indices": False,
+                    "agg_reg": True,
+                    "agg_sec": False,
+                    "agg_version": "ixi",
+                    "group_indices": False,
                     "r_p": ["FR"],
                     "s_p": ["D"],
                     "r_c": None,
@@ -198,10 +202,10 @@ def test_uncertainty_report_writes_summary_log(tmp_path: Path) -> None:
             "lcia_method": ["gwp100_lcia"],
             "fu_code": "L2.a.a",
             "source": "exiobase_3",
-            "group_reg": True,
-            "group_sec": False,
-            "group_version": "ixi",
-            "aggreg_indices": False,
+            "agg_reg": True,
+            "agg_sec": False,
+            "agg_version": "ixi",
+            "group_indices": False,
             "version_name": "v1",
             "r_p": ["FR"],
             "s_p": ["D"],
@@ -314,7 +318,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
         completed_runs=0,
         status="complete",
         run_id="mc_no_alternate_source",
-        arguments={"group_reg": False},
+        arguments={"agg_reg": False},
         source_parameters={"inter_mrio_uncertainty": {}},
         artifacts=_uncertainty_scope_artifacts(tmp_path, "mc_no_alternate_source"),
     )
@@ -328,9 +332,9 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
             "base_io_lca_args": {
                 "project_name": "io_lca_report_demo",
                 "source": "exiobase_3",
-                "group_reg": False,
-                "group_sec": True,
-                "group_version": "ixi",
+                "agg_reg": False,
+                "agg_sec": True,
+                "agg_version": "ixi",
                 "years": [2020],
                 "lcia_method": ["gwp100_lcia"],
                 "fu_code": "L2.a.a",
@@ -338,7 +342,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
                 "r_c": None,
                 "r_p": None,
                 "s_p": ["D"],
-                "aggreg_indices": False,
+                "group_indices": False,
             }
         },
         active_sources=("lcia_uncertainty",),
@@ -508,11 +512,13 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
             },
         ),
         artifacts=_uncertainty_scope_artifacts(tmp_path, "mc_convergence_reason"),
+        compatibility_context={"artifact_contract": "asr_branch_set"},
     )
     convergence_text = str(
         uncertainty_report(manifest=convergence_manifest, reuse_status="computed")
     )
     assert convergence_text
+    assert "Convergence scope: independent per branch" in convergence_text
     assert "lineage warning" in convergence_text
 
     nested_acc_manifest = tmp_path / "nested_acc" / "monte_carlo" / "mc_1" / "logs" / "scope.json"
@@ -692,6 +698,32 @@ def test_run_progress_uses_status_sink() -> None:
     terminal_progress.finish()
 
 
+def test_fixed_monte_carlo_progress_persists_only_final_completion() -> None:
+    status = _RecordingStatus()
+    progress = monte_carlo_run_progress(source="uncertainty_test", status=status)
+
+    progress_complete(progress=progress, completed=5, max_runs=10, mode="fixed")
+    progress_complete(progress=progress, completed=10, max_runs=10, mode="fixed")
+
+    assert status.persistent == [False, True]
+    assert (
+        monte_carlo_completion_is_persistent(
+            completed=9,
+            max_runs=10,
+            mode="fixed",
+        )
+        is False
+    )
+    assert (
+        monte_carlo_completion_is_persistent(
+            completed=10,
+            max_runs=10,
+            mode="fixed",
+        )
+        is True
+    )
+
+
 def test_composite_phase_index_details_and_payload(tmp_path: Path) -> None:
     output_root = tmp_path / "outputs"
     manifest = output_root / "logs" / "scope_manifest.json"
@@ -820,7 +852,7 @@ def test_phase_and_status_progress_contracts(capsys) -> None:
     phase.show("runtime status")
     phase.log_message("   ")
     phase.complete("   ")
-    phase.complete("aCC scope reused exactly")
+    phase.complete("aCC scope reused")
     phase.status("[custom_owner] running")
     phase.status("[uncertainty_acc] running", owner=None)
     phase.log_message("[uncertainty_acc] detail", persistent=False)

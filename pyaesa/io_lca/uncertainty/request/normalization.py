@@ -4,8 +4,8 @@ from typing import Any, Mapping
 
 from pyaesa.io_lca.contracts.fu_mapping import resolve_fu_spec
 from pyaesa.io_lca.orchestration.request.domain_checks import (
-    validate_aggreg_indices_requires_multi_selection,
-    validate_aggreg_indices_supported,
+    validate_group_indices_requires_multi_selection,
+    validate_group_indices_supported,
 )
 from pyaesa.io_lca.orchestration.request.selectors import (
     has_multi_selected_indices,
@@ -13,7 +13,7 @@ from pyaesa.io_lca.orchestration.request.selectors import (
     validate_selector_labels,
 )
 from pyaesa.io_lca.orchestration.request.validation import (
-    normalize_grouping,
+    normalize_aggregation,
     normalize_lcia_method_list,
     normalize_supported_source,
 )
@@ -25,9 +25,9 @@ from pyaesa.io_lca.uncertainty.runtime.models import IOLCAUncertaintyRequest
 _ALLOWED_BASE_KEYS = {
     "project_name",
     "source",
-    "group_reg",
-    "group_sec",
-    "group_version",
+    "agg_reg",
+    "agg_sec",
+    "agg_version",
     "years",
     "lcia_method",
     "fu_code",
@@ -35,7 +35,7 @@ _ALLOWED_BASE_KEYS = {
     "r_c",
     "r_p",
     "s_p",
-    "aggreg_indices",
+    "group_indices",
 }
 
 
@@ -56,12 +56,12 @@ def normalize_io_lca_uncertainty_request(
         source=str(payload["source"]),
         caller="uncertainty_io_lca",
     )
-    group_reg = _bool_value(payload.get("group_reg", False), field="base_io_lca_args.group_reg")
-    group_sec = _bool_value(payload.get("group_sec", False), field="base_io_lca_args.group_sec")
-    group_reg, group_sec, group_version = normalize_grouping(
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=payload.get("group_version"),
+    agg_reg = _bool_value(payload.get("agg_reg", False), field="base_io_lca_args.agg_reg")
+    agg_sec = _bool_value(payload.get("agg_sec", False), field="base_io_lca_args.agg_sec")
+    agg_reg, agg_sec, agg_version = normalize_aggregation(
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=payload.get("agg_version"),
     )
     methods = normalize_lcia_method_list(lcia_method=payload["lcia_method"])
     fu_spec = resolve_fu_spec(fu_code=str(payload["fu_code"]))
@@ -74,36 +74,36 @@ def normalize_io_lca_uncertainty_request(
     )
     validate_selector_labels(
         source=source,
-        group_version=group_version,
-        group_reg=group_reg,
-        group_sec=group_sec,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
         filters=filters,
     )
     years = resolve_years_strict(
         years=payload.get("years"),
         source=source,
-        group_version=group_version,
-        group_reg=group_reg,
-        group_sec=group_sec,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
         upstream_analysis=False,
     )
-    aggreg_indices = _bool_value(
-        payload.get("aggreg_indices", False),
-        field="base_io_lca_args.aggreg_indices",
+    group_indices = _bool_value(
+        payload.get("group_indices", False),
+        field="base_io_lca_args.group_indices",
     )
-    validate_aggreg_indices_requires_multi_selection(
-        aggreg_indices=aggreg_indices,
+    validate_group_indices_requires_multi_selection(
+        group_indices=group_indices,
         has_multi_indices=has_multi_selected_indices(filters),
     )
-    validate_aggreg_indices_supported(spec=fu_spec, aggreg_indices=aggreg_indices)
+    validate_group_indices_supported(spec=fu_spec, group_indices=group_indices)
     source_parameters = normalize_lcia_uncertainty_parameters(parameters=lcia_parameters)
     project_name = _non_empty_text(payload["project_name"], field="base_io_lca_args.project_name")
     base_args = {
         "project_name": project_name,
         "source": source,
-        "group_reg": group_reg,
-        "group_sec": group_sec,
-        "group_version": group_version,
+        "agg_reg": agg_reg,
+        "agg_sec": agg_sec,
+        "agg_version": agg_version,
         "years": list(years),
         "lcia_method": list(methods),
         "fu_code": fu_spec.fu_code,
@@ -111,7 +111,7 @@ def normalize_io_lca_uncertainty_request(
         "r_c": filters.get("r_c"),
         "r_p": filters.get("r_p"),
         "s_p": filters.get("s_p"),
-        "aggreg_indices": aggreg_indices,
+        "group_indices": group_indices,
     }
     deterministic_args = {
         **base_args,
@@ -125,14 +125,14 @@ def normalize_io_lca_uncertainty_request(
         source_parameters=source_parameters,
         project_name=project_name,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         years=list(years),
         lcia_methods=list(methods),
         fu_spec=fu_spec,
         filters=filters,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
     )
 
 

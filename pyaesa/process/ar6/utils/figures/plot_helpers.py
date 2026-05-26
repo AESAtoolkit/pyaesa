@@ -6,10 +6,14 @@ import numpy as np
 import pandas as pd
 
 CATEGORY_COLORS = {
-    "C1": "blue",
-    "C2": "violet",
-    "C3": "orange",
-    "C4": "red",
+    "C1": "#7FBC41",
+    "C2": "#2654D2",
+    "C3": "#F39B1F",
+    "C4": "#5A0418",
+    "C5": "#00A6A6",
+    "C6": "#B247A3",
+    "C7": "#6C8E23",
+    "C8": "#8C6D31",
 }
 FIGURE_MODEL_LABEL = "ALL"
 WARMING_METADATA_COLUMN = "Median warming in 2100 (MAGICCv7.5.3)"

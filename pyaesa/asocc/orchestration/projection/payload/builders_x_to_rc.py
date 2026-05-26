@@ -33,7 +33,7 @@ def _summed_series(
     axis: Literal[0, 1, "index", "columns"],
     group_level: str | None = None,
 ) -> pd.Series:
-    """Return one numeric Series after deterministic sum and optional grouping."""
+    """Return one numeric Series after deterministic sum and optional level grouping."""
     series = pd.Series(frame.sum(axis=axis, min_count=1), copy=False)
     if group_level is None:
         return series
@@ -68,9 +68,9 @@ def project_x_to_rc_payload(
         "runtime_output_source",
         context.output_source,
     )
-    setattr(state, "runtime_group_version", context.group_version)
-    setattr(state, "runtime_group_reg", context.group_reg)
-    setattr(state, "runtime_aggreg_indices", context.aggreg_indices)
+    setattr(state, "runtime_agg_version", context.agg_version)
+    setattr(state, "runtime_agg_reg", context.agg_reg)
+    setattr(state, "runtime_group_indices", context.group_indices)
     setattr(state, "runtime_l1_reg_aggreg", context.l1_reg_aggreg)
     x_template = basis.base_payload.utility["x_to_rc"]
     if context.fu_code == "L2.a.b":

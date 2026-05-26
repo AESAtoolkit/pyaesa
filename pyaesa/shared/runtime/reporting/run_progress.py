@@ -116,6 +116,20 @@ def monte_carlo_run_progress_label(
     return f"completed runs {int(completed)}; max {int(max_runs)}; {checkpoint}"
 
 
+def monte_carlo_completion_is_persistent(
+    *,
+    completed: int,
+    max_runs: int,
+    mode: str,
+    reached: bool = False,
+    final_checkpoint: bool = False,
+) -> bool:
+    """Return whether a Monte Carlo completion line should remain visible."""
+    return bool(
+        reached or final_checkpoint or (str(mode) == "fixed" and int(completed) >= int(max_runs))
+    )
+
+
 def monte_carlo_run_drawing_label(
     *,
     start: int,

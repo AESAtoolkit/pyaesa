@@ -63,6 +63,26 @@ def sobol_plan_payload(*, plan: SobolPlan) -> dict[str, object]:
     return payload
 
 
+def selected_sobol_output_years(
+    *,
+    plan: SobolPlan,
+    available_years: tuple[int, ...],
+) -> tuple[int, ...]:
+    """Return the studied output years selected for yearly Sobol targets."""
+    studied = studied_output_years(available_years)
+    if plan.sobol_years is not None:
+        requested = set(plan.sobol_years)
+        return tuple(year for year in studied if year in requested)
+    return tuple(dict.fromkeys((studied[0], studied[-1])))
+
+
+def studied_output_years(years: int | list[int] | tuple[int, ...] | range) -> tuple[int, ...]:
+    """Return sorted unique studied output years from a public year selector."""
+    if isinstance(years, int):
+        return (int(years),)
+    return tuple(sorted({int(year) for year in years}))
+
+
 def normalize_sobol_plan(
     *,
     sobol_parameters: dict[str, Any] | None,

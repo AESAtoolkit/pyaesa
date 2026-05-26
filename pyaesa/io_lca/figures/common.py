@@ -1,5 +1,6 @@
 """Common IO-LCA figure helpers for deterministic and uncertainty products."""
 
+from collections.abc import Iterator
 import re
 from typing import cast
 
@@ -98,8 +99,8 @@ def selector_groups(
     *,
     frame: pd.DataFrame,
     selector_columns: tuple[str, ...] | None,
-) -> tuple[list[str], list[tuple[object, pd.DataFrame]]]:
-    """Return selector columns and grouped figure frames."""
+) -> tuple[list[str], Iterator[tuple[object, pd.DataFrame]]]:
+    """Return selector columns and yield grouped figure frames."""
     selector_source = SELECTOR_COLUMNS if selector_columns is None else selector_columns
     selector_cols = list(
         resolved_selector_columns(
@@ -108,10 +109,16 @@ def selector_groups(
             require_non_null=True,
         )
     )
-    if selector_cols:
-        grouped = frame.groupby(selector_cols, dropna=False, sort=True)
-        return selector_cols, [(idx, group.copy()) for idx, group in grouped]
-    return selector_cols, [((None,), frame.copy())]
+
+    def grouped_frames() -> Iterator[tuple[object, pd.DataFrame]]:
+        """Yield one selector grouped frame at a time."""
+        if selector_cols:
+            for idx, group in frame.groupby(selector_cols, dropna=False, sort=True):
+                yield idx, group.copy()
+            return
+        yield (None,), frame.copy()
+
+    return selector_cols, grouped_frames()
 
 
 def impact_panel_layout(
@@ -147,8 +154,8 @@ def impact_panel_layout(
 
 def lca_prospective_scope_slices(
     frame: pd.DataFrame,
-) -> list[tuple[str | None, str | None, pd.DataFrame]]:
-    """Return historical or SSP scoped LCA figure frames.
+) -> Iterator[tuple[str | None, str | None, pd.DataFrame]]:
+    """Yield historical or SSP scoped LCA figure frames.
 
     External LCA owns prospective scope from its SSP row metadata. Historical
     rows are repeated into each SSP scoped figure so the plotted trajectory is
@@ -158,16 +165,13 @@ def lca_prospective_scope_slices(
     scenario = lca_scenario_series(frame)
     values = sorted({value for value in scenario.tolist() if value is not None})
     if not values:
-        return [(None, None, frame.copy())]
+        yield None, None, frame.copy()
+        return
     generic = scenario.isna()
-    slices: list[tuple[str | None, str | None, pd.DataFrame]] = []
     for value in values:
         mask = scenario.eq(value) | generic
         scoped = frame.loc[mask].copy()
-        slices.append(
-            (sanitize_token(value), f"Prospective: {value}", scoped.reset_index(drop=True))
-        )
-    return slices
+        yield sanitize_token(value), f"Prospective: {value}", scoped.reset_index(drop=True)
 
 
 def lca_transition_markers(frame: pd.DataFrame) -> list[TransitionMarker]:

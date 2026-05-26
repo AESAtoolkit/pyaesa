@@ -382,10 +382,10 @@ def compute_deterministic_asr_long_matches(
     """Return long deterministic ASR matches with converted LCA numerator values.
 
     Args:
-        acc_long: Long aCC denominator rows with normalized year, value, row
-            identity, and unit columns.
+        acc_long: Long aCC rows with normalized year, value, row identity, and
+            unit columns.
         selector_frame: Source frame used to resolve selector columns.
-        impact_code: Impact code represented by the denominator rows.
+        impact_code: Impact code represented by the aCC rows.
         lca_rows: Deterministic LCA numerator rows.
         lca_type: LCA family used for selector and scenario matching.
     Returns:

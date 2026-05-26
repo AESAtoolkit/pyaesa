@@ -38,9 +38,9 @@ def _requires_ar_or_prhr_history(*, selection, fu_code: str) -> bool:
 def _validate_history_since_baseline(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool | None,
-    group_sec: bool | None,
+    agg_version: str | None,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
     historical_years: list[int],
     selection,
     fu_code: str,
@@ -60,9 +60,9 @@ def _validate_history_since_baseline(
         process_hint = _process_mrio_hint(
             source=source,
             years=missing,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
         )
         raise ValueError(
             "AR/PR-HR methods require contiguous MRIO years since "

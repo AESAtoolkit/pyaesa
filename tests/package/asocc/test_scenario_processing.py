@@ -121,10 +121,10 @@ def _context(
         project_name="scenario_processing_demo",
         source="oecd_v2025",
         fu_code="L2.a.a",
-        group_version=None,
-        group_version_reg=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_version_reg=None,
+        agg_reg=False,
+        agg_sec=False,
         lcia_method=None,
         years_input=[2005, 2030],
         reference_years_input=None,
@@ -159,7 +159,7 @@ def _context(
         l1_reg_aggreg="post",
         use_original_l1_post_domain=False,
         variant_tag=None,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         intermediate_outputs=intermediate_outputs,
         output_source_label="oecd_v2025",
@@ -172,8 +172,8 @@ def _package_run_context(
     *,
     tmp_path: Path,
     source: str,
-    group_version: str | None,
-    group_version_reg: str | None,
+    agg_version: str | None,
+    agg_version_reg: str | None,
     selected_l1: list[str],
     selected_l2_one_step: list[str],
     combined: list[tuple[str, str]],
@@ -189,10 +189,10 @@ def _package_run_context(
         project_name="scenario_processing_demo",
         source=source,
         fu_code="L1.b",
-        group_version=group_version,
-        group_version_reg=group_version_reg,
-        group_reg=group_version_reg is not None,
-        group_sec=False,
+        agg_version=agg_version,
+        agg_version_reg=agg_version_reg,
+        agg_reg=agg_version_reg is not None,
+        agg_sec=False,
         lcia_method=None,
         years_input=[*historical_years, 2030],
         reference_years_input=reference_years,
@@ -227,7 +227,7 @@ def _package_run_context(
         l1_reg_aggreg="post",
         use_original_l1_post_domain=use_original_l1_post_domain,
         variant_tag=None,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         intermediate_outputs=intermediate_outputs,
         output_source_label=source,
@@ -411,7 +411,7 @@ def test_process_scenario_for_year_covers_no_payload_return_and_cleanup(tmp_path
         lcia_by_method_original=None,
         lcia_effective_year_by_method=None,
         lcia_effective_year_by_method_original=None,
-        reg_group_map={},
+        reg_agg_map={},
         mrio_payload=None,
         l2_inputs_sliced=None,
         process_invariant_methods=False,
@@ -440,7 +440,7 @@ def test_process_scenario_for_year_covers_future_payload_path(tmp_path: Path) ->
         lcia_by_method_original=None,
         lcia_effective_year_by_method=None,
         lcia_effective_year_by_method_original=None,
-        reg_group_map={},
+        reg_agg_map={},
         mrio_payload=_MrioPayload(
             enacting_metric_l1={},
             enacting_metric_l2={},
@@ -464,8 +464,8 @@ def test_process_scenario_for_year_loads_projection_payload_when_future_mrio_is_
     context = _package_run_context(
         tmp_path=tmp_path,
         source="oecd_v2025",
-        group_version=None,
-        group_version_reg=None,
+        agg_version=None,
+        agg_version_reg=None,
         selected_l1=[],
         selected_l2_one_step=["UT(FD)"],
         combined=[],
@@ -491,7 +491,7 @@ def test_process_scenario_for_year_loads_projection_payload_when_future_mrio_is_
     year_dir = _get_mrio_year_dir(
         source=context.source,
         year=2005,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     payload = year_inputs_mod._load_year_mrio_payloads_required(  # noqa: SLF001
         saved_dir=year_dir,
@@ -507,7 +507,7 @@ def test_process_scenario_for_year_loads_projection_payload_when_future_mrio_is_
         lcia_by_method_original=None,
         lcia_effective_year_by_method=None,
         lcia_effective_year_by_method_original=None,
-        reg_group_map={},
+        reg_agg_map={},
         mrio_payload=None,
         l2_inputs_sliced=None,
         process_invariant_methods=True,
@@ -525,8 +525,8 @@ def test_process_scenario_for_year_skips_base_enacting_metric_for_wb_backed_payl
     context = _package_run_context(
         tmp_path=tmp_path,
         source="oecd_v2025",
-        group_version=None,
-        group_version_reg=None,
+        agg_version=None,
+        agg_version_reg=None,
         selected_l1=[],
         selected_l2_one_step=["UT(FD)"],
         combined=[],
@@ -542,7 +542,7 @@ def test_process_scenario_for_year_skips_base_enacting_metric_for_wb_backed_payl
     year_dir = _get_mrio_year_dir(
         source=context.source,
         year=2005,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     payload = year_inputs_mod._load_year_mrio_payloads_required(  # noqa: SLF001
         saved_dir=year_dir,
@@ -561,7 +561,7 @@ def test_process_scenario_for_year_skips_base_enacting_metric_for_wb_backed_payl
         lcia_by_method_original=None,
         lcia_effective_year_by_method=None,
         lcia_effective_year_by_method_original=None,
-        reg_group_map={},
+        reg_agg_map={},
         mrio_payload=payload,
         l2_inputs_sliced=sliced_inputs,
         process_invariant_methods=False,
@@ -580,8 +580,8 @@ def test_process_scenario_for_year_runs_partial_l2_path_for_ar_without_mrio_payl
     context = _package_run_context(
         tmp_path=tmp_path,
         source="oecd_v2025",
-        group_version=None,
-        group_version_reg=None,
+        agg_version=None,
+        agg_version_reg=None,
         selected_l1=[],
         selected_l2_one_step=["AR(E^{CBA_FD})"],
         combined=[],
@@ -614,8 +614,8 @@ def test_process_scenario_for_year_runs_partial_l2_path_for_ar_without_direct_mr
     context = _package_run_context(
         tmp_path=tmp_path,
         source="oecd_v2025",
-        group_version=None,
-        group_version_reg=None,
+        agg_version=None,
+        agg_version_reg=None,
         selected_l1=[],
         selected_l2_one_step=["AR(E^{CBA_FD})"],
         combined=[],
@@ -635,7 +635,7 @@ def test_process_scenario_for_year_runs_partial_l2_path_for_ar_without_direct_mr
         lcia_by_method_original=None,
         lcia_effective_year_by_method=None,
         lcia_effective_year_by_method_original=None,
-        reg_group_map={},
+        reg_agg_map={},
         mrio_payload=None,
         l2_inputs_sliced=None,
         process_invariant_methods=True,
@@ -644,37 +644,39 @@ def test_process_scenario_for_year_runs_partial_l2_path_for_ar_without_direct_mr
     assert state.l2_results_by_ssp_scenario[None]
 
 
-def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
+def test_year_input_cover_agg_maps_metric_loading_and_source_resolution(
     allocation_dummy_repo,
     tmp_path: Path,
 ) -> None:
     del allocation_dummy_repo
-    grouped_context = _context(
+    aggregated_context = _context(
         tmp_path=tmp_path,
         selected_l1=[],
         selected_l2_one_step=["UT(FD)", "UT(FDa)", "UT(GVAa)", "UT(GVA)", "UT(TD)"],
         combined=[],
         projection_context=None,
     )
-    grouped_context.group_version_reg = "demo_reg"
-    grouped_context.use_original_l1_post_domain = True
+    aggregated_context.agg_version_reg = "demo_reg"
+    aggregated_context.use_original_l1_post_domain = True
     for frame_name in ("wb_df", "ssp_df", "wb_df_raw", "ssp_df_raw"):
-        grouped_frame = getattr(grouped_context, frame_name).replace({"DE": "US", "DEU": "USA"})
-        setattr(grouped_context, frame_name, grouped_frame)
+        aggregated_frame = getattr(aggregated_context, frame_name).replace(
+            {"DE": "US", "DEU": "USA"}
+        )
+        setattr(aggregated_context, frame_name, aggregated_frame)
     state = _state()
 
-    mapping = year_inputs_mod._load_reg_group_map(  # noqa: SLF001
-        context=grouped_context,
+    mapping = year_inputs_mod._load_reg_agg_map(  # noqa: SLF001
+        context=aggregated_context,
         state=state,
     )
-    cached_mapping = year_inputs_mod._load_reg_group_map(  # noqa: SLF001
-        context=grouped_context,
+    cached_mapping = year_inputs_mod._load_reg_agg_map(  # noqa: SLF001
+        context=aggregated_context,
         state=state,
     )
     assert mapping == {"FR": "EU", "US": "NAM"}
     assert cached_mapping == mapping
     assert (
-        year_inputs_mod._load_reg_group_map(  # noqa: SLF001
+        year_inputs_mod._load_reg_agg_map(  # noqa: SLF001
             context=_context(
                 tmp_path=tmp_path,
                 selected_l1=[],
@@ -763,7 +765,7 @@ def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
     year_dir = _get_mrio_year_dir(
         source=fd_context.source,
         year=2005,
-        group_version=fd_context.group_version,
+        agg_version=fd_context.agg_version,
     )
     assert (
         year_inputs_mod._load_year_mrio_payloads_required(  # noqa: SLF001
@@ -805,7 +807,7 @@ def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
     assert not gva_payload.enacting_metric_l2["gva_rp_sp"].empty
 
     historical_ctx = _ScenarioRunContext(
-        context=grouped_context,
+        context=aggregated_context,
         state=state,
         year=2005,
         ssp_scenario="SSP2",
@@ -813,10 +815,10 @@ def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
     historical_source = year_inputs_mod._resolve_pop_gdp_source(historical_ctx)  # noqa: SLF001
     assert historical_source.use_ssp is False
     assert historical_source.scenario_arg is None
-    assert historical_source.group_version_reg == "demo_reg"
+    assert historical_source.agg_version_reg == "demo_reg"
 
     future_ctx = _ScenarioRunContext(
-        context=grouped_context,
+        context=aggregated_context,
         state=state,
         year=2030,
         ssp_scenario="SSP2",
@@ -824,7 +826,7 @@ def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
     future_source = year_inputs_mod._resolve_pop_gdp_source(future_ctx)  # noqa: SLF001
     assert future_source.use_ssp is True
     assert future_source.scenario_arg == "SSP2"
-    assert future_source.needs_pr_post_ungrouped is True
+    assert future_source.needs_pr_post_unaggregated is True
 
     iso3_context = _context(
         tmp_path=tmp_path,
@@ -844,7 +846,7 @@ def test_year_input_cover_group_maps_metric_loading_and_source_resolution(
         )
     )
     assert iso3_source.region_override == "iso3_code"
-    assert iso3_source.group_version_reg is None
+    assert iso3_source.agg_version_reg is None
 
     scenario_inputs = year_inputs_mod._load_scenario_population_gdp(  # noqa: SLF001
         run_ctx=future_ctx,
@@ -869,7 +871,7 @@ def test_run_year_cover_latest_existing_year_lookup_and_missing_year_skip(
     existing_dir = _get_mrio_year_dir(
         source=context.source,
         year=2005,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     existing_dir.mkdir(parents=True, exist_ok=True)
 
@@ -877,7 +879,7 @@ def test_run_year_cover_latest_existing_year_lookup_and_missing_year_skip(
         source=context.source,
         historical_years=[2004, 2005],
         year=2030,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     assert latest_year == 2005
     assert latest_dir == existing_dir
@@ -885,7 +887,7 @@ def test_run_year_cover_latest_existing_year_lookup_and_missing_year_skip(
         source=context.source,
         historical_years=[1990],
         year=1990,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     ) == (None, None)
 
     state = _state()
@@ -982,7 +984,7 @@ def test_process_year_emits_notice_when_required_mrio_metrics_are_missing(
     year_dir = _get_mrio_year_dir(
         source=context.source,
         year=2005,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     (year_dir / "enacting_metrics" / "level_1" / "fd_rf.pickle").unlink()
     state = _state()
@@ -1000,7 +1002,7 @@ def test_process_year_emits_notice_when_required_mrio_metrics_are_missing(
     assert context.logger.warning_messages
 
 
-def test_process_year_covers_grouped_and_original_lcia_future_year_fallback(
+def test_process_year_covers_aggregated_and_original_lcia_future_year_fallback(
     allocation_dummy_repo,
     tmp_path: Path,
 ) -> None:
@@ -1008,8 +1010,8 @@ def test_process_year_covers_grouped_and_original_lcia_future_year_fallback(
     context = _package_run_context(
         tmp_path=tmp_path,
         source="exiobase_396_ixi",
-        group_version="oecd_d",
-        group_version_reg="demo_reg",
+        agg_version="oecd_d",
+        agg_version_reg="demo_reg",
         selected_l1=["AR(Ecap^{PBA})"],
         selected_l2_one_step=[],
         combined=[],
@@ -1043,8 +1045,8 @@ def test_process_year_covers_original_domain_current_year_lcia_loading(
     context = _package_run_context(
         tmp_path=tmp_path,
         source="exiobase_396_ixi",
-        group_version="oecd_d",
-        group_version_reg="demo_reg",
+        agg_version="oecd_d",
+        agg_version_reg="demo_reg",
         selected_l1=["AR(Ecap^{PBA})"],
         selected_l2_one_step=[],
         combined=[],

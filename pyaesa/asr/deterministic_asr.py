@@ -115,16 +115,16 @@ def deterministic_asr(
     *,
     project_name: str,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     years: int | list[int] | range,
     fu_code: str,
     s_p: str | list[str] | None = None,
     r_p: str | list[str] | None = None,
     r_c: str | list[str] | None = None,
     r_f: str | list[str] | None = None,
-    aggreg_indices: bool = False,
+    group_indices: bool = False,
     lcia_method: str | list[str],
     base_asocc_args: dict = {
         "method_plan": "default",
@@ -185,19 +185,30 @@ def deterministic_asr(
             ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
             ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
             for ISO3 only mode (L1 EG/PR(GDPcap) only).
-        group_reg: If ``True``, aggregate regions using a grouping file.
+        agg_reg: If ``True``, reclassify MRIO regions with the
+            ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native regions
+            into one target label, or disaggregate one native region across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source regions.
-        group_sec: If ``True``, aggregate sectors using a grouping file.
+        agg_sec: If ``True``, reclassify MRIO sectors with the
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native sectors
+            into one target label, or disaggregate one native sector across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source sectors.
-        group_version: Grouping version tag used to resolve the region/sector
-            mapping CSVs. Required when ``group_reg`` or ``group_sec`` is True.
-            Defaults to an empty string for ungrouped processing. Follow
-            ``README_grouping.txt`` in the active
-            ``data_raw/mrio/<source>/grouping`` folder to name grouping
-            versions and place the matching mapping CSVs.
+        agg_version: Name token used to resolve the matching
+            ``agg_reg_<agg_version>.csv`` and/or
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+            mapping files in ``data_raw/mrio/<source>/aggregation``.
+            Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+            an empty string for native source classification. Use the same
+            token in downstream calls that should reuse the processed
+            classification. When a mapping file has a ``weight``
+            column, weights must sum to ``1`` for each original label.
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
-            years for the selected source/group version are used.
+            years for the selected source and ``agg_version`` are used.
         lcia_method: Shared downstream LCIA method name or list of names. When
             static carrying capacity (CC) is active, the denominator requires
             a matching carrying capacity CSV. The package includes static CC files for
@@ -205,9 +216,10 @@ def deterministic_asr(
             ``"ef_3.1"`` is the default carrying capacity method that
             currently has no MRIO LCIA characterization matrix. It is still
             dynamic AR6 compatible for its ``"GWP_100"`` impact category.
-            Dynamic AR6 CC is supported for ``"gwp100_lcia"`` and for
-            ``"ef_3.1"`` impact ``"GWP_100"`` only. Custom static CC methods
-            also require a matching file in
+            Dynamic AR6 CC is available for any selected method whose static
+            carrying capacity CSV contains an impact row equal to
+            ``"GWP_100"``. Custom static CC methods also require a matching
+            file in
             ``data_raw/carrying_capacities/``; follow
             ``README_add_custom_carrying_capacities.txt``. When upstream
             allocated shares of carrying capacities (aSoCC) LCIA based methods
@@ -230,7 +242,7 @@ def deterministic_asr(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing sectors. To identify valid sector
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/.../group_sec_template.csv`` file. For
+            ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv`` file. For
             EXIOBASE sector definitions, see
             ``data_raw/mrio/exiobase_3/sector_classification.xlsx``; EXIOBASE
             ixi and pxp use different sector lists.
@@ -238,27 +250,28 @@ def deterministic_asr(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_c: Consuming region filter(s), single string or list. If this is a
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid consuming regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_f: Final demand region filter(s), single string or list. If this is
             a required axis for ``fu_code`` and the argument is omitted, the
             run expands to all valid final demand regions. To identify valid
             region names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
-        aggreg_indices: Whether multiple selected region/sector indices are
-            reported as separate rows or summed into one row after the
-            selected MRIO scope is computed.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
+        group_indices: Whether multiple selected region or sector filter values
+            are kept as separate result rows or summed into one result row after
+            the function calculation has been performed.
             - ``False`` (default): keep selected values as independent rows.
-            - ``True``: sum selected values into one row.
-            Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-            aggregating CBA total demand system boundaries can double count.
-            For these functional units, define the aggregation from
-            ``process_mrio(...)`` onward with
-            ``group_reg``/``group_sec``/``group_version``.
+            - ``True``: sum selected values into one result row.
+            The function refuses to run when ``group_indices=True`` is used
+            with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+            rows for CBA total demand boundaries can double count. For these
+            functional units, change the upstream MRIO aggregation and disaggregation
+            scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+            running the study.
         base_asocc_args: Optional aSoCC only envelope reused to resolve the
             deterministic upstream aSoCC prerequisite. Write nested arguments
             as ``base_asocc_args={"method_plan": "default"}``. Omit the
@@ -354,8 +367,10 @@ def deterministic_asr(
                 only supported value is currently ``"offset"``. Ignored when
                 ``harmonization=False``.
               - ``category``: AR6 category classification selector for global
-                warming trajectories, as a string or list, such as ``"C2"``
-                or ``["C1", "C2"]``. Defaults to C1 to C4.
+                warming trajectories, as a string or list, such as ``"C3"``
+                or ``["C1", "C2"]``. Valid values are C1 through C8.
+                Defaults to C1 to C4, the categories aligned with the
+                2015 Paris Agreement.
               - ``ssp_scenario``: Canonical SSP selector as a string, list,
                 or ``None``, such as ``"SSP2"`` or ``["SSP1", "SSP2"]``.
                 Defaults to SSP1 to SSP5.
@@ -363,18 +378,20 @@ def deterministic_asr(
                 are ``"kyoto_gases"`` (default) and ``"co2"``.
                 ``emission_type="kyoto_gases"`` uses the GWP100 Kyoto Gases
                 aggregate; ``emission_type="co2"`` uses direct CO2 pathways.
-              - ``include_afolu``: Whether AFOLU is included inside the
-                selected ``emission_type``. Defaults to ``False``.
+              - ``include_afolu``: Whether AFOLU emissions are included inside
+                the selected ``emission_type``. Defaults to ``False``.
               - ``emissions_mode``: Dynamic AR6 emissions mode. Accepted
                 values are ``"net"``, ``"gross"``, and ``"gross_alt"``.
-                Defaults to ``"gross_alt"``. Gross modes write positive
-                emissions denominator rows and signed negative sequestration
-                companion rows; downstream aCC and ASR consume only the
-                denominator gross positive rows. ``"gross"`` removes all
-                sequestration sources from net emissions. ``"gross_alt"``
-                removes all sequestration sources except CCS, as it does not
-                directly capture CO2 from the atmosphere; IPCC AR6 recommends
-                treating CCS separately from net negative sequestration. See
+                Defaults to ``"gross_alt"``. ``"net"`` uses net AR6 emissions
+                pathways directly. ``"gross"`` removes all sequestration
+                sources from net emissions. ``"gross_alt"`` removes all
+                sequestration sources except CCS. CCS is retained because IPCC
+                AR6 treats CCS as capture at fossil or industrial point
+                sources rather than direct removal of CO2 from the atmosphere,
+                so it is kept separate from net negative sequestration. Gross
+                modes write positive emissions rows and signed negative
+                sequestration companion rows; downstream aCC and ASR consume
+                only the positive emissions rows. See
                 ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
                 for the methodological explanation.
               - ``subset_version``: Optional selector for a subset of AR6
@@ -450,11 +467,10 @@ def deterministic_asr(
             - ``dpi``: Positive integer figure resolution used for raster
               outputs.
         subfigures: Whether prerequisite LCA and dynamic AR6 CC figures are
-            also rendered during the automatic prerequisite cascade when
-            ``figures=True``. Default is ``True``.
+            also rendered when ``figures=True``. Default is ``True``.
 
         refresh: If ``True``, clear and recompute the resolved deterministic
-            ASR output scope for this project, source and group version,
+            ASR output scope for this project, source and aggregation version,
             numerator route, carrying capacity source, and carrying capacity
             type, plus the matching deterministic aCC prerequisite scope and,
             when the numerator route is IO-LCA, the IO-LCA prerequisite scope
@@ -466,7 +482,7 @@ def deterministic_asr(
             scope manifest plus recorded ASR result tables and figures for that
             scope before recomputation. For example, for
             ``project_name="demo"``, ``source="exiobase_3102_ixi"``,
-            ``group_version="elec"``, external LCA version ``"test_v1"``, and
+            ``agg_version="elec"``, external LCA version ``"test_v1"``, and
             static ``cc_source="gwp100_lcia"``, the refreshed scope is
             ``<repo>/demo/C_asr/exiobase_3102_ixi__elec/external_lca__test_v1/deterministic/static__gwp100_lcia``.
             External LCA staged inputs, processed MRIO inputs, processed
@@ -519,10 +535,10 @@ def deterministic_asr(
     requested_years = normalize_requested_years(years)
     mrio_scope = normalize_mrio_scope(
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
-        aggreg_indices=aggreg_indices,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
+        group_indices=group_indices,
     )
     asocc_config = normalize_base_asocc_args(base_asocc_args, fu_code=fu_code)
     cc_config = normalize_base_cc_args(base_cc_args)
@@ -544,10 +560,10 @@ def deterministic_asr(
         r_c=r_c,
         r_f=r_f,
         source=cast(str, mrio_scope["source"]),
-        group_reg=cast(bool, mrio_scope["group_reg"]),
-        group_sec=cast(bool, mrio_scope["group_sec"]),
-        group_version=cast(str | None, mrio_scope["group_version"]),
-        aggreg_indices=cast(bool, mrio_scope["aggreg_indices"]),
+        agg_reg=cast(bool, mrio_scope["agg_reg"]),
+        agg_sec=cast(bool, mrio_scope["agg_sec"]),
+        agg_version=cast(str | None, mrio_scope["agg_version"]),
+        group_indices=cast(bool, mrio_scope["group_indices"]),
         base_asocc_args=asocc_config,
     )
     native_selector = build_asocc_target_selector(base_asocc_args=base_allocate_args)
@@ -602,10 +618,10 @@ def deterministic_asr(
             r_c=r_c,
             r_f=r_f,
             source=cast(str, mrio_scope["source"]),
-            group_reg=cast(bool, mrio_scope["group_reg"]),
-            group_sec=cast(bool, mrio_scope["group_sec"]),
-            group_version=cast(str | None, mrio_scope["group_version"]),
-            aggreg_indices=cast(bool, mrio_scope["aggreg_indices"]),
+            agg_reg=cast(bool, mrio_scope["agg_reg"]),
+            agg_sec=cast(bool, mrio_scope["agg_sec"]),
+            agg_version=cast(str | None, mrio_scope["agg_version"]),
+            group_indices=cast(bool, mrio_scope["group_indices"]),
             base_asocc_args=asocc_config,
             base_cc_args=build_public_cc_branch_args(branch=branch),
             lca_args=lca_config,
@@ -630,7 +646,7 @@ def deterministic_asr(
             path_context = build_asr_path_context(
                 proj_base=proj_base,
                 source_label=source_label,
-                group_version=base_allocate_args["group_version"],
+                agg_version=base_allocate_args["agg_version"],
                 fu_code=fu_code,
                 lca_type=lca_type,
                 cc_source=branch["cc_source"],
@@ -706,30 +722,34 @@ def deterministic_asr(
                 )
                 continue
         phase = PhasePrinter("deterministic_asr")
+        prerequisite_kwargs: dict[str, Any] = {
+            "phase": phase,
+            "project_name": project_name,
+            "years": years,
+            "fu_code": fu_code,
+            "r_p": r_p,
+            "s_p": s_p,
+            "r_c": r_c,
+            "r_f": r_f,
+            "source": cast(str, mrio_scope["source"]),
+            "agg_reg": cast(bool, mrio_scope["agg_reg"]),
+            "agg_sec": cast(bool, mrio_scope["agg_sec"]),
+            "agg_version": cast(str | None, mrio_scope["agg_version"]),
+            "group_indices": cast(bool, mrio_scope["group_indices"]),
+            "base_asocc_args": asocc_config,
+            "shared_lcia_methods": shared_methods,
+            "branch": branch,
+            "external_method": external_method_norm,
+            "lca_type": lca_type,
+            "lca_version_name": lca_version_name,
+            "output_format": fmt,
+            "figure_options": figure_options_norm,
+            "figure_output_format": figure_output_format,
+            "figure_dpi": figure_dpi,
+        }
         prerequisites = ensure_asr_branch_prerequisites(
-            phase=phase,
-            project_name=project_name,
-            years=years,
-            fu_code=fu_code,
-            r_p=r_p,
-            s_p=s_p,
-            r_c=r_c,
-            r_f=r_f,
-            source=cast(str, mrio_scope["source"]),
-            group_reg=cast(bool, mrio_scope["group_reg"]),
-            group_sec=cast(bool, mrio_scope["group_sec"]),
-            group_version=cast(str | None, mrio_scope["group_version"]),
-            aggreg_indices=cast(bool, mrio_scope["aggreg_indices"]),
-            base_asocc_args=asocc_config,
-            branch=branch,
-            external_method=external_method_norm,
-            lca_type=lca_type,
-            lca_version_name=lca_version_name,
-            output_format=fmt,
-            figures=subfigures_norm,
-            figure_options=figure_options_norm,
-            figure_output_format=figure_output_format,
-            figure_dpi=figure_dpi,
+            **prerequisite_kwargs,
+            figures=False,
             refresh=refresh,
         )
         phase_entries = prerequisites.phase_entries
@@ -783,6 +803,12 @@ def deterministic_asr(
                     output_root=branch_output_root,
                 )
             )
+        if subfigures_norm:
+            prerequisites = ensure_asr_branch_prerequisites(
+                **prerequisite_kwargs,
+                figures=True,
+                refresh=False,
+            )
         result = replace(result, dynamic_ar6_summary=prerequisites.dynamic_ar6_summary)
         phase_entries.append(
             CompositePhaseIndexEntry(
@@ -814,10 +840,10 @@ def deterministic_asr(
             years=requested_years,
             lcia_methods=shared_methods,
             fu_code=fu_code,
-            group_reg=cast(bool, mrio_scope["group_reg"]),
-            group_sec=cast(bool, mrio_scope["group_sec"]),
-            group_version=cast(str | None, mrio_scope["group_version"]),
-            aggreg_indices=cast(bool, mrio_scope["aggreg_indices"]),
+            agg_reg=cast(bool, mrio_scope["agg_reg"]),
+            agg_sec=cast(bool, mrio_scope["agg_sec"]),
+            agg_version=cast(str | None, mrio_scope["agg_version"]),
+            group_indices=cast(bool, mrio_scope["group_indices"]),
             ssp_scenarios=cast(list[str] | None, asocc_config.get("ssp_scenario")),
             lca_route=lca_route,
         ),

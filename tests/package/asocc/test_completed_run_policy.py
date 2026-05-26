@@ -15,10 +15,10 @@ from pyaesa.asocc.runtime.paths.published import _asocc_deterministic_scope_root
 def _signature() -> dict[str, object]:
     return {
         "source": "oecd_v2025",
-        "group_version": None,
-        "group_reg": False,
-        "group_sec": False,
-        "aggreg_indices": False,
+        "agg_version": None,
+        "agg_reg": False,
+        "agg_sec": False,
+        "group_indices": False,
         "l1_reg_aggreg": "post",
         "fu_code": "L1.a",
         "studied_indices_tag": "r_p-FR",
@@ -48,7 +48,7 @@ def _metadata_path(tmp_path: Path, signature: dict[str, object]) -> Path:
     return _get_allocate_run_metadata_path(
         tmp_path,
         source=str(signature["source"]),
-        group_version=None,
+        agg_version=None,
     )
 
 
@@ -56,7 +56,7 @@ def _output_file(tmp_path: Path, signature: dict[str, object]) -> Path:
     root = _asocc_deterministic_scope_root(
         proj_base=tmp_path,
         source=str(signature["source"]),
-        group_version=None,
+        agg_version=None,
     )
     return root / "results" / "table_l1.csv"
 

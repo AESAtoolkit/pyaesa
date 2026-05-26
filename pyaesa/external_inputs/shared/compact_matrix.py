@@ -6,9 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
-import pyarrow.compute as pc
-import pyarrow.csv as pacsv
 
 
 @dataclass(frozen=True)
@@ -29,6 +26,7 @@ class CompactRunMatrixSource:
     run_indices: np.ndarray
     paths: tuple[Path, Path]
     values_for_runs: Callable[[np.ndarray], np.ndarray]
+    values_for_run_rows: Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 def is_compact_run_matrix_dir(path: Path, *, run_file_name: str) -> bool:
@@ -73,27 +71,33 @@ def load_compact_run_matrix_source(
     _validate_identity(identity=identity, context=context)
     run_columns = list(pd.read_csv(runs_path, nrows=0).columns)
     _validate_run_columns(columns=run_columns, identity=identity, context=context)
-    table = pacsv.read_csv(
-        runs_path,
-        convert_options=pacsv.ConvertOptions(include_columns=["run_index"]),
-    )
-    run_indices = _int64_column(table["run_index"])
+    run_indices = _read_run_indices(path=runs_path)
     expected_runs = np.arange(len(run_indices), dtype=np.int64)
     if not np.array_equal(run_indices, expected_runs):
         raise ValueError(
             f"{context} compact run matrix run_index values must start at 0 and be contiguous."
         )
     public_row_ids = identity["public_row_id"].to_numpy(dtype=np.int64)
+
+    def values_for_run_rows(requested: np.ndarray, row_positions: np.ndarray) -> np.ndarray:
+        """Return requested runs for selected public row positions."""
+        selected_ids = public_row_ids[np.asarray(row_positions, dtype=np.int64)]
+        return compact_run_matrix_values_for_runs(
+            runs_path=runs_path,
+            public_row_ids=selected_ids,
+            run_indices=run_indices,
+            requested_runs=np.asarray(requested, dtype=np.int64),
+        )
+
     return CompactRunMatrixSource(
         identity=identity.reset_index(drop=True),
         run_indices=run_indices,
         paths=(identity_path, runs_path),
-        values_for_runs=lambda requested: compact_run_matrix_values_for_runs(
-            runs_path=runs_path,
-            public_row_ids=public_row_ids,
-            run_indices=run_indices,
-            requested_runs=np.asarray(requested, dtype=np.int64),
+        values_for_runs=lambda requested: values_for_run_rows(
+            np.asarray(requested, dtype=np.int64),
+            np.arange(len(public_row_ids), dtype=np.int64),
         ),
+        values_for_run_rows=values_for_run_rows,
     )
 
 
@@ -117,14 +121,14 @@ def compact_run_matrix_values_for_runs(
     start = int(unique_runs[0])
     stop = int(unique_runs[-1]) + 1
     column_names = [str(int(public_row_id)) for public_row_id in public_row_ids]
-
-    def skip_prefix(row_number: object) -> bool:
-        return 0 < int(str(row_number)) <= start
+    all_column_names = list(pd.read_csv(runs_path, nrows=0).columns)
 
     frame = pd.read_csv(
         runs_path,
+        header=None,
+        names=all_column_names,
         usecols=["run_index", *column_names],
-        skiprows=skip_prefix,
+        skiprows=start + 1,
         nrows=stop - start,
     )
     source_runs = frame["run_index"].to_numpy(dtype=np.int64)
@@ -159,8 +163,10 @@ def _validate_run_columns(*, columns: list[str], identity: pd.DataFrame, context
         )
 
 
-def _int64_column(column: pa.ChunkedArray) -> np.ndarray:
-    return np.asarray(pc.cast(column, pa.int64()).to_numpy(zero_copy_only=False), dtype=np.int64)
+def _read_run_indices(*, path: Path) -> np.ndarray:
+    return pd.read_csv(path, usecols=["run_index"], dtype={"run_index": "int64"})[
+        "run_index"
+    ].to_numpy(dtype=np.int64, copy=False)
 
 
 def _validate_requested_runs(

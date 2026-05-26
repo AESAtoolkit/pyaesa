@@ -1,6 +1,6 @@
 """ASR Sobol variance decomposition."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 import numpy as np
@@ -14,14 +14,20 @@ from pyaesa.acc.uncertainty.request.normalization import (
 )
 from pyaesa.acc.uncertainty.evaluation.source_unit_evaluator import (
     ACCSobolEvaluationContext,
+    acc_sobol_base_chunk_rows,
     build_acc_sobol_evaluation_context,
     evaluate_acc_sobol_units,
 )
+from pyaesa.acc.uncertainty.evaluation.summary import acc_summary_excluded_columns
 from pyaesa.asr.uncertainty.sources.lca_inputs import lcia_uncertainty_source_active
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyRunPaths, LCAUncertaintyInput
 from pyaesa.asr.uncertainty.evaluation.alignment import build_asr_alignment
 from pyaesa.asr.uncertainty.evaluation.runs import (
     evaluate_asr_value_matrix,
+)
+from pyaesa.asr.uncertainty.evaluation.cumulative import (
+    cumulative_period_identity_groups,
+    evaluate_asr_cumulative_value_matrix_for_groups,
 )
 from pyaesa.asr.uncertainty.sources.source_keys import acc_source_name, io_lca_source_name
 from pyaesa.io_lca.data.contracts import IO_LCA_FAMILY
@@ -36,7 +42,14 @@ from pyaesa.io_lca.uncertainty.sobol.evaluator import (
     build_io_lca_sobol_evaluation_context,
     evaluate_io_lca_sobol_units,
 )
-from pyaesa.shared.uncertainty_assessment.sobol.plan import SobolPlan, sobol_plan_payload
+from pyaesa.shared.acc_asr_common.branches.expand import has_dynamic_ar6_branch
+from pyaesa.shared.runtime.scenario.columns import ASOCC_TIME_ROUTE_PUBLIC_COLUMN
+from pyaesa.shared.uncertainty_assessment.sobol.plan import (
+    SobolPlan,
+    selected_sobol_output_years,
+    sobol_plan_payload,
+    studied_output_years,
+)
 from pyaesa.shared.uncertainty_assessment.sobol.design import SobolEvaluationChunk
 from pyaesa.shared.uncertainty_assessment.sobol.reporting import (
     sobol_method_payload,
@@ -64,7 +77,9 @@ class ASRSobolRunResult:
 class ASRSobolEvaluationContext:
     """Prepared ASR Sobol evaluator context."""
 
-    identity: pd.DataFrame
+    target_identity: pd.DataFrame
+    static_target_positions: np.ndarray
+    cumulative_target_public_row_groups: tuple[tuple[str, ...], ...]
     source_names: tuple[str, ...]
     acc_context: ACCSobolEvaluationContext
     lca_input: LCAUncertaintyInput
@@ -123,7 +138,8 @@ def run_asr_sobol(
         plan=sobol_plan,
         dimension_names=context.source_names,
         evaluate=lambda chunk: _evaluate_chunk(context=context, chunk=chunk),
-        progress_source="uncertainty_asr",
+        max_base_chunk_rows=asr_sobol_base_chunk_rows(context=context),
+        progress_source=_asr_sobol_progress_source(paths=paths),
         status=status,
     )
     write_uncertainty_table(
@@ -141,7 +157,10 @@ def run_asr_sobol(
         output_format=runtime.output_format,
         family_label="ASR",
         source_names=context.source_names,
-        selected_scope_line="Sobol outputs are evaluated on the ASR matched public rows.",
+        selected_scope_line=(
+            "Static ASR Sobol outputs are evaluated for the selected output years. "
+            "Dynamic AR6 ASR Sobol outputs are evaluated as cumulative period targets."
+        ),
         plan=sobol_plan,
         source_summary_notes=(
             "ACC sources include the nested aSoCC and dynamic AR6 CC sources selected "
@@ -150,9 +169,13 @@ def run_asr_sobol(
             "uncertainty is active or external LCA Monte Carlo rows are supplied.",
         ),
         indices_notes=(
-            "ASR row identity is built from matched ACC denominator rows and LCA numerator rows.",
+            "ASR row identity is built from matched ACC denominator rows and LCA numerator rows. "
+            "Dynamic AR6 rows use cumulative period identities.",
         ),
-        method_notes=("ASR Sobol evaluates ASR = LCA / aCC directly for each Saltelli row.",),
+        method_notes=(
+            "ASR Sobol evaluates ASR = LCA / aCC directly for each Saltelli row. "
+            "Dynamic AR6 targets are cumulative ASR period ratios.",
+        ),
     )
     sobol_status = dict(result.status)
     sobol_status["ran"] = True
@@ -163,6 +186,21 @@ def run_asr_sobol(
         selected_scope={},
     )
     return ASRSobolRunResult(ran=True, status=sobol_status)
+
+
+def _asr_sobol_progress_source(*, paths: ASRUncertaintyRunPaths) -> str:
+    """Return a short ASR Sobol source label for static and dynamic branch runs."""
+    branch_name = paths.run_root.parent.name
+    if branch_name.startswith("dynamic_ar6__"):
+        return "asr_dynamic_ar6"
+    if branch_name.startswith("static__"):
+        return "asr_static"
+    return "asr"
+
+
+def asr_sobol_base_chunk_rows(*, context: ASRSobolEvaluationContext) -> int:
+    """Return Sobol base rows bounded by nested aCC and aSoCC evaluation."""
+    return acc_sobol_base_chunk_rows(context=context.acc_context)
 
 
 def build_asr_sobol_evaluation_context(
@@ -179,6 +217,16 @@ def build_asr_sobol_evaluation_context(
 ) -> ASRSobolEvaluationContext:
     """Build a reusable ASR Sobol evaluator context."""
     acc_uncertainty_config = normalize_acc_uncertainty_config(dict(acc_uncertainty_config))
+    full_year_tokens = studied_output_years(full_years)
+    target_years = selected_sobol_output_years(
+        plan=sobol_plan,
+        available_years=full_year_tokens,
+    )
+    acc_sobol_plan = (
+        replace(sobol_plan, sobol_years=full_year_tokens)
+        if has_dynamic_ar6_branch(branches=branches)
+        else sobol_plan
+    )
     acc_context = build_acc_sobol_evaluation_context(
         branches=branches,
         base_asocc_args=base_asocc_args,
@@ -188,7 +236,7 @@ def build_asr_sobol_evaluation_context(
             acc_uncertainty_config.get(AR6_DYNAMIC_CC_SOURCE)
         ),
         full_years=full_years,
-        sobol_plan=sobol_plan,
+        sobol_plan=acc_sobol_plan,
     )
     lca_context = _io_lca_sobol_context(
         base_io_lca_args=base_io_lca_args,
@@ -201,8 +249,18 @@ def build_asr_sobol_evaluation_context(
         lca_identity=lca_identity,
         lca_type=lca_input.lca_type,
     )
-    return ASRSobolEvaluationContext(
+    target_identity, static_positions, cumulative_groups = _asr_sobol_target_scope(
         identity=alignment.identity,
+        target_years=target_years,
+        active_sources=acc_context.source_names,
+        dynamic_category_uncertainty_active=_acc_dynamic_category_uncertainty_active(
+            context=acc_context
+        ),
+    )
+    return ASRSobolEvaluationContext(
+        target_identity=target_identity,
+        static_target_positions=static_positions,
+        cumulative_target_public_row_groups=cumulative_groups,
         source_names=tuple(acc_source_name(name) for name in acc_context.source_names)
         + _lca_sobol_source_names(lca_input=lca_input, lca_context=lca_context),
         acc_context=acc_context,
@@ -220,7 +278,7 @@ def _evaluate_chunk(
     chunk: SobolEvaluationChunk,
 ) -> EvaluatedSobolChunk:
     units = np.vstack((chunk.a, chunk.b, *chunk.ab))
-    values = evaluate_asr_sobol_units(context=context, units=units)
+    identity, values = evaluate_asr_sobol_target_units(context=context, units=units)
     a_stop = chunk.a.shape[0]
     b_stop = a_stop + chunk.b.shape[0]
     ab_values = []
@@ -230,19 +288,19 @@ def _evaluate_chunk(
         ab_values.append(values[start:stop])
         start = stop
     return EvaluatedSobolChunk(
-        identity=context.identity,
+        identity=identity,
         a_values=values[:a_stop],
         b_values=values[a_stop:b_stop],
         ab_values=tuple(ab_values),
     )
 
 
-def evaluate_asr_sobol_units(
+def evaluate_asr_sobol_target_units(
     *,
     context: ASRSobolEvaluationContext,
     units: np.ndarray,
-) -> np.ndarray:
-    """Evaluate unit interval source values into ASR public row values."""
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Evaluate unit interval source values into selected ASR Sobol targets."""
     acc_count = len(context.acc_context.source_names)
     _, acc_values = evaluate_acc_sobol_units(
         context=context.acc_context,
@@ -252,13 +310,28 @@ def evaluate_asr_sobol_units(
         context=context,
         units=units[:, acc_count:],
     )
-    return evaluate_asr_value_matrix(
+    yearly_values = evaluate_asr_value_matrix(
         acc_values=acc_values,
         lca_values=lca_values,
         acc_positions=context.acc_positions,
         lca_positions=context.lca_positions,
         lca_unit_factors=context.lca_unit_factors,
     )
+    blocks = []
+    if context.static_target_positions.size:
+        blocks.append(yearly_values[:, context.static_target_positions])
+    if context.cumulative_target_public_row_groups:
+        blocks.append(
+            evaluate_asr_cumulative_value_matrix_for_groups(
+                acc_values=acc_values,
+                lca_values=lca_values,
+                acc_positions=context.acc_positions,
+                lca_positions=context.lca_positions,
+                lca_unit_factors=context.lca_unit_factors,
+                public_row_groups=context.cumulative_target_public_row_groups,
+            )
+        )
+    return context.target_identity, np.concatenate(blocks, axis=1)
 
 
 def _lca_values_for_units(*, context: ASRSobolEvaluationContext, units: np.ndarray) -> np.ndarray:
@@ -270,6 +343,56 @@ def _lca_values_for_units(*, context: ASRSobolEvaluationContext, units: np.ndarr
         return context.lca_input.run_values_for_units(source_units)
     fixed = cast(np.ndarray, context.lca_input.fixed_values)
     return np.broadcast_to(fixed, (units.shape[0], len(fixed)))
+
+
+def _acc_dynamic_category_uncertainty_active(
+    *,
+    context: ACCSobolEvaluationContext,
+) -> bool:
+    """Return whether upstream aCC Sobol includes AR6 category uncertainty."""
+    cc_context = context.cc_context
+    if cc_context is None:
+        return False
+    return bool(cc_context.plan.source_parameters["category_uncertainty"])
+
+
+def _asr_sobol_target_scope(
+    *,
+    identity: pd.DataFrame,
+    target_years: tuple[int, ...],
+    active_sources: tuple[str, ...],
+    dynamic_category_uncertainty_active: bool,
+) -> tuple[pd.DataFrame, np.ndarray, tuple[tuple[str, ...], ...]]:
+    """Return yearly static and cumulative dynamic ASR Sobol target scope."""
+    dynamic = identity["cc_type"].astype("string").fillna("").eq("dynamic_ar6")
+    frames: list[pd.DataFrame] = []
+    static = identity.loc[~dynamic].copy()
+    if "year" in static.columns:
+        static_year = pd.Series(
+            pd.to_numeric(static["year"], errors="raise"),
+            index=static.index,
+        ).astype(int)
+        static = static.loc[static_year.isin(target_years)]
+    static_positions = static["public_row_id"].to_numpy(dtype=np.int64, copy=False)
+    if not static.empty:
+        frames.append(static.drop(columns=["public_row_id"], errors="ignore"))
+    cumulative_groups: tuple[tuple[str, ...], ...] = ()
+    dynamic_identity = identity.loc[dynamic].copy()
+    if not dynamic_identity.empty:
+        excluded = acc_summary_excluded_columns(
+            active_sources=active_sources,
+            dynamic_category_uncertainty_active=dynamic_category_uncertainty_active,
+        )
+        excluded.add(ASOCC_TIME_ROUTE_PUBLIC_COLUMN)
+        excluded.difference_update({"l1_l2_method", "l1_method", "l2_method"})
+        cumulative_identity, cumulative_groups = cumulative_period_identity_groups(
+            identity=dynamic_identity,
+            excluded_columns=excluded,
+        )
+        frames.append(cumulative_identity.drop(columns=["public_row_id"], errors="ignore"))
+    target_identity = pd.concat(frames, ignore_index=True, sort=False)
+    target_identity.insert(0, "public_row_id", np.arange(len(target_identity), dtype=np.int64))
+    return target_identity, static_positions, cumulative_groups
 
 
 def _io_lca_sobol_context(

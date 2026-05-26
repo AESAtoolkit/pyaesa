@@ -1,6 +1,6 @@
 """Shared deterministic transition figure products for long form trajectories."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -93,6 +93,7 @@ ScopedOutputBuilder = Callable[
     [Path, str | None, str, str, str | None],
     Path,
 ]
+TransitionProductScope = tuple[str, dict[str, str | None], pd.DataFrame, Path]
 
 
 def _panel_variant_entries(
@@ -655,50 +656,56 @@ def render_transition_products(
         if exact_single_year_scope
         else default_checkpoint_years(requested_years)
     )
-    if group_combined_by_impact:
-        outer_scopes = (
-            (
+
+    def outer_scopes() -> Iterator[TransitionProductScope]:
+        """Yield final transition figure scopes without retaining all selector frames."""
+        if group_combined_by_impact:
+            for (
                 impact_token,
-                {
-                    "family": family,
-                    "selector_scope": selector_title or None,
-                    "lcia_method": lcia_method,
-                    "user_facing_override_label": resolve_figure_display_label(
-                        frame=scenario_frame,
-                        user_facing_override_label=user_facing_override_label,
-                    ),
-                    "prospective_scope": scenario_title,
-                },
-                scenario_frame,
-                _default_scoped_output_base(
-                    output_base=output_base,
-                    lcia_method=lcia_method,
-                    selector_token=selector_token,
-                    scenario_token=scenario_token,
-                    impact_token=impact_token,
-                )
-                if scoped_output_builder is None
-                else scoped_output_builder(
-                    output_base,
-                    lcia_method,
-                    selector_token,
-                    scenario_token,
-                    impact_token,
-                ),
-            )
-            for impact_token, _impact_title, impact_frame, lcia_method in (
-                combined_lcia_impact_slices(long_frame)
-            )
-            for selector_token, selector_title, selector_frame in selector_slices(
+                _impact_title,
                 impact_frame,
-                selector_scope_request=selector_scope_request,
-            )
-            for scenario_token, scenario_title, scenario_frame in prospective_scope_slices(
-                selector_frame
-            )
-        )
-    else:
-        outer_scopes = []
+                lcia_method,
+            ) in combined_lcia_impact_slices(long_frame):
+                for selector_token, selector_title, selector_frame in selector_slices(
+                    impact_frame,
+                    selector_scope_request=selector_scope_request,
+                ):
+                    for scenario_token, scenario_title, scenario_frame in prospective_scope_slices(
+                        selector_frame
+                    ):
+                        scoped_output = (
+                            _default_scoped_output_base(
+                                output_base=output_base,
+                                lcia_method=lcia_method,
+                                selector_token=selector_token,
+                                scenario_token=scenario_token,
+                                impact_token=impact_token,
+                            )
+                            if scoped_output_builder is None
+                            else scoped_output_builder(
+                                output_base,
+                                lcia_method,
+                                selector_token,
+                                scenario_token,
+                                impact_token,
+                            )
+                        )
+                        yield (
+                            impact_token,
+                            {
+                                "family": family,
+                                "selector_scope": selector_title or None,
+                                "lcia_method": lcia_method,
+                                "user_facing_override_label": resolve_figure_display_label(
+                                    frame=scenario_frame,
+                                    user_facing_override_label=user_facing_override_label,
+                                ),
+                                "prospective_scope": scenario_title,
+                            },
+                            scenario_frame,
+                            scoped_output,
+                        )
+            return
         for _lcia_token, _lcia_title, lcia_frame, lcia_method in lcia_method_slices(long_frame):
             for selector_token, selector_title, selector_frame in selector_slices(
                 lcia_frame,
@@ -734,15 +741,14 @@ def render_transition_products(
                         ),
                         "prospective_scope": scenario_title,
                     }
-                    outer_scopes.append(
-                        (
-                            selector_token,
-                            title_parts,
-                            scenario_frame,
-                            scoped_output,
-                        )
+                    yield (
+                        selector_token,
+                        title_parts,
+                        scenario_frame,
+                        scoped_output,
                     )
-    for _scope_token, scoped_title_parts, scoped_frame, scoped_base in outer_scopes:
+
+    for _scope_token, scoped_title_parts, scoped_frame, scoped_base in outer_scopes():
         panel_entries, main_frame, footer_note, single_year_footer_note = _panel_variant_entries(
             frame=scoped_frame,
             requested_years=requested_years,

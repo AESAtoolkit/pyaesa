@@ -69,7 +69,7 @@ def _base_l1_inputs() -> dict:
         "pr_gdp": pr_gdp,
         "pr_to_mrio": pr_to_mrio,
         "source_key": "oecd_v2025",
-        "group_version_reg": None,
+        "agg_version_reg": None,
         "l1_reg_aggreg": "pre",
         "region_label_override": None,
         "lcia_reg": _lcia_reg_frame(),
@@ -215,8 +215,8 @@ def _ar_context(*, fu_code: str, selected_l1: list[str] | None = None) -> Simple
         selected_l2 = ["AR(E^{PBA})"]
     return SimpleNamespace(
         source="exiobase_396_ixi",
-        group_version=None,
-        group_version_reg=None,
+        agg_version=None,
+        agg_version_reg=None,
         fu_code=fu_code,
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None, "r_u": None},
         needs_lcia=True,
@@ -289,7 +289,7 @@ def test_aggregate_l1_regions_post_covers_single_and_multiindex_validation(
                 ),
             ),
             source_key="oecd_v2025",
-            group_version_reg="demo_reg",
+            agg_version_reg="demo_reg",
             region_label="r_f",
         )
 
@@ -300,7 +300,7 @@ def test_aggregate_l1_regions_post_covers_single_and_multiindex_validation(
                 index=pd.Index(["FR"], name="r_x"),
             ),
             source_key="oecd_v2025",
-            group_version_reg="demo_reg",
+            agg_version_reg="demo_reg",
             region_label="r_f",
         )
 
@@ -310,7 +310,7 @@ def test_aggregate_l1_regions_post_covers_single_and_multiindex_validation(
             index=pd.Index(["FR", "US"], name="r_f"),
         ),
         source_key="oecd_v2025",
-        group_version_reg="demo_reg",
+        agg_version_reg="demo_reg",
         region_label="r_f",
     )
     assert list(aggregated.index) == ["EU", "NAM"]
@@ -330,7 +330,7 @@ def test_compute_l1_method_with_real_families(allocation_dummy_repo) -> None:
     pr = compute_l1.compute_l1_method(
         l1_method="PR(GDPcap)",
         fu_code="L1.a",
-        **{**base, "group_version_reg": "demo_reg"},
+        **{**base, "agg_version_reg": "demo_reg"},
     )
     assert pr.index.name == "r_f"
     assert pr[2020].sum() == pytest.approx(1.0)
@@ -365,7 +365,7 @@ def test_compute_l1_method_with_real_families(allocation_dummy_repo) -> None:
         fu_code="L1.a",
         **{
             **base,
-            "group_version_reg": "demo_reg",
+            "agg_version_reg": "demo_reg",
             "l1_reg_aggreg": "post",
         },
     )

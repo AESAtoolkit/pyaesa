@@ -36,9 +36,9 @@ def build_io_lca_lcia_plan(
     """Return the compact LCIA uncertainty plan for one IO-LCA request."""
     covs = load_lcia_cov_inputs(
         sector_cov_mapping=cast(dict[str, str], request.source_parameters["sector_cov_mapping"]),
-        group_reg=request.group_reg,
-        group_version=request.group_version,
-        aggregate_region_covs=_uses_aggregate_region_covs(request=request),
+        agg_reg=request.agg_reg,
+        agg_version=request.agg_version,
+        grouped_region_covs=_uses_grouped_region_covs(request=request),
     )
     public = _canonical_public_rows(request=request, public_rows=public_rows)
     components = _attach_component_drivers(request=request, components=public, covs=covs)
@@ -172,9 +172,9 @@ def _shared_u_keys(
             build_lcia_shared_u_key(
                 project_name=request.project_name,
                 source=request.source,
-                group_reg=request.group_reg,
-                group_sec=request.group_sec,
-                group_version=request.group_version,
+                agg_reg=request.agg_reg,
+                agg_sec=request.agg_sec,
+                agg_version=request.agg_version,
                 driver_kind=str(kind),
                 driver_key=str(key),
             )
@@ -220,8 +220,8 @@ def _l1_country_axis(*, request: IOLCAUncertaintyRequest) -> str:
     return "r_f" if request.fu_spec.fu_code == "L1.a" else "r_p"
 
 
-def _uses_aggregate_region_covs(*, request: IOLCAUncertaintyRequest) -> bool:
-    if not request.aggreg_indices:
+def _uses_grouped_region_covs(*, request: IOLCAUncertaintyRequest) -> bool:
+    if not request.group_indices:
         return False
     return any(
         column in request.fu_spec.selector_axes

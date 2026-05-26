@@ -58,7 +58,7 @@ def render_asr_polar(
         context=title,
         scale_mode=scale_mode,
     )
-    density_scale = _density_scale(radial_values=radial_values, style=style)
+    density_scales = _density_scales(radial_values=radial_values, style=style)
     show_max_threshold = has_max_asr_threshold(frame=frame)
     ratios = _max_ratios(lcia_method=lcia_method, impacts=impacts, enabled=show_max_threshold)
     r_min, r_max = _radial_limits(
@@ -144,7 +144,7 @@ def render_asr_polar(
                 radial_payload=payload,
                 summary=_summary_for_impact(summaries=summaries, impact=impact),
                 max_ratio=ratios[impact],
-                density_scale=density_scale,
+                density_scale=density_scales[impact],
                 style=str(style),
                 scale_mode=scale_mode,
             )
@@ -267,11 +267,14 @@ def _radial_limits(
     return 0.0, upper * 1.18 if upper > 0.0 else 1.0
 
 
-def _density_scale(*, radial_values: dict[str, np.ndarray], style: str) -> float:
+def _density_scales(*, radial_values: dict[str, np.ndarray], style: str) -> dict[str, float]:
+    """Return per impact violin density scales for independent polar widths."""
     if style != "violin":
-        return 1.0
-    peaks = [violin_density_peak(payload) for payload in radial_values.values()]
-    return max(peaks, default=1.0)
+        return {impact: 1.0 for impact in radial_values}
+    return {
+        impact: peak if (peak := violin_density_peak(payload)) > 0.0 else 1.0
+        for impact, payload in radial_values.items()
+    }
 
 
 def _summary_for_impact(

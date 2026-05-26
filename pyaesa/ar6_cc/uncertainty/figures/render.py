@@ -1,6 +1,7 @@
 """AR6 CC uncertainty figure orchestration."""
 
 from pathlib import Path
+from collections.abc import Iterator
 from typing import cast
 
 import pandas as pd
@@ -50,11 +51,15 @@ def render_ar6_cc_uncertainty_figures(
     )
     tables = read_figure_tables(context=context)
     clear_uncertainty_figure_scope(paths=paths)
-    jobs = (
-        _active_category_jobs(context=context, tables=tables)
-        if context.category_uncertainty
-        else _inactive_category_jobs(context=context, tables=tables)
-    )
+
+    def jobs() -> Iterator[PlannedFigureJob]:
+        """Yield AR6 CC uncertainty figure jobs from prepared figure tables."""
+        yield from (
+            _active_category_jobs(context=context, tables=tables)
+            if context.category_uncertainty
+            else _inactive_category_jobs(context=context, tables=tables)
+        )
+
     return render_figure_jobs(source="uncertainty_ar6_cc", jobs=jobs, status=status)
 
 
@@ -62,49 +67,44 @@ def _active_category_jobs(
     *,
     context: FigureContext,
     tables: FigureTables,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     rows = summary_rows_global(tables=tables)
     output_dir = ar6_cc_uncertainty_figures_root(paths=context.paths)
     pair_counts = common_pair_counts(tables=tables)
     categories_by_scope = categories_by_common_scope(tables=tables)
     budget_rows = budget_rows_global(tables=tables)
-    jobs: list[PlannedFigureJob] = []
     for key, group in rows.groupby("ssp_scenario", dropna=False, sort=True):
         ssp_scenario = str(key)
         budget_group = budget_rows.loc[budget_rows["ssp_scenario"].astype(str) == ssp_scenario]
         output_stem = output_dir / common_scope_stem(
             ssp_scenario=ssp_scenario,
         )
-        jobs.append(
-            _band_job(
-                kind="multi_year",
-                label=str(ssp_scenario),
-                group=group,
-                budget_group=budget_group,
-                output_stem=output_stem,
-                title_categories=categories_by_scope[ssp_scenario],
-                variable_name=context.variable_name,
-                ssp_scenario=ssp_scenario,
-                pair_count=pair_counts[ssp_scenario],
-                sampling_method=context.sampling_method,
-                study_years=list(context.requested_years),
-                dpi=context.figure_dpi,
-                output_format=context.figure_output_format,
-            )
+        yield _band_job(
+            kind="multi_year",
+            label=str(ssp_scenario),
+            group=group,
+            budget_group=budget_group,
+            output_stem=output_stem,
+            title_categories=categories_by_scope[ssp_scenario],
+            variable_name=context.variable_name,
+            ssp_scenario=ssp_scenario,
+            pair_count=pair_counts[ssp_scenario],
+            sampling_method=context.sampling_method,
+            study_years=list(context.requested_years),
+            dpi=context.figure_dpi,
+            output_format=context.figure_output_format,
         )
-    return jobs
 
 
 def _inactive_category_jobs(
     *,
     context: FigureContext,
     tables: FigureTables,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     rows = summary_rows_by_category(tables=tables)
     output_dir = ar6_cc_uncertainty_figures_root(paths=context.paths)
     pair_counts = category_pair_counts(tables=tables)
     budget_rows = budget_rows_by_category(tables=tables)
-    jobs: list[PlannedFigureJob] = []
     group_columns = ["ssp_scenario", "cc_category"]
     for key, group in rows.groupby(group_columns, dropna=False, sort=True):
         ssp_scenario, category = _two_part_key(key)
@@ -116,24 +116,21 @@ def _inactive_category_jobs(
             ssp_scenario=ssp_scenario,
             category=category,
         )
-        jobs.append(
-            _band_job(
-                kind="multi_year",
-                label=f"{ssp_scenario} {category}",
-                group=group,
-                budget_group=budget_group,
-                output_stem=output_stem,
-                title_categories=[category],
-                variable_name=context.variable_name,
-                ssp_scenario=ssp_scenario,
-                pair_count=pair_counts[(ssp_scenario, category)],
-                sampling_method=context.sampling_method,
-                study_years=list(context.requested_years),
-                dpi=context.figure_dpi,
-                output_format=context.figure_output_format,
-            )
+        yield _band_job(
+            kind="multi_year",
+            label=f"{ssp_scenario} {category}",
+            group=group,
+            budget_group=budget_group,
+            output_stem=output_stem,
+            title_categories=[category],
+            variable_name=context.variable_name,
+            ssp_scenario=ssp_scenario,
+            pair_count=pair_counts[(ssp_scenario, category)],
+            sampling_method=context.sampling_method,
+            study_years=list(context.requested_years),
+            dpi=context.figure_dpi,
+            output_format=context.figure_output_format,
         )
-    return jobs
 
 
 def _band_job(

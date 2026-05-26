@@ -315,9 +315,9 @@ def _deterministic_io_lca_figure_paths(*, raw: dict[str, Any]) -> tuple[str, ...
 
 def _format_mrio_scope(*, arguments: dict[str, Any]) -> str:
     parts = [
-        f"group_reg={bool(arguments.get('group_reg', False))}",
-        f"group_sec={bool(arguments.get('group_sec', False))}",
-        f"group_version={arguments.get('group_version') or 'none'}",
-        f"aggreg_indices={bool(arguments.get('aggreg_indices', False))}",
+        f"agg_reg={bool(arguments.get('agg_reg', False))}",
+        f"agg_sec={bool(arguments.get('agg_sec', False))}",
+        f"agg_version={arguments.get('agg_version') or 'none'}",
+        f"group_indices={bool(arguments.get('group_indices', False))}",
     ]
     return ", ".join(parts)

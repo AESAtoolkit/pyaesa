@@ -1,5 +1,6 @@
 """aSoCC uncertainty figure orchestration."""
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -103,8 +104,15 @@ def render_asocc_uncertainty_figures(
             multi_method=context.multi_method,
             status=status,
         )
-    jobs = _uncertainty_jobs(context=context, identity=tables.identity, summary=tables.summary)
-    return render_figure_jobs(source="uncertainty_asocc", jobs=jobs, status=status)
+    return render_figure_jobs(
+        source="uncertainty_asocc",
+        jobs=lambda: _uncertainty_jobs(
+            context=context,
+            identity=tables.identity,
+            summary=tables.summary,
+        ),
+        status=status,
+    )
 
 
 def _uncertainty_jobs(
@@ -112,7 +120,7 @@ def _uncertainty_jobs(
     context: FigureContext,
     identity,
     summary,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if single_requested_year(context) is None:
         return _multi_year_jobs(context=context, identity=identity, summary=summary)
     return _single_year_jobs(context=context, identity=identity, summary=summary)
@@ -123,7 +131,7 @@ def _single_year_jobs(
     context: FigureContext,
     identity,
     summary,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     del summary
     identity_rows = prepared_identity_rows(context=context, identity=identity)
     if INTER_METHOD_SOURCE in set(context.active_sources):
@@ -131,64 +139,45 @@ def _single_year_jobs(
             rows=violin_rows_from_sparse_runs(context=context, identity_rows=identity_rows)
         )
         inter_rows = _collapsed_inter_method_value_rows(rows=method_rows, context=context)
-        return [
-            *(
-                plan_inter_method_jobs(
-                    rows=inter_rows,
-                    context=context,
-                    plotter=plot_violin_scope,
-                    kind="inter_method",
-                )
-                if context.inter_method
-                else []
-            ),
-            *(
-                plan_multi_method_jobs(
-                    rows=method_rows,
-                    context=context,
-                    plotter=plot_violin_scope,
-                    kind="multi_method",
-                )
-                if context.multi_method
-                else []
-            ),
-            *(
-                plan_per_method_jobs(
-                    rows=method_rows,
-                    context=context,
-                    plotter=plot_violin_scope,
-                    kind="per_method",
-                )
-                if context.per_method
-                else []
-            ),
-        ]
+        if context.inter_method:
+            yield from plan_inter_method_jobs(
+                rows=inter_rows,
+                context=context,
+                plotter=plot_violin_scope,
+                kind="inter_method",
+            )
+        if context.multi_method:
+            yield from plan_multi_method_jobs(
+                rows=method_rows,
+                context=context,
+                plotter=plot_violin_scope,
+                kind="multi_method",
+            )
+        if context.per_method:
+            yield from plan_per_method_jobs(
+                rows=method_rows,
+                context=context,
+                plotter=plot_violin_scope,
+                kind="per_method",
+            )
+        return
     rows = drop_empty_value_rows(
         rows=violin_rows_from_compact_runs(context=context, identity_rows=identity_rows)
     )
-    multi_method_jobs = (
-        plan_multi_method_jobs(
+    if context.multi_method and has_multiple_methods(rows):
+        yield from plan_multi_method_jobs(
             rows=rows,
             context=context,
             plotter=plot_violin_scope,
             kind="multi_method",
         )
-        if context.multi_method and has_multiple_methods(rows)
-        else []
-    )
-    return [
-        *multi_method_jobs,
-        *(
-            plan_per_method_jobs(
-                rows=rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="per_method",
-            )
-            if context.per_method
-            else []
-        ),
-    ]
+    if context.per_method:
+        yield from plan_per_method_jobs(
+            rows=rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="per_method",
+        )
 
 
 def _multi_year_jobs(
@@ -196,64 +185,46 @@ def _multi_year_jobs(
     context: FigureContext,
     identity,
     summary,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if INTER_METHOD_SOURCE in set(context.active_sources):
         rows = prepared_summary_rows(context=context, summary=summary)
         method_rows = _summary_scope_rows(rows=rows, scope=ASOCC_SUMMARY_SCOPE_PER_METHOD)
         inter_rows = _summary_scope_rows(rows=rows, scope=ASOCC_SUMMARY_SCOPE_INTER_METHOD)
-        return [
-            *(
-                plan_inter_method_jobs(
-                    rows=inter_rows,
-                    context=context,
-                    plotter=plot_band_scope,
-                    kind="inter_method",
-                )
-                if context.inter_method
-                else []
-            ),
-            *(
-                plan_multi_method_mean_jobs(
-                    rows=method_rows,
-                    context=context,
-                    plotter=plot_mean_line_scope,
-                )
-                if context.multi_method
-                else []
-            ),
-            *(
-                plan_per_method_jobs(
-                    rows=method_rows,
-                    context=context,
-                    plotter=plot_band_scope,
-                    kind="per_method",
-                )
-                if context.per_method
-                else []
-            ),
-        ]
-    rows = prepared_summary_rows(context=context, summary=summary)
-    return [
-        *(
-            plan_multi_method_mean_jobs(
-                rows=rows,
+        if context.inter_method:
+            yield from plan_inter_method_jobs(
+                rows=inter_rows,
+                context=context,
+                plotter=plot_band_scope,
+                kind="inter_method",
+            )
+        if context.multi_method:
+            yield from plan_multi_method_mean_jobs(
+                rows=method_rows,
                 context=context,
                 plotter=plot_mean_line_scope,
             )
-            if context.multi_method
-            else []
-        ),
-        *(
-            plan_per_method_jobs(
-                rows=rows,
+        if context.per_method:
+            yield from plan_per_method_jobs(
+                rows=method_rows,
                 context=context,
                 plotter=plot_band_scope,
                 kind="per_method",
             )
-            if context.per_method
-            else []
-        ),
-    ]
+        return
+    rows = prepared_summary_rows(context=context, summary=summary)
+    if context.multi_method:
+        yield from plan_multi_method_mean_jobs(
+            rows=rows,
+            context=context,
+            plotter=plot_mean_line_scope,
+        )
+    if context.per_method:
+        yield from plan_per_method_jobs(
+            rows=rows,
+            context=context,
+            plotter=plot_band_scope,
+            kind="per_method",
+        )
 
 
 def _collapsed_inter_method_value_rows(
@@ -270,7 +241,7 @@ def _collapsed_inter_method_value_rows(
 
 
 def _planned_ssp_rows(*, rows: pd.DataFrame, context: FigureContext) -> pd.DataFrame:
-    parts = figure_ssp_slices(rows, context=context)
+    parts = list(figure_ssp_slices(rows, context=context))
     return pd.concat(parts, ignore_index=True) if parts else rows.iloc[0:0].copy()
 
 

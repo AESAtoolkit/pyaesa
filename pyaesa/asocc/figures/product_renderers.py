@@ -110,9 +110,11 @@ def render_products(
     status: StatusSink | None = None,
 ) -> list[Path]:
     """Render deterministic aSoCC multi-method products before per method products."""
-    jobs = [
-        *(
-            plan_multi_method_jobs(
+
+    def jobs():
+        """Yield aSoCC figure jobs without retaining every selector scope."""
+        if multi_method:
+            yield from plan_multi_method_jobs(
                 rows=rows,
                 figures_root=figures_root,
                 requested_years=requested_years,
@@ -121,11 +123,8 @@ def render_products(
                 plotter=plot_scope,
                 row_preparer=prepare_plot_rows,
             )
-            if multi_method
-            else []
-        ),
-        *(
-            plan_per_method_jobs(
+        if per_method:
+            yield from plan_per_method_jobs(
                 rows=rows,
                 figures_root=figures_root,
                 requested_years=requested_years,
@@ -134,10 +133,7 @@ def render_products(
                 plotter=plot_scope,
                 row_preparer=prepare_plot_rows,
             )
-            if per_method
-            else []
-        ),
-    ]
+
     paths = render_figure_jobs(source=status_source, jobs=jobs, status=status)
     write_variant_compression_method_note(figures_root=figures_root, rows=rows)
     return paths

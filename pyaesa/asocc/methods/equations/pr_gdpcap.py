@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from pyaesa.asocc.data.region_group_mapping import load_region_group_mapping
+from pyaesa.asocc.data.region_agg_mapping import load_region_agg_mapping
 from pyaesa.asocc.runtime.selection.normalize import (
     normalize_l1_reg_mode_required,
 )
@@ -29,7 +29,7 @@ def _compute_pre_aggregated_share(
     gdp_iso: pd.Series,
     iso_to_mrio: pd.Series,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.Series:
     """Compute PR(GDPcap) MRIO shares in pre aggregation mode."""
     pop_iso = pop_iso.copy()
@@ -41,10 +41,10 @@ def _compute_pre_aggregated_share(
         label="ISO3->MRIO mapping",
     )
     final_mrio_by_iso = dict(iso_to_mrio_by_iso)
-    if group_version:
-        mapping = load_region_group_mapping(
+    if agg_version:
+        mapping = load_region_agg_mapping(
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         final_mrio_by_iso = {
             iso: _map_region_code(mrio, mapping) for iso, mrio in iso_to_mrio_by_iso.items()
@@ -52,22 +52,22 @@ def _compute_pre_aggregated_share(
         mapped_unique = [
             _map_region_code(mrio, mapping) for mrio in sorted(set(iso_to_mrio_by_iso.values()))
         ]
-        grouped_sizes = {
+        aggregated_sizes = {
             str(code): int(count)
             for code, count in pd.Series(mapped_unique, dtype="object").value_counts().items()
         }
     else:
-        grouped_sizes = {}
+        aggregated_sizes = {}
 
     # Always start from ISO3 rows; only pool ISO3 upfront when their MRIO
-    # regions are explicitly grouped together by the grouping map.
+    # regions are explicitly aggregated together by the MRIO aggregation and disaggregation map.
     pr_key_items: list[tuple[str, str]] = []
     for iso3_raw in pop_iso.index:
         iso3 = str(iso3_raw)
-        grouped_code = final_mrio_by_iso[iso3]
-        grouped_size = int(grouped_sizes.get(grouped_code, 0))
-        if group_version and grouped_size > 1:
-            pr_key_items.append(("grp", grouped_code))
+        aggregated_code = final_mrio_by_iso[iso3]
+        aggregated_size = int(aggregated_sizes.get(aggregated_code, 0))
+        if agg_version and aggregated_size > 1:
+            pr_key_items.append(("agg", aggregated_code))
         else:
             pr_key_items.append(("iso", iso3))
     pr_key = pd.MultiIndex.from_tuples(pr_key_items, names=["key_type", "key_value"])
@@ -81,10 +81,10 @@ def _compute_pre_aggregated_share(
     for index_item in share_pr.index.tolist():
         kind = str(index_item[0])
         key = str(index_item[1])
-        mrio_codes.append(key if kind == "grp" else final_mrio_by_iso[key])
+        mrio_codes.append(key if kind == "agg" else final_mrio_by_iso[key])
     share_pr["mrio_code"] = mrio_codes
-    grouped_share = share_pr.groupby("mrio_code")["share"].sum(min_count=1)
-    return pd.Series(grouped_share, copy=False)
+    aggregated_share = share_pr.groupby("mrio_code")["share"].sum(min_count=1)
+    return pd.Series(aggregated_share, copy=False)
 
 
 def _compute_post_aggregated_share(
@@ -93,7 +93,7 @@ def _compute_post_aggregated_share(
     gdp_iso: pd.Series,
     iso_to_mrio: pd.Series,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.Series:
     """Compute PR(GDPcap) MRIO shares in post aggregation mode."""
     pop_iso = pop_iso.copy()
@@ -112,17 +112,17 @@ def _compute_post_aggregated_share(
         name="mrio_code",
     )
     share_mrio = pd.Series(share_iso.groupby(mrio_codes).sum(min_count=1), copy=False)
-    if group_version:
-        mapping = load_region_group_mapping(
+    if agg_version:
+        mapping = load_region_agg_mapping(
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
-        grouped_index = pd.Index(
+        aggregated_index = pd.Index(
             [_map_region_code(str(code), mapping) for code in share_mrio.index],
             name=share_mrio.index.name,
         )
         share_mrio = pd.Series(
-            share_mrio.groupby(grouped_index).sum(min_count=1),
+            share_mrio.groupby(aggregated_index).sum(min_count=1),
             copy=False,
         )
     return share_mrio
@@ -135,7 +135,7 @@ def compute_pr_gdpcap(
     iso_to_mrio: pd.Series,
     year: int,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
     aggregation_mode: str,
     region_label: str = "region",
 ) -> pd.DataFrame:
@@ -147,7 +147,7 @@ def compute_pr_gdpcap(
         iso_to_mrio: Mapping from ISO3 code to MRIO region code.
         year: Year of computation.
         source_key: MRIO source key.
-        group_version: Grouping version tag.
+        agg_version: Aggregation and disaggregation version tag.
 
     Returns:
         DataFrame of shares indexed by MRIO region code.
@@ -160,7 +160,7 @@ def compute_pr_gdpcap(
             gdp_iso=gdp_iso,
             iso_to_mrio=iso_to_mrio,
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
     else:
         share_mrio = _compute_post_aggregated_share(
@@ -168,7 +168,7 @@ def compute_pr_gdpcap(
             gdp_iso=gdp_iso,
             iso_to_mrio=iso_to_mrio,
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
 
     share_mrio.index = share_mrio.index.set_names(region_label)

@@ -18,7 +18,7 @@ PB_LCIA_IMPACT_PANEL_ORDER = (
     "OA",
     "N",
     "P GLO",
-    "FWC",
+    "FWU",
     "LSC",
     "BI FD",
     "aCO2",

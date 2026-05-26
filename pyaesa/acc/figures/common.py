@@ -1,6 +1,7 @@
 """Common aCC figure contracts shared by deterministic and uncertainty renderers."""
 
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -84,18 +85,19 @@ def attach_common_columns(frame: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def scope_slices(frame: pd.DataFrame, columns: tuple[str, ...]) -> list[pd.DataFrame]:
-    """Return one figure slice per visible combination of selected columns."""
+def scope_slices(frame: pd.DataFrame, columns: tuple[str, ...]) -> Iterator[pd.DataFrame]:
+    """Yield one figure slice per visible combination of selected columns."""
     group_columns = [column for column in columns if column in frame.columns]
-    return [group.copy() for _key, group in frame.groupby(group_columns, dropna=False, sort=True)]
+    for _key, group in frame.groupby(group_columns, dropna=False, sort=True):
+        yield group.copy()
 
 
 def static_asocc_ssp_slices(
     frame: pd.DataFrame,
     *,
     requested_ssps: tuple[str, ...] = (),
-) -> list[pd.DataFrame]:
-    """Return static aCC slices with invariant rows repeated into SSP scopes."""
+) -> Iterator[pd.DataFrame]:
+    """Yield static aCC slices with invariant rows repeated into SSP scopes."""
     return repeat_invariant_rows_into_scenarios(
         frame,
         scenario_column=ASOCC_SSP_SCENARIO_COLUMN,

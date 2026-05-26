@@ -38,9 +38,9 @@ class _RunCommonInputs:
 
     project_name: str
     source: str
-    group_version: str | None
-    group_reg: bool | None
-    group_sec: bool | None
+    agg_version: str | None
+    agg_reg: bool | None
+    agg_sec: bool | None
     years: int | list[int] | range | None
     historical_year_cap: int | None
     refresh: bool
@@ -114,7 +114,7 @@ def _run_allocate_family(
     *,
     common: _RunCommonInputs,
     mode: str,
-    aggreg_indices: bool,
+    group_indices: bool,
     l1_override: list[str] | None,
     combined_override: list[tuple[str, str]] | None,
     l2_one_step_override: list[str] | None,
@@ -134,7 +134,7 @@ def _run_allocate_family(
             common=common,
             mode=mode,
             show_mode_tag=False,
-            aggreg_indices=aggreg_indices,
+            group_indices=group_indices,
             l1_override=l1_override,
             combined_override=combined_override,
             l2_one_step_override=l2_one_step_override,
@@ -161,7 +161,7 @@ def _run_allocate_family(
             path=_get_allocate_summary_log_path(
                 mode_result.proj_base,
                 source=mode_result.output_source_label,
-                group_version=common.group_version,
+                agg_version=common.agg_version,
             ),
             summary=str(report),
         )
@@ -175,7 +175,7 @@ def _run_mode(
     common: _RunCommonInputs,
     mode: str,
     show_mode_tag: bool,
-    aggreg_indices: bool,
+    group_indices: bool,
     l1_override: list[str] | None,
     combined_override: list[tuple[str, str]] | None,
     l2_one_step_override: list[str] | None,
@@ -194,9 +194,9 @@ def _run_mode(
         request=PrepareContextRequest(
             project_name=common.project_name,
             source=common.source,
-            group_version=common.group_version,
-            group_reg=common.group_reg,
-            group_sec=common.group_sec,
+            agg_version=common.agg_version,
+            agg_reg=common.agg_reg,
+            agg_sec=common.agg_sec,
             years=common.years,
             historical_year_cap=common.historical_year_cap,
             refresh=common.refresh,
@@ -216,7 +216,7 @@ def _run_mode(
             l2_reuse_years=common.l2_reuse_years,
             l1_reg_aggreg=mode,
             variant_tag=variant_tag,
-            aggreg_indices=aggreg_indices,
+            group_indices=group_indices,
             output_format=common.output_format,
             intermediate_outputs=common.intermediate_outputs,
             output_source_label=common.output_source_label,
@@ -264,7 +264,7 @@ def _run_mode(
     branch_label = format_branch_label(
         context=context,
         mode=mode,
-        grouped_mode=aggreg_indices,
+        grouped_mode=group_indices,
     )
     indices_label = format_indices_label(context.filters)
     branch_source_prefix = runtime_prefix(context=context, show_mode_tag=show_mode_tag)

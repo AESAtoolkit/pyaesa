@@ -13,7 +13,7 @@ from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     run_positions_in_window,
     sparse_public_row_group_index,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 def trajectory_segment(

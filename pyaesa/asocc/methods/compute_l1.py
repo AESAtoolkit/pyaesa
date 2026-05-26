@@ -5,7 +5,7 @@ from typing import cast
 
 import pandas as pd
 
-from ..data.region_group_mapping import load_region_group_mapping
+from ..data.region_agg_mapping import load_region_agg_mapping
 from .equations.ar_e import compute_ar_e_l1
 from .equations.ar_ecap import compute_ar_ecap_l1
 from .equations.eg_pop import compute_eg_pop
@@ -19,15 +19,15 @@ def _aggregate_l1_regions_post(
     *,
     frame: pd.DataFrame,
     source_key: str,
-    group_version_reg: str,
+    agg_version_reg: str,
     region_label: str,
 ) -> pd.DataFrame:
-    """Map original MRIO regions to grouped labels and sum duplicate rows."""
+    """Map original MRIO regions to aggregated labels and sum duplicate rows."""
     # Post aggregation is only used for methods where shares are computed on
-    # original regions first, then rolled up to grouped regions.
-    mapping = load_region_group_mapping(
+    # original regions first, then rolled up to aggregated regions.
+    mapping = load_region_agg_mapping(
         source_key=source_key,
-        group_version=group_version_reg,
+        agg_version=agg_version_reg,
     )
     if isinstance(frame.index, pd.MultiIndex):
         if region_label not in frame.index.names:
@@ -47,8 +47,8 @@ def _aggregate_l1_regions_post(
                 new_levels.append(frame.index.get_level_values(level_pos))
         out = frame.copy()
         out.index = pd.MultiIndex.from_arrays(new_levels, names=new_names)
-        grouped = out.groupby(level=new_names, sort=False).sum(min_count=1)
-        return cast(pd.DataFrame, grouped)
+        aggregated = out.groupby(level=new_names, sort=False).sum(min_count=1)
+        return cast(pd.DataFrame, aggregated)
 
     if str(frame.index.name) != region_label:
         raise ValueError(
@@ -57,8 +57,8 @@ def _aggregate_l1_regions_post(
         )
     out = frame.copy()
     out.index = out.index.map(lambda code: mapping.get(code, code))
-    grouped = out.groupby(level=0, sort=False).sum(min_count=1)
-    return cast(pd.DataFrame, grouped)
+    aggregated = out.groupby(level=0, sort=False).sum(min_count=1)
+    return cast(pd.DataFrame, aggregated)
 
 
 def resolve_l1_region_label(*, l1_method: str, fu_code: str) -> str:
@@ -89,7 +89,7 @@ def compute_l1_method(
     pr_gdp: pd.Series | None,
     pr_to_mrio: pd.Series | None,
     source_key: str,
-    group_version_reg: str | None,
+    agg_version_reg: str | None,
     l1_reg_aggreg: str,
     region_label_override: str | None = None,
     lcia_reg: pd.DataFrame | None,
@@ -116,9 +116,9 @@ def compute_l1_method(
         pr_gdp: GDP by ISO3 code.
         pr_to_mrio: Mapping from ISO3 code to MRIO region.
         source_key: MRIO source key.
-        group_version_reg: Region grouping tag.
+        agg_version_reg: Region aggregation tag.
         l1_reg_aggreg: L1 aggregation mode ("pre" or "post") for methods
-            where grouping timing matters.
+            where aggregation timing matters.
         region_label_override: Explicit region axis label override.
         lcia_reg: LCIA regional impacts for current year.
         lcia_reg_by_year: LCIA time series by year.
@@ -160,7 +160,7 @@ def compute_l1_method(
             iso_to_mrio=pr_to_mrio,
             year=year,
             source_key=source_key,
-            group_version=group_version_reg,
+            agg_version=agg_version_reg,
             aggregation_mode=l1_reg_aggreg,
             region_label=region_label,
         )
@@ -183,7 +183,7 @@ def compute_l1_method(
             impact_parent_map=impact_parent_map,
             available_years=available_years,
             source_key=source_key,
-            group_version=group_version_reg,
+            agg_version=agg_version_reg,
             aggregation_mode=l1_reg_aggreg,
             region_label=region_label,
             parent_cum_cache=pr_hr_parent_cum_cache,
@@ -202,12 +202,12 @@ def compute_l1_method(
             index_cache=index_cache,
         )
         mode = normalize_l1_reg_mode_required(l1_reg_aggreg)
-        if mode == "post" and group_version_reg:
-            # For post mode, compute on original labels then aggregate to grouped labels.
+        if mode == "post" and agg_version_reg:
+            # For post mode, compute on original labels then aggregate to aggregated labels.
             result = _aggregate_l1_regions_post(
                 frame=result,
                 source_key=source_key,
-                group_version_reg=group_version_reg,
+                agg_version_reg=agg_version_reg,
                 region_label=region_label,
             )
         return result

@@ -40,7 +40,7 @@ OUTPUT_FORMAT = "pickle"
 
 GROUP_REG: bool | None = None
 GROUP_SEC: bool | None = None
-GROUP_VERSION: str | None = None
+AGG_VERSION: str | None = None
 L1_REG_AGGREG: str | list[str] | None = "pre"
 
 METHOD_PLAN: str = "default"
@@ -160,10 +160,10 @@ def _ensure_repo_root() -> Path:
 
 
 def _resolved_matrix_version() -> str | None:
-    """Return processed data matrix version exactly from user GROUP_VERSION."""
-    if GROUP_VERSION is None:
+    """Return processed data matrix version exactly from user AGG_VERSION."""
+    if AGG_VERSION is None:
         return None
-    version = str(GROUP_VERSION).strip()
+    version = str(AGG_VERSION).strip()
     return version or None
 
 
@@ -186,7 +186,7 @@ _CONFIG_KEYS = (
     "OUTPUT_FORMAT",
     "GROUP_REG",
     "GROUP_SEC",
-    "GROUP_VERSION",
+    "AGG_VERSION",
     "L1_REG_AGGREG",
     "METHOD_PLAN",
     "L1_METHODS",
@@ -224,11 +224,11 @@ class ValidationAllocateArgs(TypedDict, total=False):
     source: str
     years: list[int]
     fu_code: str
-    group_reg: bool
-    group_sec: bool
-    group_version: str
+    agg_reg: bool
+    agg_sec: bool
+    agg_version: str
     l1_reg_aggreg: str
-    aggreg_indices: bool
+    group_indices: bool
     method_plan: str
     l1_methods: list[str] | None
     one_step_methods: list[str] | None
@@ -308,11 +308,11 @@ def _allocate_args_for_fu(
         "source": source,
         "years": [inputs.year],
         "fu_code": fu_code,
-        "group_reg": bool(GROUP_REG),
-        "group_sec": bool(GROUP_SEC),
-        "group_version": "" if GROUP_VERSION is None else str(GROUP_VERSION),
+        "agg_reg": bool(GROUP_REG),
+        "agg_sec": bool(GROUP_SEC),
+        "agg_version": "" if AGG_VERSION is None else str(AGG_VERSION),
         "l1_reg_aggreg": l1_mode,
-        "aggreg_indices": False,
+        "group_indices": False,
         "method_plan": METHOD_PLAN,
         "l1_methods": L1_METHODS,
         "one_step_methods": ONE_STEP_METHODS,
@@ -400,8 +400,8 @@ def _validate_fu_report(
             output_format=OUTPUT_FORMAT,
             atol=ATOL,
             matrix_version=inputs.matrix_version,
-            group_reg=GROUP_REG,
-            aggreg_indices=False,
+            agg_reg=GROUP_REG,
+            group_indices=False,
         )
         if fu_code in inputs.l2_star_b_fus:
             fu_rows.extend(validate_l2_star_b_outputs(l2_context))
@@ -437,7 +437,7 @@ def run_allocation_methods_sum_to_one_rules() -> None:
         f"sources={list(inputs.sources)}, year={year}, "
         f"L1_FUS={list(inputs.l1_fus)}, L2_FUS={list(inputs.l2_fus)}, "
         f"L2_STAR_B_FUS={sorted(inputs.l2_star_b_fus)}, buckets={list(inputs.buckets)}, "
-        f"ATOL={ATOL}, GROUP_VERSION={inputs.matrix_version}, "
+        f"ATOL={ATOL}, AGG_VERSION={inputs.matrix_version}, "
         f"REFRESH_ALLOCATE_OUTPUTS={REFRESH_ALLOCATE_OUTPUTS}, "
         f"REFRESH_VALIDATION_REPORTS={REFRESH_VALIDATION_REPORTS}",
         end="\n\n",

@@ -62,21 +62,24 @@ def test_lcia_contracts_cover_rules_and_bundled_static_cc_loading(
 
     assert contracts_mod.dynamic_cc_match(lcia_method="gwp100_lcia") == {"impact": "GWP_100"}
     assert contracts_mod.dynamic_cc_match(lcia_method="pb_lcia") is None
-    assert contracts_mod.dynamic_cc_compatible_methods(
-        method_specs=("pb_lcia", "ef_3.1", "gwp100_lcia", "unknown_method")
-    ) == ["ef_3.1", "gwp100_lcia"]
-    assert (
-        contracts_mod._normalize_dynamic_cc_match(  # noqa: SLF001
-            lcia_method="pb_lcia",
-            match=None,
-        )
-        is None
+    pd.DataFrame(
+        [
+            {
+                "impact_full_name": "Climate change",
+                "impact": "GWP_100",
+                "impact_unit": "kg CO2-eq",
+                "min_cc": 1.0,
+                "max_cc": 2.0,
+            }
+        ]
+    ).to_csv(
+        paths_mod.static_cc_csv_path(lcia_method="custom_climate"),
+        index=False,
     )
-    with pytest.raises(ValueError):
-        contracts_mod._normalize_dynamic_cc_match(  # noqa: SLF001
-            lcia_method="pb_lcia",
-            match={"impact": " "},
-        )
+    assert contracts_mod.dynamic_cc_match(lcia_method="custom_climate") == {"impact": "GWP_100"}
+    assert contracts_mod.dynamic_cc_compatible_methods(
+        method_specs=("pb_lcia", "ef_3.1", "gwp100_lcia", "custom_climate", "unknown_method")
+    ) == ["ef_3.1", "gwp100_lcia", "custom_climate"]
 
 
 def test_lcia_path_contracts_cover_cleaning_and_cov_paths(
@@ -106,42 +109,40 @@ def test_lcia_path_contracts_cover_cleaning_and_cov_paths(
     assert covs.country_covs["World"] == covs.world_cov
     assert covs.sector_cov_mapping == {"Electricity": "Electricity"}
     assert "Electricity" in covs.sector_covs
-    grouped_covs = load_lcia_cov_inputs(
+    aggregated_covs = load_lcia_cov_inputs(
         sector_cov_mapping={"Electricity": "Electricity"},
-        group_reg=True,
-        group_version="eu27",
+        agg_reg=True,
+        agg_version="eu27",
     )
-    assert grouped_covs.country_covs["EU27"] == pytest.approx(0.0768)
-    assert grouped_covs.country_covs["World"] == grouped_covs.world_cov
-    aggregate_path = paths_mod.carbon_account_cov_path(
-        asset_name="reg_cbca_covs_aggreg_indices.csv"
-    )
+    assert aggregated_covs.country_covs["EU27"] == pytest.approx(0.0768)
+    assert aggregated_covs.country_covs["World"] == aggregated_covs.world_cov
+    aggregate_path = paths_mod.carbon_account_cov_path(asset_name="reg_cbca_covs_group_indices.csv")
     if aggregate_path.exists():
         aggregate_path.unlink()
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, aggregate_region_covs=True)
+        load_lcia_cov_inputs(sector_cov_mapping={}, grouped_region_covs=True)
     pd.DataFrame({"exio_code": ["FR, US", "World"], "cov": [0.31, 0.2]}).to_csv(
         aggregate_path,
         index=False,
     )
     aggregate_covs = load_lcia_cov_inputs(
         sector_cov_mapping={"Electricity": "Electricity"},
-        aggregate_region_covs=True,
+        grouped_region_covs=True,
     )
     assert aggregate_covs.country_covs["FR, US"] == pytest.approx(0.31)
     pd.DataFrame({"exio_code": ["EU27, Nordic", "World"], "cov": [0.41, 0.2]}).to_csv(
-        paths_mod.carbon_account_cov_path(asset_name="reg_cbca_covs_group_eu27_aggreg_indices.csv"),
+        paths_mod.carbon_account_cov_path(asset_name="reg_cbca_covs_agg_eu27_group_indices.csv"),
         index=False,
     )
-    grouped_aggregate_covs = load_lcia_cov_inputs(
+    aggregated_aggregate_covs = load_lcia_cov_inputs(
         sector_cov_mapping={"Electricity": "Electricity"},
-        group_reg=True,
-        group_version="eu27",
-        aggregate_region_covs=True,
+        agg_reg=True,
+        agg_version="eu27",
+        grouped_region_covs=True,
     )
-    assert grouped_aggregate_covs.country_covs["EU27, Nordic"] == pytest.approx(0.41)
+    assert aggregated_aggregate_covs.country_covs["EU27, Nordic"] == pytest.approx(0.41)
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="missing")
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="missing")
 
     assert normalize_lcia_uncertainty_parameters(
         parameters={"sector_cov_mapping": {" Electricity ": " Electricity "}}
@@ -156,25 +157,25 @@ def test_lcia_path_contracts_cover_cleaning_and_cov_paths(
         normalize_lcia_uncertainty_parameters(
             parameters={"sector_cov_mapping": {"Electricity": " "}}
         )
-    bad_group_path = paths_mod.carbon_account_cov_path(asset_name="reg_cbca_covs_group_bad.csv")
-    bad_group_path.write_text("exio_code,cov\nEU27,0.1\n", encoding="utf-8")
+    bad_agg_path = paths_mod.carbon_account_cov_path(asset_name="reg_cbca_covs_agg_bad.csv")
+    bad_agg_path.write_text("exio_code,cov\nEU27,0.1\n", encoding="utf-8")
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="bad")
-    bad_group_path.write_text("exio_code,cov\nEU27,x\nWorld,0.2\n", encoding="utf-8")
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="bad")
+    bad_agg_path.write_text("exio_code,cov\nEU27,x\nWorld,0.2\n", encoding="utf-8")
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="bad")
-    bad_group_path.write_text("exio_code,cov\nEU27,0.1\nWorld,\n", encoding="utf-8")
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="bad")
+    bad_agg_path.write_text("exio_code,cov\nEU27,0.1\nWorld,\n", encoding="utf-8")
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="bad")
-    bad_group_path.write_text(
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="bad")
+    bad_agg_path.write_text(
         "exio_code,cov\nEU27,0.1\nEU27,0.2\nWorld,0.2\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="bad")
-    bad_group_path.write_text("code,cov\nEU27,0.1\nWorld,0.2\n", encoding="utf-8")
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="bad")
+    bad_agg_path.write_text("code,cov\nEU27,0.1\nWorld,0.2\n", encoding="utf-8")
     with pytest.raises(ValueError):
-        load_lcia_cov_inputs(sector_cov_mapping={}, group_reg=True, group_version="bad")
+        load_lcia_cov_inputs(sector_cov_mapping={}, agg_reg=True, agg_version="bad")
 
     small_covs = LCIACoVInputs(
         country_covs={"FR": 0.1, "World": 0.2},
@@ -189,7 +190,7 @@ def test_lcia_path_contracts_cover_cleaning_and_cov_paths(
     with pytest.raises(ValueError):
         country_cov_values(covs=small_covs, country_key=pd.Series(["DE"]))
     with pytest.raises(ValueError):
-        country_cov_values(covs=grouped_covs, country_key=pd.Series(["MissingRegion"]))
+        country_cov_values(covs=aggregated_covs, country_key=pd.Series(["MissingRegion"]))
     sector_keys = sector_cov_keys(covs=small_covs, sector_label=pd.Series(["Power"]))
     assert sector_keys.tolist() == ["Electricity"]
     np.testing.assert_allclose(
@@ -206,18 +207,18 @@ def test_lcia_shared_u_key_is_driver_scoped_by_run() -> None:
     country_key = build_lcia_shared_u_key(
         project_name="p",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         driver_kind="country",
         driver_key="FR",
     )
     sector_key = build_lcia_shared_u_key(
         project_name="p",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         driver_kind="sector",
         driver_key="Electricity",
     )

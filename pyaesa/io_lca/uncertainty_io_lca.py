@@ -11,9 +11,9 @@ def uncertainty_io_lca(
     base_io_lca_args: dict[str, Any] = {
         "project_name": None,
         "source": None,
-        "group_reg": False,
-        "group_sec": False,
-        "group_version": "",
+        "agg_reg": False,
+        "agg_sec": False,
+        "agg_version": "",
         "years": None,
         "lcia_method": None,
         "fu_code": None,
@@ -21,7 +21,7 @@ def uncertainty_io_lca(
         "r_p": None,
         "r_c": None,
         "r_f": None,
-        "aggreg_indices": False,
+        "group_indices": False,
     },
     uncertainty_config: dict[str, Any] = {
         "mc_parameters": {
@@ -66,19 +66,30 @@ def uncertainty_io_lca(
               ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
               ``"exiobase_3102_pxp"``). pyaesa currently only supports
               EXIOBASE for LCIA characterization.
-            - ``group_reg``: If ``True``, aggregate regions using a grouping
-              file. Default ``False`` keeps native source regions.
-            - ``group_sec``: If ``True``, aggregate sectors using a grouping
-              file. Default ``False`` keeps native source sectors.
-            - ``group_version``: Grouping version tag used to resolve the
-              region/sector mapping CSVs. Required when ``group_reg`` or
-              ``group_sec`` is True. Defaults to an empty string for ungrouped
-              processing. Follow ``README_grouping.txt`` in the active
-              ``data_raw/mrio/<source>/grouping`` folder to name grouping
-              versions and place the matching mapping CSVs.
+            - ``agg_reg``: If ``True``, reclassify MRIO regions with the
+              ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native regions
+              into one target label, or disaggregate one native region across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source regions.
+            - ``agg_sec``: If ``True``, reclassify MRIO sectors with the
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native sectors
+              into one target label, or disaggregate one native sector across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source sectors.
+            - ``agg_version``: Name token used to resolve the matching
+              ``agg_reg_<agg_version>.csv`` and/or
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+              mapping files in ``data_raw/mrio/<source>/aggregation``.
+              Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+              an empty string for native source classification. Use the same
+              token in downstream calls that should reuse the processed
+              classification. When a mapping file has a ``weight``
+              column, weights must sum to ``1`` for each original label.
             - ``years``: Studied years. Accepts a single year, list, or
               range. If omitted, all available MRIO years for the selected
-              source/group version are used.
+              source and ``agg_version`` are used.
             - ``lcia_method``: Required LCIA method(s) selected for IO-LCA
               results (for example ``"pb_lcia"`` or
               ``["pb_lcia", "gwp100_lcia"]``). The method(s) must have been
@@ -99,7 +110,7 @@ def uncertainty_io_lca(
               omitted, the run expands to all valid producing sectors. To
               identify valid sector names, see the first column of the
               relevant
-              ``data_raw/mrio/.../grouping/.../group_sec_template.csv`` file.
+              ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv`` file.
               For EXIOBASE sector definitions, see
               ``data_raw/mrio/exiobase_3/sector_classification.xlsx``;
               EXIOBASE ixi and pxp use different sector lists.
@@ -107,30 +118,31 @@ def uncertainty_io_lca(
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_c``: Consuming region filter(s), single string or list. If
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid consuming regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_f``: Final demand region filter(s), single string or list.
               If this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid final demand regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
-            - ``aggreg_indices``: Whether multiple selected region/sector
-              indices are reported as separate rows or summed into one row
-              after the selected MRIO scope is computed.
+            - ``group_indices``: Whether multiple selected region or sector
+              filter values are kept as separate result rows or summed into one
+              result row after the function calculation has been performed.
               - ``False`` (default): keep selected values as independent rows.
-              - ``True``: sum selected values into one row.
-              Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-              aggregating CBA total demand system boundaries can double count.
-              For these functional units, define the aggregation from
-              ``process_mrio(...)`` onward with
-              ``group_reg``/``group_sec``/``group_version``.
+              - ``True``: sum selected values into one result row.
+              The function refuses to run when ``group_indices=True`` is used
+              with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+              rows for CBA total demand boundaries can double count. For these
+              functional units, change the upstream MRIO aggregation and disaggregation
+              scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+              running the study.
         uncertainty_config: Monte Carlo configuration dictionary. It must
             activate ``lcia_uncertainty``, which is the IO-LCA public
             uncertainty source. LCIA uncertainty is inactive by default
@@ -182,16 +194,17 @@ def uncertainty_io_lca(
               ``data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/``. Users
               can inspect ``sec_cbca_covs.csv`` for sector CoV codes before
               choosing ``sector_cov_mapping`` values. CoV keys must match the
-              LCIA uncertainty output domain. If ``group_reg=True``, region
-              keys use ``reg_cbca_covs_group_<group_version>.csv``; otherwise
-              they use ``reg_cbca_covs.csv``. If ``aggreg_indices=True``
-              collapses a region axis, put the full aggregate region label in
-              ``reg_cbca_covs_group_<group_version>_aggreg_indices.csv`` when
-              grouped, otherwise ``reg_cbca_covs_aggreg_indices.csv``. If
-              ``group_sec=True`` or ``aggreg_indices=True``, use the
-              corresponding grouped or aggregate ``s_p`` labels as
-              ``sector_cov_mapping`` keys. For
-              example, with ``aggreg_indices=True`` and ``s_p=["A", "B"]``,
+              LCIA uncertainty output domain. If ``agg_reg=True``, region
+              keys use ``reg_cbca_covs_agg_<agg_version>.csv``; otherwise
+              they use ``reg_cbca_covs.csv``. If ``group_indices=True``
+              sums a region selector axis after calculation, put the full
+              combined output region label in
+              ``reg_cbca_covs_agg_<agg_version>_group_indices.csv`` when
+              ``agg_reg=True``, otherwise ``reg_cbca_covs_group_indices.csv``.
+              If ``agg_sec=True`` or ``group_indices=True``, use the
+              corresponding ``agg_sec`` output labels or combined output
+              ``s_p`` labels as ``sector_cov_mapping`` keys. For
+              example, with ``group_indices=True`` and ``s_p=["A", "B"]``,
               write ``sector_cov_mapping={"A, B": "Electricity"}`` when
               ``Electricity`` is the sector CoV code selected from
               ``sec_cbca_covs.csv``.

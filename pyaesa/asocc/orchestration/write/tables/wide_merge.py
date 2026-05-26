@@ -23,7 +23,7 @@ def group_output_rows(
     filters: dict[str, list[str] | None],
     year_columns: tuple[str, ...],
 ) -> pd.DataFrame:
-    """Aggregate outputs over selected multi value index filters."""
+    """Group outputs over selected multi value index filters."""
     out = df.copy()
     collapsed_cols: list[str] = []
     for key, col in _FILTER_COLUMN_MAP.items():

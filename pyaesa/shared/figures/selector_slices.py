@@ -1,4 +1,6 @@
-"""Shared selector slice helpers for deterministic figure rendering."""
+"""Shared selector slice helpers for package figure rendering."""
+
+from collections.abc import Iterator
 
 import numpy as np
 import pandas as pd
@@ -17,67 +19,14 @@ def selector_slices(
     *,
     selector_columns: tuple[str, ...] = SELECTOR_COLUMNS,
     selector_scope_request: SelectorScopeRequest | None = None,
-) -> list[tuple[str, str, pd.DataFrame]]:
-    """Return deterministic figure slices split by FU selector combinations."""
+) -> Iterator[tuple[str, str, pd.DataFrame]]:
+    """Yield figure slices split by FU selector combinations."""
     scoped_selector_columns = figure_selector_columns(
         frame,
         selector_columns=selector_columns,
     )
     if frame.empty:
-        return [
-            (
-                "all",
-                resolve_selector_scope(
-                    frame=frame,
-                    selector_columns=scoped_selector_columns,
-                    selector_scope_request=selector_scope_request,
-                )
-                or "",
-                frame.copy(),
-            )
-        ]
-    present = [column for column in scoped_selector_columns if column in frame.columns]
-    if not present:
-        return [
-            (
-                "all",
-                resolve_selector_scope(
-                    frame=frame,
-                    selector_columns=scoped_selector_columns,
-                    selector_scope_request=selector_scope_request,
-                )
-                or "",
-                frame.copy(),
-            )
-        ]
-    grouped = list(frame.groupby(present, dropna=False, sort=True))
-    slices: list[tuple[str, str, pd.DataFrame]] = []
-    reference_frame = frame.copy()
-    value_token_maps = {
-        column: deduplicated_selector_value_tokens(reference_frame[column].tolist())
-        for column in present
-    }
-    for key, subset in grouped:
-        key_tuple = key if isinstance(key, tuple) else (key,)
-        token_parts: list[str] = []
-        for column, value in zip(present, key_tuple, strict=True):
-            value_token = value_token_maps[column][selector_value_text(value)]
-            token_parts.append(f"{selector_axis_token(column)}_{value_token}")
-        slices.append(
-            (
-                "__".join(token_parts) if token_parts else "all",
-                resolve_selector_scope(
-                    frame=subset,
-                    reference_frame=reference_frame,
-                    selector_columns=scoped_selector_columns,
-                    selector_scope_request=selector_scope_request,
-                )
-                or "",
-                subset.copy().reset_index(drop=True),
-            )
-        )
-    return slices or [
-        (
+        yield (
             "all",
             resolve_selector_scope(
                 frame=frame,
@@ -87,7 +36,42 @@ def selector_slices(
             or "",
             frame.copy(),
         )
-    ]
+        return
+    present = [column for column in scoped_selector_columns if column in frame.columns]
+    if not present:
+        yield (
+            "all",
+            resolve_selector_scope(
+                frame=frame,
+                selector_columns=scoped_selector_columns,
+                selector_scope_request=selector_scope_request,
+            )
+            or "",
+            frame.copy(),
+        )
+        return
+    reference_frame = frame
+    value_token_maps = {
+        column: deduplicated_selector_value_tokens(reference_frame[column].tolist())
+        for column in present
+    }
+    for key, subset in frame.groupby(present, dropna=False, sort=True):
+        key_tuple = key if isinstance(key, tuple) else (key,)
+        token_parts: list[str] = []
+        for column, value in zip(present, key_tuple, strict=True):
+            value_token = value_token_maps[column][selector_value_text(value)]
+            token_parts.append(f"{selector_axis_token(column)}_{value_token}")
+        yield (
+            "__".join(token_parts) if token_parts else "all",
+            resolve_selector_scope(
+                frame=subset,
+                reference_frame=reference_frame,
+                selector_columns=scoped_selector_columns,
+                selector_scope_request=selector_scope_request,
+            )
+            or "",
+            subset.copy().reset_index(drop=True),
+        )
 
 
 def matching_selector_mask(

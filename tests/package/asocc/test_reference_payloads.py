@@ -16,7 +16,7 @@ from pyaesa.asocc.data.reference_payloads import (
 def _reference_context(*, fu_code: str = "L2.a.a") -> SimpleNamespace:
     return SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         fu_code=fu_code,
         filters={
             "r_p": ["FR"],
@@ -81,7 +81,7 @@ def test_load_reference_lcia_reg_uses_skipped_year_reason_and_domain_wrapper(
         ref_year=2005,
         lcia_method="gwp100_lcia",
         lcia_kind="CBA_FD",
-        group_version=None,
+        agg_version=None,
     )
     pba = load_reference_lcia_reg(
         context=context,
@@ -89,7 +89,7 @@ def test_load_reference_lcia_reg_uses_skipped_year_reason_and_domain_wrapper(
         ref_year=2005,
         lcia_method="gwp100_lcia",
         lcia_kind="PBA",
-        group_version=None,
+        agg_version=None,
     )
     wrapped = load_reference_lcia_reg_for_domain(
         context=context,
@@ -124,7 +124,7 @@ def test_load_reference_lcia_reg_reports_skipped_year_reason(
             ref_year=2005,
             lcia_method="gwp100_lcia",
             lcia_kind="CBA_FD",
-            group_version=None,
+            agg_version=None,
         )
     assert state.skipped_years[2005]["gwp100_lcia"] == "Dummy LCIA unavailable"
 
@@ -160,7 +160,7 @@ def test_load_reference_lcia_payload_and_reg_cover_missing_method_and_missing_ke
     context = _reference_context()
     state = _reference_state()
 
-    saved_dir = _get_mrio_year_dir(source=context.source, year=2005, group_version=None)
+    saved_dir = _get_mrio_year_dir(source=context.source, year=2005, agg_version=None)
     state.lcia_method_payload_cache[
         (
             None,
@@ -183,7 +183,7 @@ def test_load_reference_lcia_payload_and_reg_cover_missing_method_and_missing_ke
             ref_year=2005,
             lcia_method="gwp100_lcia",
             lcia_kind="PBA",
-            group_version=None,
+            agg_version=None,
         )
 
 
@@ -193,7 +193,7 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
 ) -> None:
     context = _reference_context()
     state = _reference_state()
-    saved_dir = _get_mrio_year_dir(source=context.source, year=2005, group_version=None)
+    saved_dir = _get_mrio_year_dir(source=context.source, year=2005, agg_version=None)
     missing_metric = (
         saved_dir / "enacting_metrics" / "level_1" / "gwp100_lcia" / "e_cba_fd_reg.pickle"
     )
@@ -215,7 +215,7 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
     assert original_repo.repo_root.exists()
     original_context = SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         fu_code="L2.a.a",
         filters=context.filters,
         needs_lcia=True,

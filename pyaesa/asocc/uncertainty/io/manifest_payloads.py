@@ -134,7 +134,7 @@ def external_input_payload(*, plan: ExternalAsoccRowsPlan) -> tuple[dict[str, An
 
 
 def _inter_mrio_summary_records(*, inter_mrio_plan) -> list[dict[str, str]]:
-    """Return reporting records for inter MRIO route skips."""
+    """Return reporting records for inter-MRIO route skips."""
     if inter_mrio_plan is None:
         return []
     route_report = getattr(inter_mrio_plan, "route_report", None)
@@ -152,7 +152,7 @@ def _inter_mrio_summary_records(*, inter_mrio_plan) -> list[dict[str, str]]:
         {
             "severity": "WARNING",
             "message": (
-                "Inter MRIO uncertainty was not applied for "
+                "Inter-MRIO uncertainty was not applied for "
                 + "; ".join(detail_parts)
                 + " because deterministic aSoCC time routes did not match."
             ),

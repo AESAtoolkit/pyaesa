@@ -305,5 +305,6 @@ def render_cc_pathway_figures(
             dpi=dpi,
             output_format=output_format,
         ),
+        total=len(ssp_values),
         status=status,
     )

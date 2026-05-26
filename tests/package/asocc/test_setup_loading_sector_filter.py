@@ -8,22 +8,22 @@ mod = importlib.import_module("pyaesa.asocc.orchestration.setup.loading.loading"
 def test_validate_sector_filter_labels_real_paths(allocation_dummy_repo) -> None:
     mod._validate_sector_filter_labels(
         source=mod.ISO3_SOURCE_KEY,
-        group_version=None,
+        agg_version=None,
         filters={"s_p": ["bad"]},
     )
     mod._validate_sector_filter_labels(
         source="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
         filters={"s_p": None},
     )
     mod._validate_sector_filter_labels(
         source="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
         filters={"s_p": [" ", ""]},
     )
     mod._validate_sector_filter_labels(
         source="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
         filters={"s_p": ["D"]},
     )
     allocation_dummy_repo.write_mrio_metadata(
@@ -36,7 +36,7 @@ def test_validate_sector_filter_labels_real_paths(allocation_dummy_repo) -> None
     with pytest.raises(ValueError) as exc:
         mod._validate_sector_filter_labels(
             source="exiobase_396_ixi",
-            group_version="elec",
+            agg_version="elec",
             filters={"s_p": ["INVALID_SECTOR"]},
         )
     assert "matrix_version='elec'" in str(exc.value)

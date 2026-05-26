@@ -53,21 +53,6 @@ def compatible_completed_run_id_for_context(
     )
 
 
-def compatible_complete_run(
-    *,
-    compatible: tuple[CompatibleMonteCarloRun, ...],
-    runtime: Any,
-    mc_parameters: Mapping[str, Any] | None,
-) -> CompatibleMonteCarloRun | None:
-    """Return a completed aSoCC run satisfying the current run request."""
-    return complete_run_with_requested_runs(
-        compatible=compatible,
-        requested_runs=runtime.n_runs,
-        mode=runtime.mode,
-        mc_parameters=mc_parameters,
-    )
-
-
 def compatible_complete_sobol_run(
     *,
     compatible: tuple[CompatibleMonteCarloRun, ...],

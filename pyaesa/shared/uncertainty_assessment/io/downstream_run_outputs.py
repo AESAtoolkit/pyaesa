@@ -10,6 +10,7 @@ import pandas as pd
 
 from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
+    monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
     monte_carlo_run_progress,
     monte_carlo_run_progress_label,
@@ -22,16 +23,20 @@ from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_sparse_run_rows,
     iter_sparse_run_row_windows,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
-    write_uncertainty_table,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
+from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
+    sparse_rows_to_overlapping_group_values,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.convergence import (
     ConvergenceCheckpointCursor,
     MeanConvergenceAccumulator,
-    ordered_mean_convergence_reached,
+    mean_convergence_payload,
+    mean_convergence_payload_for_targets,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 
@@ -52,13 +57,14 @@ class DownstreamRunOutputPlan:
     run_layout: str
     summary_identity: pd.DataFrame
     public_row_count: int
-    compact_batches: Callable[[str, int, int], Iterator[tuple[np.ndarray, np.ndarray]]]
-    sparse_batches: Callable[[str, int, int], Iterator[tuple[np.ndarray, SparseRunRows]]]
+    compact_batches: Callable[[str, int, int, int], Iterator[tuple[np.ndarray, np.ndarray]]]
     collapse_compact: Callable[[np.ndarray], np.ndarray]
-    collapse_sparse: Callable[[SparseRunRows, np.ndarray, np.ndarray], np.ndarray]
-    sparse_public_row_group_index: Callable[[], np.ndarray]
-    empty_sparse_rows: Callable[[], SparseRunRows]
     summary_public_row_groups: tuple[tuple[str, ...], ...] | None = None
+    sparse_batches: (
+        Callable[[str, int, int, int], Iterator[tuple[np.ndarray, SparseRunRows]]] | None
+    ) = None
+    sparse_public_row_group_membership_index: Callable[[], np.ndarray] | None = None
+    empty_sparse_rows: Callable[[], SparseRunRows] | None = None
 
 
 @dataclass(frozen=True)
@@ -78,7 +84,7 @@ def write_downstream_run_outputs(
     show_progress: bool = True,
     progress: RunProgressPrinter | None = None,
 ) -> tuple[int, dict[str, Any] | None]:
-    """Write downstream run values, exact summaries, and convergence status."""
+    """Write downstream run values, summaries, and convergence status."""
     state = new_downstream_run_output_state(paths=paths)
     try:
         state, convergence = append_downstream_run_outputs(
@@ -125,7 +131,7 @@ def append_downstream_run_outputs(
     progress_max_runs: int | None = None,
     progress_component: bool = False,
 ) -> tuple[DownstreamRunOutputState, dict[str, Any] | None]:
-    """Append one downstream run interval and update exact summaries."""
+    """Append one downstream run interval and update summaries."""
     state = _initialize_downstream_convergence_state(
         paths=paths,
         plan=plan,
@@ -231,6 +237,7 @@ def _append_compact_run_outputs(
                 runtime.output_format,
                 completed,
                 int(target_runs),
+                runtime.batch_size,
             ):
                 for start in range(0, len(source_run_indices), runtime.batch_size):
                     stop = min(start + runtime.batch_size, len(source_run_indices))
@@ -269,7 +276,11 @@ def _append_compact_run_outputs(
                             mode=progress_label_mode,
                             component=progress_component,
                         ),
-                        persistent=str(progress_label_mode) == "fixed",
+                        persistent=monte_carlo_completion_is_persistent(
+                            completed=completed,
+                            max_runs=progress_target,
+                            mode=progress_label_mode,
+                        ),
                     )
                     if convergence is not None:
                         break
@@ -314,7 +325,15 @@ def _append_sparse_run_outputs(
     convergence = None
     checkpoints = ConvergenceCheckpointCursor.from_runtime(runtime=runtime)
     checkpoints.advance_to_completed(completed_runs=completed)
-    public_row_group_index = plan.sparse_public_row_group_index()
+    public_row_group_membership_index = cast(
+        Callable[[], np.ndarray],
+        plan.sparse_public_row_group_membership_index,
+    )()
+    sparse_batches = cast(
+        Callable[[str, int, int, int], Iterator[tuple[np.ndarray, SparseRunRows]]],
+        plan.sparse_batches,
+    )
+    empty_sparse_rows = cast(Callable[[], SparseRunRows], plan.empty_sparse_rows)
     own_progress = progress is None
     if own_progress:
         progress = monte_carlo_run_progress(
@@ -331,10 +350,11 @@ def _append_sparse_run_outputs(
         ) as writer:
             source_chunks = (
                 rows
-                for _run_indices, rows in plan.sparse_batches(
+                for _run_indices, rows in sparse_batches(
                     runtime.output_format,
                     completed,
                     int(target_runs),
+                    runtime.batch_size,
                 )
             )
             for run_indices, rows in iter_sparse_run_row_windows(
@@ -342,7 +362,7 @@ def _append_sparse_run_outputs(
                 start_run_index=completed,
                 stop_run_index=int(target_runs),
                 batch_size=runtime.batch_size,
-                empty_rows=plan.empty_sparse_rows(),
+                empty_rows=empty_sparse_rows(),
             ):
                 progress.begin(
                     label=monte_carlo_run_drawing_label(
@@ -356,14 +376,11 @@ def _append_sparse_run_outputs(
                 completed_run_count = int(run_indices[-1]) + 1
                 writer.write_batch(rows=rows, batch_index=batch_index)
                 check_convergence = checkpoints.reached(completed_runs=completed_run_count)
-                completed, convergence = append_downstream_summary_values(
+                completed, convergence = append_downstream_sparse_summary_values(
                     convergence_state=state.convergence_state,
-                    summary_values=plan.collapse_sparse(
-                        rows,
-                        run_indices,
-                        public_row_group_index,
-                    ),
+                    sparse_rows=rows,
                     run_indices=run_indices,
+                    public_row_group_membership_index=public_row_group_membership_index,
                     runtime=runtime,
                     check_convergence=check_convergence,
                 )
@@ -376,7 +393,11 @@ def _append_sparse_run_outputs(
                         mode=progress_label_mode,
                         component=progress_component,
                     ),
-                    persistent=str(progress_label_mode) == "fixed",
+                    persistent=monte_carlo_completion_is_persistent(
+                        completed=completed,
+                        max_runs=progress_target,
+                        mode=progress_label_mode,
+                    ),
                 )
                 batch_index += 1
                 if convergence is not None:
@@ -457,7 +478,11 @@ def _replay_sparse_convergence_state(
     completed_runs: int,
     convergence_state: MeanConvergenceAccumulator,
 ) -> None:
-    public_row_group_index = plan.sparse_public_row_group_index()
+    public_row_group_membership_index = cast(
+        Callable[[], np.ndarray],
+        plan.sparse_public_row_group_membership_index,
+    )()
+    empty_sparse_rows = cast(Callable[[], SparseRunRows], plan.empty_sparse_rows)
     windows = iter_sparse_run_row_windows(
         chunks=iter_sparse_run_rows(
             path=paths.public_runs,
@@ -467,11 +492,18 @@ def _replay_sparse_convergence_state(
         start_run_index=0,
         stop_run_index=int(completed_runs),
         batch_size=runtime.batch_size,
-        empty_rows=plan.empty_sparse_rows(),
+        empty_rows=empty_sparse_rows(),
     )
     for run_indices, rows in windows:
-        convergence_state.update(
-            values=plan.collapse_sparse(rows, run_indices, public_row_group_index)
+        row_runs, row_groups, values = sparse_rows_to_overlapping_group_values(
+            sparse_rows=rows,
+            run_indices=run_indices,
+            public_row_group_index=public_row_group_membership_index,
+        )
+        convergence_state.accumulate_sparse_group_means(
+            row_runs=row_runs,
+            row_groups=row_groups,
+            values=values,
         )
 
 
@@ -487,22 +519,44 @@ def append_downstream_summary_values(
     if convergence_state is not None:
         convergence_state.update(values=summary_values)
     completed = int(run_indices[-1]) + 1
-    if not check_convergence or runtime.mode != "convergence":
-        return completed, None
     target = cast(MeanConvergenceAccumulator, convergence_state)
-    reached = ordered_mean_convergence_reached(
+    convergence = mean_convergence_payload_for_targets(
         targets=(target,),
         completed_runs=completed,
-        rtol=runtime.rtol,
+        runtime=runtime,
+        check_convergence=check_convergence,
     )
-    convergence = (
-        downstream_convergence_payload(
-            reached=True,
-            completed_runs=completed,
-            runtime=runtime,
+    return completed, convergence
+
+
+def append_downstream_sparse_summary_values(
+    *,
+    convergence_state: MeanConvergenceAccumulator | None,
+    sparse_rows: SparseRunRows,
+    run_indices: np.ndarray,
+    public_row_group_membership_index: np.ndarray,
+    runtime: UncertaintyRuntimeRequest,
+    check_convergence: bool = True,
+) -> tuple[int, dict[str, Any] | None]:
+    """Accumulate sparse run summary means without materializing dense run matrices."""
+    if convergence_state is not None:
+        row_runs, row_groups, values = sparse_rows_to_overlapping_group_values(
+            sparse_rows=sparse_rows,
+            run_indices=run_indices,
+            public_row_group_index=public_row_group_membership_index,
         )
-        if reached
-        else None
+        convergence_state.accumulate_sparse_group_means(
+            row_runs=row_runs,
+            row_groups=row_groups,
+            values=values,
+        )
+    completed = int(run_indices[-1]) + 1
+    target = cast(MeanConvergenceAccumulator, convergence_state)
+    convergence = mean_convergence_payload_for_targets(
+        targets=(target,),
+        completed_runs=completed,
+        runtime=runtime,
+        check_convergence=check_convergence,
     )
     return completed, convergence
 
@@ -519,7 +573,7 @@ def final_downstream_convergence_payload(
         return convergence
     if not final_checkpoint:
         return None
-    return downstream_convergence_payload(
+    return mean_convergence_payload(
         reached=False,
         completed_runs=completed_runs,
         runtime=runtime,
@@ -534,7 +588,7 @@ def write_downstream_summary(
     output_format: str,
     sparse: bool,
 ) -> None:
-    """Write exact summary statistics from downstream public run artifacts."""
+    """Write summary statistics from downstream public run artifacts."""
     summary = exact_summary_from_public_runs(
         identity_frame=plan.summary_identity,
         runs_path=paths.public_runs,
@@ -548,20 +602,3 @@ def write_downstream_summary(
         frame=summary,
         output_format=output_format,
     )
-
-
-def downstream_convergence_payload(
-    *,
-    reached: bool,
-    completed_runs: int,
-    runtime: UncertaintyRuntimeRequest,
-) -> dict[str, Any]:
-    """Return the common Monte Carlo convergence payload."""
-    return {
-        "reached": bool(reached),
-        "completed_runs": int(completed_runs),
-        "max_runs": int(runtime.max_runs),
-        "rtol": float(runtime.rtol),
-        "stable_runs": int(runtime.stable_runs),
-        "statistics": list(runtime.convergence_statistics),
-    }

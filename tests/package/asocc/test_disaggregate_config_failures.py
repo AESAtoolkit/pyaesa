@@ -14,31 +14,29 @@ from pyaesa.asocc.disaggregation.run_plan import build_disaggregation_run_plan
 
 def _base_config() -> dict:
     return {
-        "target_grouped_run": {
+        "target_agg_run": {
             "source": "oecd_v2025",
-            "group_reg": False,
-            "group_sec": False,
-            "group_version": None,
+            "agg_reg": False,
+            "agg_sec": False,
+            "agg_version": None,
             "s_p": ["D"],
         },
-        "ref_grouped_run": {
+        "ref_agg_run": {
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": "oecd_d",
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": "oecd_d",
             "s_p": ["D"],
         },
-        "ref_split_run": {
+        "ref_disagg_run": {
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": "elec",
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": "elec",
             "s_p": ["Electricity"],
         },
-        "disaggregation_specs": [
-            {"grouped_sector_label": "D", "split_sector_label": "Electricity"}
-        ],
-        "new_disaggregated_version_name": "disagg_oecd",
+        "disaggregation_specs": [{"agg_sector_label": "D", "disagg_sector_label": "Electricity"}],
+        "new_disagg_version_name": "disagg_oecd",
     }
 
 
@@ -84,7 +82,7 @@ def test_parse_disaggregate_args_rejects_non_dict_config() -> None:
 
 def test_parse_disaggregate_args_rejects_missing_and_unknown_top_keys() -> None:
     config = _base_config()
-    del config["new_disaggregated_version_name"]
+    del config["new_disagg_version_name"]
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
@@ -96,57 +94,57 @@ def test_parse_disaggregate_args_rejects_missing_and_unknown_top_keys() -> None:
 
 def test_parse_selector_strict_failure_modes() -> None:
     config = _base_config()
-    config["target_grouped_run"] = "bad"
+    config["target_agg_run"] = "bad"
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["unknown"] = 1
+    config["target_agg_run"]["unknown"] = 1
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["source"] = ""
+    config["target_agg_run"]["source"] = ""
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["source"] = None
+    config["target_agg_run"]["source"] = None
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["source"] = "bad_source"
+    config["target_agg_run"]["source"] = "bad_source"
     with pytest.raises(ValueError, match="source"):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["group_reg"] = "False"
+    config["target_agg_run"]["agg_reg"] = "False"
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["group_version"] = "x"
+    config["target_agg_run"]["agg_version"] = "x"
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["s_p"] = "D"
+    config["target_agg_run"]["s_p"] = "D"
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["s_p"] = [""]
+    config["target_agg_run"]["s_p"] = [""]
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["s_p"] = [None]
+    config["target_agg_run"]["s_p"] = [None]
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["target_grouped_run"]["s_p"] = []
+    config["target_agg_run"]["s_p"] = []
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
@@ -165,8 +163,8 @@ def test_parse_specs_strict_failure_modes() -> None:
     config = _base_config()
     config["disaggregation_specs"] = [
         {
-            "grouped_sector_label": "D",
-            "split_sector_label": "Electricity",
+            "agg_sector_label": "D",
+            "disagg_sector_label": "Electricity",
             "extra": "x",
         }
     ]
@@ -174,24 +172,24 @@ def test_parse_specs_strict_failure_modes() -> None:
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["disaggregation_specs"] = [{"grouped_sector_label": "D", "split_sector_label": ""}]
+    config["disaggregation_specs"] = [{"agg_sector_label": "D", "disagg_sector_label": ""}]
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
 
 def test_selector_to_specs_cross_rules_failures() -> None:
     config = _base_config()
-    config["ref_grouped_run"]["s_p"] = ["X"]
-    with pytest.raises(ValueError, match="ref_grouped_run.s_p"):
+    config["ref_agg_run"]["s_p"] = ["X"]
+    with pytest.raises(ValueError, match="ref_agg_run.s_p"):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["ref_split_run"]["s_p"] = ["X"]
-    with pytest.raises(ValueError, match="ref_split_run.s_p"):
+    config["ref_disagg_run"]["s_p"] = ["X"]
+    with pytest.raises(ValueError, match="ref_disagg_run.s_p"):
         _call(config, _base_allocate_args())
 
     config = _base_config()
-    config["ref_split_run"]["source"] = "oecd_v2025"
+    config["ref_disagg_run"]["source"] = "oecd_v2025"
     with pytest.raises(ValueError):
         _call(config, _base_allocate_args())
 
@@ -228,13 +226,13 @@ def test_runtime_type_failures() -> None:
         _call(_base_config(), _base_allocate_args(), refresh=1)
 
 
-def test_group_flags_default_to_false_when_omitted() -> None:
+def test_agg_flags_default_to_false_when_omitted() -> None:
     config = _base_config()
-    del config["target_grouped_run"]["group_reg"]
-    del config["target_grouped_run"]["group_sec"]
+    del config["target_agg_run"]["agg_reg"]
+    del config["target_agg_run"]["agg_sec"]
     parsed = _call(config, _base_allocate_args())
-    assert parsed.disaggregation.target_grouped_run.group_reg is False
-    assert parsed.disaggregation.target_grouped_run.group_sec is False
+    assert parsed.disaggregation.target_agg_run.agg_reg is False
+    assert parsed.disaggregation.target_agg_run.agg_sec is False
 
 
 def test_base_allocate_time_selector_normalization_and_failures() -> None:
@@ -280,9 +278,9 @@ def test_region_compatibility_rejects_invalid_region_filters_and_missing_labels(
     del allocation_dummy_repo
     selector = SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     )
     base_args = {
         "r_p": None,
@@ -291,8 +289,8 @@ def test_region_compatibility_rejects_invalid_region_filters_and_missing_labels(
     }
     validate_region_compatibility(
         target_selector=selector,
-        ref_grouped_selector=selector,
-        ref_split_selector=selector,
+        ref_aggregated_selector=selector,
+        ref_disaggregate_selector=selector,
         base_allocate_args=base_args,
         combined_methods=[],
     )
@@ -300,8 +298,8 @@ def test_region_compatibility_rejects_invalid_region_filters_and_missing_labels(
     with pytest.raises(ValueError):
         validate_region_compatibility(
             target_selector=selector,
-            ref_grouped_selector=selector,
-            ref_split_selector=selector,
+            ref_aggregated_selector=selector,
+            ref_disaggregate_selector=selector,
             base_allocate_args={"r_p": ["ZZ"], "r_c": None, "r_f": None},
             combined_methods=[],
         )
@@ -337,7 +335,7 @@ def test_disaggregation_report_string_covers_figure_summaries() -> None:
         branch_reports=[
             DisaggregationBranchReport(
                 l1_reg_aggreg="post",
-                aggreg_indices=True,
+                group_indices=True,
                 summaries=["done"],
                 disaggregation_audit_path=Path("audit.csv"),
                 metadata_path=Path("metadata.json"),
@@ -346,7 +344,7 @@ def test_disaggregation_report_string_covers_figure_summaries() -> None:
         ],
     )
     with_figure_summary = str(with_figures)
-    assert "aggreg_indices=grouped" in with_figure_summary
+    assert "group_indices=grouped" in with_figure_summary
     assert "done" in with_figure_summary
 
     plain = DisaggregationReport(
@@ -354,7 +352,7 @@ def test_disaggregation_report_string_covers_figure_summaries() -> None:
         branch_reports=[
             DisaggregationBranchReport(
                 l1_reg_aggreg="post",
-                aggreg_indices=False,
+                group_indices=False,
                 summaries=["done"],
                 disaggregation_audit_path=Path("audit.csv"),
                 metadata_path=Path("metadata.json"),

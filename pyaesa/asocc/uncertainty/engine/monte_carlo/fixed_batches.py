@@ -9,25 +9,32 @@ from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioPlan
 from pyaesa.asocc.uncertainty.sources.lcia import LCIAPlan
 from pyaesa.asocc.uncertainty.io.paths import AsoccUncertaintyRunPaths
 from pyaesa.asocc.uncertainty.sources.projection import ProjectionPlan
-from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import sample_compact_batch
+from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    compact_batch_inter_mrio_matches,
+    sample_compact_batch,
+)
 from pyaesa.asocc.uncertainty.engine.inter_method.execution import InterMethodExecutionPlan
 from pyaesa.asocc.uncertainty.engine.inter_method.sampling import (
     external_run_offsets_for_start,
+    inter_method_inter_mrio_matches_by_branch,
     sample_sparse_inter_method_batch,
 )
 from pyaesa.asocc.uncertainty.schema.public_rows import ASOCC_UNCERTAINTY_CSV_DTYPES
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import fixed_run_plan
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRowsWriter,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import (
     read_uncertainty_table,
     write_uncertainty_table,
 )
 from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
-    monte_carlo_run_progress,
+    monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
+    monte_carlo_run_progress,
     monte_carlo_run_progress_label,
 )
 
@@ -82,6 +89,12 @@ def write_fixed_batches(
     own_progress = progress is None
     if own_progress:
         progress = monte_carlo_run_progress(source="uncertainty_asocc", enabled=show_progress)
+    inter_mrio_matches = compact_batch_inter_mrio_matches(
+        loaded=loaded,
+        inter_mrio_plan=inter_mrio_plan,
+        lcia_plan=lcia_plan,
+        projection_plan=projection_plan,
+    )
     try:
         with CompactRunMatrixWriter(
             path=paths.public_runs,
@@ -106,6 +119,7 @@ def write_fixed_batches(
                     batch=batch,
                     sources=sources,
                     external_plan=external_plan,
+                    inter_mrio_matches=inter_mrio_matches,
                 )
                 if not identity_written:
                     write_uncertainty_table(
@@ -126,7 +140,11 @@ def write_fixed_batches(
                         mode=progress_mode,
                         component=progress_component,
                     ),
-                    persistent=str(progress_mode) == "fixed",
+                    persistent=monte_carlo_completion_is_persistent(
+                        completed=batch.stop_run_index,
+                        max_runs=runtime.n_runs if progress_max_runs is None else progress_max_runs,
+                        mode=progress_mode,
+                    ),
                 )
     finally:
         if own_progress:
@@ -178,6 +196,10 @@ def _write_sparse_inter_method_fixed_batches(
             for source in branch.external_plan.monte_carlo_sources
         ),
     )
+    inter_mrio_matches_by_branch = inter_method_inter_mrio_matches_by_branch(
+        execution_plan=inter_method_execution_plan,
+        inter_mrio_plan=inter_mrio_plan,
+    )
     own_progress = progress is None
     if own_progress:
         progress = monte_carlo_run_progress(source="uncertainty_asocc", enabled=show_progress)
@@ -206,6 +228,7 @@ def _write_sparse_inter_method_fixed_batches(
                     sources=sources,
                     identity=identity,
                     external_render_offsets=external_render_offsets,
+                    inter_mrio_matches_by_branch=inter_mrio_matches_by_branch,
                 )
                 for label, count in sparse_batch.external_run_counts.items():
                     external_render_offsets[label] = external_render_offsets.get(label, 0) + count
@@ -228,7 +251,11 @@ def _write_sparse_inter_method_fixed_batches(
                         mode=progress_mode,
                         component=progress_component,
                     ),
-                    persistent=str(progress_mode) == "fixed",
+                    persistent=monte_carlo_completion_is_persistent(
+                        completed=batch.stop_run_index,
+                        max_runs=runtime.n_runs if progress_max_runs is None else progress_max_runs,
+                        mode=progress_mode,
+                    ),
                 )
     finally:
         if own_progress:

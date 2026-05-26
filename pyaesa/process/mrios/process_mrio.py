@@ -13,9 +13,9 @@ def process_mrio(
     *,
     refresh: bool = False,
     lcia_method: Optional[str | Sequence[str]] = None,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     keep_intermediate_uncasext: bool = False,
     pymrio_calc_all: bool = False,
 ) -> ProcessReportMRIO | None:
@@ -31,17 +31,17 @@ def process_mrio(
             ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``).
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
-            years for the selected source/group version are used.
+            years for the selected source and ``agg_version`` are used.
         refresh: If ``True``, clear and recompute only the requested processed
             MRIO year folders inside the resolved source and classification
             output scope. The output scope is
             ``data_processed/mrio/<source>/<version_tag>``, where
-            ``version_tag`` is ``original_classification`` for ungrouped
-            processing or ``custom_classification_<group_version>`` for
-            grouped processing. For each requested year, the corresponding
-            processed year folder and metadata year entry are removed before
-            recomputation. Raw downloads and project outputs are not refreshed.
-            Defaults to ``False``.
+            ``version_tag`` is ``original_classification`` for native source
+            classification or ``custom_classification_<agg_version>`` for
+            custom MRIO aggregation and disaggregation processing. For each requested
+            year, the corresponding processed year folder and metadata year
+            entry are removed before recomputation. Raw downloads and project
+            outputs are not refreshed. Defaults to ``False``.
         lcia_method: LCIA method(s) used to characterize MRIO
             environmental stressors into the selected method(s) impact
             categories (for example ``"pb_lcia"`` or
@@ -52,16 +52,27 @@ def process_mrio(
             ``README_add_custom_lcia_characterization_matrices.txt`` in
             ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
             and pass the custom method file stem here.
-        group_reg: If ``True``, aggregate regions using a grouping file.
+        agg_reg: If ``True``, reclassify MRIO regions with the
+            ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native regions
+            into one target label, or disaggregate one native region across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source regions.
-        group_sec: If ``True``, aggregate sectors using a grouping file.
+        agg_sec: If ``True``, reclassify MRIO sectors with the
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native sectors
+            into one target label, or disaggregate one native sector across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source sectors.
-        group_version: Grouping version tag used to resolve the region/sector
-            mapping CSVs. Required when ``group_reg`` or ``group_sec`` is True.
-            Defaults to an empty string for ungrouped processing. Follow
-            ``README_grouping.txt`` in the active
-            ``data_raw/mrio/<source>/grouping`` folder to name grouping
-            versions and place the matching mapping CSVs.
+        agg_version: Name token used to resolve the matching
+            ``agg_reg_<agg_version>.csv`` and/or
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+            mapping files in ``data_raw/mrio/<source>/aggregation``.
+            Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+            an empty string for native source classification. Use the same
+            token in downstream calls that should reuse the processed
+            classification. When a mapping file has a ``weight``
+            column, weights must sum to ``1`` for each original label.
         keep_intermediate_uncasext: If ``True``, keep intermediate UNCASExt
             matrices needed only for optional diagnostic upstream supply chain
             decomposition in
@@ -82,7 +93,7 @@ def process_mrio(
         otherwise ``None`` when all requested years were already satisfied.
 
     Raises:
-        ValueError: If source, grouping, or LCIA arguments are invalid for the
+        ValueError: If source, aggregation, or LCIA arguments are invalid for the
             requested public processing scope.
 
     Notes:
@@ -90,16 +101,19 @@ def process_mrio(
         ``set_workspace()``; call ``set_workspace()`` before invoking this
         function. Run ``download_mrio(...)`` for the same source and years
         before processing when the raw archives are not already present.
-        The workspace prerequisite folders used by grouping and EXIOBASE LCIA
-        extension are documented in local README guides under ``data_raw``.
-        Use ``README_grouping.txt`` inside the active
-        MRIO grouping folder for custom region or sector grouping, and use
+        The workspace prerequisite folders used by MRIO aggregation and disaggregation
+        and EXIOBASE LCIA extension are documented in local README guides under
+        ``data_raw``.
+        Use ``README_aggregation.txt`` inside the active
+        MRIO aggregation folder for custom region or sector
+        MRIO aggregation and disaggregation, and use
         ``README_add_custom_lcia_characterization_matrices.txt`` plus
         ``README_add_custom_lcia_responsibility_periods.txt`` inside the
         EXIOBASE LCIA prerequisite folders when adding custom method specific
-        files beyond the package shipped methods. If grouped MRIO outputs will
-        later be used with LCIA uncertainty, follow
-        ``README_grouped_and_aggregate_lcia_covs.txt`` in
+        files beyond the package shipped methods. If custom regional MRIO
+        aggregation and disaggregation outputs will later be used with LCIA
+        uncertainty, follow
+        ``README_agg_reg_and_group_indices_lcia_covs.txt`` in
         ``data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/``.
 
     Example:
@@ -117,9 +131,9 @@ def process_mrio(
         years=years,
         refresh=refresh,
         lcia_method=lcia_method,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         keep_intermediate_uncasext=keep_intermediate_uncasext,
         pymrio_calc_all=pymrio_calc_all,
     )

@@ -33,12 +33,12 @@ def _context(
         source="oecd_v2025",
         output_source_label=output_source_label,
         output_source=published_source,
-        group_version=None,
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version=None,
+        agg_reg=False,
+        group_indices=False,
         l1_reg_aggreg="post",
         project_name="aSoCC",
-        group_sec=False,
+        agg_sec=False,
         fu_code="L2.a.a",
         lcia_method=None,
         years_input=[2005, 2030],
@@ -103,7 +103,7 @@ def test_build_metadata_payload_uses_overrides_and_single_stats_path(tmp_path: P
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=context.output_source_label,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     stats_path.parent.mkdir(parents=True, exist_ok=True)
     stats_path.write_text("header\n", encoding="utf-8")

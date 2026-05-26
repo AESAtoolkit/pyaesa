@@ -57,12 +57,21 @@ class SobolAnalysisResult:
     status: dict[str, object]
 
 
+@dataclass(frozen=True)
+class _CachedSobolChunk:
+    """Evaluated Sobol base rows retained for convergence checkpoints."""
+
+    row_start: int
+    evaluated: EvaluatedSobolChunk
+
+
 def run_sobol_analysis(
     *,
     plan: SobolPlan,
     dimension_names: tuple[str, ...],
     evaluate: Callable[[SobolEvaluationChunk], EvaluatedSobolChunk],
     source_summary_builder: SourceSummaryBuilder | None = None,
+    max_base_chunk_rows: int | None = None,
     progress_source: str = "Sobol",
     status: StatusSink | None = None,
 ) -> SobolAnalysisResult:
@@ -77,22 +86,23 @@ def run_sobol_analysis(
         n_base_samples=checkpoints[-1],
         dimension_count=dimension_count,
     )
-    first_chunk = iter_saltelli_chunks(
-        design=design,
-        chunk_rows=1,
-        start_row=0,
-        stop_row=1,
-    )[0]
+    first_chunk = next(iter_saltelli_chunks(design=design, chunk_rows=1, start_row=0, stop_row=1))
     first = evaluate(first_chunk)
     output_count = first.a_values.shape[1]
-    chunk_rows = sobol_chunk_rows(
+    output_cache_rows = sobol_chunk_rows(
         output_count=output_count,
         dimension_count=dimension_count,
+        confidence_resamples=plan.confidence_resamples,
     )
+    chunk_rows = output_cache_rows
+    if max_base_chunk_rows is not None:
+        chunk_rows = min(chunk_rows, max(1, int(max_base_chunk_rows)))
     reached = False
     history: list[dict[str, object]] = []
     final_table = pd.DataFrame()
     final_source_summary = pd.DataFrame()
+    cached_chunks = [_CachedSobolChunk(row_start=0, evaluated=first)]
+    cached_stop = 1
     progress = sobol_progress(source=progress_source, status=status)
     try:
         for checkpoint_index, n_base in enumerate(checkpoints):
@@ -102,18 +112,38 @@ def run_sobol_analysis(
                     max_base=plan.max_base_samples,
                     dimension_count=dimension_count,
                     mode=plan.mode,
+                    state="evaluating",
                 )
             )
-            estimates = _estimate_checkpoint(
-                plan=plan,
-                design=design,
-                n_base=n_base,
-                output_count=output_count,
-                dimension_count=dimension_count,
-                chunk_rows=chunk_rows,
-                first=first,
-                evaluate=evaluate,
-            )
+            if plan.mode == "convergence" and n_base <= output_cache_rows:
+                cached_stop = _append_evaluated_chunks(
+                    chunks=cached_chunks,
+                    cached_stop=cached_stop,
+                    target_stop=n_base,
+                    design=design,
+                    chunk_rows=chunk_rows,
+                    evaluate=evaluate,
+                )
+                estimates = _estimate_cached_checkpoint(
+                    plan=plan,
+                    n_base=n_base,
+                    output_count=output_count,
+                    dimension_count=dimension_count,
+                    chunks=tuple(cached_chunks),
+                )
+            else:
+                cached_chunks = [_CachedSobolChunk(row_start=0, evaluated=first)]
+                cached_stop = 1
+                estimates = _estimate_checkpoint(
+                    plan=plan,
+                    design=design,
+                    n_base=n_base,
+                    output_count=output_count,
+                    dimension_count=dimension_count,
+                    chunk_rows=chunk_rows,
+                    first=first,
+                    evaluate=evaluate,
+                )
             final_table, final_source_summary, checkpoint_status = _tables_and_status(
                 identity=first.identity,
                 dimension_names=dimension_names,
@@ -134,6 +164,7 @@ def run_sobol_analysis(
                     max_base=plan.max_base_samples,
                     dimension_count=dimension_count,
                     mode=plan.mode,
+                    state="completed",
                 ),
                 persistent=plan.mode == "fixed" or reached or final_checkpoint,
             )
@@ -180,16 +211,14 @@ def _sobol_progress_label(
     max_base: int,
     dimension_count: int,
     mode: str,
+    state: str,
 ) -> str:
     """Return a compact Sobol checkpoint progress label."""
     evaluations = int(n_base) * (int(dimension_count) + 2)
     if str(mode) == "fixed":
-        return f"base samples {int(n_base)}; design evaluations {evaluations}"
-    return (
-        f"base samples {int(n_base)} (max {int(max_base)}); "
-        f"design evaluations {evaluations}; latest completed checkpoint, "
-        "next checkpoint running"
-    )
+        return f"{state} fixed base {int(n_base)} of {int(max_base)}; evals {evaluations}"
+    checkpoint = "checkpoint" if str(state) == "evaluating" else "checkpoint checked"
+    return f"{state} base {int(n_base)}; max {int(max_base)}; evals {evaluations}; {checkpoint}"
 
 
 def _estimate_checkpoint(
@@ -230,6 +259,60 @@ def _estimate_checkpoint(
     ):
         evaluated = evaluate(chunk)
         row_stop = chunk.row_start + chunk.a.shape[0]
+        accumulator.add(
+            a_values=evaluated.a_values,
+            b_values=evaluated.b_values,
+            mixed_values=evaluated.ab_values,
+            row_weights=None if weights is None else weights[:, chunk.row_start : row_stop],
+        )
+    return accumulator.estimates(confidence_level=plan.confidence_level)
+
+
+def _append_evaluated_chunks(
+    *,
+    chunks: list[_CachedSobolChunk],
+    cached_stop: int,
+    target_stop: int,
+    design,
+    chunk_rows: int,
+    evaluate: Callable[[SobolEvaluationChunk], EvaluatedSobolChunk],
+) -> int:
+    """Evaluate and cache convergence rows missing from the current checkpoint."""
+    for chunk in iter_saltelli_chunks(
+        design=design,
+        chunk_rows=chunk_rows,
+        start_row=cached_stop,
+        stop_row=target_stop,
+    ):
+        chunks.append(_CachedSobolChunk(row_start=chunk.row_start, evaluated=evaluate(chunk)))
+    return int(target_stop)
+
+
+def _estimate_cached_checkpoint(
+    *,
+    plan: SobolPlan,
+    n_base: int,
+    output_count: int,
+    dimension_count: int,
+    chunks: tuple[_CachedSobolChunk, ...],
+) -> SobolIndexEstimate:
+    """Estimate one convergence checkpoint from already evaluated Sobol rows."""
+    weights = (
+        _bootstrap_row_weights(
+            base_count=n_base,
+            confidence_resamples=plan.confidence_resamples,
+        )
+        if n_base > 1
+        else None
+    )
+    accumulator = SobolMomentAccumulator(
+        output_count=output_count,
+        dimension_count=dimension_count,
+        confidence_resamples=plan.confidence_resamples,
+    )
+    for chunk in chunks:
+        evaluated = chunk.evaluated
+        row_stop = chunk.row_start + evaluated.a_values.shape[0]
         accumulator.add(
             a_values=evaluated.a_values,
             b_values=evaluated.b_values,

@@ -41,10 +41,17 @@ from pyaesa.asocc.uncertainty.sources.names import INTER_MRIO_SOURCE
 
 INTER_MRIO_ALPHA_RANDOM_STREAM = "asocc.inter_mrio.alpha"
 _METHOD_COLUMNS = ("l1_l2_method", "l1_method", "l2_method")
+# LCIA axes are public duplication axes for non LCIA methods, not endpoint identity.
+_INTER_MRIO_MATCH_EXCLUDED_COLUMNS = {
+    ASOCC_VALUE_COLUMN,
+    ASOCC_TIME_ROUTE_COLUMN,
+    "lcia_method",
+    "impact",
+}
 _ALTERNATE_DROPPED_ARG_KEYS = {
-    "group_version",
-    "group_reg",
-    "group_sec",
+    "agg_version",
+    "agg_reg",
+    "agg_sec",
     "lcia_method",
     "figures",
     "figure_format",
@@ -152,6 +159,7 @@ def apply_inter_mrio_uncertainty_to_matrix(
     batch: RunBatch,
     projection_selection: np.ndarray | None,
     unit_values: np.ndarray | None = None,
+    matches: InterMrioInterpolationMatches | None = None,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """Interpolate eligible final rows between main and alternate endpoint matrices."""
     if template.empty:
@@ -159,16 +167,15 @@ def apply_inter_mrio_uncertainty_to_matrix(
         # sampling with no pyaesa owned rows. Inter-MRIO uncertainty is skipped
         # for external methods; those values are already final for this source.
         return template, values
-    alternate_template, alternate_values = _alternate_endpoint_matrix(
+    alternate_values = _alternate_endpoint_values(
         plan=plan,
         batch=batch,
         projection_selection=projection_selection,
     )
-    main_positions, alternate_positions = _interpolation_positions(
-        template=template,
-        alternate_template=alternate_template,
-        external_method_labels=plan.external_method_labels,
-    )
+    if matches is None:
+        matches = inter_mrio_interpolation_matches(template=template, plan=plan)
+    main_positions = matches.main_positions
+    alternate_positions = matches.alternate_positions
     if main_positions.size == 0:
         return template, values
     alpha = _alpha(batch=batch, unit_values=unit_values)[:, None]
@@ -177,6 +184,19 @@ def apply_inter_mrio_uncertainty_to_matrix(
         alternate_values[:, alternate_positions] - values[:, main_positions]
     )
     return template, out
+
+
+def inter_mrio_interpolation_matches(
+    *,
+    template: pd.DataFrame,
+    plan: InterMrioPlan,
+) -> InterMrioInterpolationMatches:
+    """Return stable interpolation positions for one compact batch template."""
+    return _interpolation_matches(
+        template=template,
+        alternate_template=_alternate_endpoint_template(plan=plan),
+        external_method_labels=plan.external_method_labels,
+    )
 
 
 def inter_mrio_source_method_row(
@@ -223,22 +243,26 @@ def inter_mrio_route_report(
     )
 
 
-def _alternate_endpoint_matrix(
+def _alternate_endpoint_template(*, plan: InterMrioPlan) -> pd.DataFrame:
+    if plan.alternate_projection_plan is not None:
+        return projection_public_row_template(plan=plan.alternate_projection_plan)
+    return plan.alternate_loaded.rows
+
+
+def _alternate_endpoint_values(
     *,
     plan: InterMrioPlan,
     batch: RunBatch,
     projection_selection: np.ndarray | None,
-) -> tuple[pd.DataFrame, np.ndarray]:
+) -> np.ndarray:
     if plan.alternate_projection_plan is not None:
-        template = projection_public_row_template(plan=plan.alternate_projection_plan)
-        values = projection_value_matrix_for_indices(
+        return projection_value_matrix_for_indices(
             plan=plan.alternate_projection_plan,
             batch=batch,
             selected_indices=cast(np.ndarray, projection_selection),
         )
-        return template, values
     values = plan.alternate_loaded.rows[ASOCC_VALUE_COLUMN].to_numpy(dtype="float64")
-    return plan.alternate_loaded.rows, np.broadcast_to(values, (batch.n_runs, len(values)))
+    return np.broadcast_to(values, (batch.n_runs, len(values)))
 
 
 def _interpolation_positions(
@@ -304,11 +328,10 @@ def _interpolation_matches(
 
 
 def _alignment_columns(*, template: pd.DataFrame, alternate_template: pd.DataFrame) -> list[str]:
-    blocked = {ASOCC_VALUE_COLUMN, ASOCC_TIME_ROUTE_COLUMN}
     return [
         column
         for column in template.columns
-        if column in alternate_template.columns and column not in blocked
+        if column in alternate_template.columns and column not in _INTER_MRIO_MATCH_EXCLUDED_COLUMNS
     ]
 
 
@@ -317,7 +340,7 @@ def _diagnostic_alignment_columns(
     template: pd.DataFrame,
     alternate_template: pd.DataFrame,
 ) -> list[str]:
-    blocked = {ASOCC_VALUE_COLUMN, ASOCC_TIME_ROUTE_COLUMN, "l2_reuse_year"}
+    blocked = {*_INTER_MRIO_MATCH_EXCLUDED_COLUMNS, "l2_reuse_year"}
     return [
         column
         for column in template.columns

@@ -125,11 +125,62 @@ def _cc_output_scope_ready(
     return cc_output_exists(output_file=post_study_output_file)
 
 
+def _output_format_from_path(path: Path) -> str:
+    """Return the tabular output format represented by one persisted path."""
+    return normalize_tabular_output_format(path.suffix.lstrip("."))
+
+
+def _materialize_requested_output_format(
+    *,
+    payload: dict[str, Any],
+    output_file: Path,
+    post_study_output_file: Path | None,
+    output_format: str,
+) -> bool:
+    """Write missing requested output files from another persisted format."""
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, dict):
+        return False
+    stored_output_raw = artifacts.get("output_file")
+    if not stored_output_raw:
+        return False
+    stored_output = Path(str(stored_output_raw))
+    if not cc_output_exists(output_file=stored_output):
+        return False
+    stored_format = _output_format_from_path(stored_output)
+    write_cc_output(
+        read_cc_output(output_file=stored_output, output_format=stored_format),
+        output_file,
+        output_format,
+    )
+    if post_study_output_file is None:
+        return cc_output_exists(output_file=output_file)
+    stored_post_raw = artifacts.get("post_study_output_file")
+    if not stored_post_raw:
+        return False
+    stored_post = Path(str(stored_post_raw))
+    if not cc_output_exists(output_file=stored_post):
+        return False
+    write_cc_output(
+        read_cc_output(
+            output_file=stored_post,
+            output_format=_output_format_from_path(stored_post),
+        ),
+        post_study_output_file,
+        output_format,
+    )
+    return _cc_output_scope_ready(
+        output_file=output_file,
+        post_study_output_file=post_study_output_file,
+    )
+
+
 def _ensure_processed_ar6_scope(
     *,
     study_period: list[int],
     harmonization: bool,
     harmonization_method: str,
+    category: list[str],
     refresh: bool,
     status: PhasePrinter | NullPhasePrinter | None = None,
 ) -> ProcessReportAR6:
@@ -139,6 +190,7 @@ def _ensure_processed_ar6_scope(
         figures=False,
         harmonization=harmonization,
         harmonization_method=harmonization_method,
+        category=category,
         refresh=refresh,
         _status=status,
     )
@@ -319,11 +371,18 @@ def run_deterministic_ar6_cc(
         reuse_mode = "reuse"
     if reuse_mode == "reuse":
         if not _cc_output_scope_ready(output_file=out_file, post_study_output_file=post_out_file):
-            raise ValueError(
-                "Existing deterministic_ar6_cc metadata marks this scope as complete, but one "
-                f"or more output files are missing in '{cc_dir}'. Use refresh=True for this "
-                "selector scope."
+            materialized = _materialize_requested_output_format(
+                payload=existing_meta,
+                output_file=out_file,
+                post_study_output_file=post_out_file,
+                output_format=fmt,
             )
+            if not materialized:
+                raise ValueError(
+                    "Existing deterministic_ar6_cc metadata marks this scope as complete, but one "
+                    f"or more output files are missing in '{cc_dir}'. Use refresh=True for this "
+                    "selector scope."
+                )
     if reuse_mode == "reuse" and not refresh:
         if not figures:
             return _write_report_summary(
@@ -343,6 +402,13 @@ def run_deterministic_ar6_cc(
                         Path(str(path))
                         for path in existing_meta["artifacts"].get("figure_paths", [])
                     ],
+                    output_file=out_file,
+                    post_study_output_file=post_out_file,
+                    reuse_status=(
+                        "reused_exact"
+                        if str(existing_meta["artifacts"].get("output_file")) == str(out_file)
+                        else "partially_reused"
+                    ),
                 ),
                 summary_log=summary_log_file,
             )
@@ -368,6 +434,8 @@ def run_deterministic_ar6_cc(
                         Path(str(path))
                         for path in existing_meta["artifacts"].get("figure_paths", [])
                     ],
+                    output_file=out_file,
+                    post_study_output_file=post_out_file,
                 ),
                 summary_log=summary_log_file,
             )
@@ -422,6 +490,8 @@ def run_deterministic_ar6_cc(
                 cc_dir=cc_dir,
                 logs_dir=logs_dir,
                 figure_paths=figure_paths,
+                output_file=out_file,
+                post_study_output_file=post_out_file,
                 reuse_status="partially_reused",
             ),
             summary_log=summary_log_file,
@@ -431,6 +501,7 @@ def run_deterministic_ar6_cc(
         study_period=study_period,
         harmonization=harmonization,
         harmonization_method=harmonization_method,
+        category=cats,
         refresh=refresh,
         status=_status,
     )
@@ -523,8 +594,6 @@ def run_deterministic_ar6_cc(
             fmt,
         )
 
-    if figures and existing_meta_raw is not None:
-        clear_figure_state_paths(payload=existing_meta)
     save_run_metadata(
         meta_file,
         build_run_metadata_payload(

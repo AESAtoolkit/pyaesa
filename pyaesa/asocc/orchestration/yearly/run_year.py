@@ -20,7 +20,7 @@ from .shared.year_inputs import (
     _MrioPayload,
     _ScenarioRunContext,
     _load_year_mrio_payloads_required,
-    _load_reg_group_map,
+    _load_reg_agg_map,
 )
 from .shared.scenario_routing import emit_notice
 from .shared.scenario_processing import _process_scenario_for_year
@@ -36,14 +36,14 @@ def _latest_existing_year_dir(
     source: str,
     historical_years: list[int],
     year: int,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> tuple[int | None, Path | None]:
     """Return latest existing MRIO year directory not after the requested year."""
     for hist_year in sorted((value for value in historical_years if value <= year), reverse=True):
         candidate = _get_mrio_year_dir(
             source=source,
             year=hist_year,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         if candidate.exists():
             return hist_year, candidate
@@ -79,7 +79,7 @@ def _process_year(
         saved_dir = _get_mrio_year_dir(
             source=context.source,
             year=year,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         has_year_dir = saved_dir.exists()
     projection_active = (
@@ -103,7 +103,7 @@ def _process_year(
     if progress is not None:
         progress.begin_year(year)
 
-    reg_group_map = _load_reg_group_map(context=context, state=state)
+    reg_agg_map = _load_reg_agg_map(context=context, state=state)
 
     needs_mrio = bool(selected_l2_names)
     mrio_payload: _MrioPayload | None = None
@@ -135,7 +135,7 @@ def _process_year(
             source=context.source,
             historical_years=context.historical_years,
             year=year,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
 
     lcia_by_method = None
@@ -157,14 +157,14 @@ def _process_year(
         original_saved_dir = _get_mrio_year_dir(
             source=context.source,
             year=original_saved_year,
-            group_version=None,
+            agg_version=None,
         )
         if not original_saved_dir.exists():
             original_saved_year, original_saved_dir = _latest_existing_year_dir(
                 source=context.source,
                 historical_years=context.historical_years,
                 year=year,
-                group_version=None,
+                agg_version=None,
             )
         lcia_effective_year_by_method_original = {}
         lcia_by_method_original = _load_lcia_for_year(
@@ -172,7 +172,7 @@ def _process_year(
             state=state,
             year=(cast(int, original_saved_year) if original_saved_year is not None else year),
             saved_dir=cast(Path, original_saved_dir),
-            group_version_override=None,
+            agg_version_override=None,
             allow_method_year_fallback=True,
             method_year_out=lcia_effective_year_by_method_original,
         )
@@ -218,7 +218,7 @@ def _process_year(
             lcia_by_method_original=lcia_by_method_original,
             lcia_effective_year_by_method=lcia_effective_year_by_method,
             lcia_effective_year_by_method_original=lcia_effective_year_by_method_original,
-            reg_group_map=reg_group_map,
+            reg_agg_map=reg_agg_map,
             mrio_payload=mrio_payload,
             l2_inputs_sliced=l2_inputs_sliced,
             process_invariant_methods=(ssp_scenario == primary_ssp_scenario),

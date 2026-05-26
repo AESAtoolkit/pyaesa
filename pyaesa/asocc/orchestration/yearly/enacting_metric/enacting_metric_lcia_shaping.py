@@ -3,7 +3,7 @@
 import pandas as pd
 
 from ....data.load_mrio import _metric_to_series
-from .enacting_metric_common import _append_grouped_mrio_code_level
+from .enacting_metric_common import _append_aggregated_mrio_code_level
 from .enacting_metric_lcia_routing import _PrHrCumulativeMetricContract
 
 
@@ -28,7 +28,7 @@ def _shape_lcia_percap_series(
     region_label: str,
     use_original_domain: bool,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.Series:
     """Return one shaped enacting metric LCIA per-capita series."""
     pop_aligned = _align_population_for_lcia_frame(
@@ -39,11 +39,11 @@ def _shape_lcia_percap_series(
     per_cap = per_cap.replace([float("inf"), -float("inf")], pd.NA)
     series = _metric_to_series(output_metric, per_cap)
     if use_original_domain:
-        series = _append_grouped_mrio_code_level(
+        series = _append_aggregated_mrio_code_level(
             series=series,
             region_label=region_label,
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
     return series
 
@@ -54,7 +54,7 @@ def _shape_pr_hr_cumulative_series(
     contract: _PrHrCumulativeMetricContract,
     use_original_domain: bool,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.Series:
     """Return one shaped PR-HR cumulative enacting metric series."""
     cumulative_df = pd.DataFrame.from_dict(parent_cum, orient="index")
@@ -65,10 +65,10 @@ def _shape_pr_hr_cumulative_series(
         cumulative_df,
     )
     if use_original_domain:
-        series = _append_grouped_mrio_code_level(
+        series = _append_aggregated_mrio_code_level(
             series=series,
             region_label=contract.region_label,
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
         )
     return series

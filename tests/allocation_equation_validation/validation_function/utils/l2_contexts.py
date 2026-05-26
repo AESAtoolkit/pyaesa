@@ -17,5 +17,5 @@ class L2RunContext(NamedTuple):
     output_format: str
     atol: float
     matrix_version: str | None = None
-    group_reg: bool | None = None
-    aggreg_indices: bool = False
+    agg_reg: bool | None = None
+    group_indices: bool = False

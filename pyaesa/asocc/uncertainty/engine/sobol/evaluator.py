@@ -11,12 +11,16 @@ from pyaesa.asocc.uncertainty.engine.inter_method.execution import (
     build_inter_method_execution_plan,
 )
 from pyaesa.asocc.uncertainty.engine.inter_method.sampling import (
+    inter_method_inter_mrio_matches_by_branch,
     sample_inter_method_summary_matrix_batch,
 )
 from pyaesa.asocc.uncertainty.engine.reuse.prerequisites import (
     prepare_asocc_deterministic_prerequisite,
 )
-from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import sample_compact_batch
+from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    compact_batch_inter_mrio_matches,
+    sample_compact_batch,
+)
 from pyaesa.asocc.uncertainty.engine.sobol.scope import (
     inter_mrio_plan_for_sobol_years,
     loaded_for_sobol_years,
@@ -47,6 +51,7 @@ from pyaesa.asocc.uncertainty.sources.inter_method import (
 )
 from pyaesa.asocc.uncertainty.sources.inter_mrio import (
     INTER_MRIO_SOURCE,
+    InterMrioInterpolationMatches,
     InterMrioPlan,
     build_inter_mrio_plan,
 )
@@ -55,6 +60,7 @@ from pyaesa.asocc.uncertainty.sources.lcia import (
     LCIASupportRowCache,
     LCIAPlan,
     build_lcia_plan,
+    lcia_sampling_memory_row_counts,
 )
 from pyaesa.asocc.uncertainty.sources.projection import (
     PROJECTION_SOURCE,
@@ -75,6 +81,7 @@ from pyaesa.shared.uncertainty_assessment.request.sources import (
     SourceActivationPlan,
     build_source_activation_plan,
 )
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 
 ASOCC_SOBOL_EVALUATOR_SOURCES: tuple[str, ...] = (
     INTER_METHOD_SOURCE,
@@ -100,6 +107,8 @@ class AsoccSobolEvaluationContext:
     external_plan: Any
     selected_years: tuple[int, ...]
     requested_ssp_scenarios: tuple[str, ...]
+    inter_mrio_matches: InterMrioInterpolationMatches | None = None
+    inter_method_inter_mrio_matches: dict[str, InterMrioInterpolationMatches] | None = None
 
 
 def asocc_sobol_source_names(*, sources: SourceActivationPlan, external_plan) -> tuple[str, ...]:
@@ -192,6 +201,20 @@ def build_asocc_sobol_evaluation_context(
         inter_method_plan=inter_method_plan,
         inter_method_execution_plan=inter_method_execution_plan,
         inter_mrio_plan=sobol_inter_mrio_plan,
+        inter_mrio_matches=compact_batch_inter_mrio_matches(
+            loaded=sobol_loaded,
+            inter_mrio_plan=sobol_inter_mrio_plan,
+            lcia_plan=lcia_plan,
+            projection_plan=projection_plan,
+        )
+        if inter_method_plan is None
+        else None,
+        inter_method_inter_mrio_matches=inter_method_inter_mrio_matches_by_branch(
+            execution_plan=inter_method_execution_plan,
+            inter_mrio_plan=sobol_inter_mrio_plan,
+        )
+        if inter_method_execution_plan is not None
+        else None,
         lcia_plan=lcia_plan,
         projection_plan=projection_plan,
         sources=sources,
@@ -334,6 +357,7 @@ def evaluate_asocc_sobol_units(
             batch=batch,
             sources=context.sources,
             source_units=source_units,
+            inter_mrio_matches_by_branch=context.inter_method_inter_mrio_matches,
         )
         return summary_identity, values
     identity, _run_indices, values = sample_compact_batch(
@@ -345,5 +369,53 @@ def evaluate_asocc_sobol_units(
         sources=context.sources,
         external_plan=context.external_plan,
         source_units=source_units,
+        inter_mrio_matches=context.inter_mrio_matches,
     )
     return identity, values
+
+
+def asocc_sobol_base_chunk_rows(
+    *,
+    context: AsoccSobolEvaluationContext,
+    dimension_count: int,
+) -> int:
+    """Return Sobol base rows bounded by aSoCC evaluator working matrices."""
+    unit_rows = memory_bounded_rows(bytes_per_row=_asocc_sobol_unit_bytes(context=context))
+    saltelli_rows_per_base = max(1, int(dimension_count) + 2)
+    return max(1, unit_rows // saltelli_rows_per_base)
+
+
+def _asocc_sobol_unit_bytes(*, context: AsoccSobolEvaluationContext) -> int:
+    lcia_plan = _context_lcia_plan(context=context)
+    shared_keys, sampled_rows = lcia_sampling_memory_row_counts(plan=lcia_plan)
+    public_rows = _context_public_row_count(context=context, lcia_plan=lcia_plan)
+    float_cells = (
+        len(context.source_names)
+        + shared_keys
+        + sampled_rows * len(("sampled_lcia_values", "lcia_working_values"))
+        + public_rows * len(("public_values", "concatenated_values"))
+    )
+    return max(1, int(float_cells) * np.dtype(np.float64).itemsize)
+
+
+def _context_lcia_plan(*, context: AsoccSobolEvaluationContext) -> LCIAPlan | None:
+    execution_plan = context.inter_method_execution_plan
+    if execution_plan is None:
+        return context.lcia_plan
+    return cast(LCIAPlan | None, execution_plan.lcia_plan)
+
+
+def _context_public_row_count(
+    *,
+    context: AsoccSobolEvaluationContext,
+    lcia_plan: LCIAPlan | None,
+) -> int:
+    if context.inter_method_execution_plan is not None:
+        return len(context.inter_method_execution_plan.row_universe.identity)
+    if lcia_plan is not None:
+        return (
+            len(lcia_plan.passthrough_rows)
+            + len(lcia_plan.direct_rows)
+            + sum(len(route.final_rows) for route in lcia_plan.combined_routes)
+        )
+    return len(context.loaded.rows)

@@ -18,9 +18,9 @@ def resolve_years_strict(
     *,
     years: int | list[int] | range | None,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     upstream_analysis: bool = False,
 ) -> list[int]:
     """Resolve studied years against the processed IO-LCA source coverage.
@@ -28,9 +28,9 @@ def resolve_years_strict(
     Args:
         years: API year selector.
         source: Source key.
-        group_version: Grouping version or ``None``.
-        group_reg: Region grouping flag.
-        group_sec: Sector grouping flag.
+        agg_version: Aggregation version or ``None``.
+        agg_reg: Region aggregation flag.
+        agg_sec: Sector MRIO aggregation and disaggregation flag.
         upstream_analysis: Whether the caller also requires staged upstream
             diagnostics. This affects only the missing-year recovery hint.
 
@@ -41,18 +41,18 @@ def resolve_years_strict(
         ValueError: If requested years are outside processed historical
             coverage or missing from the processed MRIO source scope.
     """
-    available_years = _years_from_metadata(source, group_version)
+    available_years = _years_from_metadata(source, agg_version)
     if not available_years:
         process_hint = _process_mrio_hint(
             source=source,
             years=[],
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
         )
         raise ValueError(
             "No processed historical MRIO years are available for IO-LCA. "
-            f"source='{source}', group_version={group_version!r}. Run: {process_hint}"
+            f"source='{source}', agg_version={agg_version!r}. Run: {process_hint}"
         )
     years_norm = _normalize_year_selector(value=years, name="years")
     resolved_years = (
@@ -84,9 +84,9 @@ def resolve_years_strict(
         hint = _process_mrio_hint(
             source=source,
             years=blocking_missing,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             keep_intermediate_uncasext=upstream_analysis,
         )
         raise ValueError(

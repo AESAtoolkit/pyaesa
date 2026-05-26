@@ -9,7 +9,7 @@ It covers:
 
 - maintainer side generation of precomputed raw corrected values tables
 - runtime loading of those precomputed values
-- runtime application to parsed raw environmental `F` tables before grouping
+- runtime application to parsed raw environmental `F` tables before aggregation
   and characterization
 
 ## Public Surface
@@ -84,7 +84,7 @@ During `process_mrio(...)`:
 1. raw EXIO year is parsed
 2. precomputed raw corrected values for that source and year are loaded
 3. corrected values are applied to parsed raw environmental `F`
-4. grouping and characterization continue normally
+4. aggregation and characterization continue normally
 
 This keeps downstream `PBA`, `CBA`, and processed UNCASExt metrics aligned to
 the same corrected source values.
@@ -93,7 +93,7 @@ the same corrected source values.
 
 Runtime does not print per year progress messages for corrections.
 
-The final `ProcessReportMRIO` summary adds one grouped block when corrections
+The final `ProcessReportMRIO` summary adds one aggregated block when corrections
 were applied, listing:
 
 - affected year or year range

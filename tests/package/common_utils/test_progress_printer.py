@@ -435,6 +435,21 @@ def test_zero_total_and_inactive_finish_paths() -> None:
     zero_printer.finish()
     assert zero_stream.getvalue() == ""
 
+    active_stream = _TTYStream(is_tty=False)
+    active_printer = mod.YearProgressPrinter(
+        source="x",
+        action="a",
+        total=1,
+        use_ipy_display=False,
+        stream=active_stream,
+        clock=_SequenceClock(),
+    )
+    active_printer.show("clear me")
+    active_printer.clear_transient()
+    assert active_printer._active is False
+    assert active_printer._ipy_handle is None
+    assert "\r" in active_stream.getvalue()
+
 
 def test_terminal_transient_status_resumes_live_line() -> None:
     stream = _TTYStream(is_tty=True)

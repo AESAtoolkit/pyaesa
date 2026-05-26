@@ -154,7 +154,7 @@ def merged_coverage(
     requested_coverage: dict[str, list[Any]],
 ) -> dict[str, list[Any]]:
     """Return sorted branch coverage after writing one request."""
-    existing = None if existing_metadata is None else existing_metadata["reuse"]["coverage"]
+    existing = None if not existing_metadata else existing_metadata["reuse"]["coverage"]
     merged: dict[str, list[Any]] = {}
     for axis, requested_values in requested_coverage.items():
         values = set(requested_values)

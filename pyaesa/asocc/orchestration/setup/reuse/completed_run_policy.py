@@ -327,14 +327,14 @@ def _has_existing_output_files(
     *,
     proj_base: Path,
     output_source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> bool:
     """Return whether persisted deterministic output files exist for one source."""
     patterns = tuple(f"*{suffix}" for suffix in TABULAR_SUFFIXES)
     source_root = _asocc_deterministic_scope_root(
         proj_base=proj_base,
         source=output_source,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     if not source_root.exists():
         return False
@@ -371,12 +371,12 @@ def apply_completed_run_policy(
     meta_path = _get_allocate_run_metadata_path(
         proj_base,
         source=output_source,
-        group_version=run_signature.get("group_version"),
+        agg_version=run_signature.get("agg_version"),
     )
     outputs_exist = _has_existing_output_files(
         proj_base=proj_base,
         output_source=output_source,
-        group_version=run_signature.get("group_version"),
+        agg_version=run_signature.get("agg_version"),
     )
     if not meta_path.exists():
         if outputs_exist:
@@ -465,11 +465,11 @@ def apply_completed_run_policy(
         )
     if incompatible_exact_details:
         raise ValueError(
-            "Existing deterministic aSoCC metadata for this source and group_version uses "
+            "Existing deterministic aSoCC metadata for this source and agg_version uses "
             "fixed identity fields that differ from the current request. These fields share "
             "one deterministic output folder and cannot coexist there. Use a new "
             "project_name, or use refresh=True to replace the deterministic aSoCC outputs "
-            "for this source and group_version. Incompatible identity details: "
+            "for this source and agg_version. Incompatible identity details: "
             + " ; ".join(incompatible_exact_details)
         )
     raise ValueError(

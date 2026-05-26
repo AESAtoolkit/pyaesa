@@ -8,8 +8,8 @@ def _run_prerequisite_asocc(
     project_name: str,
     source: str,
     sectors: list[str],
-    group_sec: bool = False,
-    group_version: str | None = None,
+    agg_sec: bool = False,
+    agg_version: str | None = None,
 ) -> None:
     deterministic_asocc(
         project_name=project_name,
@@ -17,8 +17,8 @@ def _run_prerequisite_asocc(
         years=[2005, 2006],
         fu_code="L2.a.a",
         s_p=sectors,
-        group_sec=group_sec,
-        group_version="" if group_version is None else group_version,
+        agg_sec=agg_sec,
+        agg_version="" if agg_version is None else agg_version,
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
         output_format="csv",
@@ -32,8 +32,8 @@ def _run_prerequisite_pair_asocc(
     project_name: str,
     source: str,
     sectors: list[str],
-    group_sec: bool = False,
-    group_version: str | None = None,
+    agg_sec: bool = False,
+    agg_version: str | None = None,
 ) -> None:
     deterministic_asocc(
         project_name=project_name,
@@ -42,8 +42,8 @@ def _run_prerequisite_pair_asocc(
         fu_code="L2.c.b",
         r_c=["FR"],
         s_p=sectors,
-        group_sec=group_sec,
-        group_version="" if group_version is None else group_version,
+        agg_sec=agg_sec,
+        agg_version="" if agg_version is None else agg_version,
         method_plan="pairs",
         l1_l2_pairs=["PR(GDPcap)::UT(GVAa)"],
         output_format="csv",
@@ -54,25 +54,25 @@ def _run_prerequisite_pair_asocc(
 
 def _disaggregation_config() -> dict:
     return {
-        "target_grouped_run": {
+        "target_agg_run": {
             "source": "oecd_v2025",
             "s_p": ["Energy", "Other"],
         },
-        "ref_grouped_run": {
+        "ref_agg_run": {
             "source": "exiobase_396_ixi",
-            "group_sec": True,
-            "group_version": "energy_group",
+            "agg_sec": True,
+            "agg_version": "energy_aggregate",
             "s_p": ["Energy", "Other"],
         },
-        "ref_split_run": {
+        "ref_disagg_run": {
             "source": "exiobase_396_ixi",
             "s_p": ["Coal", "Gas"],
         },
         "disaggregation_specs": [
-            {"grouped_sector_label": "Energy", "split_sector_label": "Coal"},
-            {"grouped_sector_label": "Other", "split_sector_label": "Gas"},
+            {"agg_sector_label": "Energy", "disagg_sector_label": "Coal"},
+            {"agg_sector_label": "Other", "disagg_sector_label": "Gas"},
         ],
-        "new_disaggregated_version_name": "disagg_oecd_energy",
+        "new_disagg_version_name": "disagg_oecd_energy",
     }
 
 
@@ -115,7 +115,7 @@ def _prepare_repo(allocation_dummy_repo) -> None:
     )
     allocation_dummy_repo.write_mrio_metadata(
         source="exiobase_396_ixi",
-        matrix_version="energy_group",
+        matrix_version="energy_aggregate",
         sectors_used=["Energy", "Other"],
         regions_used=["FR", "US"],
         years=years,
@@ -132,7 +132,7 @@ def _prepare_repo(allocation_dummy_repo) -> None:
     )
     allocation_dummy_repo.write_mrio_history(
         source="exiobase_396_ixi",
-        matrix_version="energy_group",
+        matrix_version="energy_aggregate",
         years=years,
     )
 
@@ -149,8 +149,8 @@ def test_disaggregate_asocc_public_write_reuse_and_refresh(allocation_dummy_repo
         project_name=project_name,
         source="exiobase_396_ixi",
         sectors=["Energy", "Other"],
-        group_sec=True,
-        group_version="energy_group",
+        agg_sec=True,
+        agg_version="energy_aggregate",
     )
     _run_prerequisite_asocc(
         project_name=project_name,
@@ -171,9 +171,9 @@ def test_disaggregate_asocc_public_write_reuse_and_refresh(allocation_dummy_repo
     assert branch.metadata_path.exists()
     assert branch.disaggregation_audit_path.exists()
     metadata = branch.metadata_path.read_text(encoding="utf-8")
-    assert "target_grouped_run" in metadata
-    assert "ref_grouped_run" in metadata
-    assert "ref_split_run" in metadata
+    assert "target_agg_run" in metadata
+    assert "ref_agg_run" in metadata
+    assert "ref_disagg_run" in metadata
 
     output_root = (
         allocation_dummy_repo.repo_root / f"{project_name}" / "B1_asocc" / "disagg_oecd_energy"
@@ -233,8 +233,8 @@ def test_disaggregate_asocc_public_combined_method_branch(allocation_dummy_repo)
         project_name=project_name,
         source="exiobase_396_ixi",
         sectors=["Energy", "Other"],
-        group_sec=True,
-        group_version="energy_group",
+        agg_sec=True,
+        agg_version="energy_aggregate",
     )
     _run_prerequisite_pair_asocc(
         project_name=project_name,

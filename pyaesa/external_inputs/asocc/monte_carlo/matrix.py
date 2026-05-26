@@ -24,7 +24,7 @@ from pyaesa.external_inputs.asocc.monte_carlo.matrix_csv import (
 )
 from pyaesa.external_inputs.shared.compact_matrix import (
     is_compact_run_matrix_dir,
-    load_compact_run_matrix,
+    load_compact_run_matrix_source,
 )
 from pyaesa.external_inputs.shared.tabular import none_for_missing_series
 from pyaesa.external_inputs.shared.matrix_identity import (
@@ -68,16 +68,30 @@ def _materialize_compact_source(
     templates: list[pd.DataFrame] = []
     matrices: list[np.ndarray] = []
     for selection in source.file_selections:
-        compact = load_compact_run_matrix(
+        compact = load_compact_run_matrix_source(
             directory=selection.path,
             run_file_name="asocc_runs.csv",
             context=f"External aSoCC compact Monte Carlo source '{selection.path.name}'",
         )
-        compact_identity, compact_values = _compact_selection_identity_and_values(
-            source=source,
+        public_rows, source_positions = _compact_selection_rows_and_positions(
             identity=compact.identity,
-            values=compact.values,
             file_selection=selection,
+        )
+        compact_values = compact.values_for_run_rows(compact.run_indices, source_positions)
+        run_zero = public_rows.copy()
+        run_zero.insert(0, "run_index", 0)
+        run_zero["value"] = compact_values[0, :]
+        normalized = normalize_external_asocc_render_rows(
+            frame=run_zero,
+            selection=source.selection,
+            lcia_method=selection.lcia_method,
+            ssp_scenario=None,
+            requested_years=list(selection.requested_years),
+            include_asocc_ssp_scenario_column=True,
+        )
+        compact_identity = normalized.drop(columns=["run_index", "value"]).reset_index(drop=True)
+        compact_identity.insert(
+            0, "public_row_id", np.arange(len(compact_identity), dtype=np.int64)
         )
         template = compact_identity.drop(columns=["public_row_id"]).copy()
         template.insert(0, "run_index", 0)
@@ -92,11 +106,9 @@ def _materialize_compact_source(
     return _materialized(source=source, template=template, values=values)
 
 
-def _compact_selection_identity_and_values(
+def _compact_selection_rows_and_positions(
     *,
-    source: ExternalMonteCarloRowsSource,
     identity: pd.DataFrame,
-    values: np.ndarray,
     file_selection: ExternalMonteCarloFileSelection,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     identity = identity.copy()
@@ -118,27 +130,13 @@ def _compact_selection_identity_and_values(
             f"for requested years {list(file_selection.requested_years)}."
         )
     positions = filtered["public_row_id"].to_numpy(dtype=np.int64)
-    selected_values = values[:, positions]
     public_rows = filtered.drop(columns=["public_row_id"]).reset_index(drop=True)
     validate_impact_contract(
         frame=public_rows,
         path=file_selection.path / "public_row_identity.csv",
         lcia_method=file_selection.lcia_method,
     )
-    run_zero = public_rows.copy()
-    run_zero.insert(0, "run_index", 0)
-    run_zero["value"] = selected_values[0, :]
-    normalized = normalize_external_asocc_render_rows(
-        frame=run_zero,
-        selection=source.selection,
-        lcia_method=file_selection.lcia_method,
-        ssp_scenario=None,
-        requested_years=list(file_selection.requested_years),
-        include_asocc_ssp_scenario_column=True,
-    )
-    out = normalized.drop(columns=["run_index", "value"]).reset_index(drop=True)
-    out.insert(0, "public_row_id", np.arange(len(out), dtype=np.int64))
-    return out, selected_values
+    return public_rows, positions
 
 
 def _materialize_frame_source(

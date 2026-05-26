@@ -43,3 +43,19 @@ html_theme_options = {
     "collapse_navigation": False,
     "navigation_depth": 4,
 }
+
+
+def copy_methodological_notes(app, exception):
+    """Copy repository methodological PDFs into the HTML output tree."""
+    if exception is not None:
+        return
+    source = ROOT / "methodological_notes"
+    destination = Path(app.outdir) / "methodological_notes"
+    if source.exists():
+        from shutil import copytree
+
+        copytree(source, destination, dirs_exist_ok=True)
+
+
+def setup(app):
+    app.connect("build-finished", copy_methodological_notes)

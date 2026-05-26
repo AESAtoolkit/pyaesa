@@ -668,12 +668,13 @@ def test_upsert_wide_table_writer_preserves_comma_labels_blank_values_and_precis
     )
 
     raw = path.read_text(encoding="utf-8")
+    expected_value = format(1.23456789012345, ".17g")
     assert '"PR-HR(Ecap,cum)"' in raw
-    assert "1.23456789012" in raw
+    assert expected_value in raw
     assert raw.endswith(",\n")
     written = pd.read_csv(path)
     assert written.loc[0, "l2_method"] == "PR-HR(Ecap,cum)"
-    assert float(written.loc[0, "2020"]) == pytest.approx(1.23456789012)
+    assert float(written.loc[0, "2020"]) == pytest.approx(1.23456789012345)
     assert pd.isna(written.loc[0, "2021"])
 
 
@@ -752,7 +753,7 @@ def test_prepare_allocation_frame_paths() -> None:
         output_spec=spec,
         frames=[frame],
         filters={"r_p": ["FR", "US"], "s_p": ["A"], "r_c": None, "r_f": None},
-        aggreg_indices=True,
+        group_indices=True,
         persisted_years=[2020],
     )
     assert list(out.columns) == [
@@ -775,7 +776,7 @@ def test_prepare_allocation_frame_paths() -> None:
             )
         ],
         filters={"r_p": ["FR"], "s_p": ["A"], "r_c": None, "r_f": None},
-        aggreg_indices=True,
+        group_indices=True,
         persisted_years=[2020],
     )
     assert passthrough_out.shape == (1, 7)
@@ -798,7 +799,7 @@ def test_prepare_allocation_frame_paths() -> None:
             )
         ],
         filters={"r_p": wide_idx_values, "s_p": ["A"], "r_c": None, "r_f": None},
-        aggreg_indices=True,
+        group_indices=True,
         persisted_years=[2020],
     )
     assert wide_grouped_out.shape == (1, 7)
@@ -816,7 +817,7 @@ def test_prepare_allocation_frame_paths() -> None:
             "r_f": None,
             "unknown_key": ["x"],
         },
-        aggreg_indices=False,
+        group_indices=False,
         persisted_years=[],
     )
     assert list(empty_out.columns) == [
@@ -841,7 +842,7 @@ def test_prepare_allocation_frame_prefixed_index_normalization_and_empty_row_dro
         output_spec=spec,
         frames=[frame],
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
-        aggreg_indices=False,
+        group_indices=False,
         persisted_years=[2020],
     )
 
@@ -881,7 +882,7 @@ def test_prepare_allocation_frame_prefixed_single_identifier_index_normalizes_na
         output_spec=spec,
         frames=[frame],
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
-        aggreg_indices=False,
+        group_indices=False,
         persisted_years=[2020],
     )
 
@@ -928,7 +929,7 @@ def test_prepare_allocation_frame_keeps_all_method_columns_when_present() -> Non
         output_spec=spec,
         frames=[frame],
         filters={"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None},
-        aggreg_indices=False,
+        group_indices=False,
         persisted_years=[2020],
     )
 
@@ -953,7 +954,7 @@ def test_prepare_allocation_frame_surfaces_noncanonical_index_contracts() -> Non
             output_spec=spec,
             frames=[pd.DataFrame({"r_p": ["FR"], "s_p": ["A"], "2020": [1.0]})],
             filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
-            aggreg_indices=False,
+            group_indices=False,
             persisted_years=[2020],
         )
 
@@ -966,7 +967,7 @@ def test_prepare_allocation_frame_surfaces_noncanonical_index_contracts() -> Non
             output_spec=spec,
             frames=[pd.DataFrame({2020: [1.0]}, index=unnamed_index)],
             filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
-            aggreg_indices=False,
+            group_indices=False,
             persisted_years=[2020],
         )
 
@@ -975,6 +976,6 @@ def test_prepare_allocation_frame_surfaces_noncanonical_index_contracts() -> Non
             output_spec=spec,
             frames=[pd.DataFrame({2020: [1.0]}, index=pd.Index(["FR"], name="r_p"))],
             filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
-            aggreg_indices=False,
+            group_indices=False,
             persisted_years=[2020],
         )

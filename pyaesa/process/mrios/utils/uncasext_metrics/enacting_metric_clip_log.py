@@ -46,7 +46,7 @@ def clipping_log_columns_explanation_text() -> str:
             "",
             "source: MRIO source identifier used by process_mrio(...).",
             "matrix_version: MRIO version lane. 'original_classification' means no "
-            "grouping version.",
+            "aggregation version.",
             "matrix: Matrix or derived object that triggered the log row.",
             "event_type: Diagnostic event kind such as 'clip_negative_value' or "
             "'normalize_distribution'.",

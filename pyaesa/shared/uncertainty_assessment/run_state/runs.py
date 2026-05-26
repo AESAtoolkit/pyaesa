@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Callable, Mapping, cast
 
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
     UncertaintyManifest,
@@ -178,6 +178,46 @@ def complete_run_with_requested_sobol(
             continue
         return run
     return None
+
+
+def complete_run_with_sobol_reuse_status(
+    *,
+    compatible: tuple[CompatibleMonteCarloRun, ...],
+    requested_runs: int,
+    mode: str,
+    mc_parameters: Mapping[str, Any] | None,
+    sobol_parameters: Mapping[str, Any] | None,
+    complete_sobol_run: Callable[[], CompatibleMonteCarloRun | None] | None = None,
+) -> tuple[CompatibleMonteCarloRun | None, str]:
+    """Return the reusable run and whether requested Sobol still needs computing."""
+    if sobol_parameters is not None:
+        reusable = (
+            complete_sobol_run()
+            if complete_sobol_run is not None
+            else complete_run_with_requested_sobol(
+                compatible=compatible,
+                requested_runs=requested_runs,
+                mode=mode,
+                mc_parameters=mc_parameters,
+                sobol_parameters=sobol_parameters,
+            )
+        )
+        if reusable is not None:
+            return reusable, "reused_exact"
+        reusable = complete_run_with_requested_runs(
+            compatible=compatible,
+            requested_runs=requested_runs,
+            mode=mode,
+            mc_parameters=mc_parameters,
+        )
+        return reusable, "computed"
+    reusable = complete_run_with_requested_runs(
+        compatible=compatible,
+        requested_runs=requested_runs,
+        mode=mode,
+        mc_parameters=mc_parameters,
+    )
+    return reusable, "reused_exact"
 
 
 def appendable_completed_run(

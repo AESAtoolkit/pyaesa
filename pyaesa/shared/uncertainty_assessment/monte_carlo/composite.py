@@ -1,6 +1,7 @@
 """Composite Monte Carlo convergence checkpoints and inventory metadata."""
 
 from dataclasses import dataclass
+from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
 
 from pyaesa.shared.uncertainty_assessment.request.core import (
@@ -102,6 +103,20 @@ def component_inventory_finalizes(
 ) -> bool:
     """Return whether a component call must write final public artifacts."""
     return component_inventory is None or bool(finalize_component_inventory)
+
+
+def initial_component_inventory_finalizes(
+    *,
+    checkpoints: Sequence[int],
+    finalize_outputs: bool = True,
+) -> bool:
+    """Return whether the first component checkpoint is also final.
+
+    A parent convergence request with one checkpoint has no later component
+    append step, so the upstream inventory should close its output state before
+    the downstream plan is built.
+    """
+    return bool(finalize_outputs and len(checkpoints) == 1)
 
 
 def component_inventory_progress_parameters(

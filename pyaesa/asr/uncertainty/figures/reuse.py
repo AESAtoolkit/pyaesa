@@ -39,7 +39,7 @@ def render_reusable_asr_figures_if_requested(
         run_id=manifest.run_id,
         output_format=manifest.output_format,
     )
-    figure_paths = render_asr_uncertainty_figures(
+    figure_result = render_asr_uncertainty_figures(
         manifest=manifest,
         paths=paths,
         figure_options=figure_options,
@@ -48,8 +48,9 @@ def render_reusable_asr_figures_if_requested(
     )
     write_run_figure_paths(
         paths=paths,
-        figure_paths=figure_paths,
+        figure_paths=figure_result.paths,
         figure_options=figure_options,
         figure_format=figure_format,
+        warning_messages=figure_result.warning_messages,
     )
     return read_manifest(path=paths.scope_manifest)

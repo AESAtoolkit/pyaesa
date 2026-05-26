@@ -9,7 +9,7 @@ from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan
 from pyaesa.asr.uncertainty.sources.source_keys import acc_source_name, io_lca_source_name
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent, write_via_atomic_temp
 from pyaesa.shared.runtime.text import join_user_text_lines
-from pyaesa.shared.uncertainty_assessment.io.tables import public_run_artifact_readme_lines
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_readme_lines
 
 
 def build_asr_source_methods(*, plan: ASRUncertaintyPlan) -> pd.DataFrame:

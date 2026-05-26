@@ -20,14 +20,14 @@ class IOLCAUncertaintyRequest:
     source_parameters: dict[str, Any]
     project_name: str
     source: str
-    group_reg: bool
-    group_sec: bool
-    group_version: str | None
+    agg_reg: bool
+    agg_sec: bool
+    agg_version: str | None
     years: list[int]
     lcia_methods: list[str]
     fu_spec: IOLCAFUSpec
     filters: dict[str, list[str] | None]
-    aggreg_indices: bool
+    group_indices: bool
 
 
 @dataclass(frozen=True)

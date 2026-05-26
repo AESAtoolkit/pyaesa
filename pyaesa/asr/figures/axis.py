@@ -1,7 +1,6 @@
 """ASR axis scale and tick policies."""
 
 import math
-import warnings
 from typing import Literal
 
 import numpy as np
@@ -21,11 +20,12 @@ ASRScaleMode = Literal["normal", "log"]
 ASR_NORMAL_SCALE: ASRScaleMode = "normal"
 ASR_LOG_SCALE: ASRScaleMode = "log"
 ASR_LOG_SWITCH_THRESHOLD = 10.0
+ASR_LOG_LOWER_SWITCH_THRESHOLD = 0.5
 _ASR_THRESHOLD = 1.0
 _NORMAL_THRESHOLD_ONLY_MARGIN = 0.06
 _ZERO_LOG_SCALE_WARNING = (
-    "ASR figure values include zero values and values above 10. "
-    "A log ASR axis would make the high ASR range more readable, but log scaling "
+    "ASR figure values include zero values and values outside the 0.5 to 10 range. "
+    "A log ASR axis would make the ASR range more readable, but log scaling "
     "is not valid for zero values; therefore using a normal ASR axis."
 )
 
@@ -50,12 +50,26 @@ def resolve_asr_scale_mode(values: object) -> ASRScaleMode:
     if positive.size == 0:
         return ASR_NORMAL_SCALE
     if np.any(finite == 0.0):
-        if np.any(positive > ASR_LOG_SWITCH_THRESHOLD):
-            warnings.warn(_ZERO_LOG_SCALE_WARNING, UserWarning, stacklevel=2)
         return ASR_NORMAL_SCALE
-    if np.any(positive > ASR_LOG_SWITCH_THRESHOLD):
+    if _prefers_log_scale(positive):
         return ASR_LOG_SCALE
     return ASR_NORMAL_SCALE
+
+
+def asr_zero_log_scale_warning_needed(values: object) -> bool:
+    """Return whether ASR values force normal scale despite high positive values."""
+    numeric = np.asarray(values, dtype=np.float64)
+    finite = numeric[np.isfinite(numeric)]
+    if finite.size == 0 or np.any(finite < 0.0):
+        return False
+    positive = finite[finite > 0.0]
+    return bool(positive.size and np.any(finite == 0.0) and _prefers_log_scale(positive))
+
+
+def asr_zero_log_scale_warning_message(*, labels: tuple[str, ...]) -> str:
+    """Return the public warning text for ASR figure axis scale conflicts."""
+    suffix = f" Affected figures: {'; '.join(labels)}." if labels else ""
+    return f"{_ZERO_LOG_SCALE_WARNING}{suffix}"
 
 
 def resolve_asr_log_limits(values: object, *, context: str) -> tuple[tuple[float, float], int]:
@@ -191,6 +205,14 @@ def _normal_asr_tick_step(span: float) -> float:
     if span <= 5.0:
         return 0.5
     return 1.0
+
+
+def _prefers_log_scale(positive_values: np.ndarray) -> bool:
+    """Return whether positive ASR values span outside the normal display band."""
+    return bool(
+        np.any(positive_values < ASR_LOG_LOWER_SWITCH_THRESHOLD)
+        or np.any(positive_values > ASR_LOG_SWITCH_THRESHOLD)
+    )
 
 
 def normal_asr_tick_text(value: float) -> str:

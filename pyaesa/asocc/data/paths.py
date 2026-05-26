@@ -22,7 +22,7 @@ def _get_mrio_year_dir(
     *,
     source: str,
     year: int,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the processed MRIO year directory."""
-    return _get_year_saved_path(source, year, matrix_version=group_version)
+    return _get_year_saved_path(source, year, matrix_version=agg_version)

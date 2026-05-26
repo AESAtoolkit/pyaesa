@@ -54,9 +54,9 @@ def run_io_lca_method(
     *,
     lcia_method: str,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     spec: IOLCAFUSpec,
     filters: dict[str, list[str] | None],
     metadata: dict,
@@ -66,7 +66,7 @@ def run_io_lca_method(
     resolved_years: list[int],
     upstream_analysis: bool,
     upstream_stages: int,
-    aggreg_indices: bool,
+    group_indices: bool,
     output_format: str,
     refresh: bool,
     method_progress=None,
@@ -127,7 +127,7 @@ def run_io_lca_method(
     done_stage = set(existing_stage)
     skipped_years: dict[int, str] = {}
     main_selector_axes = spec.selector_axes
-    downstream_selector_axes = tuple() if aggreg_indices else spec.selector_axes
+    downstream_selector_axes = tuple() if group_indices else spec.selector_axes
     owns_progress = method_progress is None
     if method_progress is None:
         method_progress = year_progress(
@@ -143,9 +143,9 @@ def run_io_lca_method(
             method_progress.begin_year(year)
             payload, unavailable_reason = load_main_payload(
                 source=source,
-                group_version=group_version,
-                group_reg=group_reg,
-                group_sec=group_sec,
+                agg_version=agg_version,
+                agg_reg=agg_reg,
+                agg_sec=agg_sec,
                 metadata=metadata,
                 metadata_path=domain_metadata_path,
                 year=year,
@@ -167,7 +167,7 @@ def run_io_lca_method(
                     spec=spec,
                     filters=filters,
                 )
-                if aggreg_indices and not year_main_rows.empty:
+                if group_indices and not year_main_rows.empty:
                     year_main_rows = aggregate_main(
                         year_main_rows,
                         selector_axes=main_selector_axes,
@@ -201,11 +201,11 @@ def run_io_lca_method(
                     origin_rows=origin_rows_for_year.reset_index(drop=True),
                     selector_axes=spec.selector_axes,
                 )
-                if aggreg_indices and not year_origin_rows.empty:
+                if group_indices and not year_origin_rows.empty:
                     year_origin_rows = aggregate_origin(year_origin_rows)
                 done_origin.add(int(year))
                 if year in pending_stage:
-                    year_stage_rows = aggregate_stage(stage_rows) if aggreg_indices else stage_rows
+                    year_stage_rows = aggregate_stage(stage_rows) if group_indices else stage_rows
                     done_stage.add(int(year))
             merged_main: pd.DataFrame | None = None
             if year in pending_main and not year_main_rows.empty:

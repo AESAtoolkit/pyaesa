@@ -1,9 +1,15 @@
 """Family neutral Monte Carlo mean convergence helpers."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
+from pyaesa.shared.runtime.memory import memory_bounded_rows
+from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
+    sparse_group_run_means,
+)
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 
 
@@ -71,6 +77,54 @@ class MeanConvergenceAccumulator:
         self.sums += np.where(observed, values, 0.0).sum(axis=0)
         self.counts += observed.sum(axis=0)
 
+    def accumulate_group_observations(
+        self,
+        *,
+        groups: np.ndarray,
+        values: np.ndarray,
+    ) -> None:
+        """Accumulate one pre collapsed observation per convergence target.
+
+        `groups` contains target positions in this accumulator. `values`
+        contains one value for each position after the caller has already
+        reduced the current run window to target level, for example sparse run
+        means or ASR frequency indicators. NaN values are missing observations
+        and do not contribute to sums or counts.
+        """
+        if groups.size == 0:
+            return
+        observed = ~np.isnan(values)
+        observed_groups = np.asarray(groups, dtype=np.int64)[observed]
+        observed_values = np.asarray(values, dtype=np.float64)[observed]
+        if observed_groups.size == 0:
+            return
+        np.add.at(self.sums, observed_groups, observed_values)
+        np.add.at(self.counts, observed_groups, 1)
+
+    def accumulate_sparse_group_means(
+        self,
+        *,
+        row_runs: np.ndarray,
+        row_groups: np.ndarray,
+        values: np.ndarray,
+        memory_budget_bytes: int | None = None,
+    ) -> None:
+        """Accumulate sparse selected row values collapsed to summary group means."""
+        group_count = len(self.sums)
+        runs = np.asarray(row_runs, dtype=np.int64)
+        row_group_values = np.asarray(row_groups, dtype=np.int64)
+        observed_values = np.asarray(values, dtype=np.float64)
+        if runs.size == 0:
+            return
+        for groups, means in iter_sparse_group_mean_updates(
+            row_runs=runs,
+            row_groups=row_group_values,
+            values=observed_values,
+            group_count=group_count,
+            memory_budget_bytes=memory_budget_bytes,
+        ):
+            self.accumulate_group_observations(groups=groups, values=means)
+
     def means(self) -> np.ndarray:
         """Return current cumulative means, treating only NaN as missing."""
         return np.divide(
@@ -100,6 +154,61 @@ class MeanConvergenceAccumulator:
         return reached
 
 
+def _sparse_group_mean_slices(
+    *,
+    row_runs: np.ndarray,
+    group_count: int,
+    memory_budget_bytes: int | None,
+) -> Iterator[tuple[int, int]]:
+    runs_per_block = memory_bounded_rows(
+        bytes_per_row=_sparse_group_mean_working_bytes_per_run(group_count=group_count),
+        memory_budget_bytes=memory_budget_bytes,
+    )
+    first_run = int(row_runs[0])
+    final_run = int(row_runs[-1]) + 1
+    for run_start in range(first_run, final_run, runs_per_block):
+        run_stop = min(run_start + runs_per_block, final_run)
+        start = int(np.searchsorted(row_runs, run_start, side="left"))
+        stop = int(np.searchsorted(row_runs, run_stop, side="left"))
+        yield start, stop
+
+
+def iter_sparse_group_mean_updates(
+    *,
+    row_runs: np.ndarray,
+    row_groups: np.ndarray,
+    values: np.ndarray,
+    group_count: int,
+    memory_budget_bytes: int | None = None,
+) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+    """Yield memory bounded sparse means keyed by target group."""
+    runs = np.asarray(row_runs, dtype=np.int64)
+    row_group_values = np.asarray(row_groups, dtype=np.int64)
+    observed_values = np.asarray(values, dtype=np.float64)
+    if runs.size == 0:
+        return
+    for start, stop in _sparse_group_mean_slices(
+        row_runs=runs,
+        group_count=group_count,
+        memory_budget_bytes=memory_budget_bytes,
+    ):
+        yield sparse_group_run_means(
+            row_runs=runs[start:stop],
+            row_groups=row_group_values[start:stop],
+            values=observed_values[start:stop],
+            group_count=group_count,
+        )
+
+
+def _sparse_group_mean_working_bytes_per_run(*, group_count: int) -> int:
+    """Estimate temporary arrays used to collapse one sparse run to group means."""
+    return int(group_count) * (
+        np.dtype(np.float64).itemsize
+        + np.dtype(np.int64).itemsize
+        + np.dtype(np.bool_).itemsize * len(("observed", "nan_mask"))
+    )
+
+
 def ordered_mean_convergence_reached(
     *,
     targets: tuple[MeanConvergenceAccumulator, ...],
@@ -112,6 +221,46 @@ def ordered_mean_convergence_reached(
         if not target.check(completed_runs=completed_runs, rtol=rtol):
             reached = False
     return reached
+
+
+def mean_convergence_payload(
+    *,
+    reached: bool,
+    completed_runs: int,
+    runtime: UncertaintyRuntimeRequest,
+) -> dict[str, Any]:
+    """Return the standard Monte Carlo mean convergence payload."""
+    return {
+        "reached": bool(reached),
+        "completed_runs": int(completed_runs),
+        "max_runs": int(runtime.max_runs),
+        "rtol": float(runtime.rtol),
+        "stable_runs": int(runtime.stable_runs),
+        "statistics": list(runtime.convergence_statistics),
+    }
+
+
+def mean_convergence_payload_for_targets(
+    *,
+    targets: tuple[MeanConvergenceAccumulator, ...],
+    completed_runs: int,
+    runtime: UncertaintyRuntimeRequest,
+    check_convergence: bool,
+) -> dict[str, Any] | None:
+    """Return a reached payload when every mean target is stable at a checkpoint."""
+    if not check_convergence or runtime.mode != "convergence":
+        return None
+    if not ordered_mean_convergence_reached(
+        targets=targets,
+        completed_runs=completed_runs,
+        rtol=runtime.rtol,
+    ):
+        return None
+    return mean_convergence_payload(
+        reached=True,
+        completed_runs=completed_runs,
+        runtime=runtime,
+    )
 
 
 def stable_relative(*, previous: np.ndarray, current: np.ndarray, rtol: float) -> bool:

@@ -83,10 +83,15 @@ from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import monte_carlo_run_progress
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
+    iter_compact_run_matrix,
+    iter_sparse_run_rows,
+)
 from pyaesa.shared.uncertainty_assessment.io.tables import read_uncertainty_table
 from pyaesa.process.ar6.utils.io.contracts import processed_workbook_name
 from pyaesa.process.ar6.utils.io.metadata import build_process_metadata_payload
 from pyaesa.process.ar6.utils.io.paths import get_logs_dir, get_processed_dir
+from pyaesa.process.ar6.utils.pipeline.runtime_helpers import process_signature
 
 
 def _seed_pathway_counts(
@@ -135,6 +140,38 @@ def _base_args(
 
 def _manifest_run_root(manifest) -> Path:
     return Path(manifest.artifacts["scope_manifest"]).parents[1]
+
+
+def _read_compact_run_matrix_frame(*, path: Path, column_count: int) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for run_index, matrix in iter_compact_run_matrix(
+        path=path,
+        output_format="csv_compact",
+        column_count=column_count,
+    ):
+        frame = pd.DataFrame(matrix, columns=[str(index) for index in range(column_count)])
+        frame.insert(0, "run_index", run_index)
+        frames.append(frame)
+    if not frames:
+        return pd.DataFrame(columns=["run_index", *[str(index) for index in range(column_count)]])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_sparse_run_rows_frame(*, path: Path, value_column: str) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for rows in iter_sparse_run_rows(path=path, output_format="csv_compact"):
+        frames.append(
+            pd.DataFrame(
+                {
+                    "run_index": rows.run_index,
+                    "public_row_id": rows.public_row_id,
+                    value_column: rows.values,
+                }
+            )
+        )
+    if not frames:
+        return pd.DataFrame(columns=["run_index", "public_row_id", value_column])
+    return pd.concat(frames, ignore_index=True)
 
 
 def test_uncertainty_ar6_cc_figure_context_scalar_year() -> None:
@@ -222,12 +259,15 @@ def test_uncertainty_ar6_cc_public_fixed_csv_reuse_and_artifacts(ar6_dummy_repo)
     assert not list(identity_path.parents[1].glob(".summary_values_*.dat"))
 
     identity = pd.read_csv(identity_path)
-    runs = pd.read_csv(runs_path)
+    runs = _read_sparse_run_rows_frame(path=runs_path, value_column="cc")
     summary = pd.read_csv(summary_path)
     post_identity = pd.read_csv(post_identity_path)
-    post_runs = pd.read_csv(post_runs_path)
+    post_runs = _read_sparse_run_rows_frame(path=post_runs_path, value_column="cc")
     budget_identity = pd.read_csv(budget_identity_path)
-    budget_runs = pd.read_csv(budget_runs_path)
+    budget_runs = _read_compact_run_matrix_frame(
+        path=budget_runs_path,
+        column_count=len(budget_identity),
+    )
     source_methods = pd.read_csv(source_methods_path)
     assert identity.to_dict(orient="list") == {
         "public_row_id": list(range(6)),
@@ -377,6 +417,48 @@ def test_uncertainty_ar6_cc_selector_scopes_and_source_settings_are_isolated(
     assert true_root.parent.parent == false_root.parent.parent
     assert with_category_uncertainty.run_id != without_category_uncertainty.run_id
     assert reused_without_category_uncertainty.run_id == without_category_uncertainty.run_id
+
+
+def test_uncertainty_ar6_cc_accepts_extended_category_domain(project_repo: Path) -> None:
+    del project_repo
+    years = range(2019, 2021)
+    fixed_config = {
+        "mc_parameters": {
+            "fixed": {"active": True, "n_runs": 1},
+            "convergence": {"active": False},
+        },
+        "dynamic_ar6_cc_uncertainty": {"sampling_method": "srs"},
+    }
+    _write_seed_deterministic_scope(
+        years=years,
+        categories=["C8"],
+        ssps=["SSP5"],
+        multi_candidate=False,
+    )
+
+    manifest = uncertainty_ar6_cc(
+        base_ar6_cc_args={
+            "years": years,
+            "category": "c8",
+            "ssp_scenario": "ssp5",
+        },
+        uncertainty_config=fixed_config,
+        output_format="csv_compact",
+        figures=False,
+        refresh=False,
+    ).manifest
+    request = normalize_ar6_cc_uncertainty_request(
+        base_ar6_cc_args={
+            "years": years,
+            "category": "c8",
+            "ssp_scenario": "ssp5",
+        },
+        source_parameters={"sampling_method": "srs"},
+    )
+
+    assert manifest.status == "complete"
+    assert request.category == ["C8"]
+    assert request.ssp_scenario == ["SSP5"]
 
 
 def test_uncertainty_ar6_cc_public_parquet_lhs_category_uncertainty(
@@ -925,6 +1007,16 @@ def test_uncertainty_ar6_cc_validates_public_configuration(project_repo: Path) -
     with pytest.raises(ValueError):
         uncertainty_ar6_cc(
             base_ar6_cc_args=_base_args(years=[2019, 2021]),
+            uncertainty_config={
+                "mc_parameters": {
+                    "fixed": {"active": True, "n_runs": 2},
+                    "convergence": {"active": False},
+                }
+            },
+        )
+    with pytest.raises(ValueError, match="C1, C2, C3, C4, C5, C6, C7, C8"):
+        uncertainty_ar6_cc(
+            base_ar6_cc_args=_base_args(category=["C9"]),
             uncertainty_config={
                 "mc_parameters": {
                     "fixed": {"active": True, "n_runs": 2},
@@ -1529,7 +1621,7 @@ def test_uncertainty_ar6_cc_figure_helpers_cover_flow_scopes(tmp_path: Path) -> 
     ]
     assert common_pair_counts(tables=tables) == {"SSP1": 2}
     assert categories_by_common_scope(tables=tables) == {"SSP1": ["C1", "C2"]}
-    assert len(_active_category_jobs(context=context, tables=tables)) == 1
+    assert len(list(_active_category_jobs(context=context, tables=tables))) == 1
 
     inactive_manifest = build_manifest(
         family="ar6_cc",
@@ -1576,7 +1668,7 @@ def test_uncertainty_ar6_cc_figure_helpers_cover_flow_scopes(tmp_path: Path) -> 
         "impact_unit",
         "period_segment",
     )
-    assert len(_inactive_category_jobs(context=inactive_context, tables=tables)) == 2
+    assert len(list(_inactive_category_jobs(context=inactive_context, tables=tables))) == 2
     assert _category_groups(summary.drop(columns=["cc_category"]))[0][0] == "AR6 CC"
     assert _flow_color(CC_FLOW_NEGATIVE) == "#E68613"
     figure, axis = plt.subplots()
@@ -1789,21 +1881,19 @@ def _write_seed_process_ar6_metadata(
         study_period,
         harmonization=True,
         harmonization_method="offset",
+        category=categories,
     )
     logs_dir = get_logs_dir(
         study_period,
         harmonization=True,
         harmonization_method="offset",
+        category=categories,
     )
     logs_dir.mkdir(parents=True, exist_ok=True)
     processed_dir.mkdir(parents=True, exist_ok=True)
     output_file = processed_dir / processed_workbook_name(harmonization=True)
     process_meta = build_process_metadata_payload(
-        signature={
-            "study_period": study_period,
-            "harmonization": True,
-            "harmonization_method": "offset",
-        },
+        signature=process_signature(study_period, True, "offset", categories),
         categories=categories,
         ssps=[int(str(value).removeprefix("SSP")) for value in ssps],
         harmonization=True,

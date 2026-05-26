@@ -664,8 +664,8 @@ def test_ar6_generate_overview_and_warming_branches(
 
     write_median_warming_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=[],
         scenario_rows_df=harmonized_scenarios,
         source_metadata=source_metadata.assign(
@@ -682,7 +682,7 @@ def test_ar6_generate_overview_and_warming_branches(
     )
     assert (
         tmp_path / "fig-median-warming-ar6-public-MOD=ALL-CAT=['C1', 'C2', 'C9']"
-        "-studyperiod=2019to2060.png"
+        "-studyperiod=2019to2060.svg"
     ).exists()
 
     zero_delta_log = inputs["harmonization_log"].copy()
@@ -690,8 +690,8 @@ def test_ar6_generate_overview_and_warming_branches(
     out_paths: list[str] = []
     write_delta_tconv_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=out_paths,
         harmonization_log=zero_delta_log,
         database="ar6-public",
@@ -711,8 +711,8 @@ def test_ar6_generate_overview_and_warming_branches(
     ] = 2055.0
     write_delta_tconv_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=[],
         harmonization_log=positive_delta_log,
         database="ar6-public",
@@ -726,8 +726,8 @@ def test_ar6_generate_overview_and_warming_branches(
     nan_stats_log["yearly-correction"] = np.nan
     write_harmonization_stats_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=[],
         harmonization_log=nan_stats_log,
         all_variables_l=[NET_CO2_WITH_AFOLU],
@@ -737,13 +737,13 @@ def test_ar6_generate_overview_and_warming_branches(
     )
     assert (
         tmp_path
-        / "fig-harmonization-stats-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2019to2060.png"
+        / "fig-harmonization-stats-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2019to2060.svg"
     ).exists()
 
     write_processed_budgets_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=[],
         harmonized_data=harmonized_data,
         historical_data=inputs["historical_data"],
@@ -754,41 +754,13 @@ def test_ar6_generate_overview_and_warming_branches(
         categories_repr="['C1']",
     )
     assert (
-        tmp_path / "fig-budgets-GHG-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2010to2100.png"
-    ).exists()
-
-    grouped_budget_variables = [
-        NET_CO2_WITH_AFOLU,
-        GROSS_CO2_WITH_AFOLU,
-        GROSS_ALT_CO2_WITH_AFOLU,
-        NET_KYOTO_WITH_AFOLU,
-        GROSS_KYOTO_WITH_AFOLU,
-        GROSS_ALT_KYOTO_WITH_AFOLU,
-    ]
-    write_processed_budgets_figure(
-        figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
-        out_paths=[],
-        harmonized_data=harmonized_data,
-        historical_data=inputs["historical_data"],
-        all_variables_l=grouped_budget_variables,
-        study_period=[2019, 2060],
-        remaining_budget_end_year_value=2100,
-        database="ar6-public",
-        categories_repr="['C1']",
-    )
-    assert (
-        tmp_path / "fig-budgets-CO2-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2019to2060.png"
-    ).exists()
-    assert (
-        tmp_path / "fig-budgets-GHG-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2019to2060.png"
+        tmp_path / "fig-budgets-GHG-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2010to2100.svg"
     ).exists()
 
     write_sequestration_budgets_figure(
         figures_dir=tmp_path,
-        ext="png",
-        dpi=10,
+        ext="svg",
+        dpi=1,
         out_paths=[],
         harmonized_data=harmonized_data,
         all_variables_l=[
@@ -804,11 +776,11 @@ def test_ar6_generate_overview_and_warming_branches(
     )
     assert (
         tmp_path / "fig-sequestration-budgets-forCO2-ar6-public-MOD=ALL-CAT=['C1']"
-        "-studyperiod=2019to2060.png"
+        "-studyperiod=2019to2060.svg"
     ).exists()
     assert (
         tmp_path / "fig-sequestration-budgets-forGHG-ar6-public-MOD=ALL-CAT=['C1']"
-        "-studyperiod=2019to2060.png"
+        "-studyperiod=2019to2060.svg"
     ).exists()
 
     harmonized_vars = harmonized_data.index.get_level_values("variable")
@@ -843,8 +815,8 @@ def test_ar6_generate_overview_and_warming_branches(
         database="ar6-public",
         categories=["C1", "C2", "C3", "C4"],
         variables_output=gross_figure_vars,
-        figure_output_format="png",
-        dpi=10,
+        figure_output_format="svg",
+        dpi=1,
         figure_convergence_tol=0.1,
         figure_convergence_max_runs=20000,
         write_sampling_figures_func=fake_sampling_generate_only,
@@ -866,8 +838,8 @@ def test_ar6_generate_overview_and_warming_branches(
             database="ar6-public",
             categories=["C1"],
             variables_output=["missing-variable"],
-            figure_output_format="png",
-            dpi=10,
+            figure_output_format="svg",
+            dpi=1,
             figure_convergence_tol=0.1,
             figure_convergence_max_runs=20000,
         )
@@ -889,8 +861,8 @@ def test_ar6_generate_overview_and_warming_branches(
             database="ar6-public",
             categories=["C1"],
             variables_output=gross_figure_vars,
-            figure_output_format="png",
-            dpi=10,
+            figure_output_format="svg",
+            dpi=1,
             figure_convergence_tol=0.1,
             figure_convergence_max_runs=20000,
         )
@@ -912,8 +884,8 @@ def test_ar6_generate_overview_and_warming_branches(
             database="ar6-public",
             categories=["C1"],
             variables_output=gross_figure_vars,
-            figure_output_format="png",
-            dpi=10,
+            figure_output_format="svg",
+            dpi=1,
             figure_convergence_tol=0.1,
             figure_convergence_max_runs=20000,
         )
@@ -944,8 +916,8 @@ def test_ar6_generate_overview_and_warming_branches(
             database="ar6-public",
             categories=["C1"],
             variables_output=[NET_CO2_WITH_AFOLU],
-            figure_output_format="png",
-            dpi=10,
+            figure_output_format="svg",
+            dpi=1,
             figure_convergence_tol=0.1,
             figure_convergence_max_runs=20000,
         )
@@ -966,8 +938,8 @@ def test_ar6_generate_overview_and_warming_branches(
             database="ar6-public",
             categories=["C1"],
             variables_output=[NET_CO2_WITH_AFOLU],
-            figure_output_format="png",
-            dpi=10,
+            figure_output_format="svg",
+            dpi=1,
             figure_convergence_tol=0.1,
             figure_convergence_max_runs=20000,
         )

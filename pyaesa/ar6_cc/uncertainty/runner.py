@@ -48,6 +48,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.report import (
     uncertainty_report,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import (
+    BatchMemoryBlock,
     memory_bounded_batch_size,
     normalize_uncertainty_request,
 )
@@ -100,6 +101,10 @@ class AR6CCComponentSession:
     run_id: str | None = None
     output_states: dict[str, dict[str, Any]] | None = None
     completed_runs: int = 0
+
+    def requires_finalization(self) -> bool:
+        """Return whether this session keeps unfinished output states."""
+        return self.output_states is not None
 
 
 def run_uncertainty_ar6_cc(
@@ -264,7 +269,10 @@ def run_uncertainty_ar6_cc_component(
     post_study_scope_years = component_session.post_study_scope_years
     runtime = replace(
         runtime,
-        batch_size=memory_bounded_batch_size(runtime=runtime, row_count=len(plan.identity)),
+        batch_size=memory_bounded_batch_size(
+            runtime=runtime,
+            primary_block=BatchMemoryBlock("ar6_cc_run_values", len(plan.identity)),
+        ),
     )
     context = build_ar6_cc_manifest_context(
         request=request,
@@ -319,7 +327,8 @@ def run_uncertainty_ar6_cc_component(
             max_runs=max(progress_parameters["max_runs"], reusable.manifest.completed_runs),
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
-            visible=not all((had_component_session, component_parent_convergence)),
+            visible=show_progress
+            and not all((had_component_session, component_parent_convergence)),
         )
         progress.finish()
         reused_manifest = (
@@ -491,7 +500,7 @@ def run_uncertainty_ar6_cc_component(
                 compatibility_context=context["compatibility_context"],
                 run_id=manifest.run_id,
             )
-        if figures:
+        if figures and finalize_outputs:
             figure_paths = render_ar6_cc_uncertainty_figures(
                 manifest=complete,
                 paths=paths,

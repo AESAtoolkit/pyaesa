@@ -42,9 +42,9 @@ from .figure_scope import (
     clear_existing_io_lca_figure_scope,
 )
 from pyaesa.io_lca.orchestration.request.domain_checks import (
-    require_grouped_branch,
-    validate_aggreg_indices_requires_multi_selection,
-    validate_aggreg_indices_supported,
+    require_aggregated_branch,
+    validate_group_indices_requires_multi_selection,
+    validate_group_indices_supported,
 )
 from .figure_support import (
     done_and_skipped_lcia_years,
@@ -61,9 +61,9 @@ from pyaesa.io_lca.orchestration.request.selectors import (
     validate_selector_labels,
 )
 from pyaesa.io_lca.orchestration.request.validation import (
-    normalize_aggreg_indices_modes,
+    normalize_group_indices_modes,
     normalize_figure_output_format,
-    normalize_grouping,
+    normalize_aggregation,
     normalize_lcia_method_list,
     normalize_supported_source,
     validate_dpi,
@@ -75,9 +75,9 @@ def render_io_lca_figures(
     *,
     project_name: str,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     years: int | list[int] | range | None = None,
     lcia_method: str | list[str],
     fu_code: str,
@@ -85,7 +85,7 @@ def render_io_lca_figures(
     r_c: str | list[str] | None = None,
     r_p: str | list[str] | None = None,
     s_p: str | list[str] | None = None,
-    aggreg_indices: bool = False,
+    group_indices: bool = False,
     dpi: int = 500,
     output_format: str = "png",
     refresh: bool = False,
@@ -97,14 +97,14 @@ def render_io_lca_figures(
         source=source,
         caller="deterministic_io_lca figure generation",
     )
-    group_reg_norm, group_sec_norm, group_version_norm = normalize_grouping(
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+    agg_reg_norm, agg_sec_norm, agg_version_norm = normalize_aggregation(
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
     )
     methods = normalize_lcia_method_list(lcia_method=lcia_method)
     spec = resolve_fu_spec(fu_code=fu_code)
-    aggreg_indices = normalize_aggreg_indices_modes(aggreg_indices)[0]
+    group_indices = normalize_group_indices_modes(group_indices)[0]
     dpi_norm = validate_dpi(dpi)
     figure_output_norm = normalize_figure_output_format(output_format)
 
@@ -118,20 +118,20 @@ def render_io_lca_figures(
     has_multi_indices = has_multi_selected_indices(filters)
     validate_selector_labels(
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         filters=filters,
     )
     _metadata_preview, metadata_path = load_domain_metadata(
         source=source_norm,
-        group_version=group_version_norm,
+        agg_version=agg_version_norm,
     )
-    require_grouped_branch(
+    require_aggregated_branch(
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         metadata_path=metadata_path,
         methods=methods,
         years=years,
@@ -139,21 +139,21 @@ def render_io_lca_figures(
     resolved_years = resolve_years_strict(
         years=years,
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         upstream_analysis=False,
     )
-    validate_aggreg_indices_requires_multi_selection(
-        aggreg_indices=aggreg_indices,
+    validate_group_indices_requires_multi_selection(
+        group_indices=group_indices,
         has_multi_indices=has_multi_indices,
     )
-    validate_aggreg_indices_supported(spec=spec, aggreg_indices=aggreg_indices)
+    validate_group_indices_supported(spec=spec, group_indices=group_indices)
     paths = resolve_io_lca_paths(
         project_name=project_name,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
-        group_version=group_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
+        agg_version=agg_version_norm,
     )
     source_figures_dir = figures_dir_for_source(
         paths=paths,
@@ -172,14 +172,14 @@ def render_io_lca_figures(
     figure_signature = build_io_lca_figure_signature(
         project_name=project_name,
         source=source_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
-        group_version=group_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
+        agg_version=agg_version_norm,
         years=resolved_years,
         methods=methods,
         fu_code=spec.fu_code,
         filters=filters,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         dpi=dpi_norm,
         output_format=figure_output_norm,
         io_output_format=io_output_format,
@@ -198,11 +198,11 @@ def render_io_lca_figures(
                 },
                 project_name=project_name,
                 source=source_norm,
-                group_reg=group_reg_norm,
-                group_sec=group_sec_norm,
-                group_version=group_version_norm,
+                agg_reg=agg_reg_norm,
+                agg_sec=agg_sec_norm,
+                agg_version=agg_version_norm,
                 fu_code=spec.fu_code,
-                aggreg_indices=aggreg_indices,
+                group_indices=group_indices,
                 output_format=io_output_format,
                 requested_years={int(year) for year in resolved_years},
                 requested_methods=set(methods),
@@ -252,7 +252,7 @@ def render_io_lca_figures(
         require_main_result_columns(
             frame=lcia_method_frame,
             lcia_method=lcia_method,
-            selector_axes=tuple() if aggreg_indices else spec.selector_axes,
+            selector_axes=tuple() if group_indices else spec.selector_axes,
         )
         lcia_method_frame = normalize_plot_years(frame=lcia_method_frame)
         lcia_method_frame = cast(
@@ -262,17 +262,18 @@ def render_io_lca_figures(
             ].copy(),
         )
         lcia_method_frames[lcia_method] = lcia_method_frame
-    jobs: list[PlannedFigureJob] = []
-    for lcia_method in methods:
-        frame = lcia_method_frames[lcia_method]
-        if frame.empty:
-            continue
-        _selector_cols, groups = selector_groups(frame=frame, selector_columns=None)
-        if exact_single_year_scope:
-            for checkpoint_year in checkpoint_years:
+
+    def jobs():
+        """Yield deterministic IO-LCA figure jobs one selector scope at a time."""
+        for lcia_method in methods:
+            frame = lcia_method_frames[lcia_method]
+            if frame.empty:
+                continue
+            _selector_cols, groups = selector_groups(frame=frame, selector_columns=None)
+            if exact_single_year_scope:
                 for _group_key, group_frame in groups:
-                    jobs.append(
-                        PlannedFigureJob(
+                    for checkpoint_year in checkpoint_years:
+                        yield PlannedFigureJob(
                             kind="checkpoint",
                             label=f"{lcia_method} {int(checkpoint_year)}",
                             render=partial(
@@ -287,11 +288,9 @@ def render_io_lca_figures(
                                 selector_scope_request=selector_scope_request,
                             ),
                         )
-                    )
-            continue
-        for _group_key, group_frame in groups:
-            jobs.append(
-                PlannedFigureJob(
+                continue
+            for _group_key, group_frame in groups:
+                yield PlannedFigureJob(
                     kind="multi_year",
                     label=f"{lcia_method} multi-year",
                     render=partial(
@@ -305,7 +304,7 @@ def render_io_lca_figures(
                         selector_scope_request=selector_scope_request,
                     ),
                 )
-            )
+
     rendered = render_figure_jobs(source="deterministic_io_lca", jobs=jobs, status=status)
     for lcia_method in methods:
         method_token = sanitize_token(lcia_method)

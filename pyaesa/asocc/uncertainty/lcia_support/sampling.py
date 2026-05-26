@@ -289,7 +289,7 @@ def _axis_cov_keys(
 
 
 def _aggregate_axis_label(*, loaded: LoadedAsoccFinalRows, column: str) -> str | None:
-    if not bool(loaded.base_asocc_args.get("aggreg_indices")):
+    if not bool(loaded.base_asocc_args.get("group_indices")):
         return None
     return aggregate_selector_label_or_none(loaded.base_asocc_args.get(column))
 
@@ -304,9 +304,9 @@ def _shared_u_keys(*, rows: pd.DataFrame, loaded: LoadedAsoccFinalRows) -> list[
             build_lcia_shared_u_key(
                 project_name=str(loaded.base_asocc_args["project_name"]),
                 source=str(loaded.base_asocc_args["source"]),
-                group_reg=bool(loaded.base_asocc_args["group_reg"]),
-                group_sec=bool(loaded.base_asocc_args["group_sec"]),
-                group_version=loaded.base_asocc_args["group_version"],
+                agg_reg=bool(loaded.base_asocc_args["agg_reg"]),
+                agg_sec=bool(loaded.base_asocc_args["agg_sec"]),
+                agg_version=loaded.base_asocc_args["agg_version"],
                 driver_kind=str(kind),
                 driver_key=str(key),
             )

@@ -49,7 +49,7 @@ def _record_direct_lcia_percap_pass(
                 region_label=pair.region_label,
                 use_original_domain=bool(use_original_domain),
                 source_key=context.source,
-                group_version=context.group_version_reg,
+                agg_version=context.agg_version_reg,
             )
             key = EnactingMetricKey(
                 metric=pair.output_metric,
@@ -126,7 +126,7 @@ def _record_pr_hr_cumulative_pass(
             contract=cumulative_contract,
             use_original_domain=bool(use_original_domain),
             source_key=context.source,
-            group_version=context.group_version_reg,
+            agg_version=context.agg_version_reg,
         )
         _record_enacting_metric_input(
             context=context,

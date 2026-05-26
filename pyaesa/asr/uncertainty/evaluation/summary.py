@@ -10,14 +10,13 @@ from pyaesa.acc.uncertainty.evaluation.summary import (
     acc_summary_identity_groups,
 )
 from pyaesa.acc.uncertainty.sources.source_keys import ASOCC_INTER_METHOD_SOURCE
-from pyaesa.asr.uncertainty.evaluation.scenario_groups import (
+from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
     scenario_identity_groups_from_excluded_columns,
 )
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan
 from pyaesa.shared.runtime.scenario.columns import ASOCC_TIME_ROUTE_PUBLIC_COLUMN
 from pyaesa.shared.runtime.scenario.time_routes import collapse_asocc_time_route
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
-    collapse_sparse_rows_to_overlapping_summary_groups,
     collapse_values_to_summary_groups,
     identity_groups_from_excluded_columns,
     sparse_public_row_group_membership_index,
@@ -26,7 +25,6 @@ from pyaesa.shared.uncertainty_assessment.io.public_summary import (
     exact_summary_and_frequency_from_public_runs,
 )
 from pyaesa.shared.uncertainty_assessment.io.summary_kernels import SUMMARY_STATISTICS
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
 from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 
 ASR_SUMMARY_METRIC_COLUMN = "asr_metric"
@@ -126,22 +124,6 @@ def collapse_asr_cumulative_values_to_summary(
     return collapse_values_to_summary_groups(
         values=values,
         public_row_groups=plan.cumulative_summary_public_row_groups,
-    )
-
-
-def collapse_asr_sparse_rows_to_summary(
-    *,
-    sparse_rows: SparseRunRows,
-    run_indices: np.ndarray,
-    plan: ASRUncertaintyPlan,
-    public_row_group_index: np.ndarray,
-) -> np.ndarray:
-    """Collapse sparse ASR rows to source aware summary groups."""
-    return collapse_sparse_rows_to_overlapping_summary_groups(
-        sparse_rows=sparse_rows,
-        run_indices=run_indices,
-        public_row_groups=plan.summary_public_row_groups,
-        public_row_group_index=public_row_group_index,
     )
 
 

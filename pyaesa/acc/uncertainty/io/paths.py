@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from pyaesa.acc.shared.runtime.paths import get_acc_root
+from pyaesa.shared.acc_asr_common.branches.config import cc_branch_token
 from pyaesa.shared.runtime.metadata.contracts import SCOPE_MANIFEST_FILENAME
 from pyaesa.shared.uncertainty_assessment.io.formats import suffix_for_uncertainty_output
 
@@ -13,17 +14,27 @@ def acc_monte_carlo_root(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the aCC Monte Carlo root for one source branch."""
     return (
         get_acc_root(
             proj_base=proj_base,
             source_label=source_label,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         / "monte_carlo"
     )
+
+
+def acc_monte_carlo_branch_root(
+    *,
+    monte_carlo_root: Path,
+    cc_source: str,
+    cc_type: str,
+) -> Path:
+    """Return the aCC Monte Carlo root for one carrying capacity branch."""
+    return Path(monte_carlo_root) / cc_branch_token(cc_source=cc_source, cc_type=cc_type)
 
 
 def build_acc_uncertainty_run_paths(

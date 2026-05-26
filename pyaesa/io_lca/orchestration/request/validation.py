@@ -52,45 +52,45 @@ def normalize_lcia_method_list(*, lcia_method: str | list[str]) -> list[str]:
     return methods
 
 
-def normalize_aggreg_indices_modes(aggreg_indices: bool) -> list[bool]:
-    """Normalize aggreg_indices to one deterministic execution branch."""
+def normalize_group_indices_modes(group_indices: bool) -> list[bool]:
+    """Normalize group_indices to one deterministic execution branch."""
     try:
-        return [normalize_output_mode(aggreg_indices)]
+        return [normalize_output_mode(group_indices)]
     except ValueError as exc:
-        raise ValueError("aggreg_indices must be a boolean.") from exc
+        raise ValueError("group_indices must be a boolean.") from exc
 
 
-def normalize_grouping(
+def normalize_aggregation(
     *,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
 ) -> tuple[bool, bool, str | None]:
-    """Normalize grouping flags and validate group_version contract.
+    """Normalize aggregation flags and validate agg_version contract.
 
     Args:
-        group_reg: Region grouping flag.
-        group_sec: Sector grouping flag.
-        group_version: Optional grouping version.
+        agg_reg: Region aggregation flag.
+        agg_sec: Sector MRIO aggregation and disaggregation flag.
+        agg_version: Optional aggregation version.
 
     Returns:
-        ``(group_reg, group_sec, group_version_clean)``.
+        ``(agg_reg, agg_sec, agg_version_clean)``.
 
     Raises:
-        ValueError: If grouping arguments are inconsistent.
+        ValueError: If MRIO aggregation and disaggregation arguments are inconsistent.
     """
-    reg = bool(group_reg)
-    sec = bool(group_sec)
-    grouped = reg or sec
-    cleaned = str(group_version).strip() if group_version is not None else ""
-    if grouped and not cleaned:
-        raise ValueError("group_version must be provided when group_reg or group_sec is True.")
-    if (not grouped) and cleaned:
+    reg = bool(agg_reg)
+    sec = bool(agg_sec)
+    aggregated = reg or sec
+    cleaned = str(agg_version).strip() if agg_version is not None else ""
+    if aggregated and not cleaned:
+        raise ValueError("agg_version must be provided when agg_reg or agg_sec is True.")
+    if (not aggregated) and cleaned:
         raise ValueError(
-            "group_version was provided but grouping is disabled. "
-            "Either enable grouping or omit group_version."
+            "agg_version was provided but aggregation is disabled. "
+            "Either enable aggregation or omit agg_version."
         )
-    return reg, sec, (cleaned if grouped else None)
+    return reg, sec, (cleaned if aggregated else None)
 
 
 def normalize_io_output_format(output_format: str) -> str:

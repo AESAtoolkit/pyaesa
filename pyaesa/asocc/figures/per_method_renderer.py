@@ -1,6 +1,6 @@
 """Lean per method deterministic aSoCC figure renderer."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -26,9 +26,8 @@ def plan_per_method_jobs(
     output_format: str,
     plotter: Callable[..., list[Path]],
     row_preparer: Callable[[pd.DataFrame], pd.DataFrame],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     """Plan one multi-year or single year product per method and SSP scope."""
-    jobs: list[PlannedFigureJob] = []
     methods = sorted(
         {
             str(value).strip()
@@ -60,25 +59,22 @@ def plan_per_method_jobs(
                         include_impact=True,
                         studied_year=single_requested_year(requested_years),
                     )
-                    jobs.append(
-                        PlannedFigureJob(
-                            kind="per_method",
-                            label=output_base.name,
-                            render=planned_plot(
-                                plotter=plotter,
-                                frame=prepared_rows,
-                                requested_years=requested_years,
-                                output_stem=output_base,
-                                title=title,
-                                dpi=dpi,
-                                output_format=output_format,
-                                group_legend=False,
-                                include_impact_in_label=True,
-                                include_method_in_label=False,
-                            ),
-                        )
+                    yield PlannedFigureJob(
+                        kind="per_method",
+                        label=output_base.name,
+                        render=planned_plot(
+                            plotter=plotter,
+                            frame=prepared_rows,
+                            requested_years=requested_years,
+                            output_stem=output_base,
+                            title=title,
+                            dpi=dpi,
+                            output_format=output_format,
+                            group_legend=False,
+                            include_impact_in_label=True,
+                            include_method_in_label=False,
+                        ),
                     )
-    return jobs
 
 
 def visible_values(frame: pd.DataFrame, column: str) -> list[str]:
@@ -86,8 +82,8 @@ def visible_values(frame: pd.DataFrame, column: str) -> list[str]:
     return visible_scope_values(frame, column)
 
 
-def figure_ssp_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
-    """Return final SSP figure scopes while keeping row owned SSP metadata."""
+def figure_ssp_slices(frame: pd.DataFrame) -> Iterator[pd.DataFrame]:
+    """Yield final SSP figure scopes while keeping row owned SSP metadata."""
     return preplanned_scenario_scope_slices(
         frame,
         scenario_column=ASOCC_SSP_SCENARIO_COLUMN,
@@ -96,12 +92,14 @@ def figure_ssp_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
     )
 
 
-def lcia_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
-    """Return per method LCIA method figure scopes."""
+def lcia_slices(frame: pd.DataFrame) -> Iterator[pd.DataFrame]:
+    """Yield per method LCIA method figure scopes."""
     values = visible_values(frame, "lcia_method")
     if not values:
-        return [frame.copy()]
-    return [frame.loc[frame["lcia_method"].astype(str).eq(value)].copy() for value in values]
+        yield frame.copy()
+        return
+    for value in values:
+        yield frame.loc[frame["lcia_method"].astype(str).eq(value)].copy()
 
 
 def scoped_stem(

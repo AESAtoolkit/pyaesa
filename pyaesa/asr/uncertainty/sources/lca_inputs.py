@@ -6,7 +6,10 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from pyaesa.external_inputs.lca.deterministic import load_external_lca_deterministic_rows
+from pyaesa.external_inputs.lca.deterministic import (
+    load_external_lca_deterministic_rows,
+    load_external_lca_deterministic_rows_from_paths,
+)
 from pyaesa.external_inputs.lca.figures import (
     render_external_lca_deterministic_figures_from_rows,
     render_external_lca_uncertainty_figures_from_source,
@@ -16,6 +19,7 @@ from pyaesa.external_inputs.lca.monte_carlo import (
     external_lca_values_for_runs,
     external_lca_values_for_units,
     load_external_lca_monte_carlo_source,
+    load_external_lca_monte_carlo_source_from_path,
 )
 from pyaesa.external_inputs.lca.paths import (
     external_lca_deterministic_dir,
@@ -28,6 +32,9 @@ from pyaesa.io_lca.uncertainty.runtime.prerequisites import (
     prepare_io_lca_deterministic_prerequisite,
 )
 from pyaesa.io_lca.uncertainty.request.normalization import normalize_io_lca_uncertainty_request
+from pyaesa.io_lca.uncertainty.figures.reuse import (
+    render_reusable_io_lca_figures_if_requested,
+)
 from pyaesa.io_lca.uncertainty.runner import run_uncertainty_io_lca_component
 from pyaesa.shared.figures.contracts import SELECTOR_COLUMNS
 from pyaesa.shared.figures.request_validation import normalize_figure_format
@@ -145,6 +152,88 @@ def lca_values_for_runs(*, lca_input: LCAUncertaintyInput, run_indices: np.ndarr
         cast(np.ndarray, lca_input.fixed_values),
         (len(run_indices), len(lca_input.identity)),
     )
+
+
+def render_lca_subfigures_from_input(
+    *,
+    lca_input: LCAUncertaintyInput,
+    base_allocate_args: dict[str, Any],
+    lcia_methods: list[str],
+    lca_version_name: str | None,
+    lca_config: dict[str, Any],
+    figure_format: dict[str, Any] | None,
+    status: StatusSink,
+    completed_runs: int,
+) -> None:
+    """Render persisted LCA subfigures after the parent ASR run is final."""
+    if lca_input.lca_type == IO_LCA_FAMILY:
+        request = normalize_io_lca_uncertainty_request(
+            base_io_lca_args=base_io_lca_args_from_allocate_args(
+                base_allocate_args={**base_allocate_args, "lcia_method": lcia_methods}
+            ),
+            lcia_parameters=cast(dict[str, Any], lca_config.get(LCIA_SOURCE, {})),
+        )
+        if lca_input.manifest is not None:
+            render_reusable_io_lca_figures_if_requested(
+                manifest=lca_input.manifest,
+                request=request,
+                figures=True,
+                figure_options=None,
+                figure_format=figure_format,
+                status=status,
+            )
+            return
+        prepare_io_lca_deterministic_prerequisite(
+            request=request,
+            refresh=False,
+            figures=True,
+            figure_format=figure_format,
+            status=status,
+        )
+        return
+    version_name = cast(str, lca_version_name)
+    years = normalize_requested_years(base_allocate_args["years"])
+    selected_methods = {str(method) for method in lcia_methods}
+    project_base = cast(Path, lca_input.phase_output_root).parents[1]
+    for item in lca_input.external_inputs:
+        lcia_method = str(item["lcia_method"])
+        if lcia_method not in selected_methods:
+            continue
+        paths = tuple(Path(str(path)) for path in item.get("paths", ()))
+        if item.get("type") == "external_lca_monte_carlo":
+            for path in paths:
+                source = load_external_lca_monte_carlo_source_from_path(
+                    path=path,
+                    version_name=version_name,
+                    lcia_method=lcia_method,
+                    years=years,
+                    base_allocate_args=base_allocate_args,
+                )
+                _render_external_lca_uncertainty_subfigures(
+                    proj_base=project_base,
+                    source=source,
+                    figure_format=figure_format,
+                    status=status,
+                    completed_runs=completed_runs,
+                )
+        elif item.get("type") == "external_lca_deterministic":
+            rows = _asr_external_deterministic_rows(
+                rows=load_external_lca_deterministic_rows_from_paths(
+                    paths=paths,
+                    lcia_method=lcia_method,
+                    years=years,
+                    base_allocate_args=base_allocate_args,
+                ),
+                lcia_method=lcia_method,
+            )
+            _render_external_lca_deterministic_subfigures(
+                proj_base=project_base,
+                lca_version_name=version_name,
+                lcia_method=lcia_method,
+                rows=rows,
+                figure_format=figure_format,
+                status=status,
+            )
 
 
 def _io_lca_input(
@@ -455,6 +544,8 @@ def _external_lca_run_value_provider(
         for block in value_blocks
         if isinstance(block, ExternalLCAMonteCarloSource)
     )
+    external_cache: dict[int, np.ndarray] = {}
+    external_cache_stop: dict[int, int] = {}
 
     def provider(run_indices: np.ndarray) -> np.ndarray:
         requested = np.asarray(run_indices, dtype=np.int64)
@@ -471,13 +562,33 @@ def _external_lca_run_value_provider(
             )
         values = np.empty((len(requested), len(identity)), dtype=np.float64)
         start = 0
-        for block in value_blocks:
+        target_stop = int(requested.max()) + 1
+        for block_index, block in enumerate(value_blocks):
             if isinstance(block, ExternalLCAMonteCarloSource):
                 stop = start + len(block.identity)
-                values[:, start:stop] = external_lca_values_for_runs(
-                    source=block,
-                    run_indices=requested,
-                )
+                cached_stop = int(external_cache_stop.get(block_index, 0))
+                if target_stop > cached_stop:
+                    prefetch_stop = min(
+                        int(run_count),
+                        max(target_stop, cached_stop * 2, target_stop + len(requested)),
+                    )
+                    new_values = external_lca_values_for_runs(
+                        source=block,
+                        run_indices=np.arange(cached_stop, prefetch_stop, dtype=np.int64),
+                    )
+                    cached = external_cache.get(block_index)
+                    if cached is None:
+                        external_cache[block_index] = new_values
+                    else:
+                        extended = np.empty(
+                            (prefetch_stop, cached.shape[1]),
+                            dtype=np.float64,
+                        )
+                        extended[:cached_stop] = cached
+                        extended[cached_stop:prefetch_stop] = new_values
+                        external_cache[block_index] = extended
+                    external_cache_stop[block_index] = prefetch_stop
+                values[:, start:stop] = external_cache[block_index][requested]
             else:
                 base = cast(np.ndarray, block)
                 stop = start + len(base)
@@ -543,6 +654,7 @@ def _public_lca_run_value_provider(
                 column_count=int(column_count),
                 start_run_index=start,
                 stop_run_index=stop,
+                max_rows_per_chunk=len(requested),
             )
         ]
         source_values = np.vstack([values for _chunk_runs, values in pieces])
@@ -577,9 +689,13 @@ def _external_deterministic_rows(
             f"Expected Monte Carlo stem '{expected_stem}' under {monte_carlo_dir}, "
             f"or deterministic stem '{expected_stem}' under {deterministic_dir}."
         )
+    return _asr_external_deterministic_rows(rows=rows, lcia_method=lcia_method), paths
+
+
+def _asr_external_deterministic_rows(*, rows: pd.DataFrame, lcia_method: str) -> pd.DataFrame:
     out = rows.rename(columns={"value": "lca_value"}).copy()
     out["lcia_method"] = str(lcia_method)
-    return out, paths
+    return out
 
 
 def _identity_from_lca_rows(*, rows: pd.DataFrame) -> pd.DataFrame:
@@ -619,9 +735,9 @@ def base_io_lca_args_from_allocate_args(*, base_allocate_args: dict[str, Any]) -
     keys = (
         "project_name",
         "source",
-        "group_reg",
-        "group_sec",
-        "group_version",
+        "agg_reg",
+        "agg_sec",
+        "agg_version",
         "years",
         "lcia_method",
         "fu_code",
@@ -629,7 +745,7 @@ def base_io_lca_args_from_allocate_args(*, base_allocate_args: dict[str, Any]) -
         "r_c",
         "r_p",
         "s_p",
-        "aggreg_indices",
+        "group_indices",
     )
     return {key: base_allocate_args[key] for key in keys}
 

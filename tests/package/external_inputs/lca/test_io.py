@@ -14,6 +14,7 @@ from pyaesa.external_inputs.lca import paths as path_mod
 from pyaesa.external_inputs.lca.deterministic import load_external_lca_deterministic_rows
 from pyaesa.external_inputs.lca.monte_carlo import (
     ExternalLCAMonteCarloSource,
+    external_lca_values_for_run_rows,
     external_lca_values_for_runs,
     load_external_lca_monte_carlo_source_from_path,
 )
@@ -563,6 +564,20 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     assert all(path.name.startswith("supplier_v1__gwp100_lcia__") for path in paths)
     assert all("__SSP2" in path.stem for path in paths)
     assert all("rf_all" not in path.name and "rc_all" not in path.name for path in paths)
+    deterministic_status = _StatusRecorder()
+    assert figures_mod.render_external_lca_deterministic_figures_from_rows(
+        proj_base=report.project_root,
+        version_name="supplier_v1",
+        lcia_method=lcia_method,
+        rows=rows.loc[rows["year"].astype(int).eq(2005)].rename(columns={"value": "lca_value"}),
+        output_format="png",
+        dpi=10,
+        status=deterministic_status,
+    )
+    assert len(deterministic_status.messages) == 2
+    assert deterministic_status.messages[0].startswith("[external_lca] Generating figure")
+    assert "Generating figures" not in deterministic_status.messages[0]
+    assert deterministic_status.messages[1].startswith("[external_lca] Generated figure")
 
     status = _StatusRecorder()
     source_values = pd.DataFrame({"0": [1.0], "1": [2.0]}).to_numpy(dtype=float).T
@@ -588,6 +603,22 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
         source=source,
         run_indices=source.run_indices,
     ).tolist() == [[1.0], [2.0]]
+    assert external_lca_values_for_run_rows(
+        source=source,
+        run_indices=np.array([0], dtype=np.int64),
+        row_positions=np.empty(0, dtype=np.int64),
+    ).shape == (1, 0)
+    assert external_lca_values_for_run_rows(
+        source=source,
+        run_indices=np.array([1], dtype=np.int64),
+        row_positions=np.array([0], dtype=np.int64),
+    ).tolist() == [[2.0]]
+    with pytest.raises(ValueError):
+        external_lca_values_for_run_rows(
+            source=source,
+            run_indices=np.array([2], dtype=np.int64),
+            row_positions=np.array([0], dtype=np.int64),
+        )
     mc_paths = figures_mod.render_external_lca_uncertainty_figures_from_source(
         proj_base=report.project_root,
         source=source,
@@ -597,7 +628,10 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
         status=status,
     )
     assert mc_paths
-    assert status.messages
+    assert len(status.messages) == 2
+    assert status.messages[0].startswith("[external_lca] Generating figure")
+    assert "Generating figures" not in status.messages[0]
+    assert status.messages[1].startswith("[external_lca] Generated figure")
     assert figures_mod.render_external_lca_uncertainty_figures_from_source(
         proj_base=report.project_root,
         source=source,
@@ -605,6 +639,44 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
         dpi=10,
         completed_runs=1,
     )
+
+    scoped_requests: list[tuple[int, ...]] = []
+    multi_year_values = np.array([[1.0, 3.0], [2.0, 4.0]], dtype=np.float64)
+
+    def values_for_scoped_rows(
+        run_indices: np.ndarray,
+        row_positions: np.ndarray,
+    ) -> np.ndarray:
+        scoped_requests.append(tuple(int(value) for value in row_positions.tolist()))
+        return multi_year_values[run_indices][:, row_positions]
+
+    multi_year_source = ExternalLCAMonteCarloSource(
+        version_name="supplier_mc_multi",
+        lcia_method=lcia_method,
+        identity=pd.DataFrame(
+            {
+                "public_row_id": [0, 1],
+                "year": [2005, 2006],
+                "impact": [impact, impact],
+                "impact_unit": [impact_unit, impact_unit],
+                "r_p": ["FR", "FR"],
+                "s_p": ["D", "D"],
+                EXT_LCA_SSP_SCENARIO_COLUMN: [None, "SSP2"],
+            }
+        ),
+        run_indices=np.array([0, 1], dtype=np.int64),
+        paths=(deterministic_dir / "supplier_mc_multi.csv",),
+        values_for_runs=lambda run_indices: multi_year_values[run_indices],
+        values_for_run_rows=values_for_scoped_rows,
+    )
+    assert figures_mod.render_external_lca_uncertainty_figures_from_source(
+        proj_base=report.project_root,
+        source=multi_year_source,
+        output_format="png",
+        dpi=10,
+        completed_runs=2,
+    )
+    assert scoped_requests == [(0, 1)]
 
 
 def test_external_lca_io_covers_contract_failures_and_year_detection(
@@ -670,11 +742,14 @@ def test_external_compact_run_matrix_reports_inventory_and_corrupt_rows(
     matrix_dir = project_repo / "external_compact_matrix"
     matrix_dir.mkdir()
     runs_path = matrix_dir / "lca_runs.csv"
-    pd.DataFrame({"public_row_id": [0]}).to_csv(
+    pd.DataFrame({"public_row_id": [0, 1]}).to_csv(
         matrix_dir / "public_row_identity.csv",
         index=False,
     )
-    pd.DataFrame({"run_index": [0, 1], "0": [1.0, 2.0]}).to_csv(runs_path, index=False)
+    pd.DataFrame({"run_index": [0, 1], "0": [1.0, 2.0], "1": [3.0, 4.0]}).to_csv(
+        runs_path,
+        index=False,
+    )
 
     source = load_compact_run_matrix_source(
         directory=matrix_dir,
@@ -687,11 +762,21 @@ def test_external_compact_run_matrix_reports_inventory_and_corrupt_rows(
         context="External LCA",
     )
 
-    assert matrix.values.tolist() == [[1.0], [2.0]]
-    assert source.values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 1)
+    assert matrix.values.tolist() == [[1.0, 3.0], [2.0, 4.0]]
+    assert source.values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 2)
+    assert source.values_for_run_rows(
+        np.array([1], dtype=np.int64),
+        np.array([1], dtype=np.int64),
+    ).tolist() == [[4.0]]
     assert compact_run_matrix_values_for_runs(
         runs_path=runs_path,
-        public_row_ids=np.array([0], dtype=np.int64),
+        public_row_ids=np.array([1], dtype=np.int64),
+        run_indices=np.array([0, 1], dtype=np.int64),
+        requested_runs=np.array([1], dtype=np.int64),
+    ).tolist() == [[4.0]]
+    assert compact_run_matrix_values_for_runs(
+        runs_path=runs_path,
+        public_row_ids=np.array([1], dtype=np.int64),
         run_indices=np.array([0, 1], dtype=np.int64),
         requested_runs=np.empty(0, dtype=np.int64),
     ).shape == (0, 1)
@@ -737,7 +822,15 @@ def test_external_lca_monte_carlo_real_sources_cover_empty_and_streamed_requests
         years=[2005],
         base_allocate_args=base_args,
     )
-    assert frame_source.values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 1)
+    frame_values_for_runs = frame_source.values_for_runs
+    frame_values_for_run_rows = frame_source.values_for_run_rows
+    assert frame_values_for_runs is not None
+    assert frame_values_for_run_rows is not None
+    assert frame_values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 1)
+    assert frame_values_for_run_rows(
+        np.array([0], dtype=np.int64),
+        np.array([0], dtype=np.int64),
+    ).tolist() == [[1.0]]
 
     identity_count = 65_537
     regions = np.array([f"R{index:05d}" for index in range(identity_count)], dtype=object)
@@ -773,3 +866,12 @@ def test_external_lca_monte_carlo_real_sources_cover_empty_and_streamed_requests
         values[0, [0, -1]],
         [1.0 + identity_count / 1e9, 1.0 + (row_count - 1) / 1e9],
     )
+    selected_values = stream_source.values_for_run_rows(
+        np.array([1], dtype=np.int64),
+        np.array([identity_count - 1], dtype=np.int64),
+    )
+    np.testing.assert_allclose(selected_values, [[1.0 + (row_count - 1) / 1e9]])
+    assert stream_source.values_for_run_rows(
+        np.array([1], dtype=np.int64),
+        np.empty(0, dtype=np.int64),
+    ).shape == (1, 0)

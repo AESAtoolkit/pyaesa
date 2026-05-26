@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from pyaesa.asocc.uncertainty.engine.sobol.evaluator import (
+    asocc_sobol_base_chunk_rows,
     build_asocc_sobol_evaluation_context,
     evaluate_asocc_sobol_chunk,
 )
@@ -78,6 +79,10 @@ def run_asocc_sobol(
         plan=sobol_plan,
         dimension_names=context.source_names,
         evaluate=lambda chunk: evaluate_asocc_sobol_chunk(context=context, chunk=chunk),
+        max_base_chunk_rows=asocc_sobol_base_chunk_rows(
+            context=context,
+            dimension_count=len(context.source_names),
+        ),
         source_summary_builder=lambda identity, dimensions, estimates: asocc_sobol_source_summary(
             identity=identity,
             dimension_names=dimensions,

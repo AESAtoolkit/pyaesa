@@ -54,7 +54,7 @@ def _compute_l1_ar_lcia_method(
             int(ref_year),
             str(region_label_override) if region_label_override is not None else None,
             bool(use_original_domain),
-            str(run.context.group_version_reg),
+            str(run.context.agg_version_reg),
             str(run.context.l1_reg_aggreg),
         )
         if (

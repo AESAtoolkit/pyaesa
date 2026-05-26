@@ -22,19 +22,19 @@ def test_request_scope_normalizers_cover_success_paths() -> None:
 
     assert norm_mod._normalize_optional_years([2030, 2031], name="years") == [2030, 2031]
     assert norm_mod._normalize_optional_years(None, name="years") is None
-    assert norm_mod._normalize_aggreg_indices(False) is False
+    assert norm_mod._normalize_group_indices(False) is False
     assert norm_mod._normalize_l1_reg_aggreg(" POST ") == "post"
-    assert norm_mod.normalize_source_grouping_scope(
+    assert norm_mod.normalize_source_aggregation_scope(
         source=" oecd_v2025 ",
-        group_reg=True,
-        group_sec=False,
-        group_version=" grp ",
-    ) == ("oecd_v2025", True, False, "grp")
-    assert norm_mod.normalize_source_grouping_scope(
+        agg_reg=True,
+        agg_sec=False,
+        agg_version=" agg ",
+    ) == ("oecd_v2025", True, False, "agg")
+    assert norm_mod.normalize_source_aggregation_scope(
         source=" disagg_demo ",
-        group_reg=None,
-        group_sec=None,
-        group_version=None,
+        agg_reg=None,
+        agg_sec=None,
+        agg_version=None,
     ) == ("disagg_demo", False, False, None)
     assert scope_mod._selector_method_label(" plain ") == "plain"  # noqa: SLF001
     assert scope_mod._selector_method_label(" CO(S)::UT(FD) ") == "CO(S)_UT(FD)"  # noqa: SLF001
@@ -68,11 +68,11 @@ def test_request_scope_normalizers_cover_success_paths() -> None:
             "'flag' must be a boolean",
         ),
         (
-            lambda: norm_mod._normalize_aggreg_indices("both"),
+            lambda: norm_mod._normalize_group_indices("both"),
             "Use True or False, not 'both'",
         ),
         (
-            lambda: norm_mod._normalize_aggreg_indices("no"),
+            lambda: norm_mod._normalize_group_indices("no"),
             "must be a boolean",
         ),
         (
@@ -100,15 +100,15 @@ def test_normalize_base_allocate_args_normalizes_full_public_scope() -> None:
             "project_name": " demo ",
             "source": " oecd_v2025 ",
             "fu_code": " L2.a.a ",
-            "group_reg": True,
-            "group_sec": False,
-            "group_version": " grp ",
+            "agg_reg": True,
+            "agg_sec": False,
+            "agg_version": " agg ",
             "years": 2030,
             "r_p": [" US ", "FR", "US"],
             "s_p": "D",
             "r_c": None,
             "r_f": ["FR"],
-            "aggreg_indices": False,
+            "group_indices": False,
             "method_plan": "one_step",
             "one_step_methods": ["AR(E^{CBA_FD})"],
             "l1_methods": None,
@@ -127,15 +127,15 @@ def test_normalize_base_allocate_args_normalizes_full_public_scope() -> None:
     assert normalized["project_name"] == "demo"
     assert normalized["source"] == "oecd_v2025"
     assert normalized["fu_code"] == "L2.a.a"
-    assert normalized["group_reg"] is True
-    assert normalized["group_sec"] is False
-    assert normalized["group_version"] == "grp"
+    assert normalized["agg_reg"] is True
+    assert normalized["agg_sec"] is False
+    assert normalized["agg_version"] == "agg"
     assert normalized["years"] == [2030]
     assert normalized["r_p"] == ["FR", "US"]
     assert normalized["s_p"] == ["D"]
     assert normalized["r_c"] is None
     assert normalized["r_f"] == ["FR"]
-    assert normalized["aggreg_indices"] is False
+    assert normalized["group_indices"] is False
     assert normalized["method_plan"] == "one_step"
     assert normalized["one_step_methods"] == ["AR(E^{CBA_FD})"]
     assert normalized["l1_methods"] is None
@@ -156,10 +156,10 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
             "project_name": " demo ",
             "source": " oecd_v2025 ",
             "fu_code": " L2.a.a ",
-            "group_reg": True,
-            "group_sec": False,
-            "group_version": " grp ",
-            "aggreg_indices": False,
+            "agg_reg": True,
+            "agg_sec": False,
+            "agg_version": " agg ",
+            "group_indices": False,
             "l1_reg_aggreg": " PRE ",
         },
         payload_name="base_asocc_args",
@@ -169,10 +169,10 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
         "project_name": "demo",
         "source": "oecd_v2025",
         "fu_code": "L2.a.a",
-        "group_reg": True,
-        "group_sec": False,
-        "group_version": "grp",
-        "aggreg_indices": False,
+        "agg_reg": True,
+        "agg_sec": False,
+        "agg_version": "agg",
+        "group_indices": False,
         "l1_reg_aggreg": "pre",
     }
 
@@ -210,9 +210,9 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
                 "project_name": "demo",
                 "source": "oecd_v2025",
                 "fu_code": "L2.a.a",
-                "group_reg": "yes",
+                "agg_reg": "yes",
             },
-            "group_reg",
+            "agg_reg",
             TypeError,
         ),
         (
@@ -231,9 +231,9 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
                 "project_name": "demo",
                 "source": "disagg_oecd",
                 "fu_code": "L2.a.a",
-                "group_version": "elec",
+                "agg_version": "elec",
             },
-            "must be called directly without grouping controls",
+            "must be called directly without aggregation controls",
             ValueError,
         ),
         (
@@ -241,9 +241,9 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
                 "project_name": "demo",
                 "source": "disagg_oecd",
                 "fu_code": "L2.a.a",
-                "group_reg": True,
+                "agg_reg": True,
             },
-            "must be called directly without grouping controls",
+            "must be called directly without aggregation controls",
             ValueError,
         ),
         (
@@ -251,9 +251,9 @@ def test_normalize_deterministic_scope_args_normalizes_shared_scope() -> None:
                 "project_name": "demo",
                 "source": "disagg_oecd",
                 "fu_code": "L2.a.a",
-                "group_sec": True,
+                "agg_sec": True,
             },
-            "must be called directly without grouping controls",
+            "must be called directly without aggregation controls",
             ValueError,
         ),
     ],
@@ -280,9 +280,9 @@ def test_normalize_base_allocate_args_rejects_invalid_payloads(
                 "project_name": "demo",
                 "source": "oecd_v2025",
                 "fu_code": "L2.a.a",
-                "aggreg_indices": "true",
+                "group_indices": "true",
             },
-            "'base_asocc_args.aggreg_indices' must be a boolean",
+            "'base_asocc_args.group_indices' must be a boolean",
             ValueError,
         ),
         (
@@ -307,24 +307,24 @@ def test_normalize_deterministic_scope_args_rejects_invalid_payloads(
 
 
 @pytest.mark.parametrize(
-    ("group_reg", "group_sec", "group_version"),
+    ("agg_reg", "agg_sec", "agg_version"),
     [
         (True, False, None),
         (False, True, None),
         (False, False, "demo"),
     ],
 )
-def test_normalize_source_grouping_scope_rejects_grouping_for_disaggregated_sources(
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+def test_normalize_source_aggregation_scope_rejects_aggregation_for_disaggregated_sources(
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
 ) -> None:
     with pytest.raises(ValueError):
-        norm_mod.normalize_source_grouping_scope(
+        norm_mod.normalize_source_aggregation_scope(
             source="disagg_demo",
-            group_reg=group_reg,
-            group_sec=group_sec,
-            group_version=group_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
+            agg_version=agg_version,
         )
 
 
@@ -445,7 +445,7 @@ def test_path_resolution_cover_validation_and_paths(allocation_dummy_repo) -> No
         branch_mod.build_asocc_deterministic_path_scope(
             proj_base=allocation_dummy_repo.repo_root,
             source_label=" ",
-            group_version=None,
+            agg_version=None,
         )
 
     base_allocate_args = norm_mod.normalize_base_allocate_args(
@@ -469,7 +469,7 @@ def test_path_resolution_cover_validation_and_paths(allocation_dummy_repo) -> No
     disagg_scope_expected = branch_mod.build_asocc_deterministic_path_scope(
         proj_base=scope.proj_base,
         source_label="disagg_demo",
-        group_version=None,
+        agg_version=None,
     )
     disagg_manifest = branch_mod.allocate_run_metadata_path(scope=disagg_scope_expected)
     disagg_manifest.parent.mkdir(parents=True, exist_ok=True)
@@ -491,30 +491,32 @@ def test_path_resolution_cover_validation_and_paths(allocation_dummy_repo) -> No
     assert wrapped_scope == disagg_scope
     assert wrapped_path == disagg_manifest
 
-    grouped_base_allocate_args = norm_mod.normalize_base_allocate_args(
+    aggregated_base_allocate_args = norm_mod.normalize_base_allocate_args(
         {
             "project_name": "demo_path",
             "source": "exiobase_396_ixi",
-            "group_sec": True,
-            "group_version": "elec",
+            "agg_sec": True,
+            "agg_version": "elec",
             "fu_code": "L2.a.a",
             "method_plan": "one_step",
             "one_step_methods": ["UT(FD)"],
         }
     )
-    grouped_disagg_scope, grouped_resolved_path = branch_mod.resolve_disaggregation_path_scope(
-        base_allocate_args=grouped_base_allocate_args,
-        source_label="disagg_demo",
+    aggregated_disagg_scope, aggregated_resolved_path = (
+        branch_mod.resolve_disaggregation_path_scope(
+            base_allocate_args=aggregated_base_allocate_args,
+            source_label="disagg_demo",
+        )
     )
-    assert grouped_disagg_scope.source_label == "disagg_demo"
-    assert grouped_disagg_scope.group_version is None
-    assert grouped_resolved_path == disagg_manifest
+    assert aggregated_disagg_scope.source_label == "disagg_demo"
+    assert aggregated_disagg_scope.agg_version is None
+    assert aggregated_resolved_path == disagg_manifest
     direct_disagg_scope = branch_mod.build_asocc_deterministic_path_scope(
         proj_base=scope.proj_base,
         source_label="disagg_demo",
-        group_version="elec",
+        agg_version="elec",
     )
-    assert direct_disagg_scope.group_version is None
+    assert direct_disagg_scope.agg_version is None
 
     with pytest.raises(ValueError):
         branch_mod.project_base_from_allocation_descendant(allocation_dummy_repo.repo_root)
@@ -535,12 +537,12 @@ def test_path_resolution_cover_validation_and_paths(allocation_dummy_repo) -> No
     assert branch_mod.path_scope_from_signature(
         proj_base=scope.proj_base,
         source_label="oecd_v2025",
-        run_signature={"group_version": "elec"},
+        run_signature={"agg_version": "elec"},
         context_label="test path",
     ) == branch_mod.build_asocc_deterministic_path_scope(
         proj_base=scope.proj_base,
         source_label="oecd_v2025",
-        group_version="elec",
+        agg_version="elec",
     )
 
     enacting_metric_dir = branch_mod.asocc_enacting_metric_dir(

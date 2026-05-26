@@ -73,14 +73,14 @@ def asocc_signature_payload_matches_request(
     candidate_signature = persisted_signature
     exact_keys = (
         "source",
-        "group_version",
-        "group_reg",
-        "group_sec",
+        "agg_version",
+        "agg_reg",
+        "agg_sec",
         "fu_code",
         "studied_indices_tag",
         "l1_reg_aggreg",
         "variant_tag",
-        "aggreg_indices",
+        "group_indices",
         "projection_mode",
     )
     if _signature_view(candidate_signature, exact_keys) != _signature_view(
@@ -139,11 +139,11 @@ def io_lca_signature_compatible(
     signature: dict[str, Any],
     project_name: str,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
     fu_code: str,
-    aggreg_indices: bool,
+    group_indices: bool,
     output_format: str,
     requested_years: set[int],
     requested_methods: set[str],
@@ -153,11 +153,11 @@ def io_lca_signature_compatible(
     exact = {
         "project_name": project_name,
         "source": source,
-        "group_reg": bool(group_reg),
-        "group_sec": bool(group_sec),
-        "group_version": group_version,
+        "agg_reg": bool(agg_reg),
+        "agg_sec": bool(agg_sec),
+        "agg_version": agg_version,
         "fu_code": fu_code,
-        "aggreg_indices": bool(aggreg_indices),
+        "group_indices": bool(group_indices),
         "output_format": output_format,
     }
     for key, expected in exact.items():

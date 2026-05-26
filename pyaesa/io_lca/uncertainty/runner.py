@@ -45,10 +45,12 @@ from pyaesa.shared.uncertainty_assessment.run_state.report import (
     uncertainty_report,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import (
+    BatchMemoryBlock,
     memory_bounded_batch_size,
     normalize_uncertainty_request,
 )
 from pyaesa.shared.uncertainty_assessment.run_state.runs import (
+    CompatibleMonteCarloRun,
     appendable_completed_run,
     compatible_completed_runs,
     compatible_completed_run_for_id,
@@ -69,9 +71,7 @@ from pyaesa.shared.uncertainty_assessment.io.downstream_run_outputs import (
 )
 from pyaesa.shared.uncertainty_assessment.request.sources import build_source_activation_plan
 from pyaesa.shared.lcia.uncertainty_source import LCIA_SOURCE
-from pyaesa.shared.uncertainty_assessment.io.tables import (
-    write_uncertainty_table,
-)
+from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     PHASE_A_LCA,
     phase_ready_detail,
@@ -105,7 +105,12 @@ class IOLCAComponentSession:
     phase_entries: list[Any]
     plan: Any
     monte_carlo_root: Any
+    run_id: str | None = None
     output_state: DownstreamRunOutputState | None = None
+
+    def requires_finalization(self) -> bool:
+        """Return whether this session keeps unfinished output state."""
+        return self.output_state is not None
 
 
 def run_uncertainty_io_lca(
@@ -224,7 +229,10 @@ def run_uncertainty_io_lca_component(
     plan = component_session.plan
     runtime = replace(
         runtime,
-        batch_size=memory_bounded_batch_size(runtime=runtime, row_count=len(plan.identity)),
+        batch_size=memory_bounded_batch_size(
+            runtime=runtime,
+            primary_block=BatchMemoryBlock("io_lca_run_values", len(plan.identity)),
+        ),
     )
     context = build_io_lca_manifest_context(
         request=request,
@@ -245,26 +253,25 @@ def run_uncertainty_io_lca_component(
         progress_enabled=show_progress or external_progress,
     )
     monte_carlo_root = component_session.monte_carlo_root
+    requested_run_id = component_session.run_id if component_session.run_id is not None else run_id
+    compatible, writable_run_id = _compatible_runs_for_requested_id(
+        monte_carlo_root=monte_carlo_root,
+        compatibility_key=context["compatibility_key"],
+        requested_run_id=requested_run_id,
+    )
     if refresh:
         cleanup_monte_carlo_runs_for_refresh(
             monte_carlo_root=monte_carlo_root,
             compatibility_key=context["compatibility_key"],
-            run_id=run_id if component_inventory is None else None,
+            run_id=writable_run_id if component_inventory is None else None,
             arguments=context["arguments"],
             component_inventory=component_inventory,
         )
-    required_run = compatible_completed_run_for_id(
-        monte_carlo_root=monte_carlo_root,
-        run_id=run_id,
-    )
-    compatible = (
-        compatible_completed_runs(
+        compatible, writable_run_id = _compatible_runs_for_requested_id(
             monte_carlo_root=monte_carlo_root,
             compatibility_key=context["compatibility_key"],
+            requested_run_id=requested_run_id,
         )
-        if run_id is None
-        else (() if required_run is None else (required_run,))
-    )
     reusable = complete_run_with_requested_runs(
         compatible=compatible,
         requested_runs=runtime.n_runs,
@@ -278,7 +285,8 @@ def run_uncertainty_io_lca_component(
             max_runs=max(progress_parameters["max_runs"], reusable.manifest.completed_runs),
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
-            visible=not all((had_component_session, component_parent_convergence)),
+            visible=show_progress
+            and not all((had_component_session, component_parent_convergence)),
         )
         progress.finish()
         reused_manifest = render_reusable_io_lca_figures_if_requested(
@@ -315,23 +323,16 @@ def run_uncertainty_io_lca_component(
                 manifest=reused_manifest,
                 reuse_status="reused_exact",
             ),
-            session=component_session,
+            session=replace(component_session, run_id=reused_manifest.run_id),
         )
     append_compatible = compatible
+    append_writable_run_id = writable_run_id
     if component_inventory is not None:
-        required_append_run = compatible_completed_run_for_id(
+        append_compatible, append_writable_run_id = _compatible_runs_for_requested_id(
             monte_carlo_root=monte_carlo_root,
-            run_id=run_id,
+            compatibility_key=context["compatibility_key"],
+            requested_run_id=requested_run_id,
             include_running_component_inventory=True,
-        )
-        append_compatible = (
-            compatible_completed_runs(
-                monte_carlo_root=monte_carlo_root,
-                compatibility_key=context["compatibility_key"],
-                include_running_component_inventory=True,
-            )
-            if run_id is None
-            else (() if required_append_run is None else (required_append_run,))
         )
     append_run = (
         appendable_completed_run(
@@ -361,7 +362,7 @@ def run_uncertainty_io_lca_component(
         component_inventory=context["component_inventory"],
         compatibility_key=context["compatibility_key"],
         compatibility_context=context["compatibility_context"],
-        run_id=(append_run.manifest.run_id if append_run is not None else run_id),
+        run_id=(append_run.manifest.run_id if append_run is not None else append_writable_run_id),
     )
     paths = build_io_lca_uncertainty_run_paths(
         deterministic_manifest_path=prerequisite.metadata_path,
@@ -439,7 +440,7 @@ def run_uncertainty_io_lca_component(
                 compatibility_context=context["compatibility_context"],
                 run_id=manifest.run_id,
             )
-        if figures:
+        if figures and finalize_outputs:
             figure_paths = render_io_lca_uncertainty_figures(
                 manifest=complete,
                 paths=paths,
@@ -488,10 +489,46 @@ def run_uncertainty_io_lca_component(
                 manifest=complete,
                 reuse_status="computed",
             ),
-            session=replace(component_session, output_state=output_state),
+            session=replace(component_session, run_id=complete.run_id, output_state=output_state),
         )
     finally:
         progress.finish()
+
+
+def _compatible_runs_for_requested_id(
+    *,
+    monte_carlo_root: Any,
+    compatibility_key: str,
+    requested_run_id: str | None,
+    include_running_component_inventory: bool = False,
+) -> tuple[tuple[CompatibleMonteCarloRun, ...], str | None]:
+    """Return compatible IO-LCA runs and the run id that can be safely written."""
+    if requested_run_id is None:
+        return (
+            compatible_completed_runs(
+                monte_carlo_root=monte_carlo_root,
+                compatibility_key=compatibility_key,
+                include_running_component_inventory=include_running_component_inventory,
+            ),
+            None,
+        )
+    requested = compatible_completed_run_for_id(
+        monte_carlo_root=monte_carlo_root,
+        run_id=requested_run_id,
+        include_running_component_inventory=include_running_component_inventory,
+    )
+    if requested is None:
+        return (), str(requested_run_id)
+    if requested.manifest.compatibility_key == compatibility_key:
+        return (requested,), str(requested_run_id)
+    return (
+        compatible_completed_runs(
+            monte_carlo_root=monte_carlo_root,
+            compatibility_key=compatibility_key,
+            include_running_component_inventory=include_running_component_inventory,
+        ),
+        None,
+    )
 
 
 def _complete_deterministic_lca_phase(

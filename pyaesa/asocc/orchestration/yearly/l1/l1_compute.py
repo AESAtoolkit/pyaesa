@@ -38,7 +38,7 @@ def _compute_l1_non_lcia_result(
         available_years=run.context.historical_years,
         reference_year=(run.context.reference_years[0] if run.context.reference_years else None),
         source_key=run.context.source,
-        group_version_reg=run.context.group_version_reg,
+        agg_version_reg=run.context.agg_version_reg,
         l1_reg_aggreg=run.context.l1_reg_aggreg,
         region_label_override=region_label_override,
     )
@@ -93,7 +93,7 @@ def _compute_l1_non_lcia_method(
         lcia_method=None,
         frame=result,
         ssp_scenario=run.ssp_scenario,
-        grouped_mode=bool(run.context.aggreg_indices),
+        grouped_mode=bool(run.context.group_indices),
         state=run.state,
     )
     run.state.l1_results_by_ssp_scenario[run.ssp_scenario].setdefault(spec, []).append(result)

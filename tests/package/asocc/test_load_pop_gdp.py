@@ -5,7 +5,7 @@ import pytest
 
 from pyaesa.asocc.data import paths as paths_mod
 from pyaesa.asocc.data import load_pop_gdp as mod
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path, _get_year_saved_path
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path, _get_year_saved_path
 
 
 def test_processed_table_and_scalar_series_cover_basic_contracts(tmp_path: Path) -> None:
@@ -56,52 +56,52 @@ def test_processed_table_and_scalar_series_cover_basic_contracts(tmp_path: Path)
     assert duplicate_sample == ["A", "B"]
 
 
-def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
+def test_apply_aggregation_and_get_series_for_year_cover_aggregation_and_validation(
     project_repo: Path,
 ) -> None:
-    group_path = _get_group_map_path("oecd_v2025", kind="reg", group_version="demo")
-    group_path.parent.mkdir(parents=True, exist_ok=True)
+    agg_path = _get_agg_map_path("oecd_v2025", kind="reg", agg_version="demo")
+    agg_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
             "original_classification": ["OECD_A", "OECD_B", "OECD_C"],
-            "grouped_mrio": ["EU", "EU", "ROW"],
+            "aggregated_mrio": ["EU", "EU", "ROW"],
         }
-    ).to_csv(group_path, index=False)
+    ).to_csv(agg_path, index=False)
 
     original = pd.Series([1.0, 2.0, 3.0], index=pd.Index(["OECD_A", "OECD_B", "OECD_C"]))
-    unchanged = mod._apply_grouping_to_series(
+    unchanged = mod._apply_aggregation_to_series(
         original,
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     assert unchanged.equals(original)
 
-    grouped = mod._apply_grouping_to_series(
+    aggregated = mod._apply_aggregation_to_series(
         original,
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     )
-    assert grouped.to_dict() == {"EU": 3.0, "ROW": 3.0}
+    assert aggregated.to_dict() == {"EU": 3.0, "ROW": 3.0}
 
-    unique_group_path = _get_group_map_path("oecd_v2025", kind="reg", group_version="unique")
+    unique_agg_path = _get_agg_map_path("oecd_v2025", kind="reg", agg_version="unique")
     pd.DataFrame(
         {
             "original_classification": ["OECD_A", "OECD_B", "OECD_C"],
-            "grouped_mrio": ["EU", "NAM", "ROW"],
+            "aggregated_mrio": ["EU", "NAM", "ROW"],
         }
-    ).to_csv(unique_group_path, index=False)
-    uniquely_grouped = mod._apply_grouping_to_series(
+    ).to_csv(unique_agg_path, index=False)
+    uniquely_aggregated = mod._apply_aggregation_to_series(
         original,
         source_key="oecd_v2025",
-        group_version="unique",
+        agg_version="unique",
     )
-    assert uniquely_grouped.to_dict() == {"EU": 1.0, "NAM": 2.0, "ROW": 3.0}
+    assert uniquely_aggregated.to_dict() == {"EU": 1.0, "NAM": 2.0, "ROW": 3.0}
 
     with pytest.raises(ValueError):
-        mod._apply_grouping_to_series(
+        mod._apply_aggregation_to_series(
             pd.Series([4.0], index=pd.Index(["OECD_Z"])),
             source_key="oecd_v2025",
-            group_version="demo",
+            agg_version="demo",
         )
 
     ssp_frame = pd.DataFrame(
@@ -119,7 +119,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
         variable="pop",
         year=2030,
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
         ssp_scenario="SSP1",
     )
     assert ssp_scenario_series.to_dict() == {"EU": 3.0}
@@ -129,7 +129,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
         variable="pop",
         year=2030,
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         ssp_scenario=None,
     )
     assert list(multiindex_series.index) == [
@@ -144,7 +144,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
             variable="pop",
             year=2040,
             source_key="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             ssp_scenario="SSP1",
         )
 
@@ -154,7 +154,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
             variable="pop",
             year=2030,
             source_key="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             ssp_scenario="SSP1",
             region_col_override="missing_region",
         )
@@ -174,7 +174,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
             variable="pop",
             year=2030,
             source_key="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             ssp_scenario="SSP1",
         )
 
@@ -192,7 +192,7 @@ def test_apply_grouping_and_get_series_for_year_cover_grouping_and_validation(
             variable="pop",
             year=2030,
             source_key="oecd_v2025",
-            group_version=None,
+            agg_version=None,
         )
 
 
@@ -462,5 +462,5 @@ def test_processed_data_paths_cover_dataset_normalization_and_mrio_passthrough(
     assert paths_mod._get_mrio_year_dir(
         source="oecd_v2025",
         year=2019,
-        group_version="demo",
+        agg_version="demo",
     ) == _get_year_saved_path("oecd_v2025", 2019, matrix_version="demo")

@@ -1,3 +1,4 @@
 "Planetary boundary","Control variable","impact_parent","impact","impact_unit","stressor","extension","stressor_unit","factor"
-"Climate change","Energy imbalance at top-of-atmosphere","EI","EI","W yr m-2","CH4 - combustion - air","air emissions","kg","1.59e-12"
-"Climate change","Atmospheric CO2 concentration","aCO2","aCO2","ppm yr","CH4 - combustion - air","air emissions","kg","7.4e-11"
+"Climate change","Energy imbalance at top-of-atmosphere","EI","EI","W m-2","CH4 - combustion - air","air emissions","kg","1.59e-12"
+"Biosphere integrity","Functional diversity (Biodiversity Intactness Index - BII)","BI FD","BI FD GHG","%BII loss","CO2 - waste - fossil - air","air emissions","kg","2.08E-13"
+"Biosphere integrity","Functional diversity (Biodiversity Intactness Index - BII)","BI FD","BI FD LAND","%BII loss","Artificial Surfaces","land","km2","7.31E-07"

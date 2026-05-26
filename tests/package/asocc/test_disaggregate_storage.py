@@ -60,7 +60,7 @@ def test_disaggregate_time_route_warning_lines_cover_bridge_summary() -> None:
             audit_frame=pd.DataFrame(
                 {
                     "year": [2023],
-                    "ref_grouped_time_route_bridge": [False],
+                    "ref_aggregated_time_route_bridge": [False],
                 }
             )
         )
@@ -70,8 +70,8 @@ def test_disaggregate_time_route_warning_lines_cover_bridge_summary() -> None:
         audit_frame=pd.DataFrame(
             {
                 "year": [2023, 2024],
-                "ref_grouped_time_route_bridge": [True, False],
-                "ref_split_time_route_bridge": [False, True],
+                "ref_aggregated_time_route_bridge": [True, False],
+                "ref_disaggregate_time_route_bridge": [False, True],
             }
         )
     )
@@ -96,7 +96,7 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
             "l2_reuse_year": [None],
         }
     )
-    regression_grouped = pd.DataFrame(
+    regression_aggregated = pd.DataFrame(
         {
             "l1_l2_method": ["UT(TD)"],
             "l2_method": ["UT(TD)"],
@@ -122,16 +122,16 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
     )
     output_rows, audit = disaggregate_rows(
         target_rows=regression_target,
-        ref_grouped_rows=regression_grouped,
-        ref_split_rows=regression_split,
-        grouped_sector_by_split={
+        ref_aggregated_rows=regression_aggregated,
+        ref_disaggregate_rows=regression_split,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
     )
     assert output_rows.sort_values("s_p")["value"].tolist() == [8.0, 12.0]
     assert bool(
-        audit[["ref_grouped_time_route_bridge", "ref_split_time_route_bridge"]]
+        audit[["ref_aggregated_time_route_bridge", "ref_disaggregate_time_route_bridge"]]
         .to_numpy(dtype=bool)
         .all()
     )
@@ -150,7 +150,7 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
             "value": [20.0],
         }
     )
-    reuse_grouped = pd.DataFrame(
+    reuse_aggregated = pd.DataFrame(
         {
             "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
             "l1_method": ["EG(Pop)", "EG(Pop)"],
@@ -190,25 +190,25 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
     )
     output_rows, audit = disaggregate_rows(
         target_rows=reuse_target,
-        ref_grouped_rows=reuse_grouped,
-        ref_split_rows=reuse_split,
-        grouped_sector_by_split={
+        ref_aggregated_rows=reuse_aggregated,
+        ref_disaggregate_rows=reuse_split,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
     )
     assert output_rows.sort_values("s_p")["value"].tolist() == [8.0, 12.0]
     assert bool(
-        audit[["ref_grouped_time_route_bridge", "ref_split_time_route_bridge"]]
+        audit[["ref_aggregated_time_route_bridge", "ref_disaggregate_time_route_bridge"]]
         .to_numpy(dtype=bool)
         .all()
     )
 
     output_rows, _audit = disaggregate_rows(
         target_rows=reuse_target.drop(columns=ASOCC_SSP_SCENARIO_COLUMN),
-        ref_grouped_rows=reuse_grouped.drop(columns=ASOCC_SSP_SCENARIO_COLUMN),
-        ref_split_rows=reuse_split.drop(columns=ASOCC_SSP_SCENARIO_COLUMN),
-        grouped_sector_by_split={
+        ref_aggregated_rows=reuse_aggregated.drop(columns=ASOCC_SSP_SCENARIO_COLUMN),
+        ref_disaggregate_rows=reuse_split.drop(columns=ASOCC_SSP_SCENARIO_COLUMN),
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -216,7 +216,7 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
     assert output_rows.sort_values("s_p")["value"].tolist() == [8.0, 12.0]
 
     same_year_target = reuse_target.assign(l2_reuse_year=1996)
-    same_year_grouped = reuse_grouped.iloc[[1]].assign(
+    same_year_aggregated = reuse_aggregated.iloc[[1]].assign(
         l2_reuse_year=1996,
         year=2023,
         value=10.0,
@@ -228,16 +228,16 @@ def test_published_storage_bridges_mrio_time_route_mismatches() -> None:
     )
     output_rows, audit = disaggregate_rows(
         target_rows=same_year_target,
-        ref_grouped_rows=same_year_grouped,
-        ref_split_rows=same_year_split,
-        grouped_sector_by_split={
+        ref_aggregated_rows=same_year_aggregated,
+        ref_disaggregate_rows=same_year_split,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
     )
     assert output_rows.sort_values("s_p")["value"].tolist() == [8.0, 12.0]
     assert not bool(
-        audit[["ref_grouped_time_route_bridge", "ref_split_time_route_bridge"]]
+        audit[["ref_aggregated_time_route_bridge", "ref_disaggregate_time_route_bridge"]]
         .to_numpy(dtype=bool)
         .any()
     )
@@ -247,12 +247,12 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
     tmp_path: Path,
 ) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
     target_path = target_root / "regression_proj" / "UT(FD)__ssp2.csv"
-    ref_grouped_path = ref_grouped_root / "UT(FD).csv"
-    ref_split_path = ref_split_root / "UT(FD).csv"
+    ref_aggregated_path = ref_aggregated_root / "UT(FD).csv"
+    ref_disaggregate_path = ref_disaggregate_root / "UT(FD).csv"
 
     _write_table(
         target_path,
@@ -267,7 +267,7 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
         ),
     )
     _write_table(
-        ref_grouped_path,
+        ref_aggregated_path,
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)", "UT(FD)"],
@@ -279,7 +279,7 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
         ),
     )
     _write_table(
-        ref_split_path,
+        ref_disaggregate_path,
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)"] * 4,
@@ -302,14 +302,14 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
         requested_years=[2021],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="UT(FD)",
         requested_years=[2021],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="UT(FD)",
         requested_years=[2021],
         require_requested_coverage=True,
@@ -317,9 +317,9 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
 
     output_rows, audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split={
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -361,13 +361,13 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
     tmp_path: Path,
 ) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
     stem = "EG(Pop)_UT(FDa)__ssp2"
     target_path = target_root / "historical_reuse" / f"{stem}.csv"
-    ref_grouped_path = ref_grouped_root / "historical_reuse" / f"{stem}.csv"
-    ref_split_path = ref_split_root / "historical_reuse" / f"{stem}.csv"
+    ref_aggregated_path = ref_aggregated_root / "historical_reuse" / f"{stem}.csv"
+    ref_disaggregate_path = ref_disaggregate_root / "historical_reuse" / f"{stem}.csv"
 
     _write_table(
         target_path,
@@ -384,7 +384,7 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
         ),
     )
     _write_table(
-        ref_grouped_path,
+        ref_aggregated_path,
         pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"],
@@ -397,7 +397,7 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
         ),
     )
     _write_table(
-        ref_split_path,
+        ref_disaggregate_path,
         pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -416,14 +416,14 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
         requested_years=[2030],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2030],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2030],
         require_requested_coverage=True,
@@ -431,9 +431,9 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
 
     output_rows, _audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split={
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -475,20 +475,20 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
 
 def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
     target_paths = [
         target_root / "regression_proj" / "UT(TD)__ssp1.csv",
         target_root / "regression_proj" / "UT(TD)__ssp2.csv",
     ]
-    ref_grouped_paths = [
-        ref_grouped_root / "regression_proj" / "UT(TD)__ssp1.csv",
-        ref_grouped_root / "regression_proj" / "UT(TD)__ssp2.csv",
+    ref_aggregated_paths = [
+        ref_aggregated_root / "regression_proj" / "UT(TD)__ssp1.csv",
+        ref_aggregated_root / "regression_proj" / "UT(TD)__ssp2.csv",
     ]
-    ref_split_paths = [
-        ref_split_root / "regression_proj" / "UT(TD)__ssp1.csv",
-        ref_split_root / "regression_proj" / "UT(TD)__ssp2.csv",
+    ref_disaggregate_paths = [
+        ref_disaggregate_root / "regression_proj" / "UT(TD)__ssp1.csv",
+        ref_disaggregate_root / "regression_proj" / "UT(TD)__ssp2.csv",
     ]
     for path, target_value in [
         (target_paths[0], 12.0),
@@ -506,9 +506,9 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
                 }
             ),
         )
-    for path, grouped_value in [
-        (ref_grouped_paths[0], 10.0),
-        (ref_grouped_paths[1], 12.0),
+    for path, aggregated_value in [
+        (ref_aggregated_paths[0], 10.0),
+        (ref_aggregated_paths[1], 12.0),
     ]:
         _write_table(
             path,
@@ -518,13 +518,13 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
                     "l2_method": ["UT(TD)"],
                     "r_p": ["FR"],
                     "s_p": ["D"],
-                    "2026": [grouped_value],
+                    "2026": [aggregated_value],
                 }
             ),
         )
     for path, coal_value, gas_value in [
-        (ref_split_paths[0], 4.0, 6.0),
-        (ref_split_paths[1], 3.0, 9.0),
+        (ref_disaggregate_paths[0], 4.0, 6.0),
+        (ref_disaggregate_paths[1], 3.0, 9.0),
     ]:
         _write_table(
             path,
@@ -545,14 +545,14 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
         requested_years=[2026],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="UT(TD)",
         requested_years=[2026],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="UT(TD)",
         requested_years=[2026],
         require_requested_coverage=True,
@@ -560,9 +560,9 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
 
     output_rows, _audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split={
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -617,10 +617,10 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
     tmp_path: Path,
 ) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
-    for scenario, target_values, grouped_values, split_values in [
+    for scenario, target_values, aggregated_values, disaggregate_values in [
         ("ssp1", [10.0, 20.0], [10.0, 20.0], [(4.0, 6.0), (5.0, 15.0)]),
         ("ssp2", [30.0, 40.0], [15.0, 20.0], [(3.0, 12.0), (4.0, 16.0)]),
     ]:
@@ -639,7 +639,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
             ),
         )
         _write_table(
-            ref_grouped_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_aggregated_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -648,12 +648,12 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
                     "r_c": ["FR", "FR"],
                     "s_p": ["D", "D"],
                     "l2_reuse_year": [2005, 2006],
-                    "2030": grouped_values,
+                    "2030": aggregated_values,
                 }
             ),
         )
         _write_table(
-            ref_split_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_disaggregate_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
@@ -668,10 +668,10 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
                     ],
                     "l2_reuse_year": [2005, 2005, 2006, 2006],
                     "2030": [
-                        split_values[0][0],
-                        split_values[0][1],
-                        split_values[1][0],
-                        split_values[1][1],
+                        disaggregate_values[0][0],
+                        disaggregate_values[0][1],
+                        disaggregate_values[1][0],
+                        disaggregate_values[1][1],
                     ],
                 }
             ),
@@ -683,14 +683,14 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
         requested_years=[2030],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2030],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2030],
         require_requested_coverage=True,
@@ -698,9 +698,9 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
 
     output_rows, _audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split={
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -769,8 +769,8 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
     tmp_path: Path,
 ) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
     for scenario, values_2023, values_2030 in [
         ("ssp1", [10.0, 20.0], [10.0, 20.0]),
@@ -792,7 +792,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
             ),
         )
     _write_table(
-        ref_grouped_root / "EG(Pop)_UT(FDa).csv",
+        ref_aggregated_root / "EG(Pop)_UT(FDa).csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"],
@@ -805,7 +805,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
         ),
     )
     _write_table(
-        ref_split_root / "EG(Pop)_UT(FDa).csv",
+        ref_disaggregate_root / "EG(Pop)_UT(FDa).csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -817,12 +817,12 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
             }
         ),
     )
-    for scenario, grouped_2030, split_2030 in [
+    for scenario, aggregated_2030, split_2030 in [
         ("ssp1", [10.0, 20.0], [(4.0, 6.0), (5.0, 15.0)]),
         ("ssp2", [15.0, 20.0], [(3.0, 12.0), (4.0, 16.0)]),
     ]:
         _write_table(
-            ref_grouped_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_aggregated_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -831,12 +831,12 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
                     "r_c": ["FR", "FR"],
                     "s_p": ["D", "D"],
                     "l2_reuse_year": [2005, 2006],
-                    "2030": grouped_2030,
+                    "2030": aggregated_2030,
                 }
             ),
         )
         _write_table(
-            ref_split_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_disaggregate_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
@@ -866,14 +866,14 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
         requested_years=[2023, 2030],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2023, 2030],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="EG(Pop)_UT(FDa)",
         requested_years=[2023, 2030],
         require_requested_coverage=True,
@@ -881,9 +881,9 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
 
     output_rows, _audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split={
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate={
             "Electricity_coal": "D",
             "Electricity_gas": "D",
         },
@@ -954,8 +954,8 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
     tmp_path: Path,
 ) -> None:
     target_root = tmp_path / "target"
-    ref_grouped_root = tmp_path / "ref_grouped"
-    ref_split_root = tmp_path / "ref_split"
+    ref_aggregated_root = tmp_path / "ref_aggregated"
+    ref_disaggregate_root = tmp_path / "ref_disaggregate"
     _write_table(
         target_root / "regression_proj" / "UT(FD)__ssp2.csv",
         pd.DataFrame(
@@ -969,7 +969,7 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
         ),
     )
     _write_table(
-        ref_grouped_root / "UT(FD).csv",
+        ref_aggregated_root / "UT(FD).csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)"],
@@ -981,7 +981,7 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
         ),
     )
     _write_table(
-        ref_split_root / "historical_reuse" / "UT(FD)__ssp2.csv",
+        ref_disaggregate_root / "historical_reuse" / "UT(FD)__ssp2.csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)", "UT(FD)"],
@@ -1000,14 +1000,14 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
         requested_years=[2021],
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=ref_grouped_root,
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=ref_aggregated_root,
         stem_prefix="UT(FD)",
         requested_years=[2021],
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=ref_split_root,
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=ref_disaggregate_root,
         stem_prefix="UT(FD)",
         requested_years=[2021],
         require_requested_coverage=True,
@@ -1016,9 +1016,9 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
     with pytest.raises(ValueError, match="multiple incompatible published variants"):
         disaggregate_rows(
             target_rows=target_rows,
-            ref_grouped_rows=ref_grouped_rows,
-            ref_split_rows=ref_split_rows,
-            grouped_sector_by_split={"Electricity_coal": "D"},
+            ref_aggregated_rows=ref_aggregated_rows,
+            ref_disaggregate_rows=ref_disaggregate_rows,
+            aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
         )
 
 
@@ -1090,9 +1090,9 @@ def test_published_storage_helper_paths_cover_empty_inputs_and_alt_formats(tmp_p
 def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) -> None:
     empty_output, empty_audit = disaggregate_rows(
         target_rows=pd.DataFrame(),
-        ref_grouped_rows=pd.DataFrame(),
-        ref_split_rows=pd.DataFrame(),
-        grouped_sector_by_split={},
+        ref_aggregated_rows=pd.DataFrame(),
+        ref_disaggregate_rows=pd.DataFrame(),
+        aggregated_sector_by_disaggregate={},
     )
     assert empty_output.empty
     assert empty_audit.empty
@@ -1109,7 +1109,7 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
             "l2_reuse_year": [None],
         }
     )
-    ref_grouped_rows = pd.DataFrame(
+    ref_aggregated_rows = pd.DataFrame(
         {
             "year": [2030],
             "r_p": ["FR"],
@@ -1121,7 +1121,7 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
             "l2_reuse_year": [None],
         }
     )
-    ref_split_missing_mapping = pd.DataFrame(
+    ref_disaggregate_missing_mapping = pd.DataFrame(
         {
             "year": [2030],
             "r_p": ["FR"],
@@ -1136,45 +1136,47 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
     with pytest.raises(ValueError, match="not declared in disaggregation_specs"):
         disaggregate_rows(
             target_rows=target_rows,
-            ref_grouped_rows=ref_grouped_rows,
-            ref_split_rows=ref_split_missing_mapping,
-            grouped_sector_by_split={"Electricity_coal": "D"},
+            ref_aggregated_rows=ref_aggregated_rows,
+            ref_disaggregate_rows=ref_disaggregate_missing_mapping,
+            aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
         )
 
-    ref_grouped_missing = ref_grouped_rows.assign(s_p="X")
-    ref_split_rows = ref_split_missing_mapping.assign(
+    ref_aggregated_missing = ref_aggregated_rows.assign(s_p="X")
+    ref_disaggregate_rows = ref_disaggregate_missing_mapping.assign(
         s_p="Electricity_coal",
         value=4.0,
     )
     with pytest.raises(ValueError, match="Missing reference values"):
         disaggregate_rows(
             target_rows=target_rows,
-            ref_grouped_rows=ref_grouped_missing,
-            ref_split_rows=ref_split_rows,
-            grouped_sector_by_split={"Electricity_coal": "D"},
+            ref_aggregated_rows=ref_aggregated_missing,
+            ref_disaggregate_rows=ref_disaggregate_rows,
+            aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
         )
 
-    with pytest.raises(ValueError, match="grouped reference value is zero"):
+    with pytest.raises(ValueError, match="aggregated reference value is zero"):
         disaggregate_rows(
             target_rows=target_rows,
-            ref_grouped_rows=ref_grouped_rows.assign(value=0.0),
-            ref_split_rows=ref_split_rows,
-            grouped_sector_by_split={"Electricity_coal": "D"},
+            ref_aggregated_rows=ref_aggregated_rows.assign(value=0.0),
+            ref_disaggregate_rows=ref_disaggregate_rows,
+            aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
         )
 
-    with pytest.raises(ValueError, match="both grouped and split reference values are zero"):
+    with pytest.raises(
+        ValueError, match="both aggregated and disaggregate reference values are zero"
+    ):
         disaggregate_rows(
             target_rows=target_rows,
-            ref_grouped_rows=ref_grouped_rows.assign(value=0.0),
-            ref_split_rows=ref_split_rows.assign(value=0.0),
-            grouped_sector_by_split={"Electricity_coal": "D"},
+            ref_aggregated_rows=ref_aggregated_rows.assign(value=0.0),
+            ref_disaggregate_rows=ref_disaggregate_rows.assign(value=0.0),
+            aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
         )
 
     zero_output_rows, zero_audit = disaggregate_rows(
         target_rows=target_rows.assign(value=0.0),
-        ref_grouped_rows=ref_grouped_rows.assign(value=0.0),
-        ref_split_rows=ref_split_rows.assign(value=0.0, s_p="Electricity_coal"),
-        grouped_sector_by_split={"Electricity_coal": "D"},
+        ref_aggregated_rows=ref_aggregated_rows.assign(value=0.0),
+        ref_disaggregate_rows=ref_disaggregate_rows.assign(value=0.0, s_p="Electricity_coal"),
+        aggregated_sector_by_disaggregate={"Electricity_coal": "D"},
     )
     assert float(zero_output_rows.loc[0, "value"]) == 0.0
     assert float(zero_audit.loc[0, "ratio"]) == 0.0
@@ -1222,9 +1224,9 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
         target=pd.DataFrame({"year": [2030], "r_p": ["FR"], "value": [1.0]}),
         reference=pd.DataFrame({"year": [2030], "r_p": ["FR"], "value": [2.0], "s_p": ["D"]}),
         exact_keys=["year", "r_p"],
-        label="ref_grouped",
+        label="ref_aggregated",
     )
-    assert merged.loc[0, "ref_grouped_value"] == 2.0
+    assert merged.loc[0, "ref_aggregated_value"] == 2.0
 
     schema_with_missing_year = PartitionSchema(
         relative_parent=Path(),
@@ -1273,6 +1275,6 @@ def test_published_storage_optional_filter_and_merge_cover_transition_edges() ->
             }
         ),
         exact_keys=["year", "r_p"],
-        label="ref_grouped",
+        label="ref_aggregated",
     )
-    assert bool(merged["ref_grouped_value"].isna().all())
+    assert bool(merged["ref_aggregated_value"].isna().all())

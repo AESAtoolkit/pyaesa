@@ -32,7 +32,7 @@ def _ensure_pr_hr_wb_population_history(
         else state.pop_series_by_ssp_scenario
     )
     wb_history = base_history.setdefault(None, {})
-    group_version_reg = None if use_original_domain else context.group_version_reg
+    agg_version_reg = None if use_original_domain else context.agg_version_reg
     for hist_year in context.historical_years:
         year_key = int(hist_year)
         if year_key > int(impact_year) or year_key in wb_history:
@@ -41,7 +41,7 @@ def _ensure_pr_hr_wb_population_history(
             context=context,
             year=year_key,
             ssp_scenario=None,
-            group_version_reg=group_version_reg,
+            agg_version_reg=agg_version_reg,
         )
     return wb_history
 

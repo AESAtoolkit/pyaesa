@@ -38,7 +38,7 @@ def get_acc_root(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the source-scoped aCC root shared by deterministic and MC branches."""
     return (
@@ -46,6 +46,6 @@ def get_acc_root(
         / ACC_ROOT_DIRNAME
         / asocc_source_version_token(
             source=source_label,
-            group_version=group_version,
+            agg_version=agg_version,
         )
     )

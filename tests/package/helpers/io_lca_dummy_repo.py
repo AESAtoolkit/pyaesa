@@ -280,3 +280,35 @@ def build_io_lca_dummy_repo(
         unavailable_years=tuple(effective_unavailable_years),
         impacts=tuple(effective_impacts),
     )
+
+
+def add_io_lca_dummy_method(
+    repo: IOLCADummyRepo,
+    *,
+    lcia_method: str,
+    impacts: list[str],
+    parent_by_impact: dict[str, str],
+) -> None:
+    """Add one LCIA method to an existing IO-LCA dummy repository."""
+    method = str(lcia_method)
+    _write_lcia_rps(
+        source=repo.source,
+        lcia_method=method,
+        impacts=impacts,
+        parent_by_impact=parent_by_impact,
+    )
+    metadata_path = _get_metadata_path(repo.source, matrix_version=None)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    parent_units = {parent: "kg" for parent in sorted(set(parent_by_impact.values()))}
+    available = {int(year) for year in repo.available_years}
+    for raw_year, year_payload in metadata["years"].items():
+        year = int(raw_year)
+        method_status: dict[str, object] = {"available": year in available}
+        if year not in available:
+            method_status["reason"] = "extension missing"
+        year_payload["extensions"][method] = dict(method_status)
+        year_payload["lcia_status"][method] = dict(method_status)
+        year_payload["enacting_metrics"]["units"]["lcia_by_method"][method] = dict(parent_units)
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    for year in repo.available_years:
+        _write_year_payloads(repo.source, method, int(year), impacts=impacts)

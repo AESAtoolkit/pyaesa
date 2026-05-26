@@ -59,7 +59,7 @@ It does not own:
   and uncertainty aCC/ASR flows
 - deterministic downstream support stays under the deterministic subtree
 - public persisted payloads use public names such as
-  `source`, grouping arguments, `aggreg_indices`, `base_asocc_args`,
+  `source`, MRIO aggregation and disaggregation arguments, `group_indices`, `base_asocc_args`,
   `base_cc_args`, `lca_args`, and `external_method`
 - the first level is intentionally split between cross flow composite contracts
   (`branches/`, `persistence/`, and `scope/`) and deterministic only shared
@@ -98,4 +98,3 @@ Package tests for behavior that consumes these shared modules live under:
 For touched shared aCC ASR owners, run scoped `ruff`, scoped `pyright`, and
 targeted package tests for every aCC or ASR public path that consumes the
 touched module. Touched owners must keep 100 percent line and branch coverage.
-

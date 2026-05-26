@@ -26,14 +26,14 @@ def clip_counts_by_key(
     fit_start_year: int,
     fit_end_year: int,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> dict[tuple[str, ...], int]:
     """Return clipping event counts keyed by deterministic regression identity."""
     path = (
         allocate_regression_logs_dir(
             proj_base=proj_base,
             source=source,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         / "projection_clipping_log.csv"
     )
@@ -47,13 +47,13 @@ def clip_counts_by_key(
         return {}
     if any(column not in frame.columns for column in CLIP_KEY_COLUMNS):
         return {}
-    grouped = (
+    aggregated = (
         frame.loc[:, CLIP_KEY_COLUMNS]
         .astype(str)
         .groupby(CLIP_KEY_COLUMNS, sort=False, dropna=False)
         .size()
     )
-    counts = grouped.rename("clip_count").reset_index()
+    counts = aggregated.rename("clip_count").reset_index()
     return {
         tuple(str(value) for value in key_values): int(clip_count)
         for *key_values, clip_count in counts.loc[:, [*CLIP_KEY_COLUMNS, "clip_count"]].itertuples(

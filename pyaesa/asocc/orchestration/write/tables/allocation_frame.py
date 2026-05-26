@@ -17,7 +17,7 @@ def prepare_allocation_frame(
     output_spec: OutputSpec,
     frames: list[pd.DataFrame],
     filters: dict[str, list[str] | None],
-    aggreg_indices: bool,
+    group_indices: bool,
     persisted_years: list[int],
 ) -> pd.DataFrame:
     """Prepare one allocation output frame before persistence."""
@@ -76,7 +76,7 @@ def prepare_allocation_frame(
         keep_rows = ~np.isnan(year_values).all(axis=1)
         if not bool(keep_rows.all()):
             df = df.loc[keep_rows].reset_index(drop=True)
-    if aggreg_indices:
+    if group_indices:
         df = group_output_rows(df, filters=scoped_filters, year_columns=year_columns)
     if present_year_columns or not df.empty:
         df[ASOCC_SSP_SCENARIO_COLUMN] = output_spec.route.ssp_scenario

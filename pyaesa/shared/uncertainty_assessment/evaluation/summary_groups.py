@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 def identity_groups_from_excluded_columns(
@@ -82,36 +82,13 @@ def collapse_values_to_summary_groups(
     return out
 
 
-def collapse_sparse_rows_to_summary_groups(
+def sparse_rows_to_overlapping_group_values(
     *,
     sparse_rows: SparseRunRows,
     run_indices: np.ndarray,
-    public_row_groups: tuple[tuple[str, ...], ...],
     public_row_group_index: np.ndarray,
-) -> np.ndarray:
-    """Collapse sparse public row values to summary group columns."""
-    row_runs = run_positions_in_window(
-        run_indices=run_indices,
-        row_run_index=sparse_rows.run_index,
-    )
-    row_groups = public_row_group_index[sparse_rows.public_row_id]
-    return _collapse_sparse_run_group_values(
-        row_runs=row_runs,
-        row_groups=row_groups,
-        values=sparse_rows.values,
-        run_count=len(run_indices),
-        group_count=len(public_row_groups),
-    )
-
-
-def collapse_sparse_rows_to_overlapping_summary_groups(
-    *,
-    sparse_rows: SparseRunRows,
-    run_indices: np.ndarray,
-    public_row_groups: tuple[tuple[str, ...], ...],
-    public_row_group_index: np.ndarray,
-) -> np.ndarray:
-    """Collapse sparse rows when one public row belongs to several summary groups."""
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return sparse run positions, summary groups, and values with memberships expanded."""
     source_positions, row_groups = _sparse_membership_positions(
         public_row_id=sparse_rows.public_row_id,
         public_row_group_index=public_row_group_index,
@@ -120,37 +97,35 @@ def collapse_sparse_rows_to_overlapping_summary_groups(
         run_indices=run_indices,
         row_run_index=sparse_rows.run_index[source_positions],
     )
-    return _collapse_sparse_run_group_values(
-        row_runs=row_runs,
-        row_groups=row_groups,
-        values=sparse_rows.values[source_positions],
-        run_count=len(run_indices),
-        group_count=len(public_row_groups),
-    )
+    return row_runs, row_groups, sparse_rows.values[source_positions]
 
 
-def _collapse_sparse_run_group_values(
+def sparse_group_run_means(
     *,
     row_runs: np.ndarray,
     row_groups: np.ndarray,
     values: np.ndarray,
-    run_count: int,
     group_count: int,
-) -> np.ndarray:
-    """Average sparse values by run position and summary group."""
-    shape = (int(run_count), int(group_count))
-    flat = row_runs * int(group_count) + row_groups
-    sums = np.bincount(
-        flat,
-        weights=values,
-        minlength=shape[0] * shape[1],
-    ).reshape(shape)
-    counts = np.bincount(flat, minlength=shape[0] * shape[1]).reshape(shape)
-    return np.divide(
-        sums,
-        counts,
-        out=np.full(shape, np.nan, dtype=np.float64),
-        where=counts > 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return observed summary groups and per run group mean values."""
+    flat_groups = np.asarray(row_runs, dtype=np.int64) * int(group_count) + np.asarray(
+        row_groups, dtype=np.int64
+    )
+    if flat_groups.size == 0:
+        return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.float64)
+    order = np.argsort(flat_groups)
+    sorted_groups = flat_groups[order]
+    sorted_values = np.asarray(values, dtype=np.float64)[order]
+    unique_groups, starts, counts = np.unique(
+        sorted_groups,
+        return_index=True,
+        return_counts=True,
+    )
+    group_means = np.add.reduceat(sorted_values, starts) / counts
+    observed = ~np.isnan(group_means)
+    return (
+        (unique_groups[observed] % int(group_count)).astype(np.int64, copy=False),
+        group_means[observed].astype(np.float64, copy=False),
     )
 
 

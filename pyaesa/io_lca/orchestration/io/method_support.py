@@ -105,7 +105,7 @@ def _collapse_selector_axes(
     frame: pd.DataFrame,
     selector_axes: tuple[str, ...],
 ) -> pd.DataFrame:
-    """Collapse selector axis values to full aggregate labels."""
+    """Collapse selector axis values to full combined output labels."""
     out = frame.copy()
     for axis in selector_axes:
         out[axis] = aggregate_selector_label(out[axis].tolist())

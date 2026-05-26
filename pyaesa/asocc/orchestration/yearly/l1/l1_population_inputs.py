@@ -13,7 +13,7 @@ def _load_population_for_year(
     context,
     year: int,
     ssp_scenario: str | None,
-    group_version_reg: str | None,
+    agg_version_reg: str | None,
 ) -> pd.Series:
     """Load one L1 population series from processed pop/gdp tables."""
     year_col = str(int(year))
@@ -29,7 +29,7 @@ def _load_population_for_year(
         variable=pop_var,
         year=year,
         source_key=context.source,
-        group_version=group_version_reg,
+        agg_version=agg_version_reg,
         ssp_scenario=ssp_scenario if use_ssp else None,
         region_col_override=region_override,
     )
@@ -51,7 +51,7 @@ def _resolve_l1_population_inputs(
         if use_original_domain
         else run.state.pop_series_by_ssp_scenario[run.ssp_scenario]
     )
-    if use_original_domain and run.context.group_version_reg:
+    if use_original_domain and run.context.agg_version_reg:
         post_cache = run.state.pr_post_pop_series_by_ssp_scenario.setdefault(run.ssp_scenario, {})
         for hist_year in run.context.historical_years:
             if hist_year not in post_cache:
@@ -59,7 +59,7 @@ def _resolve_l1_population_inputs(
                     context=run.context,
                     year=hist_year,
                     ssp_scenario=run.ssp_scenario,
-                    group_version_reg=None,
+                    agg_version_reg=None,
                 )
         pop_series = post_cache[run.year]
         pop_by_year = post_cache
@@ -85,7 +85,7 @@ def _load_ar_reference_population(
             context=run.context,
             year=ref_year,
             ssp_scenario=None,
-            group_version_reg=(None if use_original_domain else run.context.group_version_reg),
+            agg_version_reg=(None if use_original_domain else run.context.agg_version_reg),
         )
         ref_pop_cache[ref_year] = pop_ref
     return pop_ref

@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from functools import partial
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
@@ -317,28 +318,27 @@ def render_asr_figures(
         if cc_type != "static" and _single_year(requested_years) is None
         else None
     )
-    jobs = (
-        _per_method_jobs(
-            groups=groups,
-            components=component_rows,
-            global_ar6_source=global_ar6_source,
-            figures_root=figures_root,
-            requested_years=requested_years,
-            cc_type=cc_type,
-            cc_source=cc_source,
-            emissions_mode=emissions_mode,
-            dpi=dpi,
-            output_format=output_format,
-            selector_scope_request=selector_scope_request,
-            scale_modes=scale_modes,
-            polar_years=polar_years,
-        )
-        if bool(figure_options["per_method"])
-        else []
-    )
-    if bool(figure_options["multi_method"]) and has_multiple_prepared_asr_groups(groups):
-        jobs.extend(
-            _multi_method_jobs(
+
+    def jobs():
+        """Yield deterministic ASR figure jobs one selector scope at a time."""
+        if bool(figure_options["per_method"]):
+            yield from _per_method_jobs(
+                groups=groups,
+                components=component_rows,
+                global_ar6_source=global_ar6_source,
+                figures_root=figures_root,
+                requested_years=requested_years,
+                cc_type=cc_type,
+                cc_source=cc_source,
+                emissions_mode=emissions_mode,
+                dpi=dpi,
+                output_format=output_format,
+                selector_scope_request=selector_scope_request,
+                scale_modes=scale_modes,
+                polar_years=polar_years,
+            )
+        if bool(figure_options["multi_method"]) and has_multiple_prepared_asr_groups(groups):
+            yield from _multi_method_jobs(
                 groups=groups,
                 components=component_rows,
                 global_ar6_source=global_ar6_source,
@@ -352,7 +352,7 @@ def render_asr_figures(
                 selector_scope_request=selector_scope_request,
                 scale_modes=scale_modes,
             )
-        )
+
     paths = render_figure_jobs(source="deterministic_asr", jobs=jobs, status=status)
     rows = all_prepared_asr_rows(groups)
     write_variant_compression_method_note(figures_root=figures_root, rows=rows)
@@ -385,9 +385,8 @@ def _per_method_jobs(
     selector_scope_request: SelectorScopeRequest | None,
     scale_modes: dict[str, ASRScaleMode],
     polar_years: list[int],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     single_year = _single_year(requested_years)
-    jobs: list[PlannedFigureJob] = []
     for group in groups:
         for branch_rows in _dynamic_branch_slices(rows=group.rows, cc_type=cc_type):
             for selector_token, selector_title, selector_rows in selector_slices(
@@ -416,28 +415,31 @@ def _per_method_jobs(
                     studied_year=single_year,
                     selector_title=selector_title,
                 )
-                jobs.append(
-                    PlannedFigureJob(
-                        kind="per_method",
-                        label=output_base.name,
-                        render=partial(
-                            _plot_scope,
-                            frame=prepared,
-                            requested_years=requested_years,
-                            output_stem=output_base,
-                            title=title,
-                            dpi=dpi,
-                            output_format=output_format,
-                            group_legend=False,
-                            include_method_in_label=False,
-                            allow_polar=polar_allowed,
-                            dynamic=cc_type != "static",
-                            emissions_mode=emissions_mode,
-                            scale_mode=scale_mode,
-                            components=components,
-                            global_ar6_source=global_ar6_source,
-                        ),
-                    )
+                yield PlannedFigureJob(
+                    kind="per_method",
+                    label=output_base.name,
+                    planned_outputs=_planned_scope_output_count(
+                        frame=prepared,
+                        requested_years=requested_years,
+                        dynamic=cc_type != "static",
+                    ),
+                    render=partial(
+                        _plot_scope,
+                        frame=prepared,
+                        requested_years=requested_years,
+                        output_stem=output_base,
+                        title=title,
+                        dpi=dpi,
+                        output_format=output_format,
+                        group_legend=False,
+                        include_method_in_label=False,
+                        allow_polar=polar_allowed,
+                        dynamic=cc_type != "static",
+                        emissions_mode=emissions_mode,
+                        scale_mode=scale_mode,
+                        components=components,
+                        global_ar6_source=global_ar6_source,
+                    ),
                 )
                 if polar_allowed and single_year is None and len(impacts) > 1:
                     years = pd.Series(pd.to_numeric(prepared[YEAR_COLUMN], errors="raise")).astype(
@@ -463,30 +465,27 @@ def _per_method_jobs(
                             studied_year=int(year),
                             selector_title=selector_title,
                         )
-                        jobs.append(
-                            PlannedFigureJob(
-                                kind="polar_deterministic",
-                                label=year_output_base.name,
-                                render=partial(
-                                    _plot_scope,
-                                    frame=year_prepared,
-                                    requested_years=[int(year)],
-                                    output_stem=year_output_base,
-                                    title=year_title,
-                                    dpi=dpi,
-                                    output_format=output_format,
-                                    group_legend=False,
-                                    include_method_in_label=False,
-                                    allow_polar=True,
-                                    dynamic=False,
-                                    emissions_mode=emissions_mode,
-                                    scale_mode=scale_mode,
-                                    components=components,
-                                    global_ar6_source=global_ar6_source,
-                                ),
-                            )
+                        yield PlannedFigureJob(
+                            kind="polar_deterministic",
+                            label=year_output_base.name,
+                            render=partial(
+                                _plot_scope,
+                                frame=year_prepared,
+                                requested_years=[int(year)],
+                                output_stem=year_output_base,
+                                title=year_title,
+                                dpi=dpi,
+                                output_format=output_format,
+                                group_legend=False,
+                                include_method_in_label=False,
+                                allow_polar=True,
+                                dynamic=False,
+                                emissions_mode=emissions_mode,
+                                scale_mode=scale_mode,
+                                components=components,
+                                global_ar6_source=global_ar6_source,
+                            ),
                         )
-    return jobs
 
 
 def _multi_method_jobs(
@@ -503,9 +502,8 @@ def _multi_method_jobs(
     output_format: str,
     selector_scope_request: SelectorScopeRequest | None,
     scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     single_year = _single_year(requested_years)
-    jobs: list[PlannedFigureJob] = []
     for branch_rows in _dynamic_branch_slices(
         rows=combined_prepared_asr_rows(groups),
         cc_type=cc_type,
@@ -550,40 +548,52 @@ def _multi_method_jobs(
                     studied_year=single_year,
                     selector_title=selector_title,
                 )
-                jobs.append(
-                    PlannedFigureJob(
-                        kind="multi_method",
-                        label=output_base.name,
-                        render=partial(
-                            _plot_scope,
-                            frame=scope,
-                            requested_years=requested_years,
-                            output_stem=output_base,
-                            title=title,
-                            dpi=dpi,
-                            output_format=output_format,
-                            group_legend=True,
-                            include_method_in_label=True,
-                            allow_polar=False,
-                            dynamic=cc_type != "static",
-                            emissions_mode=emissions_mode,
-                            scale_mode=scale_mode,
-                            limits=common_limits,
-                            components=components,
-                            global_ar6_source=global_ar6_source,
-                        ),
-                    )
+                yield PlannedFigureJob(
+                    kind="multi_method",
+                    label=output_base.name,
+                    planned_outputs=_planned_scope_output_count(
+                        frame=scope,
+                        requested_years=requested_years,
+                        dynamic=cc_type != "static",
+                    ),
+                    render=partial(
+                        _plot_scope,
+                        frame=scope,
+                        requested_years=requested_years,
+                        output_stem=output_base,
+                        title=title,
+                        dpi=dpi,
+                        output_format=output_format,
+                        group_legend=True,
+                        include_method_in_label=True,
+                        allow_polar=False,
+                        dynamic=cc_type != "static",
+                        emissions_mode=emissions_mode,
+                        scale_mode=scale_mode,
+                        limits=common_limits,
+                        components=components,
+                        global_ar6_source=global_ar6_source,
+                    ),
                 )
-    return jobs
 
 
-def _dynamic_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> list[pd.DataFrame]:
+def _dynamic_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> Iterator[pd.DataFrame]:
     if str(cc_type) == "static":
-        scopes: list[pd.DataFrame] = []
         for branch_scope in scope_slices(rows, ("lcia_method",)):
-            scopes.extend(static_asocc_ssp_slices(branch_scope))
-        return scopes
-    return scope_slices(rows, ("lcia_method", *DYNAMIC_SCOPE_COLUMNS))
+            yield from static_asocc_ssp_slices(branch_scope)
+        return
+    yield from scope_slices(rows, ("lcia_method", *DYNAMIC_SCOPE_COLUMNS))
+
+
+def _planned_scope_output_count(
+    *,
+    frame: pd.DataFrame,
+    requested_years: list[int],
+    dynamic: bool,
+) -> int:
+    """Return the number of figure files rendered by one deterministic ASR job."""
+    single_year = _single_year(requested_years)
+    return 2 if dynamic and single_year is None and len(ordered_impacts(frame)) == 1 else 1
 
 
 def _prepare_plot_rows(rows: pd.DataFrame) -> pd.DataFrame:
@@ -1819,7 +1829,6 @@ def _line_group_excluded_columns() -> set[str]:
         _COLOR_COLUMN,
         _MAX_THRESHOLD_COLUMN,
         "cumulative_asr",
-        "cumulative_no_transgression",
         *ASR_TRANSITION_SERIES_EXCLUDED_COLUMNS,
     }
 

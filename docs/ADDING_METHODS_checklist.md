@@ -105,15 +105,15 @@ Registry rows are the source of truth for method discovery and capability.
 
 | File | Responsibility |
 | --- | --- |
-| `pyaesa/asocc/methods/registry/specs/l1.py` | Declarative L1 rows. |
-| `pyaesa/asocc/methods/registry/specs/l2.py` | Declarative L2 rows. |
-| `pyaesa/asocc/methods/registry/specs/all_specs.py` | Combined method spec inventory. |
-| `pyaesa/asocc/methods/registry/build/build.py` | Registry assembly from declarative specs. |
-| `pyaesa/asocc/methods/registry/registry.py` | Registry facade and supported family inventory. |
-| `pyaesa/asocc/methods/registry/model/types.py` | Typed registry fields. |
-| `pyaesa/asocc/methods/registry/model/input_requirements.py` | Input coverage requirements. |
-| `pyaesa/asocc/methods/registry/queries/resolve.py` | Canonical label resolution. |
-| `pyaesa/asocc/methods/registry/model/family_checks.py` | Import time registry integrity checks. |
+| [`pyaesa/asocc/methods/registry/specs/l1.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/specs/l1.py) | Declarative L1 rows. |
+| [`pyaesa/asocc/methods/registry/specs/l2.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/specs/l2.py) | Declarative L2 rows. |
+| [`pyaesa/asocc/methods/registry/specs/all_specs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/specs/all_specs.py) | Combined method spec inventory. |
+| [`pyaesa/asocc/methods/registry/build/build.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/build/build.py) | Registry assembly from declarative specs. |
+| [`pyaesa/asocc/methods/registry/registry.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/registry.py) | Registry facade and supported family inventory. |
+| [`pyaesa/asocc/methods/registry/model/types.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/model/types.py) | Typed registry fields. |
+| [`pyaesa/asocc/methods/registry/model/input_requirements.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/model/input_requirements.py) | Input coverage requirements. |
+| [`pyaesa/asocc/methods/registry/queries/resolve.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/queries/resolve.py) | Canonical label resolution. |
+| [`pyaesa/asocc/methods/registry/model/family_checks.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/registry/model/family_checks.py) | Import time registry integrity checks. |
 
 Each registry row must declare:
 
@@ -149,10 +149,10 @@ default method plan.
 
 | File | Responsibility |
 | --- | --- |
-| `pyaesa/asocc/runtime/selection/resolve.py` | Normalize user method selectors and method plans. |
-| `pyaesa/asocc/runtime/selection/plans.py` | Resolve method plans. |
-| `pyaesa/asocc/runtime/selection/pair_policy.py` | Validate L1 and L2 pair compatibility. |
-| `pyaesa/asocc/orchestration/setup/request/selection.py` | Build setup selection. |
+| [`pyaesa/asocc/runtime/selection/resolve.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/selection/resolve.py) | Normalize user method selectors and method plans. |
+| [`pyaesa/asocc/runtime/selection/plans.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/selection/plans.py) | Resolve method plans. |
+| [`pyaesa/asocc/runtime/selection/pair_policy.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/selection/pair_policy.py) | Validate L1 and L2 pair compatibility. |
+| [`pyaesa/asocc/orchestration/setup/request/selection.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/setup/request/selection.py) | Build setup selection. |
 
 Selection code should answer only these questions:
 
@@ -192,10 +192,10 @@ add the metric where MRIO processing owns it. Do not derive it ad hoc inside
 | Area | Canonical owner |
 | --- | --- |
 | Processed MRIO metric construction | `pyaesa/process/mrios/utils/uncasext_metrics/` |
-| Processed MRIO public entry point | `pyaesa/process/mrios/process_mrio.py` |
-| Processed MRIO metadata | `pyaesa/process/mrios/utils/io/metadata.py` |
-| Deterministic aSoCC metric loading | `pyaesa/asocc/data/load_mrio.py` |
-| Per year required metric planning | `pyaesa/asocc/orchestration/yearly/shared/year_inputs.py` |
+| Processed MRIO public entry point | [`pyaesa/process/mrios/process_mrio.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/process/mrios/process_mrio.py) |
+| Processed MRIO metadata | [`pyaesa/process/mrios/utils/io/metadata.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/process/mrios/utils/io/metadata.py) |
+| Deterministic aSoCC metric loading | [`pyaesa/asocc/data/load_mrio.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/data/load_mrio.py) |
+| Per year required metric planning | [`pyaesa/asocc/orchestration/yearly/shared/year_inputs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/year_inputs.py) |
 | Optional enacting metric output recording | `pyaesa/asocc/orchestration/yearly/enacting_metric/` |
 
 Required implementation order:
@@ -203,8 +203,8 @@ Required implementation order:
 1. Define the processed metric shape and labels in the process owner.
 2. Write the metric during `process_mrio(...)`.
 3. Record enough metadata for deterministic loading and validation.
-4. Add a loader under `pyaesa/asocc/data/load_mrio.py`.
-5. Add the metric to required per year loading in `year_inputs.py`.
+4. Add a loader under [`pyaesa/asocc/data/load_mrio.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/data/load_mrio.py).
+5. Add the metric to required per year loading in [`year_inputs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/year_inputs.py).
 6. Pass it to the method family dispatch.
 7. Use it in the equation owner.
 8. Add package tests for processing, loading, and deterministic public output.
@@ -229,17 +229,17 @@ download files, parse raw user files, or repair missing processed data.
 
 ## 10. Implement The Equation At The Family Owner
 
-Scientific calculation belongs under `pyaesa/asocc/methods/`.
+Scientific calculation belongs under [`pyaesa/asocc/methods/`](https://github.com/AESAtoolkit/pyaesa/tree/main/pyaesa/asocc/methods).
 
 | File or folder | Responsibility |
 | --- | --- |
-| `methods/compute_l1.py` | Dispatch L1 methods by registry family. |
-| `methods/compute_l2.py` | Dispatch L2 methods by registry family. |
-| `methods/run_ar.py` | AR runtime, reference year routing, and AR caches. |
-| `methods/run_ut.py` | UT runtime and preweight application. |
-| `methods/equations/` | Pure equation functions for method families. |
-| `methods/equations/ar_result_indexing.py` | AR impact and reference year index levels. |
-| `methods/equations/ar_nan_outputs.py` | Empty AR row shapes. |
+| [`methods/compute_l1.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/compute_l1.py) | Dispatch L1 methods by registry family. |
+| [`methods/compute_l2.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/compute_l2.py) | Dispatch L2 methods by registry family. |
+| [`methods/run_ar.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/run_ar.py) | AR runtime, reference year routing, and AR caches. |
+| [`methods/run_ut.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/run_ut.py) | UT runtime and preweight application. |
+| [`methods/equations/`](https://github.com/AESAtoolkit/pyaesa/tree/main/pyaesa/asocc/methods/equations) | Pure equation functions for method families. |
+| [`methods/equations/ar_result_indexing.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/equations/ar_result_indexing.py) | AR impact and reference year index levels. |
+| [`methods/equations/ar_nan_outputs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/methods/equations/ar_nan_outputs.py) | Empty AR row shapes. |
 
 Equation rules:
 
@@ -262,18 +262,18 @@ methods, slices it to the requested public scope, and calls the method owners.
 
 | Area | Responsibility |
 | --- | --- |
-| `orchestration/yearly/run_year.py` | Per year input loading and dispatch. |
-| `orchestration/yearly/shared/year_inputs.py` | Required annual inputs. |
-| `orchestration/yearly/l1/` | L1 execution and L1 table storage. |
-| `orchestration/yearly/l2/` | L2 execution, weighting, and recomposition. |
-| `orchestration/yearly/enacting_metric/` | Optional intermediate metric recording. |
-| `orchestration/yearly/shared/scenario_processing.py` | Per scenario execution. |
-| `orchestration/yearly/shared/scenario_routing.py` | Scenario partition routing. |
+| [`orchestration/yearly/run_year.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/run_year.py) | Per year input loading and dispatch. |
+| [`orchestration/yearly/shared/year_inputs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/year_inputs.py) | Required annual inputs. |
+| [`orchestration/yearly/l1/`](https://github.com/AESAtoolkit/pyaesa/tree/main/pyaesa/asocc/orchestration/yearly/l1) | L1 execution and L1 table storage. |
+| [`orchestration/yearly/l2/`](https://github.com/AESAtoolkit/pyaesa/tree/main/pyaesa/asocc/orchestration/yearly/l2) | L2 execution, weighting, and recomposition. |
+| [`orchestration/yearly/enacting_metric/`](https://github.com/AESAtoolkit/pyaesa/tree/main/pyaesa/asocc/orchestration/yearly/enacting_metric) | Optional intermediate metric recording. |
+| [`orchestration/yearly/shared/scenario_processing.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/scenario_processing.py) | Per scenario execution. |
+| [`orchestration/yearly/shared/scenario_routing.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/scenario_routing.py) | Scenario partition routing. |
 
 The usual package method flow is:
 
 1. Registry flags tell setup which input families are needed.
-2. `year_inputs.py` loads only required metric keys.
+2. [`year_inputs.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/yearly/shared/year_inputs.py) loads only required metric keys.
 3. L1 or L2 yearly owners call the family dispatch.
 4. L2 support rows are multiplied by compatible L1 weights if needed.
 5. Public writers receive already shaped method output frames.
@@ -306,12 +306,12 @@ by year columns.
 
 | Owner | Responsibility |
 | --- | --- |
-| `runtime/output/contracts.py` | Output descriptors, identifier columns, and file tokens. |
-| `runtime/paths/published.py` | Public deterministic roots. |
-| `runtime/paths/deterministic.py` | Deterministic logs and scope paths. |
-| `orchestration/write/writers/allocations.py` | Table writing. |
-| `orchestration/write/metadata/payload.py` | Deterministic scope manifest payloads. |
-| `orchestration/setup/reuse/completed_run_policy.py` | Reuse and append policy. |
+| [`runtime/output/contracts.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/output/contracts.py) | Output descriptors, identifier columns, and file tokens. |
+| [`runtime/paths/published.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/paths/published.py) | Public deterministic roots. |
+| [`runtime/paths/deterministic.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/runtime/paths/deterministic.py) | Deterministic logs and scope paths. |
+| [`orchestration/write/writers/allocations.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/write/writers/allocations.py) | Table writing. |
+| [`orchestration/write/metadata/payload.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/write/metadata/payload.py) | Deterministic scope manifest payloads. |
+| [`orchestration/setup/reuse/completed_run_policy.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/orchestration/setup/reuse/completed_run_policy.py) | Reuse and append policy. |
 
 Publication rules:
 
@@ -343,8 +343,8 @@ rows. It must not maintain a second method list.
 
 ## 15. Add Tests That Exercise Public Reachability
 
-Package tests for aSoCC live under `tests/package/asocc/`. Scientific
-allocation validation lives under `tests/allocation_equation_validation/`.
+Package tests for aSoCC live under [`tests/package/asocc/`](https://github.com/AESAtoolkit/pyaesa/tree/main/tests/package/asocc). Scientific
+allocation validation lives under [`tests/allocation_equation_validation/`](https://github.com/AESAtoolkit/pyaesa/tree/main/tests/allocation_equation_validation).
 
 | Change | Required tests |
 | --- | --- |
@@ -367,9 +367,9 @@ cannot be reached from normal public behavior, delete the branch and the test.
 For any method logic change, run allocation equation validation in addition to
 package tests.
 
-- `tests/allocation_equation_validation/Allocation_Validation.ipynb`:
+- [`tests/allocation_equation_validation/Allocation_Validation.ipynb`](https://github.com/AESAtoolkit/pyaesa/blob/main/tests/allocation_equation_validation/Allocation_Validation.ipynb):
   interactive validation workflow.
-- `tests/allocation_equation_validation/validation_function/test_alloc_methods.py`:
+- [`tests/allocation_equation_validation/validation_function/test_alloc_methods.py`](https://github.com/AESAtoolkit/pyaesa/blob/main/tests/allocation_equation_validation/validation_function/test_alloc_methods.py):
   validation runner for sum rules.
 
 Validation evidence should cover:
@@ -388,9 +388,9 @@ Update documentation in the same change set as code.
 
 | Documentation | When to update |
 | --- | --- |
-| `pyaesa/asocc/ARCHITECTURE_asocc.md` | Method ownership or runtime changes. |
-| `docs/ADDING_METHODS_checklist.md` | Developer process or package method addition path changes. |
-| `docs/api.rst` | Public API signature or user visible behavior changes. |
+| [`pyaesa/asocc/ARCHITECTURE_asocc.md`](https://github.com/AESAtoolkit/pyaesa/blob/main/pyaesa/asocc/ARCHITECTURE_asocc.md) | Method ownership or runtime changes. |
+| [`docs/ADDING_METHODS_checklist.md`](ADDING_METHODS_checklist.md) | Developer process or package method addition path changes. |
+| [`docs/api.rst`](api.rst) | Public API signature or user visible behavior changes. |
 | Tutorials under `tutorials/` | User examples or method availability changes. |
 | External template text files | External input schema or accepted label changes. |
 

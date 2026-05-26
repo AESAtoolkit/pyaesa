@@ -176,6 +176,12 @@ def _monte_carlo_lines(*, manifest: UncertaintyManifest) -> list[str]:
         f"maximum allowed runs {maximum}; convergence {reached}"
     )
     lines = [line]
+    context = manifest.compatibility_context or {}
+    if str(context.get("artifact_contract", "")).endswith("_branch_set"):
+        lines.append(
+            "Convergence scope: independent per branch; each branch scope manifest "
+            "records its own convergence status."
+        )
     reason = convergence.get("reason") if convergence else None
     if reason is not None:
         lines.append(f"Convergence reason: {reason}")

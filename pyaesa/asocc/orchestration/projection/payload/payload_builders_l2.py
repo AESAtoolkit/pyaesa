@@ -75,9 +75,9 @@ def project_fd_payload(
         "runtime_output_source",
         context.output_source,
     )
-    setattr(state, "runtime_group_version", context.group_version)
-    setattr(state, "runtime_group_reg", context.group_reg)
-    setattr(state, "runtime_aggreg_indices", context.aggreg_indices)
+    setattr(state, "runtime_agg_version", context.agg_version)
+    setattr(state, "runtime_agg_reg", context.agg_reg)
+    setattr(state, "runtime_group_indices", context.group_indices)
     setattr(state, "runtime_l1_reg_aggreg", context.l1_reg_aggreg)
     # 1) Regress total final demand by receiving region.
     fd_rf_history = {
@@ -273,9 +273,9 @@ def project_gva_payload(
         "runtime_output_source",
         context.output_source,
     )
-    setattr(state, "runtime_group_version", context.group_version)
-    setattr(state, "runtime_group_reg", context.group_reg)
-    setattr(state, "runtime_aggreg_indices", context.aggreg_indices)
+    setattr(state, "runtime_agg_version", context.agg_version)
+    setattr(state, "runtime_agg_reg", context.agg_reg)
+    setattr(state, "runtime_group_indices", context.group_indices)
     setattr(state, "runtime_l1_reg_aggreg", context.l1_reg_aggreg)
     # 1) Regress total GVA by producer region.
     gva_rp_history = {

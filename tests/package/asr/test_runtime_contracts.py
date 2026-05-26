@@ -27,7 +27,10 @@ from pyaesa.shared.lcia.contracts import bundled_cc_expected_impact_units
 from pyaesa.shared.runtime.metadata.contracts import SCOPE_MANIFEST_FILENAME
 from pyaesa.shared.runtime.manifest_contract import manifest_digest
 from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
-from pyaesa.shared.runtime.scenario.columns import ASOCC_SSP_SCENARIO_COLUMN
+from pyaesa.shared.runtime.scenario.columns import (
+    AR6_CC_SSP_SCENARIO_COLUMN,
+    ASOCC_SSP_SCENARIO_COLUMN,
+)
 
 
 def _base_allocate_args(*, project_name: str) -> dict[str, object]:
@@ -35,9 +38,9 @@ def _base_allocate_args(*, project_name: str) -> dict[str, object]:
         {
             "project_name": project_name,
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": False,
-            "group_version": None,
+            "agg_reg": False,
+            "agg_sec": False,
+            "agg_version": None,
             "fu_code": "L2.a.a",
             "method_plan": "one_step",
             "l1_methods": None,
@@ -52,7 +55,7 @@ def _base_allocate_args(*, project_name: str) -> dict[str, object]:
             "reg_window": None,
             "l2_reuse_years": None,
             "l1_reg_aggreg": "post",
-            "aggreg_indices": False,
+            "group_indices": False,
         }
     )
 
@@ -152,7 +155,7 @@ def _acc_context(
     return build_acc_path_context(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=None,
+        agg_version=None,
         cc_source="gwp100_lcia",
         cc_type=cc_type,
     )
@@ -170,7 +173,7 @@ def _asr_context(
     return shared_paths_mod.build_asr_path_context(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=None,
+        agg_version=None,
         fu_code=fu_code,
         lca_type=lca_type,
         cc_source="gwp100_lcia",
@@ -187,7 +190,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
     assert (
         shared_paths_mod.build_asr_scope_label(
             source_label="oecd_v2025",
-            group_version=None,
+            agg_version=None,
             lca_type="external",
             cc_source="gwp100_lcia",
             cc_type="dynamic_ar6",
@@ -201,7 +204,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
     assert shared_paths_mod.get_asr_route_root(
         proj_base=tmp_path,
         source_label="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         lca_type="external",
         lca_version_name="supplier_v1",
     ) == (tmp_path / "C_asr" / "oecd_v2025" / "external_lca__supplier_v1")
@@ -254,6 +257,63 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
         ),
     ) == (branch_root / "figures_l2_vs_global")
     assert not (branch_root / "figures_l2_vs_global").exists()
+    public_payload = {
+        "years": [2020, 2021],
+        "base_cc_args": {
+            "static": {"exclude_max_cc": False},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP2"]},
+        },
+    }
+    assert scope_guard_mod.branch_identity_payload(
+        public_request_payload=public_payload,
+        cc_type="static",
+    ) == {
+        "base_cc_args": {
+            "static": {},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP2"]},
+        }
+    }
+    assert scope_guard_mod.branch_identity_payload(
+        public_request_payload=public_payload,
+        cc_type="dynamic_ar6",
+    ) == {"base_cc_args": {"static": {"exclude_max_cc": False}, "dynamic_ar6": {}}}
+    assert scope_guard_mod.branch_coverage(
+        cc_type="static",
+        requested_years=[2020],
+        static_cc_bounds=["pb"],
+        category=None,
+        ssp_scenario=None,
+    ) == {"cc_bound": ["pb"], "years": [2020]}
+    assert scope_guard_mod.branch_coverage(
+        cc_type="dynamic_ar6",
+        requested_years=[2020],
+        static_cc_bounds=[],
+        category=["C1"],
+        ssp_scenario=["SSP2"],
+    ) == {
+        "cc_category": ["C1"],
+        AR6_CC_SSP_SCENARIO_COLUMN: ["SSP2"],
+        "years": [2020],
+    }
+    recorded_output = tmp_path / "recorded.csv"
+    recorded_output.write_text("value\n1\n", encoding="utf-8")
+    scope_guard_mod.ensure_recorded_output_files_exist(
+        existing_metadata={"artifacts": {"output_files": [str(recorded_output), ""]}},
+        scope_label="demo_scope",
+        function_name="deterministic_asr",
+    )
+    with pytest.raises(ValueError):
+        scope_guard_mod.ensure_recorded_output_files_exist(
+            existing_metadata={"artifacts": {"output_files": [str(tmp_path / "missing.csv")]}},
+            scope_label="demo_scope",
+            function_name="deterministic_asr",
+        )
+    scope_guard_mod.ensure_same_branch_identity_or_raise(
+        existing_metadata=None,
+        requested_identity={"source": "demo"},
+        scope_label="demo_scope",
+        function_name="deterministic_asr",
+    )
     identity = {"source": "demo"}
     assert (
         scope_guard_mod.branch_reuse_mode_or_raise(
@@ -321,6 +381,10 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
     ) == {"impact": ["GWP_100", "ODP"], "years": [2005, 2006, 2007]}
     assert scope_guard_mod.merged_coverage(
         existing_metadata=None,
+        requested_coverage={"years": [2005]},
+    ) == {"years": [2005]}
+    assert scope_guard_mod.merged_coverage(
+        existing_metadata={},
         requested_coverage={"years": [2005]},
     ) == {"years": [2005]}
     assert scope_guard_mod.coverage_signature_covers(
@@ -394,9 +458,9 @@ def test_lca_row_loading_covers_io_and_external_routes(
     base_allocate_args = _base_allocate_args(project_name="asr_runtime_io")
     paths = resolve_io_lca_paths(
         project_name="asr_runtime_io",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
     results_dir = lca_results_dir_for_source(paths=paths, source="exiobase_396_ixi")
     io_rows = pd.DataFrame(
@@ -526,9 +590,9 @@ def test_lca_row_loading_covers_missing_discovery_and_external_absence(
     mismatch_args = _base_allocate_args(project_name="asr_runtime_mismatch_io")
     mismatch_paths = resolve_io_lca_paths(
         project_name="asr_runtime_mismatch_io",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
     _write_io_lca_results(
         lca_results_dir_for_source(paths=mismatch_paths, source="exiobase_396_ixi")
@@ -576,9 +640,9 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
     base_allocate_args = _base_allocate_args(project_name=project_name)
     paths = resolve_io_lca_paths(
         project_name=project_name,
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
     results_dir = lca_results_dir_for_source(paths=paths, source="exiobase_396_ixi")
     _write_io_lca_results(results_dir / "gwp100_lcia.csv")
@@ -856,11 +920,16 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
     historical_acc = _write_acc_file(
         acc_dir / "UT(FD)__gwp100_lcia__dynamic_ar6.csv",
         year_values={2005: 2.0},
+        extra_columns={
+            AR6_CC_SSP_SCENARIO_COLUMN: "SSP2",
+            ASOCC_SSP_SCENARIO_COLUMN: pd.NA,
+        },
     )
     prospective_acc = _write_acc_file(
         acc_dir / "UT(FD)__gwp100_lcia__dynamic_ar6__SSP2.csv",
         year_values={2030: 4.0},
         extra_columns={
+            AR6_CC_SSP_SCENARIO_COLUMN: "SSP2",
             ASOCC_SSP_SCENARIO_COLUMN: "SSP2",
             "l2_reuse_year": 2024,
         },
@@ -900,9 +969,10 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
     output_by_stem = {path.stem: pd.read_csv(path) for path in result.output_files}
     historical_output = output_by_stem["UT(FD)__gwp100_lcia__dynamic_ar6"]
     prospective_output = output_by_stem["UT(FD)__gwp100_lcia__dynamic_ar6__SSP2"]
-    assert "cumulative_asr" not in historical_output.columns
+    assert historical_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
     assert prospective_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
-    assert bool(prospective_output.loc[0, "cumulative_no_transgression"])
+    assert "cumulative_no_transgression" not in historical_output.columns
+    assert "cumulative_no_transgression" not in prospective_output.columns
     del allocation_dummy_repo
 
 

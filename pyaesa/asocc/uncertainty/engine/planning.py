@@ -39,6 +39,10 @@ from pyaesa.asocc.uncertainty.sources.reference_year import admissible_reference
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 from pyaesa.shared.uncertainty_assessment.request.core import BatchMemoryBlock
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
+from pyaesa.shared.uncertainty_assessment.io.formats import is_csv_compact_output
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
+    sparse_run_row_csv_render_working_bytes_per_row,
+)
 
 
 @dataclass(frozen=True)
@@ -209,20 +213,73 @@ def runtime_batch_size(
         if inter_method_execution_plan is not None
         else lcia_plan
     )
+    row_count = batch_row_count(
+        loaded=source_scope.loaded,
+        inter_method_execution_plan=inter_method_execution_plan,
+        inter_mrio_plan=source_scope.inter_mrio_plan,
+        lcia_plan=lcia_plan,
+        projection_plan=projection_plan,
+        sources=source_scope.sources,
+        external_plan=source_scope.external_plan,
+    )
+    public_row_count = (
+        len(inter_method_execution_plan.row_universe.identity)
+        if inter_method_execution_plan is not None
+        else row_count
+    )
     batch_size = memory_bounded_batch_size(
         runtime=runtime,
-        row_count=batch_row_count(
-            loaded=source_scope.loaded,
-            inter_method_execution_plan=inter_method_execution_plan,
-            inter_mrio_plan=source_scope.inter_mrio_plan,
-            lcia_plan=lcia_plan,
-            projection_plan=projection_plan,
-            sources=source_scope.sources,
-            external_plan=source_scope.external_plan,
+        primary_block=BatchMemoryBlock("asocc_run_values", row_count),
+        extra_blocks=(
+            *_asocc_sampling_memory_blocks(
+                row_count=row_count,
+                sparse_inter_method=inter_method_execution_plan is not None,
+                public_row_count=public_row_count,
+                runtime=runtime,
+            ),
+            *_lcia_memory_blocks(lcia_plan=lcia_memory_plan),
         ),
-        extra_blocks=_lcia_memory_blocks(lcia_plan=lcia_memory_plan),
     )
     return batch_size
+
+
+def _asocc_sampling_memory_blocks(
+    *,
+    row_count: int,
+    sparse_inter_method: bool,
+    public_row_count: int,
+    runtime: UncertaintyRuntimeRequest,
+) -> tuple[BatchMemoryBlock, ...]:
+    if not sparse_inter_method:
+        return (
+            BatchMemoryBlock("asocc_source_values", row_count),
+            BatchMemoryBlock("asocc_summary_values", row_count),
+            BatchMemoryBlock("asocc_writer_values", row_count),
+        )
+    names = (
+        "asocc_branch_run_index",
+        "asocc_branch_public_row_id",
+        "asocc_branch_values",
+        "asocc_concatenated_run_index",
+        "asocc_concatenated_public_row_id",
+        "asocc_concatenated_values",
+        "asocc_writer_run_index",
+        "asocc_writer_public_row_id",
+        "asocc_writer_values",
+    )
+    blocks = [BatchMemoryBlock(name, row_count) for name in names]
+    if is_csv_compact_output(runtime.output_format):
+        blocks.append(
+            BatchMemoryBlock(
+                "asocc_sparse_csv_render_working_bytes",
+                row_count,
+                dtype_bytes=sparse_run_row_csv_render_working_bytes_per_row(
+                    max_run_index=max(0, int(runtime.n_runs) - 1),
+                    max_public_row_id=max(0, int(public_row_count) - 1),
+                ),
+            )
+        )
+    return tuple(blocks)
 
 
 def _lcia_memory_blocks(*, lcia_plan: Any | None) -> tuple[BatchMemoryBlock, ...]:

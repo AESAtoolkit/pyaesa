@@ -79,32 +79,32 @@ def has_multi_selected_indices(filters: dict[str, list[str] | None]) -> bool:
 def validate_selector_labels(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     filters: dict[str, list[str] | None],
 ) -> None:
-    """Fail fast when selector labels are unknown in source/grouping domain.
+    """Fail fast when selector labels are unknown in the source and MRIO classification domain.
 
     Args:
         source: Source key.
-        group_version: Grouping version or ``None``.
-        group_reg: Region grouping flag.
-        group_sec: Sector grouping flag.
+        agg_version: Aggregation version or ``None``.
+        agg_reg: Region aggregation flag.
+        agg_sec: Sector MRIO aggregation and disaggregation flag.
         filters: Selector payload produced by :func:`resolve_selectors`.
     """
     wb_df, ssp_df, _wb_raw, _ssp_raw = _load_source_tables(source=source)
     _validate_region_filter_labels(
         source=source,
-        group_version=group_version,
-        group_reg=group_reg,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
         filters=filters,
         wb_df=wb_df,
         ssp_df=ssp_df,
     )
-    if group_sec or filters.get("s_p"):
+    if agg_sec or filters.get("s_p"):
         _validate_sector_filter_labels(
             source=source,
-            group_version=group_version,
+            agg_version=agg_version,
             filters=filters,
         )

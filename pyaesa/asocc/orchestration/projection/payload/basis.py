@@ -165,7 +165,7 @@ def _load_projection_metric_subset(
     saved_dir = _get_mrio_year_dir(
         source=context.source,
         year=int(year),
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     payload = _load_year_mrio_payloads_required(
         saved_dir=saved_dir,
@@ -214,7 +214,7 @@ def _load_gdp_series_for_history_year(*, context, year: int) -> pd.Series:
         variable=GDP_WB_INDICATOR,
         year=int(year),
         source_key=context.source,
-        group_version=context.group_version_reg,
+        agg_version=context.agg_version_reg,
         ssp_scenario=None,
         region_col_override=None,
     )
@@ -234,8 +234,8 @@ def regression_basis(
     """Build and cache shared regression basis for future year payloads."""
     key = (
         str(context.source),
-        str(context.group_version),
-        str(context.group_version_reg),
+        str(context.agg_version),
+        str(context.agg_version_reg),
         tuple(int(year) for year in historical_years),
         int(fit_end),
         str(context.fu_code),

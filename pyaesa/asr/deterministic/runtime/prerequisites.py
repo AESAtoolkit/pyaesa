@@ -69,10 +69,10 @@ def _io_lca_phase_summary_lines(*, io_report, base_allocate_args: dict[str, Any]
 
 def _format_mrio_scope(*, arguments: dict[str, Any]) -> str:
     parts = [
-        f"group_reg={bool(arguments.get('group_reg'))}",
-        f"group_sec={bool(arguments.get('group_sec'))}",
-        f"group_version={arguments.get('group_version') or 'none'}",
-        f"aggreg_indices={bool(arguments.get('aggreg_indices'))}",
+        f"agg_reg={bool(arguments.get('agg_reg'))}",
+        f"agg_sec={bool(arguments.get('agg_sec'))}",
+        f"agg_version={arguments.get('agg_version') or 'none'}",
+        f"group_indices={bool(arguments.get('group_indices'))}",
     ]
     return ", ".join(parts)
 
@@ -82,17 +82,18 @@ def ensure_asr_branch_prerequisites(
     phase: PhasePrinter,
     project_name: str,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
     years: int | list[int] | range,
     fu_code: str,
     r_p: str | list[str] | None,
     s_p: str | list[str] | None,
     r_c: str | list[str] | None,
     r_f: str | list[str] | None,
-    aggreg_indices: bool,
+    group_indices: bool,
     base_asocc_args: dict[str, Any],
+    shared_lcia_methods: list[str],
     branch: dict[str, Any],
     external_method: dict[str, Any] | None,
     lca_type: str,
@@ -110,16 +111,17 @@ def ensure_asr_branch_prerequisites(
         project_name=project_name,
         years=years,
         lcia_method=[branch["cc_source"]],
+        asocc_lcia_methods=shared_lcia_methods,
         fu_code=fu_code,
         r_p=r_p,
         s_p=s_p,
         r_c=r_c,
         r_f=r_f,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
-        aggreg_indices=aggreg_indices,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
+        group_indices=group_indices,
         base_asocc_args=base_asocc_args,
     )
     proj_base = resolve_allocate_project_base(
@@ -149,9 +151,9 @@ def ensure_asr_branch_prerequisites(
     acc_report = deterministic_acc(
         project_name=project_name,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version="" if group_version is None else group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version="" if agg_version is None else agg_version,
         years=years,
         lcia_method=[branch["cc_source"]],
         fu_code=fu_code,
@@ -159,9 +161,10 @@ def ensure_asr_branch_prerequisites(
         s_p=s_p,
         r_c=r_c,
         r_f=r_f,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         base_asocc_args=base_asocc_args,
         base_cc_args=branch_cc_args,
+        _shared_asocc_lcia_methods=shared_lcia_methods,
         external_method=external_method,
         output_format=output_format,
         figures=figures,
@@ -180,7 +183,7 @@ def ensure_asr_branch_prerequisites(
     acc_path_context = build_acc_path_context(
         proj_base=proj_base,
         source_label=str(base_allocate_args["source"]),
-        group_version=base_allocate_args["group_version"],
+        agg_version=base_allocate_args["agg_version"],
         cc_source=str(branch["cc_source"]),
         cc_type=str(branch["cc_type"]),
     )
@@ -196,12 +199,12 @@ def ensure_asr_branch_prerequisites(
         io_report = deterministic_io_lca(
             project_name=project_name,
             source=base_allocate_args["source"],
-            group_sec=bool(base_allocate_args["group_sec"]),
-            group_reg=bool(base_allocate_args["group_reg"]),
-            group_version=(
+            agg_sec=bool(base_allocate_args["agg_sec"]),
+            agg_reg=bool(base_allocate_args["agg_reg"]),
+            agg_version=(
                 ""
-                if str(base_allocate_args["group_version"] or "").strip() == ""
-                else str(base_allocate_args["group_version"])
+                if str(base_allocate_args["agg_version"] or "").strip() == ""
+                else str(base_allocate_args["agg_version"])
             ),
             years=base_allocate_args["years"],
             lcia_method=[branch["cc_source"]],
@@ -210,7 +213,7 @@ def ensure_asr_branch_prerequisites(
             r_c=r_c,
             r_p=r_p,
             s_p=s_p,
-            aggreg_indices=base_allocate_args["aggreg_indices"],
+            group_indices=base_allocate_args["group_indices"],
             output_format=output_format,
             figures=figures,
             figure_format={
@@ -222,12 +225,12 @@ def ensure_asr_branch_prerequisites(
         )
         io_paths = resolve_io_lca_paths(
             project_name=project_name,
-            group_reg=bool(base_allocate_args["group_reg"]),
-            group_sec=bool(base_allocate_args["group_sec"]),
-            group_version=(
+            agg_reg=bool(base_allocate_args["agg_reg"]),
+            agg_sec=bool(base_allocate_args["agg_sec"]),
+            agg_version=(
                 None
-                if str(base_allocate_args["group_version"] or "").strip() == ""
-                else str(base_allocate_args["group_version"])
+                if str(base_allocate_args["agg_version"] or "").strip() == ""
+                else str(base_allocate_args["agg_version"])
             ),
         )
         io_metadata_path = io_metadata_path_for_source(

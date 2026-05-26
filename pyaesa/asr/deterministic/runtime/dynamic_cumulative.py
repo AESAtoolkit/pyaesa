@@ -16,7 +16,7 @@ from pyaesa.shared.tabular.l2_reuse_years import (
 from .tables import write_asr_output
 
 
-@dataclass(frozen=True)
+@dataclass
 class PendingDynamicAsrOutput:
     """One dynamic ASR output waiting for full-period cumulative metrics."""
 
@@ -68,27 +68,34 @@ def _attach_group_cumulative_metrics(
         (output, canonicalize_l2_reuse_year_column(output.frame, path=output.path))
         for output in outputs
     ]
+    l2_reuse_years = _dynamic_l2_reuse_years(normalized)
+    scenario_values = _dynamic_scenario_values([frame for _output, frame in normalized])
     components = pd.concat(
-        _dynamic_component_rows_for_group(normalized),
+        _dynamic_component_rows_for_group(
+            normalized,
+            l2_reuse_years=l2_reuse_years,
+            scenario_values=scenario_values,
+        ),
         ignore_index=True,
     )
     cumulative = _dynamic_cumulative_metrics(components)
     for output, frame in normalized:
-        _attach_cumulative_to_output(output=output, normalized_frame=frame, cumulative=cumulative)
+        _attach_cumulative_to_output(
+            output=output,
+            normalized_frame=frame,
+            cumulative=cumulative,
+            l2_reuse_years=l2_reuse_years,
+            scenario_values=scenario_values,
+        )
     return components
 
 
 def _dynamic_component_rows_for_group(
     normalized: list[tuple[PendingDynamicAsrOutput, pd.DataFrame]],
+    *,
+    l2_reuse_years: list[int],
+    scenario_values: dict[str, list[str]],
 ) -> list[pd.DataFrame]:
-    l2_reuse_years = sorted(
-        {
-            int(l2_reuse_year)
-            for _output, frame in normalized
-            for l2_reuse_year in frame_l2_reuse_years(frame)
-        }
-    )
-    scenario_values = _dynamic_scenario_values([frame for _output, frame in normalized])
     return [
         _melt_dynamic_components(
             frame=_repeat_invariant_dynamic_rows(
@@ -100,6 +107,19 @@ def _dynamic_component_rows_for_group(
         )
         for output, frame in normalized
     ]
+
+
+def _dynamic_l2_reuse_years(
+    normalized: list[tuple[PendingDynamicAsrOutput, pd.DataFrame]],
+) -> list[int]:
+    """Return L2 reuse years represented by companion dynamic outputs."""
+    return sorted(
+        {
+            int(l2_reuse_year)
+            for _output, frame in normalized
+            for l2_reuse_year in frame_l2_reuse_years(frame)
+        }
+    )
 
 
 def _repeat_invariant_dynamic_rows(
@@ -117,13 +137,40 @@ def _repeat_invariant_dynamic_rows(
             for copy in repeated
         ]
     for column, values in scenario_values.items():
-        if not _frame_has_visible_values(frame, column=column):
-            repeated = [
-                _with_column_value(copy, column=column, value=value)
-                for value in values
-                for copy in repeated
-            ]
+        next_repeated: list[pd.DataFrame] = []
+        for copy in repeated:
+            if _frame_has_visible_values(copy, column=column):
+                next_repeated.append(copy)
+                continue
+            source = _matching_dynamic_scenario_series(copy, values=values)
+            if source is not None:
+                next_repeated.append(_with_column_series(copy, column=column, values=source))
+                continue
+            next_repeated.extend(
+                _with_column_value(copy, column=column, value=value) for value in values
+            )
+        repeated = next_repeated
     return pd.concat(repeated, ignore_index=True) if len(repeated) > 1 else repeated[0]
+
+
+def _matching_dynamic_scenario_series(
+    frame: pd.DataFrame,
+    *,
+    values: list[str],
+) -> pd.Series | None:
+    """Return an existing SSP series that can define one missing SSP axis."""
+    allowed = {str(value).strip() for value in values if str(value).strip()}
+    for column in ("ar6_cc_ssp_scenario", "asocc_ssp_scenario", "lca_ssp_scenario"):
+        if column not in frame.columns:
+            continue
+        series = pd.Series(frame[column], copy=False).astype("string").str.strip()
+        present = series.notna() & series.ne("")
+        if not bool(present.all()):
+            continue
+        unique = {str(value) for value in series.loc[present].tolist()}
+        if unique and unique.issubset(allowed):
+            return series.astype(object)
+    return None
 
 
 def _dynamic_scenario_values(frames: list[pd.DataFrame]) -> dict[str, list[str]]:
@@ -152,6 +199,17 @@ def _frame_has_visible_values(frame: pd.DataFrame, *, column: str) -> bool:
 def _with_column_value(frame: pd.DataFrame, *, column: str, value: object) -> pd.DataFrame:
     out = frame.copy()
     out[column] = value
+    return out
+
+
+def _with_column_series(
+    frame: pd.DataFrame,
+    *,
+    column: str,
+    values: pd.Series,
+) -> pd.DataFrame:
+    out = frame.copy()
+    out[column] = values.to_numpy(dtype=object, copy=True)
     return out
 
 
@@ -189,7 +247,6 @@ def _dynamic_cumulative_metrics(frame: pd.DataFrame) -> pd.DataFrame:
         out=np.full(len(totals), np.nan, dtype=np.float64),
         where=acc_values != 0.0,
     )
-    totals["cumulative_no_transgression"] = totals["cumulative_asr"].le(1.0)
     return totals.drop(columns=["__lca_component", "__acc_component"])
 
 
@@ -202,7 +259,6 @@ def _dynamic_cumulative_identity_columns(frame: pd.DataFrame) -> list[str]:
         "lca_ssp_start_year",
         ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
         "cumulative_asr",
-        "cumulative_no_transgression",
     }
     return [column for column in frame.columns if column not in excluded]
 
@@ -212,20 +268,26 @@ def _attach_cumulative_to_output(
     output: PendingDynamicAsrOutput,
     normalized_frame: pd.DataFrame,
     cumulative: pd.DataFrame,
+    l2_reuse_years: list[int],
+    scenario_values: dict[str, list[str]],
 ) -> None:
     identity_columns = _dynamic_cumulative_identity_columns(cumulative)
-    if any(column not in normalized_frame.columns for column in identity_columns):
+    materialized = _repeat_invariant_dynamic_rows(
+        frame=normalized_frame,
+        l2_reuse_years=l2_reuse_years,
+        scenario_values=scenario_values,
+    )
+    if any(column not in materialized.columns for column in identity_columns):
         return
-    merged = normalized_frame.loc[:, identity_columns].merge(
+    merged = materialized.loc[:, identity_columns].merge(
         cumulative,
         how="left",
         on=identity_columns,
         validate="many_to_one",
     )
     values = pd.Series(merged["cumulative_asr"], copy=False)
+    output.frame = materialized.reset_index(drop=True)
     output.frame["cumulative_asr"] = values.to_numpy(dtype=np.float64)
-    no_transgression = pd.Series(merged["cumulative_no_transgression"], copy=False)
-    output.frame["cumulative_no_transgression"] = no_transgression.where(values.notna())
 
 
 def _public_dynamic_frame(frame: pd.DataFrame) -> pd.DataFrame:
@@ -241,11 +303,7 @@ def _public_dynamic_frame(frame: pd.DataFrame) -> pd.DataFrame:
     ]
     out = frame.drop(columns=helper_columns)
     year_columns = [column for column in out.columns if str(column).isdigit()]
-    cumulative_columns = [
-        column
-        for column in ("cumulative_asr", "cumulative_no_transgression")
-        if column in out.columns
-    ]
+    cumulative_columns = [column for column in ("cumulative_asr",) if column in out.columns]
     leading = [
         column for column in out.columns if column not in {*year_columns, *cumulative_columns}
     ]

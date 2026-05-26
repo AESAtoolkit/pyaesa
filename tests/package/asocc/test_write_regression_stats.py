@@ -17,9 +17,10 @@ def _context(tmp_path: Path) -> SimpleNamespace:
         source=published_source,
         output_source_label=None,
         output_source=published_source,
-        group_version=None,
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version=None,
+        agg_reg=False,
+        group_indices=False,
+        projection_context=SimpleNamespace(reg_window=(2000, 2005)),
     )
 
 
@@ -135,7 +136,7 @@ def test_write_regression_stats_writes_current_rows_only(tmp_path: Path) -> None
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=context.source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     fit_inputs = pd.read_csv(fit_inputs_path)
     assert fit_inputs["fit_year"].tolist() == [2001]
@@ -167,7 +168,7 @@ def test_write_regression_stats_writes_fit_inputs_without_stats(tmp_path: Path) 
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=context.source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     assert fit_inputs_path.exists()
     assert pd.read_csv(fit_inputs_path)["fit_year"].tolist() == [2001]

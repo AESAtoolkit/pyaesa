@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, replace
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
 
 from pyaesa.acc.uncertainty.io.run_outputs import (
     append_acc_run_outputs,
@@ -11,7 +11,6 @@ from pyaesa.acc.uncertainty.io.run_outputs import (
 )
 from pyaesa.acc.uncertainty.runtime.component_inputs import (
     asocc_inventory_report,
-    deterministic_asocc_input,
     dynamic_cc_input as resolve_dynamic_cc_input,
 )
 from pyaesa.acc.uncertainty.runtime.models import (
@@ -20,15 +19,12 @@ from pyaesa.acc.uncertainty.runtime.models import (
     ACCUncertaintyPlan,
     ACCUncertaintyRunPaths,
 )
-from pyaesa.shared.acc_asr_common.scope.composite import base_asocc_kwargs_from_allocate_args
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import RunProgressPrinter
-from pyaesa.shared.uncertainty_assessment.orchestration import (
-    final_component_figures_required,
-    progress_begin,
-    progress_complete,
+from pyaesa.shared.uncertainty_assessment.orchestration import progress_begin, progress_complete
+from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import (
+    ComponentInput,
 )
-from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import ComponentInput
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 
 
@@ -58,14 +54,12 @@ def run_acc_checkpoints(
     initial_dynamic_cc_session: Any | None,
     start_completed_runs: int,
     base_allocate_args: dict[str, Any],
-    external_lcia_methods: list[str],
+    external_lcia_methods: list[str] | None,
     config: dict[str, Any],
     external_method: dict[str, Any] | None,
     output_format: str,
-    dynamic_branches: list[dict[str, Any]],
+    dynamic_branch: dict[str, Any] | None,
     years: int | list[int] | range,
-    render_component_checkpoint_figures: bool,
-    subfigures: bool,
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
     run_id: str | None,
@@ -106,7 +100,7 @@ def run_acc_checkpoints(
                     target_runs=checkpoint,
                     parent_mode=progress_mode,
                     parent_max_runs=progress_max_runs,
-                    figures=render_component_checkpoint_figures,
+                    figures=False,
                     figure_options=figure_options,
                     figure_format=figure_format,
                     run_id=run_id,
@@ -116,14 +110,14 @@ def run_acc_checkpoints(
                 )
                 dynamic_component = _checkpoint_dynamic_cc(
                     dynamic_cc=dynamic_cc,
-                    dynamic_branches=dynamic_branches,
+                    dynamic_branch=dynamic_branch,
                     years=years,
                     config=config,
                     output_format=output_format,
                     target_runs=checkpoint,
                     parent_mode=progress_mode,
                     parent_max_runs=progress_max_runs,
-                    figures=render_component_checkpoint_figures,
+                    figures=False,
                     figure_format=figure_format,
                     progress=dynamic_cc_progress,
                     run_id=run_id,
@@ -164,7 +158,6 @@ def run_acc_checkpoints(
                 completed=state.completed_runs,
                 max_runs=progress_max_runs,
                 mode=progress_mode,
-                persistent=str(progress_mode) == "fixed",
                 component=progress_component,
             )
             if convergence is not None and bool(convergence.get("reached")):
@@ -184,16 +177,11 @@ def run_acc_checkpoints(
             bool(finalize_outputs)
             and state.completed_runs > 0
             and (
-                _live_component_session(asocc_session)
-                or _live_component_session(dynamic_cc_session)
+                (asocc_session is not None and asocc_session.requires_finalization())
+                or (dynamic_cc_session is not None and dynamic_cc_session.requires_finalization())
             )
         )
-        render_final_figures = final_component_figures_required(
-            runtime_mode=runtime.mode,
-            subfigures=subfigures,
-            completed_runs=state.completed_runs,
-        )
-        if finalize_components or render_final_figures:
+        if finalize_components:
             asocc_input, asocc_session = _checkpoint_asocc_input(
                 asocc_input=asocc_input,
                 base_allocate_args=base_allocate_args,
@@ -204,7 +192,7 @@ def run_acc_checkpoints(
                 target_runs=state.completed_runs,
                 parent_mode=progress_mode,
                 parent_max_runs=progress_max_runs,
-                figures=render_final_figures,
+                figures=False,
                 figure_options=figure_options,
                 figure_format=figure_format,
                 run_id=run_id,
@@ -214,14 +202,14 @@ def run_acc_checkpoints(
             )
             dynamic_component = _checkpoint_dynamic_cc(
                 dynamic_cc=dynamic_cc,
-                dynamic_branches=dynamic_branches,
+                dynamic_branch=dynamic_branch,
                 years=years,
                 config=config,
                 output_format=output_format,
                 target_runs=state.completed_runs,
                 parent_mode=progress_mode,
                 parent_max_runs=progress_max_runs,
-                figures=render_final_figures,
+                figures=False,
                 figure_format=figure_format,
                 progress=dynamic_cc_progress,
                 run_id=run_id,
@@ -253,7 +241,7 @@ def run_acc_checkpoints(
 def _checkpoint_dynamic_cc(
     *,
     dynamic_cc: ACCDynamicCCInput | None,
-    dynamic_branches: list[dict[str, Any]],
+    dynamic_branch: dict[str, Any] | None,
     years: int | list[int] | range,
     config: dict[str, Any],
     output_format: str,
@@ -267,10 +255,10 @@ def _checkpoint_dynamic_cc(
     component_session: Any | None,
     finalize_component_inventory: bool,
 ) -> ComponentInput[ACCDynamicCCInput | None]:
-    if not dynamic_branches:
+    if dynamic_branch is None:
         return ComponentInput(input=None, session=None)
     return resolve_dynamic_cc_input(
-        branch=dynamic_branches[0],
+        branch=dynamic_branch,
         years=years,
         config=config,
         output_format=output_format,
@@ -289,21 +277,11 @@ def _checkpoint_dynamic_cc(
     )
 
 
-def _live_component_session(session: Any | None) -> bool:
-    return bool(
-        session is not None
-        and (
-            getattr(session, "output_state", None) is not None
-            or getattr(session, "output_states", None) is not None
-        )
-    )
-
-
 def _checkpoint_asocc_input(
     *,
     asocc_input: ACCAsoccInput,
     base_allocate_args: dict[str, Any],
-    external_lcia_methods: list[str],
+    external_lcia_methods: list[str] | None,
     config: dict[str, Any],
     external_method: dict[str, Any] | None,
     output_format: str,
@@ -319,26 +297,7 @@ def _checkpoint_asocc_input(
     finalize_component_inventory: bool,
 ) -> tuple[ACCAsoccInput, Any | None]:
     if asocc_input.manifest is None:
-        if not figures:
-            return asocc_input, component_session
-        return (
-            cast(
-                ACCAsoccInput,
-                deterministic_asocc_input(
-                    phase=NullPhasePrinter(),
-                    base_asocc_args=base_asocc_kwargs_from_allocate_args(
-                        base_allocate_args=base_allocate_args
-                    ),
-                    external_lcia_methods=external_lcia_methods,
-                    external_method=external_method,
-                    figures=True,
-                    figure_options=figure_options,
-                    figure_format=figure_format,
-                    refresh=False,
-                ),
-            ),
-            component_session,
-        )
+        return asocc_input, component_session
     run = asocc_inventory_report(
         base_allocate_args=base_allocate_args,
         external_lcia_methods=external_lcia_methods,

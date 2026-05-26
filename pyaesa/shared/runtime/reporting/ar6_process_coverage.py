@@ -4,7 +4,7 @@ from collections.abc import Iterable, Mapping
 
 
 def process_ar6_coverage_line(*, variable: object, retained: object) -> str:
-    """Return one process_ar6 retained model scenario count line."""
+    """Return one process_ar6 retained model-scenario count line."""
     return f"  {variable}: {retained} model-scenario pairs"
 
 

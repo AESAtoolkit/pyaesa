@@ -1,4 +1,4 @@
-"""Public allocated shares of carrying capacities (aSoCC) inter method utilities."""
+"""Public allocated shares of carrying capacities (aSoCC) inter-method utilities."""
 
 from typing import Any
 
@@ -24,16 +24,16 @@ def write_asocc_weight_template(
     base_asocc_args: dict[str, Any] = {
         "project_name": None,
         "source": None,
-        "group_reg": False,
-        "group_sec": False,
-        "group_version": "",
+        "agg_reg": False,
+        "agg_sec": False,
+        "agg_version": "",
         "years": None,
         "fu_code": None,
         "s_p": None,
         "r_p": None,
         "r_c": None,
         "r_f": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "method_plan": "default",
         "l1_methods": None,
         "one_step_methods": None,
@@ -50,10 +50,10 @@ def write_asocc_weight_template(
     external_method: dict[str, Any] | None = None,
     figure_format: dict[str, Any] = {"format": "png", "dpi": 500},
 ) -> InterMethodTreeArtifacts:
-    """Write equal weight inter method templates for one method scope.
+    """Write equal weight inter-method templates for one method scope.
 
     The templates define custom weights for allocated shares of carrying
-    capacities (aSoCC) inter method uncertainty. Omit arguments to use their
+    capacities (aSoCC) inter-method uncertainty. Omit arguments to use their
     default.
 
     Args:
@@ -70,19 +70,30 @@ def write_asocc_weight_template(
               ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
               ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
               for ISO3 only mode (L1 EG/PR(GDPcap) only).
-            - ``group_reg``: If ``True``, aggregate regions using a grouping
-              file. Default ``False`` keeps native source regions.
-            - ``group_sec``: If ``True``, aggregate sectors using a grouping
-              file. Default ``False`` keeps native source sectors.
-            - ``group_version``: Grouping version tag used to resolve the
-              region/sector mapping CSVs. Required when ``group_reg`` or
-              ``group_sec`` is True. Defaults to an empty string for ungrouped
-              processing. Follow ``README_grouping.txt`` in the active
-              ``data_raw/mrio/<source>/grouping`` folder to name grouping
-              versions and place the matching mapping CSVs.
+            - ``agg_reg``: If ``True``, reclassify MRIO regions with the
+              ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native regions
+              into one target label, or disaggregate one native region across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source regions.
+            - ``agg_sec``: If ``True``, reclassify MRIO sectors with the
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native sectors
+              into one target label, or disaggregate one native sector across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source sectors.
+            - ``agg_version``: Name token used to resolve the matching
+              ``agg_reg_<agg_version>.csv`` and/or
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+              mapping files in ``data_raw/mrio/<source>/aggregation``.
+              Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+              an empty string for native source classification. Use the same
+              token in downstream calls that should reuse the processed
+              classification. When a mapping file has a ``weight``
+              column, weights must sum to ``1`` for each original label.
             - ``years``: Studied years. Accepts a single year, list, or
               range. If omitted, all available MRIO years for the selected
-              source/group version are used.
+              source and ``agg_version`` are used.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
               ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
@@ -92,7 +103,7 @@ def write_asocc_weight_template(
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing sectors. To
               identify valid sector names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/.../group_sec_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv``
               file. For EXIOBASE sector definitions, see
               ``data_raw/mrio/exiobase_3/sector_classification.xlsx``;
               EXIOBASE ixi and pxp use different sector lists.
@@ -100,30 +111,31 @@ def write_asocc_weight_template(
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_c``: Consuming region filter(s), single string or list. If
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid consuming regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_f``: Final demand region filter(s), single string or list.
               If this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid final demand regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
-            - ``aggreg_indices``: Whether multiple selected region/sector
-              indices are reported as separate rows or summed into one row
-              after the selected MRIO scope is computed.
+            - ``group_indices``: Whether multiple selected region or sector
+              filter values are kept as separate result rows or summed into one
+              result row after the function calculation has been performed.
               - ``False`` (default): keep selected values as independent rows.
-              - ``True``: sum selected values into one row.
-              Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-              aggregating CBA total demand system boundaries can double count.
-              For these functional units, define the aggregation from
-              ``process_mrio(...)`` onward with
-              ``group_reg``/``group_sec``/``group_version``.
+              - ``True``: sum selected values into one result row.
+              The function refuses to run when ``group_indices=True`` is used
+              with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+              rows for CBA total demand boundaries can double count. For these
+              functional units, change the upstream MRIO aggregation and disaggregation
+              scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+              running the study.
             - ``method_plan``: ``method_plan`` defaults to ``"default"`` and
               accepts ``"default"``, ``"one_step"``, ``"two_steps"``,
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
@@ -259,16 +271,16 @@ def preview_asocc_weight_tree(
     base_asocc_args: dict[str, Any] = {
         "project_name": None,
         "source": None,
-        "group_reg": False,
-        "group_sec": False,
-        "group_version": "",
+        "agg_reg": False,
+        "agg_sec": False,
+        "agg_version": "",
         "years": None,
         "fu_code": None,
         "s_p": None,
         "r_p": None,
         "r_c": None,
         "r_f": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "method_plan": "default",
         "l1_methods": None,
         "one_step_methods": None,
@@ -286,7 +298,7 @@ def preview_asocc_weight_tree(
     external_method: dict[str, Any] | None = None,
     figure_format: dict[str, Any] = {"format": "png", "dpi": 500},
 ) -> InterMethodTreeArtifacts:
-    """Validate an edited custom inter method tree and render its preview.
+    """Validate an edited custom inter-method tree and render its preview.
 
     The preview is built for one allocated shares of carrying capacities
     (aSoCC) method scope. Omit arguments to use their default.
@@ -305,19 +317,30 @@ def preview_asocc_weight_tree(
               ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
               ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
               for ISO3 only mode (L1 EG/PR(GDPcap) only).
-            - ``group_reg``: If ``True``, aggregate regions using a grouping
-              file. Default ``False`` keeps native source regions.
-            - ``group_sec``: If ``True``, aggregate sectors using a grouping
-              file. Default ``False`` keeps native source sectors.
-            - ``group_version``: Grouping version tag used to resolve the
-              region/sector mapping CSVs. Required when ``group_reg`` or
-              ``group_sec`` is True. Defaults to an empty string for ungrouped
-              processing. Follow ``README_grouping.txt`` in the active
-              ``data_raw/mrio/<source>/grouping`` folder to name grouping
-              versions and place the matching mapping CSVs.
+            - ``agg_reg``: If ``True``, reclassify MRIO regions with the
+              ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native regions
+              into one target label, or disaggregate one native region across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source regions.
+            - ``agg_sec``: If ``True``, reclassify MRIO sectors with the
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native sectors
+              into one target label, or disaggregate one native sector across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source sectors.
+            - ``agg_version``: Name token used to resolve the matching
+              ``agg_reg_<agg_version>.csv`` and/or
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+              mapping files in ``data_raw/mrio/<source>/aggregation``.
+              Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+              an empty string for native source classification. Use the same
+              token in downstream calls that should reuse the processed
+              classification. When a mapping file has a ``weight``
+              column, weights must sum to ``1`` for each original label.
             - ``years``: Studied years. Accepts a single year, list, or
               range. If omitted, all available MRIO years for the selected
-              source/group version are used.
+              source and ``agg_version`` are used.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
               ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
@@ -327,7 +350,7 @@ def preview_asocc_weight_tree(
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing sectors. To
               identify valid sector names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/.../group_sec_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv``
               file. For EXIOBASE sector definitions, see
               ``data_raw/mrio/exiobase_3/sector_classification.xlsx``;
               EXIOBASE ixi and pxp use different sector lists.
@@ -335,30 +358,31 @@ def preview_asocc_weight_tree(
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_c``: Consuming region filter(s), single string or list. If
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid consuming regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_f``: Final demand region filter(s), single string or list.
               If this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid final demand regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
-            - ``aggreg_indices``: Whether multiple selected region/sector
-              indices are reported as separate rows or summed into one row
-              after the selected MRIO scope is computed.
+            - ``group_indices``: Whether multiple selected region or sector
+              filter values are kept as separate result rows or summed into one
+              result row after the function calculation has been performed.
               - ``False`` (default): keep selected values as independent rows.
-              - ``True``: sum selected values into one row.
-              Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-              aggregating CBA total demand system boundaries can double count.
-              For these functional units, define the aggregation from
-              ``process_mrio(...)`` onward with
-              ``group_reg``/``group_sec``/``group_version``.
+              - ``True``: sum selected values into one result row.
+              The function refuses to run when ``group_indices=True`` is used
+              with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+              rows for CBA total demand boundaries can double count. For these
+              functional units, change the upstream MRIO aggregation and disaggregation
+              scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+              running the study.
             - ``method_plan``: ``method_plan`` defaults to ``"default"`` and
               accepts ``"default"``, ``"one_step"``, ``"two_steps"``,
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa

@@ -11,10 +11,12 @@ from pyaesa.asocc.uncertainty.engine.inter_method.execution import (
     InterMethodExecutionPlan,
 )
 from pyaesa.asocc.uncertainty.engine.inter_method.identity import (
-    concat_sparse_rows,
     public_row_ids_for_branch,
 )
-from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import sample_compact_batch
+from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    compact_batch_inter_mrio_matches,
+    sample_compact_batch,
+)
 from pyaesa.asocc.uncertainty.engine.evaluation.source_unit_intervals import (
     SourceUnitIntervalSamples,
 )
@@ -31,6 +33,7 @@ from pyaesa.asocc.uncertainty.sources.inter_method import (
     sample_inter_method_labels,
 )
 from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioPlan
+from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioInterpolationMatches
 from pyaesa.asocc.uncertainty.sources.lcia import (
     LCIA_SOURCE,
     lcia_shared_u_for_plan,
@@ -44,8 +47,9 @@ from pyaesa.asocc.uncertainty.schema.public_rows import (
     ASOCC_PUBLIC_VALUE_COLUMN,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import RunBatch
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,7 @@ def sample_sparse_inter_method_batch(
     sources: SourceActivationPlan,
     identity: pd.DataFrame | None,
     external_render_offsets: dict[str, int] | None = None,
+    inter_mrio_matches_by_branch: dict[str, InterMrioInterpolationMatches] | None = None,
 ) -> SparseInterMethodBatch:
     """Return selected inter-method rows for Monte Carlo sparse persistence."""
     run_indices = batch.run_indices()
@@ -87,7 +92,19 @@ def sample_sparse_inter_method_batch(
         source_units=None,
     )
     public_lcia_axis = row_universe.public_lcia_axis
-    pieces: list[SparseRunRows] = []
+    public_row_ids_by_branch = {
+        branch.label: public_row_ids_for_branch(row_universe=row_universe, label=branch.label)
+        for branch in execution_plan.branches
+    }
+    row_offsets, sparse_row_count = _sparse_row_offsets(
+        selected=sample_state.selected,
+        row_counts_by_branch={
+            label: len(public_row_ids) for label, public_row_ids in public_row_ids_by_branch.items()
+        },
+    )
+    sparse_run_index = np.empty(sparse_row_count, dtype=np.int64)
+    sparse_public_row_id = np.empty(sparse_row_count, dtype=np.int64)
+    sparse_values = np.empty(sparse_row_count, dtype=np.float64)
     external_counts: dict[str, int] = {}
     offsets = external_render_offsets or {}
     for branch in execution_plan.branches:
@@ -120,23 +137,30 @@ def sample_sparse_inter_method_batch(
             source_units=None,
             external_run_indices_by_label=external_run_indices_by_label,
             lcia_public_axis=public_lcia_axis,
+            inter_mrio_matches=_branch_inter_mrio_matches(
+                branch=branch,
+                matches_by_branch=inter_mrio_matches_by_branch,
+            ),
         )
-        public_row_id = public_row_ids_for_branch(
-            row_universe=row_universe,
-            label=branch.label,
-        )
-        pieces.append(
-            SparseRunRows(
-                run_index=np.repeat(branch_batch.run_indices(), len(public_row_id)),
-                public_row_id=np.tile(public_row_id, branch_batch.n_runs),
-                values=branch_values.reshape(-1),
-                value_column=ASOCC_PUBLIC_VALUE_COLUMN,
-            )
+        _assign_sparse_branch_rows(
+            run_index=sparse_run_index,
+            public_row_id=sparse_public_row_id,
+            values=sparse_values,
+            row_offsets=row_offsets,
+            run_positions=run_positions,
+            branch_run_indices=branch_batch.run_indices(),
+            branch_public_row_id=public_row_ids_by_branch[branch.label],
+            branch_values=branch_values,
         )
     return SparseInterMethodBatch(
         identity=public_identity,
         run_indices=run_indices,
-        sparse_rows=concat_sparse_rows(pieces=pieces),
+        sparse_rows=SparseRunRows(
+            run_index=sparse_run_index,
+            public_row_id=sparse_public_row_id,
+            values=sparse_values,
+            value_column=ASOCC_PUBLIC_VALUE_COLUMN,
+        ),
         external_run_counts=external_counts,
     )
 
@@ -150,6 +174,7 @@ def sample_inter_method_summary_matrix_batch(
     batch,
     sources: SourceActivationPlan,
     source_units: SourceUnitIntervalSamples,
+    inter_mrio_matches_by_branch: dict[str, InterMrioInterpolationMatches] | None = None,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """Return method collapsed inter-method values for Sobol analysis."""
     row_universe = execution_plan.row_universe
@@ -193,6 +218,10 @@ def sample_inter_method_summary_matrix_batch(
                 positions=run_positions,
             ),
             lcia_public_axis=public_lcia_axis,
+            inter_mrio_matches=_branch_inter_mrio_matches(
+                branch=branch,
+                matches_by_branch=inter_mrio_matches_by_branch,
+            ),
         )
         _assign_branch_summary_values(
             output=output,
@@ -203,6 +232,28 @@ def sample_inter_method_summary_matrix_batch(
             branch_values=branch_values,
         )
     return summary_identity, output
+
+
+def inter_method_inter_mrio_matches_by_branch(
+    *,
+    execution_plan: InterMethodExecutionPlan,
+    inter_mrio_plan: InterMrioPlan | None,
+) -> dict[str, InterMrioInterpolationMatches]:
+    """Return reusable inter-MRIO row matches for inter-method branches."""
+    if inter_mrio_plan is None:
+        return {}
+    matches: dict[str, InterMrioInterpolationMatches] = {}
+    for branch in execution_plan.branches:
+        if branch.external_plan.method_labels:
+            continue
+        branch_matches = compact_batch_inter_mrio_matches(
+            loaded=branch.loaded,
+            inter_mrio_plan=inter_mrio_plan,
+            lcia_plan=branch.lcia_plan,
+            projection_plan=branch.projection_plan,
+        )
+        matches[branch.label] = cast(InterMrioInterpolationMatches, branch_matches)
+    return matches
 
 
 def _inter_method_sample_state(
@@ -274,6 +325,16 @@ def _branch_state(
     return branch_batch, projection_selection, lcia_shared_u
 
 
+def _branch_inter_mrio_matches(
+    *,
+    branch: InterMethodBranchExecution,
+    matches_by_branch: dict[str, InterMrioInterpolationMatches] | None,
+) -> InterMrioInterpolationMatches | None:
+    if branch.external_plan.method_labels or matches_by_branch is None:
+        return None
+    return matches_by_branch.get(branch.label)
+
+
 def _assign_branch_summary_values(
     *,
     output: np.ndarray,
@@ -292,6 +353,47 @@ def _assign_branch_summary_values(
             out=np.full(branch_values.shape[0], np.nan, dtype=np.float64),
             where=counts > 0,
         )
+
+
+def _sparse_row_offsets(
+    *,
+    selected: np.ndarray,
+    row_counts_by_branch: dict[str, int],
+) -> tuple[np.ndarray, int]:
+    row_counts = np.fromiter(
+        (row_counts_by_branch[str(label)] for label in selected.tolist()),
+        dtype=np.int64,
+        count=selected.size,
+    )
+    offsets = np.empty_like(row_counts)
+    if row_counts.size == 0:
+        return offsets, 0
+    offsets[0] = 0
+    if row_counts.size > 1:
+        np.cumsum(row_counts[:-1], out=offsets[1:])
+    return offsets, int(offsets[-1] + row_counts[-1])
+
+
+def _assign_sparse_branch_rows(
+    *,
+    run_index: np.ndarray,
+    public_row_id: np.ndarray,
+    values: np.ndarray,
+    row_offsets: np.ndarray,
+    run_positions: np.ndarray,
+    branch_run_indices: np.ndarray,
+    branch_public_row_id: np.ndarray,
+    branch_values: np.ndarray,
+) -> None:
+    row_count = int(branch_public_row_id.size)
+    if row_count == 0 or run_positions.size == 0:
+        return
+    destination = (
+        row_offsets[run_positions, np.newaxis] + np.arange(row_count, dtype=np.int64)
+    ).reshape(-1)
+    run_index[destination] = np.repeat(branch_run_indices, row_count)
+    public_row_id[destination] = np.tile(branch_public_row_id, run_positions.size)
+    values[destination] = branch_values.reshape(-1)
 
 
 def _source_units_for_positions(
@@ -319,7 +421,7 @@ def external_run_offsets_for_start(
     if start_run_index <= 0 or not labels:
         return counts
     label_set = set(labels)
-    chunk_size = 100_000
+    chunk_size = _inter_method_offset_chunk_size()
     for start in range(0, int(start_run_index), chunk_size):
         stop = min(start + chunk_size, int(start_run_index))
         batch = RunBatch(
@@ -334,6 +436,12 @@ def external_run_offsets_for_start(
             if text in label_set:
                 counts[text] += int(count)
     return counts
+
+
+def _inter_method_offset_chunk_size() -> int:
+    row_bytes = np.dtype(object).itemsize * len(("selected_label", "unique_workspace"))
+    row_bytes += np.dtype(np.int64).itemsize * len(("unique_counts",))
+    return memory_bounded_rows(bytes_per_row=row_bytes)
 
 
 def _external_run_indices_for_branch(

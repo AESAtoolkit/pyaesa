@@ -33,7 +33,7 @@ def write_run_figure_paths(
     metadata_path = _get_allocate_run_metadata_path(
         scope.proj_base,
         source=scope.source,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
     )
     payload = _load_run_metadata(metadata_path)
     artifacts = dict(payload["artifacts"])

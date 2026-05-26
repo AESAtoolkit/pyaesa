@@ -43,7 +43,7 @@ def _write_run_metadata(
     metadata_path = _get_allocate_run_metadata_path(
         context.proj_base,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     payload = build_metadata_payload(
         context=context,

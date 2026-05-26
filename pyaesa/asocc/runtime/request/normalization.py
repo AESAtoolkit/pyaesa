@@ -3,8 +3,8 @@
 from typing import Any
 
 from pyaesa.asocc.runtime.paths.family_roots import (
-    effective_group_flags_for_source,
-    effective_group_version_for_source,
+    effective_agg_flags_for_source,
+    effective_agg_version_for_source,
     is_native_asocc_source,
 )
 from pyaesa.asocc.methods.lcia_inputs import normalize_lcia_methods
@@ -74,10 +74,10 @@ def _normalize_optional_years(value: Any, *, name: str) -> list[int] | None:
     return years or None
 
 
-def _normalize_aggreg_indices(
+def _normalize_group_indices(
     value: Any,
     *,
-    name: str = "base_allocate_args.aggreg_indices",
+    name: str = "base_allocate_args.group_indices",
 ) -> bool:
     """Normalize the grouped output selector."""
     if isinstance(value, bool):
@@ -111,43 +111,39 @@ def _normalize_l1_reg_aggreg(
     return normalized
 
 
-def normalize_source_grouping_scope(
+def normalize_source_aggregation_scope(
     *,
     source: Any,
-    group_reg: Any,
-    group_sec: Any,
-    group_version: Any,
+    agg_reg: Any,
+    agg_sec: Any,
+    agg_version: Any,
     source_name: str = "base_allocate_args.source",
-    group_reg_name: str = "base_allocate_args.group_reg",
-    group_sec_name: str = "base_allocate_args.group_sec",
-    group_version_name: str = "base_allocate_args.group_version",
+    agg_reg_name: str = "base_allocate_args.agg_reg",
+    agg_sec_name: str = "base_allocate_args.agg_sec",
+    agg_version_name: str = "base_allocate_args.agg_version",
 ) -> tuple[str, bool, bool, str | None]:
-    """Normalize one published aSoCC source and its grouping controls."""
+    """Normalize one published aSoCC source and its aggregation controls."""
     source_clean = _require_non_empty_string(source, name=source_name)
-    normalized_group_reg = (
-        False if group_reg is None else _require_bool(group_reg, name=group_reg_name)
-    )
-    normalized_group_sec = (
-        False if group_sec is None else _require_bool(group_sec, name=group_sec_name)
-    )
-    normalized_group_version = _normalize_optional_string(group_version)
+    normalized_agg_reg = False if agg_reg is None else _require_bool(agg_reg, name=agg_reg_name)
+    normalized_agg_sec = False if agg_sec is None else _require_bool(agg_sec, name=agg_sec_name)
+    normalized_agg_version = _normalize_optional_string(agg_version)
     if not is_native_asocc_source(source=source_clean) and (
-        normalized_group_version is not None or normalized_group_reg or normalized_group_sec
+        normalized_agg_version is not None or normalized_agg_reg or normalized_agg_sec
     ):
         raise ValueError(
             "Disaggregated published aSoCC sources must be called directly without "
-            "grouping controls (group_reg/group_sec/group_version)."
+            "aggregation controls (agg_reg/agg_sec/agg_version)."
         )
-    published_group_version = effective_group_version_for_source(
+    published_agg_version = effective_agg_version_for_source(
         source=source_clean,
-        group_version=normalized_group_version,
+        agg_version=normalized_agg_version,
     )
-    published_group_reg, published_group_sec = effective_group_flags_for_source(
+    published_agg_reg, published_agg_sec = effective_agg_flags_for_source(
         source=source_clean,
-        group_reg=normalized_group_reg,
-        group_sec=normalized_group_sec,
+        agg_reg=normalized_agg_reg,
+        agg_sec=normalized_agg_sec,
     )
-    return source_clean, published_group_reg, published_group_sec, published_group_version
+    return source_clean, published_agg_reg, published_agg_sec, published_agg_version
 
 
 def normalize_deterministic_scope_args(
@@ -169,9 +165,9 @@ def normalize_deterministic_scope_args(
                 name=f"{payload_name}.fu_code",
             )
         ),
-        "aggreg_indices": _normalize_aggreg_indices(
-            raw.get("aggreg_indices", False),
-            name=f"{payload_name}.aggreg_indices",
+        "group_indices": _normalize_group_indices(
+            raw.get("group_indices", False),
+            name=f"{payload_name}.group_indices",
         ),
         "l1_reg_aggreg": _normalize_l1_reg_aggreg(
             raw.get("l1_reg_aggreg", "post"),
@@ -180,18 +176,18 @@ def normalize_deterministic_scope_args(
     }
     (
         normalized["source"],
-        normalized["group_reg"],
-        normalized["group_sec"],
-        normalized["group_version"],
-    ) = normalize_source_grouping_scope(
+        normalized["agg_reg"],
+        normalized["agg_sec"],
+        normalized["agg_version"],
+    ) = normalize_source_aggregation_scope(
         source=raw.get("source"),
-        group_reg=raw.get("group_reg"),
-        group_sec=raw.get("group_sec"),
-        group_version=raw.get("group_version"),
+        agg_reg=raw.get("agg_reg"),
+        agg_sec=raw.get("agg_sec"),
+        agg_version=raw.get("agg_version"),
         source_name=f"{payload_name}.source",
-        group_reg_name=f"{payload_name}.group_reg",
-        group_sec_name=f"{payload_name}.group_sec",
-        group_version_name=f"{payload_name}.group_version",
+        agg_reg_name=f"{payload_name}.agg_reg",
+        agg_sec_name=f"{payload_name}.agg_sec",
+        agg_version_name=f"{payload_name}.agg_version",
     )
     return normalized
 

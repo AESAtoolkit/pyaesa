@@ -1,21 +1,17 @@
-"""Exact uncertainty summaries from public run artifacts."""
+"""Uncertainty summaries from public run artifacts."""
 
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
-    collapse_sparse_rows_to_overlapping_summary_groups,
-    sparse_public_row_group_membership_index,
-)
 from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_compact_run_matrix_columns,
-    iter_sparse_run_row_windows,
-    iter_sparse_run_rows,
+)
+from pyaesa.shared.uncertainty_assessment.io.sparse_public_summary import (
+    sparse_grouped_summary_scan,
 )
 from pyaesa.shared.uncertainty_assessment.io.summary_kernels import (
-    SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK,
     SUMMARY_STATISTICS,
     assign_summary_columns,
     column_block_width,
@@ -24,7 +20,6 @@ from pyaesa.shared.uncertainty_assessment.io.summary_kernels import (
     public_row_groups_are_identity_ordered,
     summary_scan_max_numeric_cells,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
 
 
 def exact_summary_from_public_runs(
@@ -36,7 +31,7 @@ def exact_summary_from_public_runs(
     public_row_groups: tuple[tuple[str, ...], ...] | None = None,
     sparse: bool = False,
 ) -> pd.DataFrame:
-    """Build exact summary statistics from public compact or sparse run artifacts."""
+    """Build summary statistics from public compact or sparse run artifacts."""
     summary, _frequency = _summary_scan_from_public_runs(
         identity_frame=identity_frame,
         runs_path=runs_path,
@@ -58,7 +53,7 @@ def exact_summary_and_frequency_from_public_runs(
     public_row_groups: tuple[tuple[str, ...], ...] | None = None,
     sparse: bool = False,
 ) -> tuple[pd.DataFrame, np.ndarray]:
-    """Build exact summaries and frequency means from one public artifact scan."""
+    """Build summaries and frequency means from one public artifact scan."""
     summary, frequency = _summary_scan_from_public_runs(
         identity_frame=identity_frame,
         runs_path=runs_path,
@@ -85,7 +80,7 @@ def _summary_scan_from_public_runs(
     if sparse:
         if groups is None:
             groups = tuple((str(index),) for index in range(len(identity_frame)))
-        return _sparse_grouped_summary_scan(
+        summary, frequency = sparse_grouped_summary_scan(
             identity_frame=identity_frame,
             runs_path=runs_path,
             output_format=output_format,
@@ -93,6 +88,7 @@ def _summary_scan_from_public_runs(
             public_row_groups=groups,
             include_frequency=include_frequency,
         )
+        return _summary_frame(pieces=[summary], identity_frame=identity_frame), frequency
     if groups is not None and public_row_groups_are_identity_ordered(public_row_groups=groups):
         groups = None
     if groups is not None:
@@ -194,32 +190,6 @@ def _compact_grouped_summary_scan(
     )
 
 
-def _sparse_grouped_summary_scan(
-    *,
-    identity_frame: pd.DataFrame,
-    runs_path: Path,
-    output_format: str,
-    run_count: int,
-    public_row_groups: tuple[tuple[str, ...], ...],
-    include_frequency: bool,
-) -> tuple[pd.DataFrame, np.ndarray]:
-    values = _read_sparse_group_values(
-        path=runs_path,
-        output_format=output_format,
-        run_count=run_count,
-        public_row_groups=public_row_groups,
-    )
-    frequency = (
-        _frequency_mean(values=values) if include_frequency else np.empty(0, dtype=np.float64)
-    )
-    summary = identity_frame.reset_index(drop=True).copy()
-    assign_summary_columns(summary=summary, values=values)
-    return _summary_frame(pieces=[summary], identity_frame=identity_frame), _frequency_array(
-        means=[frequency],
-        include_frequency=include_frequency,
-    )
-
-
 def _summary_frame(*, pieces: list[pd.DataFrame], identity_frame: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(pieces, ignore_index=True).loc[
         :, [*identity_frame.columns, *SUMMARY_STATISTICS]
@@ -249,48 +219,6 @@ def _read_compact_columns(
     ):
         values[cursor : cursor + len(block), :] = block
         cursor += len(block)
-    return _validated_run_values(values=values, cursor=cursor, run_count=run_count)
-
-
-def _read_sparse_group_values(
-    *,
-    path: Path,
-    output_format: str,
-    run_count: int,
-    public_row_groups: tuple[tuple[str, ...], ...],
-) -> np.ndarray:
-    group_index = sparse_public_row_group_membership_index(public_row_groups=public_row_groups)
-    group_count = len(public_row_groups)
-    batch_size = max(1, SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK // max(1, group_count))
-    empty_rows = SparseRunRows(
-        run_index=np.empty(0, dtype=np.int64),
-        public_row_id=np.empty(0, dtype=np.int64),
-        values=np.empty(0, dtype=np.float64),
-        value_column="value",
-    )
-    pieces: list[np.ndarray] = []
-    windows = iter_sparse_run_row_windows(
-        chunks=iter_sparse_run_rows(path=path, output_format=output_format),
-        start_run_index=0,
-        stop_run_index=run_count,
-        batch_size=batch_size,
-        empty_rows=empty_rows,
-    )
-    for run_indices, rows in windows:
-        pieces.append(
-            collapse_sparse_rows_to_overlapping_summary_groups(
-                sparse_rows=rows,
-                run_indices=run_indices,
-                public_row_groups=public_row_groups,
-                public_row_group_index=group_index,
-            )
-        )
-    return np.vstack(pieces) if pieces else np.empty((0, group_count), dtype=np.float64)
-
-
-def _validated_run_values(*, values: np.ndarray, cursor: int, run_count: int) -> np.ndarray:
-    if int(cursor) != int(run_count):
-        raise ValueError("Public run artifact contains fewer rows than the completed run count.")
     return values
 
 

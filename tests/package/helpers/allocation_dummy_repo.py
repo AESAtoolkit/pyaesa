@@ -20,7 +20,7 @@ from pyaesa.asocc.runtime.paths.published import (
     _get_enacting_metric_dir,
 )
 from pyaesa.asocc.orchestration.setup.run_setup import _prepare_context
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path, _get_metadata_path
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path, _get_metadata_path
 from pyaesa.workspace_initialisation.workspace import clear_default_repo_root, get_default_repo_root
 from pyaesa.shared.lcia.paths import responsibility_periods_csv_path
 
@@ -208,7 +208,7 @@ class AllocationDummyRepo:
         saved_dir = _get_mrio_year_dir(
             source=source,
             year=year,
-            group_version=matrix_version,
+            agg_version=matrix_version,
         )
         level_1 = saved_dir / "enacting_metrics" / "level_1"
         level_2 = saved_dir / "enacting_metrics" / "level_2"
@@ -346,7 +346,7 @@ class AllocationDummyRepo:
         saved_dir = _get_mrio_year_dir(
             source=source,
             year=year,
-            group_version=matrix_version,
+            agg_version=matrix_version,
         )
         impact_values = list(impacts or ["climate_child"])
         level_1 = saved_dir / "enacting_metrics" / "level_1" / lcia_method
@@ -550,25 +550,25 @@ class AllocationDummyRepo:
             ),
         )
 
-    def write_group_map(
+    def write_agg_map(
         self,
         *,
         source: str,
         kind: Literal["reg", "sec"],
-        group_version: str,
+        agg_version: str,
         mapping: dict[str, str],
     ) -> Path:
-        """Write one minimal grouping map CSV and return its path."""
-        path = _get_group_map_path(
+        """Write one minimal aggregation map CSV and return its path."""
+        path = _get_agg_map_path(
             source,
             kind=kind,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         pd.DataFrame(
             [
-                {"original_classification": original, "grouped_mrio": grouped}
-                for original, grouped in mapping.items()
+                {"original_classification": original, "aggregated_mrio": aggregated}
+                for original, aggregated in mapping.items()
             ]
         ).to_csv(path, index=False)
         return path
@@ -585,7 +585,7 @@ class AllocationDummyRepo:
         meta_path = _get_allocate_run_metadata_path(
             context.proj_base,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         meta_path.parent.mkdir(parents=True, exist_ok=True)
         scope_payload = _build_run_metadata(
@@ -617,7 +617,7 @@ class AllocationDummyRepo:
         base = _get_asocc_l2_dir(
             proj_base=proj_base,
             source=source_label,
-            group_version=None,
+            agg_version=None,
             bucket=bucket,
             lcia_sub=None,
         )
@@ -644,7 +644,7 @@ class AllocationDummyRepo:
             _get_asocc_l1_dir(
                 proj_base=proj_base,
                 source=source_label,
-                group_version=None,
+                agg_version=None,
                 lcia_sub=None,
             )
             / f"l1_{method_name}.csv"
@@ -667,7 +667,7 @@ class AllocationDummyRepo:
             _get_enacting_metric_dir(
                 proj_base=proj_base,
                 source=source_label,
-                group_version=None,
+                agg_version=None,
                 level=level,
                 lcia_sub=None,
             )
@@ -698,7 +698,7 @@ class AllocationDummyRepo:
             combined_methods=combined_methods,
             one_step_methods=one_step_methods,
             l1_reg_aggreg=l1_reg_aggreg,
-            aggreg_indices=output_summed,
+            group_indices=output_summed,
             variant_tag=variant_tag,
             output_source_label=output_source_label,
         )
@@ -785,16 +785,16 @@ def build_allocation_dummy_repo(top_path: Path) -> AllocationDummyRepo:
         regions_used=["FR", "US"],
         years=exio_baseline_years,
     )
-    repo.write_group_map(
+    repo.write_agg_map(
         source="oecd_v2025",
         kind="reg",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         mapping={"FR": "EU", "US": "NAM"},
     )
-    repo.write_group_map(
+    repo.write_agg_map(
         source="exiobase_396_ixi",
         kind="reg",
-        group_version="demo_reg",
+        agg_version="demo_reg",
         mapping={"FR": "EU", "US": "NAM"},
     )
     repo.write_mrio_history(source="oecd_v2025", matrix_version=None)

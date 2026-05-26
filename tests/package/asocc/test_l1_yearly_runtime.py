@@ -57,8 +57,8 @@ def _context(*, source: str = "oecd_v2025", logger: Any | None = None, **overrid
     wb_df, ssp_df, wb_df_raw, ssp_df_raw = _load_source_tables(source=source)
     payload: dict[str, Any] = {
         "source": source,
-        "group_version": None,
-        "group_version_reg": None,
+        "agg_version": None,
+        "agg_version_reg": None,
         "wb_df": wb_df,
         "ssp_df": ssp_df,
         "wb_df_raw": wb_df_raw,
@@ -82,7 +82,7 @@ def _context(*, source: str = "oecd_v2025", logger: Any | None = None, **overrid
             "r_u": None,
         },
         "l1_reg_aggreg": "post",
-        "aggreg_indices": False,
+        "group_indices": False,
         "l1_only_no_mrio": False,
         "logger": _RecorderLogger() if logger is None else logger,
     }
@@ -118,35 +118,35 @@ def _run(
     )
 
 
-def test_l1_population_inputs_cover_grouped_original_and_iso3_contracts(
+def test_l1_population_inputs_cover_aggregated_original_and_iso3_contracts(
     allocation_dummy_repo,
 ) -> None:
     del allocation_dummy_repo
-    grouped_context = _context(group_version_reg="demo_reg")
+    aggregated_context = _context(agg_version_reg="demo_reg")
 
     population_hist = _load_population_for_year(
-        context=grouped_context,
+        context=aggregated_context,
         year=2005,
         ssp_scenario="SSP2",
-        group_version_reg="demo_reg",
+        agg_version_reg="demo_reg",
     )
     population_future = _load_population_for_year(
-        context=grouped_context,
+        context=aggregated_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg="demo_reg",
+        agg_version_reg="demo_reg",
     )
     population_future_original = _load_population_for_year(
-        context=grouped_context,
+        context=aggregated_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=None,
+        agg_version_reg=None,
     )
     population_hist_original = _load_population_for_year(
-        context=grouped_context,
+        context=aggregated_context,
         year=2005,
         ssp_scenario="SSP2",
-        group_version_reg=None,
+        agg_version_reg=None,
     )
 
     assert population_hist.to_dict() == {"EU": 10.0, "NAM": 20.0}
@@ -162,13 +162,13 @@ def test_l1_population_inputs_cover_grouped_original_and_iso3_contracts(
         },
     )
     run = _run(
-        context=grouped_context,
+        context=aggregated_context,
         state=state,
         pop_series=population_future,
         pop_series_original=population_future_original,
     )
 
-    grouped_series, grouped_by_year = _resolve_l1_population_inputs(
+    aggregated_series, aggregated_by_year = _resolve_l1_population_inputs(
         run=run,
         use_original_domain=False,
     )
@@ -187,8 +187,8 @@ def test_l1_population_inputs_cover_grouped_original_and_iso3_contracts(
         use_original_domain=True,
     )
 
-    assert grouped_series.to_dict() == {"EU": 35.0, "NAM": 45.0}
-    assert list(grouped_by_year) == [2030]
+    assert aggregated_series.to_dict() == {"EU": 35.0, "NAM": 45.0}
+    assert list(aggregated_by_year) == [2030]
     assert original_series.to_dict() == {"FR": 35.0, "US": 45.0}
     assert sorted(original_by_year) == [2005, 2006, 2030]
     assert reference_population.to_dict() == {"FR": 10.0, "US": 20.0}
@@ -200,13 +200,13 @@ def test_l1_population_inputs_cover_grouped_original_and_iso3_contracts(
         context=iso3_context,
         year=2005,
         ssp_scenario="SSP2",
-        group_version_reg=None,
+        agg_version_reg=None,
     ).to_dict() == {"FRA": 10.0, "USA": 20.0}
     assert _load_population_for_year(
         context=iso3_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=None,
+        agg_version_reg=None,
     ).to_dict() == {"FRA": 35.0, "USA": 45.0}
 
 
@@ -639,7 +639,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
         context=alias_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=alias_context.group_version_reg,
+        agg_version_reg=alias_context.agg_version_reg,
     )
     alias_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: alias_population}},
@@ -668,7 +668,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
         context=l1_only_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=l1_only_context.group_version_reg,
+        agg_version_reg=l1_only_context.agg_version_reg,
     )
     l1_only_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: l1_only_population}},
@@ -696,7 +696,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
         context=skip_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=skip_context.group_version_reg,
+        agg_version_reg=skip_context.agg_version_reg,
     )
     skip_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: skip_population}},
@@ -744,7 +744,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
         context=lcia_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=lcia_context.group_version_reg,
+        agg_version_reg=lcia_context.agg_version_reg,
     )
     lcia_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: lcia_population}},
@@ -790,7 +790,7 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
         context=context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=context.group_version_reg,
+        agg_version_reg=context.agg_version_reg,
     )
     state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: population}},
@@ -845,7 +845,7 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
         context=no_ref_context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=no_ref_context.group_version_reg,
+        agg_version_reg=no_ref_context.agg_version_reg,
     )
     no_ref_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: no_ref_population}},
@@ -894,13 +894,13 @@ def test_l1_ar_lcia_covers_ar_ecap_original_domain_population_reference(
         use_original_l1_post_domain=True,
         r_p=None,
     )
-    grouped_population = _load_population_for_year(
+    aggregated_population = _load_population_for_year(
         context=context,
         year=2030,
         ssp_scenario="SSP2",
-        group_version_reg=context.group_version_reg,
+        agg_version_reg=context.agg_version_reg,
     )
-    original_population = grouped_population * 2.0
+    original_population = aggregated_population * 2.0
     state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: original_population}},
         l1_results_by_ssp_scenario={"SSP2": {}},
@@ -909,7 +909,7 @@ def test_l1_ar_lcia_covers_ar_ecap_original_domain_population_reference(
     run = _run(
         context=context,
         state=state,
-        pop_series=grouped_population,
+        pop_series=aggregated_population,
         pop_series_original=original_population,
     )
     lcia_inputs = _iter_lcia_method_inputs(

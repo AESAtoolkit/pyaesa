@@ -27,13 +27,13 @@ from pyaesa.asocc.orchestration.yearly.enacting_metric import (
 from pyaesa.asocc.orchestration.yearly.enacting_metric import (
     enacting_metric_lcia_shaping as shaping_mod,
 )
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path
 
 
 def _context(**overrides: Any) -> Any:
     payload = {
         "source": "oecd_v2025",
-        "group_version_reg": None,
+        "agg_version_reg": None,
         "fu_code": "L2.a.a",
         "filters": {
             "r_p": ["FR"],
@@ -276,18 +276,18 @@ def test_enacting_metric_lcia_selection_and_routing_cover_selection_branches() -
     )
 
 
-def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
+def test_enacting_metric_lcia_shaping_and_common_cover_aggregation_and_filtering(
     project_repo: Path,
 ) -> None:
     del project_repo
-    group_map_path = _get_group_map_path("oecd_v2025", kind="reg", group_version="demo")
-    group_map_path.parent.mkdir(parents=True, exist_ok=True)
+    agg_map_path = _get_agg_map_path("oecd_v2025", kind="reg", agg_version="demo")
+    agg_map_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
             "original_classification": ["FR", "DE"],
-            "grouped_mrio": ["EU", "EU"],
+            "aggregated_mrio": ["EU", "EU"],
         }
-    ).to_csv(group_map_path, index=False)
+    ).to_csv(agg_map_path, index=False)
 
     lcia_frame = _impact_frame(axis="r_f")
     population = pd.Series([2.0, 4.0], index=pd.Index(["FR", "DE"]))
@@ -312,9 +312,9 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
         region_label="r_f",
         use_original_domain=True,
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     )
-    assert per_cap.index.names == ["impact", "r_f", "grouped_mrio_code"]
+    assert per_cap.index.names == ["impact", "r_f", "aggregated_mrio_code"]
     assert float(per_cap.loc[("AAL", "FR", "EU")]) == pytest.approx(5.0)
     assert pd.isna(per_cap.loc[("AAL", "DE", "EU")])
 
@@ -326,9 +326,9 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
         ),
         use_original_domain=True,
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     )
-    assert cumulative_series.index.names == ["impact", "r_f", "grouped_mrio_code"]
+    assert cumulative_series.index.names == ["impact", "r_f", "aggregated_mrio_code"]
     assert float(cumulative_series.loc[("AAL", "DE", "EU")]) == pytest.approx(2.0)
 
     multiindex_series = pd.Series(
@@ -338,23 +338,23 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
             names=["impact", "r_f"],
         ),
     )
-    assert common_mod._append_grouped_mrio_code_level(  # noqa: SLF001
+    assert common_mod._append_aggregated_mrio_code_level(  # noqa: SLF001
         series=multiindex_series,
         region_label="r_f",
         source_key="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     ).equals(multiindex_series)
-    assert common_mod._append_grouped_mrio_code_level(  # noqa: SLF001
+    assert common_mod._append_aggregated_mrio_code_level(  # noqa: SLF001
         series=pd.Series([1.0], index=pd.Index(["FR"], name="r_f")),
         region_label="r_f",
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     ).equals(pd.Series([1.0], index=pd.Index(["FR"], name="r_f")))
-    assert common_mod._append_grouped_mrio_code_level(  # noqa: SLF001
+    assert common_mod._append_aggregated_mrio_code_level(  # noqa: SLF001
         series=multiindex_series,
         region_label="r_p",
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     ).equals(multiindex_series)
 
     missing_series = pd.Series(
@@ -362,27 +362,27 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
         index=pd.MultiIndex.from_tuples([("AAL", "US")], names=["impact", "r_f"]),
     )
     with pytest.raises(ValueError):
-        common_mod._append_grouped_mrio_code_level(  # noqa: SLF001
+        common_mod._append_aggregated_mrio_code_level(  # noqa: SLF001
             series=missing_series,
             region_label="r_f",
             source_key="oecd_v2025",
-            group_version="demo",
+            agg_version="demo",
         )
 
     slice_context = _context(
         filters={"r_p": ["EU"], "s_p": None, "r_c": None, "r_f": None, "r_u": None}
     )
-    grouped_series = common_mod._append_grouped_mrio_code_level(  # noqa: SLF001
+    aggregated_series = common_mod._append_aggregated_mrio_code_level(  # noqa: SLF001
         series=multiindex_series,
         region_label="r_f",
         source_key="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     )
     sliced = common_mod._slice_enacting_metric_series_for_run(  # noqa: SLF001
         context=slice_context,
-        series=grouped_series,
+        series=aggregated_series,
     )
-    assert sliced.index.get_level_values("grouped_mrio_code").tolist() == ["EU", "EU"]
+    assert sliced.index.get_level_values("aggregated_mrio_code").tolist() == ["EU", "EU"]
     mrio_filtered = common_mod._slice_enacting_metric_series_for_run(  # noqa: SLF001
         context=_context(
             filters={"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None, "r_u": None}
@@ -396,7 +396,7 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
         ),
     )
     assert mrio_filtered.index.get_level_values("mrio_code").tolist() == ["FR"]
-    ungrouped_multiindex = common_mod._slice_enacting_metric_series_for_run(  # noqa: SLF001
+    unaggregated_multiindex = common_mod._slice_enacting_metric_series_for_run(  # noqa: SLF001
         context=_context(filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None, "r_u": None}),
         series=pd.Series(
             [1.0, 2.0],
@@ -406,7 +406,7 @@ def test_enacting_metric_lcia_shaping_and_common_cover_grouping_and_filtering(
             ),
         ),
     )
-    assert list(ungrouped_multiindex.index) == [("FR", "A"), ("DE", "B")]
+    assert list(unaggregated_multiindex.index) == [("FR", "A"), ("DE", "B")]
 
     single_index_context = _context(
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": ["FR"], "r_u": None}
@@ -920,31 +920,31 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
     )
 
 
-def test_pr_and_lcia_percap_recorders_cover_direct_and_grouped_routes() -> None:
-    grouped_context = _context(
+def test_pr_and_lcia_percap_recorders_cover_direct_and_aggregated_routes() -> None:
+    aggregated_context = _context(
         wb_df=pd.DataFrame(columns=["2005"]),
-        group_version_reg="demo",
+        agg_version_reg="demo",
         l1_only_no_mrio=False,
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None, "r_u": None},
     )
-    grouped_state = RunState()
+    aggregated_state = RunState()
     pr_mod.record_pr_enacting_metrics(
-        context=grouped_context,
-        state=grouped_state,
+        context=aggregated_context,
+        state=aggregated_state,
         year=2030,
         ssp_scenario="SSP2",
-        reg_group_map={"FR": "EU", "US": "NAM"},
+        reg_agg_map={"FR": "EU", "US": "NAM"},
         pop_iso=pd.Series([2.0, 0.0], index=pd.Index(["FRA", "USA"], name="iso3")),
         gdp_iso=pd.Series([20.0, 40.0], index=pd.Index(["FRA", "USA"], name="iso3")),
         iso_to_mrio=pd.Series(["FR", "US"], index=pd.Index(["FRA", "USA"], name="iso3")),
     )
-    grouped_key = EnactingMetricKey(metric="gdp_capita", ssp_scenario="SSP2")
-    assert grouped_state.enacting_metric_inputs[grouped_key][2030].index.names == [
+    aggregated_key = EnactingMetricKey(metric="gdp_capita", ssp_scenario="SSP2")
+    assert aggregated_state.enacting_metric_inputs[aggregated_key][2030].index.names == [
         "iso3_code",
         "mrio_code",
-        "grouped_mrio_code",
+        "aggregated_mrio_code",
     ]
-    assert pd.isna(grouped_state.enacting_metric_inputs[grouped_key][2030].iloc[1])
+    assert pd.isna(aggregated_state.enacting_metric_inputs[aggregated_key][2030].iloc[1])
 
     l1_only_state = RunState()
     pr_mod.record_pr_enacting_metrics(
@@ -952,7 +952,7 @@ def test_pr_and_lcia_percap_recorders_cover_direct_and_grouped_routes() -> None:
         state=l1_only_state,
         year=2005,
         ssp_scenario="SSP2",
-        reg_group_map={},
+        reg_agg_map={},
         pop_iso=pd.Series([2.0], index=pd.Index(["FRA"], name="iso3")),
         gdp_iso=pd.Series([20.0], index=pd.Index(["FRA"], name="iso3")),
         iso_to_mrio=pd.Series(["FR"], index=pd.Index(["FRA"], name="iso3")),
@@ -964,22 +964,22 @@ def test_pr_and_lcia_percap_recorders_cover_direct_and_grouped_routes() -> None:
     assert pr_mod._build_pr_index(  # noqa: SLF001
         pop_index=pd.Index(["FRA"], name="iso3"),
         iso_to_mrio=pd.Series(["FR"], index=pd.Index(["FRA"], name="iso3")),
-        reg_group_map={},
-        include_grouped_col=False,
+        reg_agg_map={},
+        include_aggregated_col=False,
     ).names == ["iso3_code", "mrio_code"]
     with pytest.raises(ValueError):
         pr_mod._build_pr_index(  # noqa: SLF001
             pop_index=pd.Index(["FRA", "USA"], name="iso3"),
             iso_to_mrio=pd.Series(["FR"], index=pd.Index(["FRA"], name="iso3")),
-            reg_group_map={},
-            include_grouped_col=False,
+            reg_agg_map={},
+            include_aggregated_col=False,
         )
     with pytest.raises(ValueError):
         pr_mod._build_pr_index(  # noqa: SLF001
             pop_index=pd.Index(["FRA"], name="iso3"),
             iso_to_mrio=pd.Series(["FR"], index=pd.Index(["FRA"], name="iso3")),
-            reg_group_map={"US": "NAM"},
-            include_grouped_col=True,
+            reg_agg_map={"US": "NAM"},
+            include_aggregated_col=True,
         )
 
     direct_state = RunState()

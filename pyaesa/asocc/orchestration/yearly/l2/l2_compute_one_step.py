@@ -69,7 +69,7 @@ def _compute_one_step_methods(run: _L2RunContext) -> None:
                             lcia_method_name=lcia_key,
                             ssp_scenario=routed_ssp_scenario,
                             scenario_dependent=scenario_dependent,
-                            grouped_mode=bool(run.context.aggreg_indices),
+                            grouped_mode=bool(run.context.group_indices),
                             projection_subfolder=l2_projection_subfolder(
                                 context=run.context,
                                 year=run.year,
@@ -129,7 +129,7 @@ def _compute_one_step_methods(run: _L2RunContext) -> None:
                             lcia_method_name=lcia_key,
                             ssp_scenario=routed_ssp_scenario,
                             scenario_dependent=scenario_dependent,
-                            grouped_mode=bool(run.context.aggreg_indices),
+                            grouped_mode=bool(run.context.group_indices),
                             projection_subfolder=l2_projection_subfolder(
                                 context=run.context,
                                 year=run.year,
@@ -193,7 +193,7 @@ def _compute_one_step_methods(run: _L2RunContext) -> None:
                         lcia_method_name=lcia_key,
                         ssp_scenario=routed_ssp_scenario,
                         scenario_dependent=scenario_dependent,
-                        grouped_mode=bool(run.context.aggreg_indices),
+                        grouped_mode=bool(run.context.group_indices),
                         projection_subfolder=l2_projection_subfolder(
                             context=run.context,
                             year=run.year,

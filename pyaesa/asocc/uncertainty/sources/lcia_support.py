@@ -16,6 +16,7 @@ from pyaesa.asocc.uncertainty.inputs.deterministic_rows import (
     read_deterministic_asocc_rows,
     table_paths_under_deterministic_root,
 )
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 from pyaesa.shared.runtime.scenario.columns import ASOCC_SSP_SCENARIO_COLUMN
 
 _METHOD_IDENTITY_COLUMNS = {"l1_l2_method", "l1_method", "l2_method"}
@@ -29,7 +30,6 @@ _NON_SUPPORT_IDENTITY_COLUMNS = {
     *_METHOD_IDENTITY_COLUMNS,
 }
 _LCIA_WEIGHT_IDENTITY_COLUMNS = ("lcia_method", "impact", "reference_year")
-_SUPPORT_TERM_CHUNK_SIZE = 2_000_000
 
 
 @dataclass(frozen=True)
@@ -234,8 +234,9 @@ def _matched_l1_terms(
     final_parts: list[np.ndarray] = []
     l1_parts: list[np.ndarray] = []
     l2_parts: list[np.ndarray] = []
-    for start in range(0, len(l2_matches.query_positions), _SUPPORT_TERM_CHUNK_SIZE):
-        stop = min(start + _SUPPORT_TERM_CHUNK_SIZE, len(l2_matches.query_positions))
+    chunk_size = _support_term_chunk_size()
+    for start in range(0, len(l2_matches.query_positions), chunk_size):
+        stop = min(start + chunk_size, len(l2_matches.query_positions))
         term_final = l2_matches.query_positions[start:stop]
         term_l2 = l2_matches.support_positions[start:stop]
         local_positions = np.arange(len(term_final), dtype=np.int64)
@@ -270,6 +271,25 @@ def _matched_l1_terms(
         np.concatenate(l1_parts).astype(np.int64, copy=False),
         np.concatenate(l2_parts).astype(np.int64, copy=False),
     )
+
+
+def _support_term_chunk_size() -> int:
+    int_bytes = np.dtype(np.int64).itemsize * len(
+        (
+            "term_final",
+            "term_l2",
+            "local_positions",
+            "scenario_offsets",
+            "invariant_query_positions",
+            "invariant_support_positions",
+            "scenario_query_positions",
+            "scenario_support_positions",
+            "matched_final_positions",
+            "matched_l1_positions",
+            "matched_l2_positions",
+        )
+    )
+    return memory_bounded_rows(bytes_per_row=int_bytes)
 
 
 def _support_position_matches(

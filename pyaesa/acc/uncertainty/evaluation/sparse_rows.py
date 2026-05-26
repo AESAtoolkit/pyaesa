@@ -6,7 +6,7 @@ from typing import cast
 import numpy as np
 
 from pyaesa.acc.uncertainty.runtime.models import ACCBranchPlan
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 @dataclass(frozen=True)

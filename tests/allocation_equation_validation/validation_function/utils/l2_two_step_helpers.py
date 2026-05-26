@@ -22,9 +22,9 @@ class L1RegionWeightRequest(NamedTuple):
 
     validation_project_name_root: str
     source: str
-    group_version: str | None
-    group_reg: bool | None
-    aggreg_indices: bool
+    agg_version: str | None
+    agg_reg: bool | None
+    group_indices: bool
     l1_mode: str
     output_format: str
     l1_method: str
@@ -38,9 +38,9 @@ def _cache_key(request: L1RegionWeightRequest) -> tuple[object, ...]:
     return (
         request.validation_project_name_root,
         request.source,
-        request.group_version or "",
-        bool(request.group_reg),
-        bool(request.aggreg_indices),
+        request.agg_version or "",
+        bool(request.agg_reg),
+        bool(request.group_indices),
         request.l1_mode,
         request.output_format,
         request.l1_method,
@@ -98,12 +98,12 @@ def _weights_from_table(
     if axis is None:
         return None
     numeric_values = pd.to_numeric(part[year_col], errors="coerce")
-    grouped = (
+    aggregated = (
         part.assign(_weight_value=numeric_values)
         .groupby(axis, dropna=False)["_weight_value"]
         .sum(min_count=1)
     )
-    weights = pd.Series(grouped, copy=False).astype(float)
+    weights = pd.Series(aggregated, copy=False).astype(float)
     weights.index = weights.index.map(str)
     return weights
 
@@ -120,7 +120,7 @@ def _l1_share_dir(*, request: L1RegionWeightRequest, l1_fu: str):
     path_scope = build_asocc_deterministic_path_scope(
         proj_base=project_root,
         source_label=request.source,
-        group_version=request.group_version,
+        agg_version=request.agg_version,
     )
     return asocc_l1_dir(scope=path_scope, lcia_sub=None)
 

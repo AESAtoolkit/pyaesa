@@ -6,15 +6,15 @@ from pyaesa.shared.selectors.scenarios import DEFAULT_SSP_SCENARIOS
 
 
 DETERMINISTIC_ASOCC_OPTIONAL_DEFAULTS: dict[str, Any] = {
-    "group_reg": False,
-    "group_sec": False,
-    "group_version": "",
+    "agg_reg": False,
+    "agg_sec": False,
+    "agg_version": "",
     "years": None,
     "r_p": None,
     "s_p": None,
     "r_c": None,
     "r_f": None,
-    "aggreg_indices": False,
+    "group_indices": False,
     "method_plan": "default",
     "l1_methods": None,
     "one_step_methods": None,
@@ -50,7 +50,7 @@ DISAGGREGATION_BASE_ALLOCATE_DEFAULTS: dict[str, Any] = {
         "r_p",
         "r_c",
         "r_f",
-        "aggreg_indices",
+        "group_indices",
         "method_plan",
         "l1_methods",
         "one_step_methods",

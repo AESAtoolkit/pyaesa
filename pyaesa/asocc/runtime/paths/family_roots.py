@@ -18,32 +18,32 @@ def is_native_asocc_source(*, source: str) -> bool:
     return not _is_non_native_output_source_label(source=source)
 
 
-def effective_group_version_for_source(*, source: str, group_version: str | None) -> str | None:
-    """Return the published grouping token owned by one aSoCC source label."""
+def effective_agg_version_for_source(*, source: str, agg_version: str | None) -> str | None:
+    """Return the published aggregation token owned by one aSoCC source label."""
     if _is_non_native_output_source_label(source=source):
         return None
-    version_token = str(group_version).strip() if group_version is not None else ""
+    version_token = str(agg_version).strip() if agg_version is not None else ""
     return version_token or None
 
 
-def effective_group_flags_for_source(
+def effective_agg_flags_for_source(
     *,
     source: str,
-    group_reg: bool | None,
-    group_sec: bool | None,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
 ) -> tuple[bool, bool]:
-    """Return the published grouping flags owned by one aSoCC source label."""
+    """Return the published aggregation flags owned by one aSoCC source label."""
     if _is_non_native_output_source_label(source=source):
         return False, False
-    return bool(group_reg), bool(group_sec)
+    return bool(agg_reg), bool(agg_sec)
 
 
-def asocc_source_version_token(*, source: str, group_version: str | None) -> str:
+def asocc_source_version_token(*, source: str, agg_version: str | None) -> str:
     """Return the aSoCC family local source/version token."""
     source_clean = str(source).strip()
-    version_token = effective_group_version_for_source(
+    version_token = effective_agg_version_for_source(
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     if version_token is None:
         return source_clean

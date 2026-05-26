@@ -1,6 +1,6 @@
 """Shared figure label and method identity helpers."""
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from typing import Any
 
 import pandas as pd
@@ -61,8 +61,8 @@ def visible_method_identity(frame: pd.DataFrame) -> str | None:
     return None
 
 
-def method_scope_slices(frame: pd.DataFrame) -> list[tuple[str | None, pd.DataFrame]]:
-    """Return frame slices grouped by allocation method identity only."""
+def method_scope_slices(frame: pd.DataFrame) -> Iterator[tuple[str | None, pd.DataFrame]]:
+    """Yield frame slices grouped by allocation method identity only."""
     method_columns = [
         column for column in ("l1_l2_method", "l2_method", "l1_method") if column in frame
     ]
@@ -71,9 +71,11 @@ def method_scope_slices(frame: pd.DataFrame) -> list[tuple[str | None, pd.DataFr
         columns=method_columns,
     )
     if not scope_columns:
-        return [(None, frame.copy())]
+        yield None, frame.copy()
+        return
     grouped = frame.groupby(scope_columns, dropna=False, sort=True)
-    return [(visible_method_identity(subset), subset.copy()) for _key, subset in grouped]
+    for _key, subset in grouped:
+        yield visible_method_identity(subset), subset.copy()
 
 
 def resolve_figure_display_label(

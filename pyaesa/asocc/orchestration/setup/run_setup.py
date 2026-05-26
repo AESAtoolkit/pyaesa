@@ -22,7 +22,7 @@ from pyaesa.asocc.orchestration.setup.request.selection import (
     _l1_methods_in_scope,
     _prune_lcia_methods_without_lcia_input,
     _resolve_filters,
-    _resolve_grouping,
+    _resolve_aggregation,
     _resolve_selection_bundle,
     _restrict_selection_for_iso3_mode,
     _uses_l1_post_original_domain,
@@ -56,8 +56,8 @@ from ...runtime.paths.deterministic import (
     _get_allocate_summary_log_path,
 )
 from ...runtime.paths.family_roots import (
-    effective_group_flags_for_source,
-    effective_group_version_for_source,
+    effective_agg_flags_for_source,
+    effective_agg_version_for_source,
 )
 from ...runtime.request.scope import AsoccScope
 from ...runtime.selection.normalize import normalize_l1_reg_mode_required
@@ -113,7 +113,7 @@ def _prepare_context(
     request: PrepareContextRequest,
 ) -> tuple[RunContext, RunState, bool]:
     """Prepare allocation context/state and run signature."""
-    # 1) Normalize FU/grouping/method selection from API request.
+    # 1) Normalize FU/aggregation/method selection from API request.
     if request.source is None:
         raise ValueError(
             "source cannot be None. Provide an explicit source "
@@ -131,28 +131,27 @@ def _prepare_context(
     fu_code_norm = normalize_fu_code(request.fu_code)
     _validate_td_grouped_output(
         fu_code=fu_code_norm,
-        aggreg_indices=request.aggreg_indices,
+        group_indices=request.group_indices,
     )
 
-    grouping = _resolve_grouping(
-        group_reg=request.group_reg,
-        group_sec=request.group_sec,
-        group_version=request.group_version,
+    aggregation = _resolve_aggregation(
+        agg_reg=request.agg_reg,
+        agg_sec=request.agg_sec,
+        agg_version=request.agg_version,
     )
-    published_group_version = effective_group_version_for_source(
+    published_agg_version = effective_agg_version_for_source(
         source=output_source,
-        group_version=request.group_version,
+        agg_version=request.agg_version,
     )
-    published_group_reg, published_group_sec = effective_group_flags_for_source(
+    published_agg_reg, published_agg_sec = effective_agg_flags_for_source(
         source=output_source,
-        group_reg=grouping.apply_group_reg,
-        group_sec=grouping.apply_group_sec,
+        agg_reg=aggregation.apply_agg_reg,
+        agg_sec=aggregation.apply_agg_sec,
     )
     if source_is_iso3:
-        if grouping.apply_group_reg or grouping.apply_group_sec or request.group_version:
+        if aggregation.apply_agg_reg or aggregation.apply_agg_sec or request.agg_version:
             raise ValueError(
-                "source='iso3' does not support grouping controls "
-                "(group_reg/group_sec/group_version)."
+                "source='iso3' does not support aggregation controls (agg_reg/agg_sec/agg_version)."
             )
         if request.lcia_method is not None:
             raise ValueError("source='iso3' does not support lcia_method.")
@@ -201,7 +200,7 @@ def _prepare_context(
     )
     use_original_l1_post_domain = _uses_l1_post_original_domain(
         selection=selection,
-        grouping=grouping,
+        aggregation=aggregation,
         l1_reg_aggreg=l1_reg_aggreg_mode,
     )
     wb_df, ssp_df, wb_df_raw, ssp_df_raw = _load_source_tables(
@@ -209,27 +208,27 @@ def _prepare_context(
     )
     _validate_region_filter_labels(
         source=source,
-        group_version=request.group_version,
-        group_reg=grouping.apply_group_reg,
+        agg_version=request.agg_version,
+        agg_reg=aggregation.apply_agg_reg,
         filters=filters,
         wb_df=wb_df,
         ssp_df=ssp_df,
     )
     _validate_sector_filter_labels(
         source=source,
-        group_version=request.group_version,
+        agg_version=request.agg_version,
         filters=filters,
     )
     proj_base = outputs_project_root(project_name=request.project_name)
     scope_root = _get_allocate_refresh_scope_root(
         proj_base=proj_base,
         source=output_source,
-        group_version=published_group_version,
+        agg_version=published_agg_version,
     )
     log_path = _get_allocate_summary_log_path(
         proj_base,
         source=output_source,
-        group_version=published_group_version,
+        agg_version=published_agg_version,
     )
     if request.refresh:
         close_loggers_for_scope(scope_root)
@@ -239,19 +238,19 @@ def _prepare_context(
         scope_root = _get_allocate_refresh_scope_root(
             proj_base=proj_base,
             source=output_source,
-            group_version=published_group_version,
+            agg_version=published_agg_version,
         )
         log_path = _get_allocate_summary_log_path(
             proj_base,
             source=output_source,
-            group_version=published_group_version,
+            agg_version=published_agg_version,
         )
     # 3) Resolve years/history/reference year against available MRIO metadata.
     year_plan = _resolve_year_plan(
         request=request,
         source=source,
         source_is_iso3=source_is_iso3,
-        grouping=grouping,
+        aggregation=aggregation,
         selection=selection,
         lcia_methods=lcia_methods,
         fu_code_norm=fu_code_norm,
@@ -270,15 +269,15 @@ def _prepare_context(
     scope = AsoccScope(
         base_allocate_args={
             "source": output_source,
-            "group_version": published_group_version,
-            "group_reg": published_group_reg,
-            "group_sec": published_group_sec,
+            "agg_version": published_agg_version,
+            "agg_reg": published_agg_reg,
+            "agg_sec": published_agg_sec,
             "fu_code": fu_code_norm,
             "lcia_method": lcia_methods,
             "ssp_scenario": request.ssp_scenario,
             "reference_years": request.reference_years,
             "l1_reg_aggreg": l1_reg_aggreg_mode,
-            "aggreg_indices": request.aggreg_indices,
+            "group_indices": request.group_indices,
             "projection_mode": projection_context.mode,
             "reg_window": projection_context.reg_window,
             "l2_reuse_years": list(projection_context.l2_reuse_years)
@@ -375,7 +374,7 @@ def _prepare_context(
         request=request,
         source=source,
         source_is_iso3=source_is_iso3,
-        grouping=grouping,
+        aggregation=aggregation,
         selection=selection,
         lcia_methods=lcia_methods,
         fu_code_norm=fu_code_norm,
@@ -400,8 +399,8 @@ def _prepare_context(
         project_name=request.project_name,
         source=source,
         fu_code=fu_code_norm,
-        group_version=request.group_version,
-        grouping=grouping,
+        agg_version=request.agg_version,
+        aggregation=aggregation,
         lcia_method=lcia_methods,
         years=request.years,
         reference_years=request.reference_years,
@@ -423,7 +422,7 @@ def _prepare_context(
         l1_reg_aggreg=l1_reg_aggreg_mode,
         use_original_l1_post_domain=use_original_l1_post_domain,
         variant_tag=request.variant_tag,
-        aggreg_indices=request.aggreg_indices,
+        group_indices=request.group_indices,
         output_format=request.output_format,
         intermediate_outputs=request.intermediate_outputs,
         output_source_label=request.output_source_label,
@@ -465,7 +464,7 @@ def _prepare_context(
             lcia_units_by_method,
         ) = load_enacting_metric_units_from_metadata(
             source=source,
-            matrix_version=request.group_version,
+            matrix_version=request.agg_version,
             years=year_bundle.historical_years,
         )
         for lcia_method_name in lcia_methods or []:

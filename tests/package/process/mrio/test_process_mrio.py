@@ -9,7 +9,7 @@ import pytest
 from pyaesa.process.mrios.process_mrio import process_mrio
 from pyaesa.process.mrios.utils.io.metadata import _read_metadata
 from pyaesa.process.mrios.utils.io.paths import (
-    _get_group_map_path,
+    _get_agg_map_path,
     _get_mrio_raw_corrected_values_log_path,
     _get_year_saved_dir,
 )
@@ -54,9 +54,9 @@ def test_process_mrio_wrapper_validates_inputs_and_small_contracts(project_repo:
     with pytest.raises(ValueError):
         process_mrio("oecd_v2025", lcia_method="pb_lcia")
     with pytest.raises(ValueError):
-        process_mrio("oecd_v2025", group_reg=True)
+        process_mrio("oecd_v2025", agg_reg=True)
     with pytest.raises(ValueError):
-        process_mrio("oecd_v2025", group_version="demo")
+        process_mrio("oecd_v2025", agg_version="demo")
     missing_archive_report = process_mrio("oecd_v2025")
     assert missing_archive_report is not None
     assert missing_archive_report.processed == []
@@ -266,38 +266,38 @@ def test_run_process_mrio_records_raw_corrected_values_summary(project_repo: Pat
     assert empty_payload is None
 
 
-def test_run_process_mrio_covers_refresh_grouping_and_recoverable_errors(
+def test_run_process_mrio_covers_refresh_aggregation_and_recoverable_errors(
     project_repo: Path,
 ) -> None:
     full_dir = write_oecd_raw_csv_files(project_repo, years=[2019])
     (full_dir / "ICIO2025_2020.csv").write_text("bad", encoding="utf-8")
-    reg_path = _get_group_map_path("oecd_v2025", kind="reg", group_version="demo")
-    sec_path = _get_group_map_path("oecd_v2025", kind="sec", group_version="demo")
+    reg_path = _get_agg_map_path("oecd_v2025", kind="reg", agg_version="demo")
+    sec_path = _get_agg_map_path("oecd_v2025", kind="sec", agg_version="demo")
     reg_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
             "original_classification": ["R1", "R2"],
-            "grouped_mrio": ["EU", "ROW"],
+            "aggregated_mrio": ["EU", "ROW"],
         }
     ).to_csv(reg_path, index=False)
     pd.DataFrame(
         {
             "original_classification": ["S1", "S2"],
-            "grouped_mrio": ["Energy", "Other"],
+            "aggregated_mrio": ["Energy", "Other"],
         }
     ).to_csv(sec_path, index=False)
 
-    grouped_report = run_process_mrio(
+    aggregated_report = run_process_mrio(
         source="oecd_v2025",
         years=[2019, 2020],
         refresh=True,
-        group_reg=True,
-        group_sec=True,
-        group_version="demo",
+        agg_reg=True,
+        agg_sec=True,
+        agg_version="demo",
     )
-    assert grouped_report is not None
-    assert grouped_report.processed == [2019]
-    assert 2020 in grouped_report.errors
+    assert aggregated_report is not None
+    assert aggregated_report.processed == [2019]
+    assert 2020 in aggregated_report.errors
 
     stale_saved_dir = _get_year_saved_dir("oecd_v2025", 2019, matrix_version="demo")
     stale_marker = stale_saved_dir / "stale.txt"
@@ -306,9 +306,9 @@ def test_run_process_mrio_covers_refresh_grouping_and_recoverable_errors(
         source="oecd_v2025",
         years=[2019],
         refresh=True,
-        group_reg=True,
-        group_sec=True,
-        group_version="demo",
+        agg_reg=True,
+        agg_sec=True,
+        agg_version="demo",
     )
     assert not stale_marker.exists()
 

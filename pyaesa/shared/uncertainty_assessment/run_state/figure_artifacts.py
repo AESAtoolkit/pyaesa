@@ -15,6 +15,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
 
 _FIGURE_REQUEST_KEY = "figure_request"
 _FIGURE_PATHS_KEY = "figure_paths"
+_FIGURE_WARNING_SOURCE = "figures"
 
 
 def clear_manifest_figure_paths(*, manifest_path: Path) -> None:
@@ -30,6 +31,7 @@ def write_manifest_figure_paths(
     figure_paths: list[Path],
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
+    warning_messages: tuple[str, ...] = (),
 ) -> None:
     """Persist figure paths and request signature in one uncertainty scope manifest."""
     payload = read_json_dict(manifest_path)
@@ -41,6 +43,10 @@ def write_manifest_figure_paths(
         figure_format=figure_format,
     )
     payload["artifacts"] = artifacts
+    payload["provenance"]["lineage"] = _lineage_with_figure_warnings(
+        lineage=manifest.lineage,
+        warning_messages=warning_messages,
+    )
     write_json_dict(manifest_path, payload)
 
 
@@ -50,6 +56,7 @@ def manifest_with_figure_artifacts(
     figure_paths: list[Path],
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
+    warning_messages: tuple[str, ...] = (),
 ) -> UncertaintyManifest:
     """Return ``manifest`` with current figure paths and request signature."""
     return replace(
@@ -59,6 +66,10 @@ def manifest_with_figure_artifacts(
             figure_paths=figure_paths,
             figure_options=figure_options,
             figure_format=figure_format,
+        ),
+        lineage=_lineage_with_figure_warnings(
+            lineage=manifest.lineage,
+            warning_messages=warning_messages,
         ),
     )
 
@@ -121,3 +132,30 @@ def _figure_request_payload(
         "signature": manifest_digest(normalized),
         "payload": manifest_json_value(normalized),
     }
+
+
+def _lineage_with_figure_warnings(
+    *,
+    lineage: dict[str, Any] | None,
+    warning_messages: tuple[str, ...],
+) -> dict[str, Any] | None:
+    base = {} if lineage is None else dict(lineage)
+    records = [
+        record
+        for record in base.get("summary_records") or ()
+        if not (isinstance(record, dict) and record.get("source") == _FIGURE_WARNING_SOURCE)
+    ]
+    records.extend(
+        {
+            "severity": "WARNING",
+            "source": _FIGURE_WARNING_SOURCE,
+            "message": message,
+        }
+        for message in dict.fromkeys(str(message).strip() for message in warning_messages)
+        if message
+    )
+    if records:
+        base["summary_records"] = records
+    else:
+        base.pop("summary_records", None)
+    return manifest_json_value(base) if base else None

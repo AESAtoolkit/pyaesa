@@ -56,7 +56,7 @@ def prepare_static_asr_pb_lcia_repo(
     years: list[int] | None = None,
     impacts: list[str] | None = None,
 ) -> None:
-    """Stage full PB LCIA IO-LCA support with units matching static CC inputs."""
+    """Stage full PB-LCIA IO-LCA support with units matching static CC inputs."""
     cc_path = static_cc_csv_path(lcia_method="pb_lcia")
     cc_frame = pd.read_csv(cc_path)
     if impacts is not None:

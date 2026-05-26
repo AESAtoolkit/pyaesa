@@ -109,8 +109,17 @@ class ProcessReportAR6:
 
     def _format_categories(self) -> str:
         categories = [str(value).strip() for value in self.categories if str(value).strip()]
-        if categories == ["C1", "C2", "C3", "C4"]:
-            return "C1-C4"
+        category_numbers = [
+            int(category[1:])
+            for category in categories
+            if category.startswith("C") and category[1:].isdigit()
+        ]
+        if (
+            categories
+            and len(category_numbers) == len(categories)
+            and category_numbers == list(range(category_numbers[0], category_numbers[-1] + 1))
+        ):
+            return f"C{category_numbers[0]}-C{category_numbers[-1]}"
         return ", ".join(categories)
 
     def _format_ssps(self) -> str:

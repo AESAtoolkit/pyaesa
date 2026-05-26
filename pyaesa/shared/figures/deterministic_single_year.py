@@ -120,10 +120,12 @@ def render_single_year_panels(
         panels = (
             [("value", year_frame)]
             if panel_column is None
-            else impact_slices(
-                year_frame,
-                impact_column=panel_column,
-                repeat_generic=True,
+            else list(
+                impact_slices(
+                    year_frame,
+                    impact_column=panel_column,
+                    repeat_generic=True,
+                )
             )
         )
         panels_count = len(panels)

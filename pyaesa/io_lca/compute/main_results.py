@@ -48,11 +48,16 @@ def _require_nonzero_requested_impacts(*, payload: YearMethodMainPayload) -> Non
     if metric.empty:
         return
     numeric = metric.apply(pd.to_numeric, errors="raise")
+    impact_index = (
+        metric.index.get_level_values(0)
+        if isinstance(metric.index, pd.MultiIndex)
+        else metric.index
+    )
     impact_totals = cast(
         pd.Series,
         pd.Series(
             numeric.abs().sum(axis=1, min_count=1).to_numpy(dtype=float),
-            index=pd.Index(metric.index.astype(str), name="impact"),
+            index=pd.Index(impact_index.astype(str), name="impact"),
         )
         .groupby(level=0, sort=True)
         .sum(min_count=1),

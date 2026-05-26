@@ -58,7 +58,7 @@ def _static_branch_plan(
     cc_source = str(branch["cc_source"])
     cc_rows = _static_cc_rows(cc_source=cc_source, bounds=list(branch["static_cc_bounds"]))
     asocc = _asocc_rows_for_cc_source(asocc_identity=asocc_identity, cc_source=cc_source)
-    asocc["_asocc_position"] = np.arange(len(asocc), dtype=np.int64)
+    asocc["_asocc_position"] = asocc["public_row_id"].to_numpy(dtype=np.int64, copy=False)
     asocc = asocc.drop(columns=["public_row_id"], errors="ignore")
     generic, constrained = _split_by_optional_impact(frame=asocc)
     pieces: list[pd.DataFrame] = []
@@ -89,7 +89,7 @@ def _dynamic_branch_plan(
     expected_impact = _dynamic_expected_impact(cc_source=cc_source)
     scoped = _asocc_rows_for_cc_source(asocc_identity=asocc_identity, cc_source=cc_source)
     asocc = _dynamic_asocc_scope(asocc_identity=scoped, expected_impact=expected_impact)
-    asocc["_asocc_position"] = np.arange(len(asocc), dtype=np.int64)
+    asocc["_asocc_position"] = asocc["public_row_id"].to_numpy(dtype=np.int64, copy=False)
     asocc = asocc.drop(columns=["public_row_id"], errors="ignore")
     cc = cc_identity.copy()
     cc["_cc_position"] = (

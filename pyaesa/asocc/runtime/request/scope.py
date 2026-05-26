@@ -100,9 +100,9 @@ class AsoccScope:
         )
         return {
             "source": self.base_allocate_args["source"],
-            "group_version": self.base_allocate_args["group_version"],
-            "group_reg": bool(self.base_allocate_args["group_reg"]),
-            "group_sec": bool(self.base_allocate_args["group_sec"]),
+            "agg_version": self.base_allocate_args["agg_version"],
+            "agg_reg": bool(self.base_allocate_args["agg_reg"]),
+            "agg_sec": bool(self.base_allocate_args["agg_sec"]),
             "fu_code": self.base_allocate_args["fu_code"],
             "studied_indices_tag": self.studied_indices_tag,
             "lcia_methods": list(self.base_allocate_args["lcia_method"] or []),
@@ -111,7 +111,7 @@ class AsoccScope:
             "selected_methods": self.selected_methods,
             "l1_reg_aggreg": self.base_allocate_args["l1_reg_aggreg"],
             "variant_tag": None,
-            "aggreg_indices": self.base_allocate_args["aggreg_indices"],
+            "group_indices": self.base_allocate_args["group_indices"],
             "projection_mode": projection_mode,
             "reg_window": reg_window,
             "l2_reuse_years": l2_reuse_years,
@@ -185,9 +185,9 @@ class AsoccScope:
         )
         return {
             "source": self.base_allocate_args["source"],
-            "group_version": self.base_allocate_args["group_version"],
-            "group_reg": self.base_allocate_args["group_reg"],
-            "group_sec": self.base_allocate_args["group_sec"],
+            "agg_version": self.base_allocate_args["agg_version"],
+            "agg_reg": self.base_allocate_args["agg_reg"],
+            "agg_sec": self.base_allocate_args["agg_sec"],
             "fu_code": self.base_allocate_args["fu_code"],
             "studied_indices_tag": self.studied_indices_tag,
             "years": list(years),
@@ -199,7 +199,7 @@ class AsoccScope:
             "selected_methods": dict(self.selected_methods),
             "l1_reg_aggreg": self.base_allocate_args["l1_reg_aggreg"],
             "variant_tag": variant_tag,
-            "aggreg_indices": self.base_allocate_args["aggreg_indices"],
+            "group_indices": self.base_allocate_args["group_indices"],
             "output_format": output_format,
             "intermediate_outputs": bool(intermediate_outputs),
             "projection_mode": projection_mode,

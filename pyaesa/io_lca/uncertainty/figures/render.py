@@ -1,6 +1,7 @@
 """IO-LCA uncertainty figure orchestration."""
 
 from functools import partial
+from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -53,15 +54,21 @@ def render_io_lca_uncertainty_figures(
     single_year = len(set(context.requested_years)) == 1
     tables = read_figure_tables(context=context, include_summary=not single_year)
     clear_uncertainty_figure_scope(paths=paths)
-    jobs = (
-        _single_year_jobs(context=context, tables=tables)
-        if single_year
-        else _multi_year_jobs(context=context, tables=tables)
-    )
+
+    def jobs() -> Iterator[PlannedFigureJob]:
+        """Yield IO-LCA uncertainty figure jobs from prepared figure tables."""
+        yield from (
+            _single_year_jobs(context=context, tables=tables)
+            if single_year
+            else _multi_year_jobs(context=context, tables=tables)
+        )
+
     return render_figure_jobs(source="uncertainty_io_lca", jobs=jobs, status=status)
 
 
-def _single_year_jobs(*, context: FigureContext, tables: FigureTables) -> list[PlannedFigureJob]:
+def _single_year_jobs(
+    *, context: FigureContext, tables: FigureTables
+) -> Iterator[PlannedFigureJob]:
     identity_rows = prepared_identity_rows(context=context, identity=tables.identity)
     rows = violin_rows_from_compact_runs(context=context, identity_rows=identity_rows)
     output_dir = io_lca_uncertainty_figures_root(paths=context.paths)
@@ -76,7 +83,7 @@ def _single_year_jobs(*, context: FigureContext, tables: FigureTables) -> list[P
     )
 
 
-def _multi_year_jobs(*, context: FigureContext, tables: FigureTables) -> list[PlannedFigureJob]:
+def _multi_year_jobs(*, context: FigureContext, tables: FigureTables) -> Iterator[PlannedFigureJob]:
     rows = prepared_summary_rows(context=context, summary=tables.summary)
     output_dir = io_lca_uncertainty_figures_root(paths=context.paths)
     return _lcia_method_jobs(
@@ -97,51 +104,45 @@ def _lcia_method_jobs(
     kind: str,
     render_kind: str,
     checkpoint_years: list[int],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     selector_columns = (
-        tuple() if context.request.aggreg_indices else context.request.fu_spec.selector_axes
+        tuple() if context.request.group_indices else context.request.fu_spec.selector_axes
     )
-    jobs: list[PlannedFigureJob] = []
     for lcia_method, group in rows.groupby("lcia_method", dropna=False, sort=True):
         method = str(lcia_method)
         frame = group.copy()
         _selector_cols, groups = selector_groups(frame=frame, selector_columns=selector_columns)
         if render_kind == "violin":
-            for checkpoint_year in checkpoint_years:
-                for _group_key, group_frame in groups:
-                    jobs.append(
-                        PlannedFigureJob(
-                            kind=kind,
-                            label=f"{method} single year {int(checkpoint_year)}",
-                            render=partial(
-                                write_lca_uncertainty_violin_figures,
-                                lcia_method_frame=group_frame,
-                                reference_frame=frame,
-                                figures_dir=output_dir,
-                                lcia_method=method,
-                                checkpoint_years=[int(checkpoint_year)],
-                                dpi=context.figure_dpi,
-                                output_format=context.figure_output_format,
-                                selector_columns=selector_columns,
-                            ),
-                        )
+            for _group_key, group_frame in groups:
+                for checkpoint_year in checkpoint_years:
+                    yield PlannedFigureJob(
+                        kind=kind,
+                        label=f"{method} single year {int(checkpoint_year)}",
+                        render=partial(
+                            write_lca_uncertainty_violin_figures,
+                            lcia_method_frame=group_frame,
+                            reference_frame=frame,
+                            figures_dir=output_dir,
+                            lcia_method=method,
+                            checkpoint_years=[int(checkpoint_year)],
+                            dpi=context.figure_dpi,
+                            output_format=context.figure_output_format,
+                            selector_columns=selector_columns,
+                        ),
                     )
             continue
         for _group_key, group_frame in groups:
-            jobs.append(
-                PlannedFigureJob(
-                    kind=kind,
-                    label=f"{method} multi-year uncertainty",
-                    render=partial(
-                        write_lca_uncertainty_band_figures,
-                        lcia_method_frame=group_frame,
-                        reference_frame=frame,
-                        figures_dir=output_dir,
-                        lcia_method=method,
-                        dpi=context.figure_dpi,
-                        output_format=context.figure_output_format,
-                        selector_columns=selector_columns,
-                    ),
-                )
+            yield PlannedFigureJob(
+                kind=kind,
+                label=f"{method} multi-year uncertainty",
+                render=partial(
+                    write_lca_uncertainty_band_figures,
+                    lcia_method_frame=group_frame,
+                    reference_frame=frame,
+                    figures_dir=output_dir,
+                    lcia_method=method,
+                    dpi=context.figure_dpi,
+                    output_format=context.figure_output_format,
+                    selector_columns=selector_columns,
+                ),
             )
-    return jobs

@@ -189,8 +189,8 @@ def _expected_for_row(
             validation_project_name_root=method_context.run.validation_project_name_root,
             source=method_context.run.source,
             matrix_version=method_context.run.matrix_version,
-            group_reg=method_context.run.group_reg,
-            aggreg_indices=method_context.run.aggreg_indices,
+            agg_reg=method_context.run.agg_reg,
+            group_indices=method_context.run.group_indices,
             l1_mode=method_context.run.l1_mode,
             output_format=method_context.run.output_format,
             year=method_context.run.year,
@@ -239,7 +239,7 @@ def _build_l2_star_b_row(
         f"{col}={item.get(col)}" for col in method_context.group_cols if col in item.index
     )
     return {
-        "aggreg_indices": "ungrouped",
+        "group_indices": "ungrouped",
         "source": method_context.run.source,
         "fu_code": method_context.run.fu_code,
         "year": int(method_context.run.year),

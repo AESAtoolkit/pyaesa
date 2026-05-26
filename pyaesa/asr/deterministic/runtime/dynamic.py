@@ -60,7 +60,7 @@ def process_dynamic_asr(
     acc_path_context = build_acc_path_context(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=base_allocate_args["group_version"],
+        agg_version=base_allocate_args["agg_version"],
         cc_source=cc_source,
         cc_type="dynamic_ar6",
     )
@@ -73,7 +73,7 @@ def process_dynamic_asr(
         context=build_asr_path_context(
             proj_base=proj_base,
             source_label=source_label,
-            group_version=base_allocate_args["group_version"],
+            agg_version=base_allocate_args["agg_version"],
             fu_code=fu_code,
             lca_type=lca_type,
             cc_source=cc_source,

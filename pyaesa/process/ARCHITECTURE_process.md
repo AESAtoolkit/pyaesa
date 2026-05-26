@@ -34,7 +34,7 @@ docstrings when touched.
 | Processed MRIO runtime orchestration | `mrios/utils/pipeline/runner.py` |
 | Processed MRIO paths and metadata | `mrios/utils/io/paths.py`, `mrios/utils/io/metadata.py` |
 | EXIOBASE and OECD parsing | `mrios/utils/parsers/` |
-| MRIO grouping validation | `mrios/utils/grouping/`, `mrios/utils/pipeline/grouping_validation.py` |
+| MRIO aggregation validation | `mrios/utils/aggregation/`, `mrios/utils/pipeline/aggregation_validation.py` |
 | MRIO year processing contracts | `mrios/utils/pipeline/` |
 | LCIA characterization prerequisite paths | `pyaesa/shared/lcia/paths.py` |
 | Raw correction application | `mrios/utils/raw_corrections/` |
@@ -69,7 +69,7 @@ family runtime packages.
 | `mrios/` | Public MRIO processing entry point. |
 | `mrios/utils/io/` | Processed MRIO paths, saved directory naming, metadata, and clipping log paths. |
 | `mrios/utils/parsers/` | Source parsers and EXIOBASE characterization. |
-| `mrios/utils/grouping/` | Grouping file loading and validation helpers. |
+| `mrios/utils/aggregation/` | Aggregation and disaggregation file loading and validation helpers. |
 | `mrios/utils/pipeline/` | MRIO processing runtime orchestration, contracts, setup, persistence, matrix operations, and LCIA tracking. |
 | `mrios/utils/raw_corrections/` | Maintainer owned raw correction generation and runtime application. |
 | `mrios/utils/uncasext_metrics/` | Processed enacting metrics and utility propagation metrics used by aSoCC. |
@@ -114,7 +114,7 @@ Important public options:
 | `years` | Year selector normalized by the shared MRIO year selector. |
 | `refresh` | Recompute selected years in the processed MRIO scope. |
 | `lcia_method` | EXIOBASE LCIA characterization methods; unsupported for OECD ICIO. |
-| `group_reg`, `group_sec`, `group_version` | Region and sector grouping controls. |
+| `agg_reg`, `agg_sec`, `agg_version` | Region and sector MRIO aggregation and disaggregation controls. |
 | `keep_intermediate_uncasext` | Keep post clip core and extension payloads. |
 | `pymrio_calc_all` | Keep full PyMRIO `calc_all` preclip core and extension payloads. |
 
@@ -133,20 +133,20 @@ Default MRIO processing keeps the minimal package runtime assets. Optional
 intermediate modes may keep additional matrices for inspection, but downstream
 deterministic correctness must not depend on optional intermediate payloads.
 
-### MRIO Grouping
+### MRIO Aggregation
 
-Grouping uses packaged prerequisite CSVs under `data_raw/`. `group_version`
-selects the grouping folder. Grouping validation must happen before year
+Aggregation uses packaged prerequisite CSVs under `data_raw/`. `agg_version`
+selects the aggregation folder. Aggregation validation must happen before year
 processing begins.
 
 Contributor rules:
 
-1. Grouping path ownership stays in process and project prerequisite path
+1. Aggregation path ownership stays in process and project prerequisite path
    helpers.
-2. Grouped flows, grouped `G`, enacting metrics, and LCIA payloads must use the
-   same grouped product basis.
-3. Grouped full PyMRIO output is allowed only through `pymrio_calc_all=True`.
-4. Grouping metadata must describe region and sector labels used by downstream
+2. Aggregated flows, aggregated `G`, enacting metrics, and LCIA payloads must use the
+   same aggregated product basis.
+3. Aggregated full PyMRIO output is allowed only through `pymrio_calc_all=True`.
+4. Aggregation metadata must describe region and sector labels used by downstream
    deterministic functions.
 
 ### MRIO Raw Corrections
@@ -155,7 +155,7 @@ Raw corrections are maintainer owned and documented separately in:
 
 `pyaesa/process/mrios/utils/raw_corrections/ARCHITECTURE_raw_corrections.md`
 
-Runtime processing may apply precomputed correction rows before grouping and
+Runtime processing may apply precomputed correction rows before aggregation and
 characterization. Do not add ad hoc correction logic inside parsers or
 downstream scientific packages.
 
@@ -236,8 +236,9 @@ AR6 processing owners:
 | Log text outputs and figure sampling guides | `ar6/utils/io/text_outputs.py` |
 | Process scoped figures | `ar6/utils/figures/` |
 
-The retained AR6 domain is category C1 to C4, SSP family 1 to 5, and pathways
-whose historical and future vetting fields both equal `Pass`. The AR6 variable
+The retained AR6 domain is the requested category selector within C1 through C8,
+SSP family 1 to 5, and pathways whose historical and future vetting fields both
+equal `Pass`. The default category selector is C1 to C4. The AR6 variable
 contract is owned by `pyaesa/download/ar6/utils/config.py`. Processing first
 keeps model and scenario pairs whose raw `Emissions|CO2` row has the requested
 study start year and year 2100, then applies the CO2 decomposition
@@ -278,10 +279,12 @@ available model and scenario pairs. The persisted CSV remains the detailed
 source for `drop_stage`, `drop_reason`, model, scenario, variable, retained
 variable, SSP family, and category.
 
-The processed AR6 scope lives under a dedicated `process_ar6/` subtree below the
-processed AR6 root. The scope name is derived from the study period and
-harmonization state, for example `2019-2060_harmonization_offset` or
-`2019-2060_no_harmonization`.
+The processed AR6 scope lives under a dedicated category scoped `process_ar6/`
+subtree below the processed AR6 root. The root scope name is derived from the
+study period and harmonization state, for example
+`2019-2060_harmonization_offset` or `2019-2060_no_harmonization`. The selected
+category scope is the child folder below `process_ar6/`, for example `C1-C4`,
+`C3`, or `C5-C8`.
 
 AR6 path helpers resolve paths only. `ar6/utils/pipeline/process_runner.py`
 owns directory materialization and refresh cleanup for the selected processed,
@@ -301,7 +304,7 @@ Refresh behavior is family local:
 | --- | --- |
 | MRIO | Recompute selected processed years and update processed metadata. |
 | Population GDP | Rebuild selected processed historical or SSP tables. |
-| AR6 | Rebuild the selected study period and harmonization scope, plus figures when requested. |
+| AR6 | Rebuild the selected study period and harmonization scope, plus figures when `figures=True` (default). |
 
 Reuse decisions must use family metadata and expected processed files. Do not
 scan downstream deterministic outputs to infer processing completeness.

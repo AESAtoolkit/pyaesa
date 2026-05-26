@@ -59,7 +59,7 @@ workspace repository root.
 | `workspace.py` | Repository root resolution, active session root state, and `<project_name>/` root contract. |
 | `packaged_prerequisites.py` | Copy package resource prerequisites into the workspace `data_raw/` tree. |
 | `<repo_root>/data_raw/summary.log` | User facing setup guidance log written by `set_workspace(...)`. |
-| `prerequisites/mrio/` | Grouping templates, region matching tables, sector classification, LCIA characterization factors, LCIA responsibility period files, and local README guides for grouping or custom LCIA inputs. |
+| `prerequisites/mrio/` | Aggregation templates, region matching tables, sector classification, LCIA characterization factors, LCIA responsibility period files, and local README guides for aggregation or custom LCIA inputs. |
 | `prerequisites/carrying_capacities/` | Static carrying capacity prerequisite CSVs and the local README guide for adding custom carrying capacity files. |
 | `prerequisites/methodological_notes/` | Detailed methodological PDFs, recommended citation guide, quick functional unit and allocation method guide, and allocation paths figure copied to `data_raw/methodological_notes/`. |
 
@@ -120,12 +120,12 @@ Prerequisite families:
 
 | Family | Workspace purpose |
 | --- | --- |
-| `prerequisites/mrio/exiobase_3/grouping/` | EXIOBASE region and sector grouping templates. |
+| `prerequisites/mrio/exiobase_3/aggregation/` | EXIOBASE region and sector aggregation templates. |
 | `prerequisites/mrio/exiobase_3/reg_matching/` | EXIOBASE region matching tables for WB and SSP data. |
 | `prerequisites/mrio/exiobase_3/lcia/characterization_factors_matrices/` | EXIOBASE LCIA characterization factors and the local README guide for adding custom characterization matrices beyond package shipped methods. |
 | `prerequisites/mrio/exiobase_3/lcia/responsibility_periods/` | LCIA responsibility period files and the local README guide for adding custom responsibility period tables beyond package shipped methods. |
 | `prerequisites/mrio/exiobase_3/lcia/carbon_accounts_covs/` | Carbon consumption based accounts coefficients of variation (CoV) CSVs for LCIA based allocation methods and IO-LCA LCIA result uncertainty. |
-| `prerequisites/mrio/oecd_v2025/grouping/` | OECD region and sector grouping templates. |
+| `prerequisites/mrio/oecd_v2025/aggregation/` | OECD region and sector aggregation templates. |
 | `prerequisites/mrio/oecd_v2025/reg_matching/` | OECD region matching tables for WB and SSP data. |
 | `prerequisites/carrying_capacities/` | Static carrying capacity tables, LCIA carrying capacity metadata, and the custom carrying capacity guide. |
 | `prerequisites/methodological_notes/` | Detailed methodological PDFs, recommended citations, the quick functional unit and allocation method guide, and the allocation paths figure copied to `data_raw/methodological_notes/`. |

@@ -1,10 +1,10 @@
 """Public AR6 climate processing entrypoint."""
 
 from pyaesa.download.ar6.utils.config import (
-    DEFAULT_CATEGORIES,
     DEFAULT_DATABASE,
     DEFAULT_SSPS,
     DEFAULT_VARIABLES_OUTPUT,
+    normalize_ar6_categories,
 )
 from pyaesa.download.ar6.utils.io.paths import (
     get_citation_txt_path,
@@ -37,6 +37,7 @@ def process_ar6(
     figures: bool = True,
     harmonization: bool = True,
     harmonization_method: str = "offset",
+    category: str | list[str] = ["C1", "C2", "C3", "C4"],
     refresh: bool = False,
     figure_format: dict[str, object] = {"format": "png", "dpi": 500},
     figure_convergence_tol: float = 5e-2,
@@ -52,8 +53,12 @@ def process_ar6(
     historical PRIMAP plus Global Carbon Budget baseline or keeps only the
     scenarios that pass the package interpolation and derived variable
     construction rules without harmonization. The retained
-    AR6 domain is categories ``C1-C4``, SSP families ``SSP1-SSP5``, and
-    pathways whose historical and future AR6 vetting fields both equal ``"Pass"``.
+    AR6 domain is the requested category selector within ``C1`` through ``C8``,
+    SSP families ``SSP1-SSP5``, and pathways whose historical and future AR6
+    vetting fields both equal ``"Pass"``. The default category selector is
+    ``["C1", "C2", "C3", "C4"]``, the categories aligned with the
+    2015 Paris Agreement. Categories ``C5`` through ``C8`` are available as
+    explicit opt in selectors.
     Processing first keeps model-scenario pairs whose raw CO2 row has the
     requested study start year and year 2100, then applies the CO2
     decomposition reconstruction check, derives net emissions and carbon
@@ -90,10 +95,16 @@ def process_ar6(
             ``harmonization=True``. Defaults to ``"offset"``. The only
             supported value is currently ``"offset"``.
             Ignored when ``harmonization=False``.
+        category: AR6 category classification selector for global warming
+            trajectories. Accepts a string such as ``"C3"`` or a list such as
+            ``["C1", "C2"]``. Valid values are ``"C1"`` through ``"C8"``.
+            Defaults to ``["C1", "C2", "C3", "C4"]``, the categories
+            aligned with the 2015 Paris Agreement.
         refresh: If ``True``, clear and recompute only the resolved processed
             AR6 output scope for the requested study period, harmonization
-            flag, and harmonization method. Raw downloads and downstream AR6
-            CC, aCC, or ASR outputs are not refreshed. Defaults to ``False``.
+            flag, harmonization method, and category selector. Raw downloads
+            and downstream AR6 CC, aCC, or ASR outputs are not refreshed.
+            Defaults to ``False``.
         figure_format: Figure render settings mapping. Defaults to
             ``{"format": "png", "dpi": 500}``.
 
@@ -151,6 +162,7 @@ def process_ar6(
     try:
         phase_owner.announce(PHASE_B1_AR6_DYNAMIC_CC, "process_ar6")
         study_period_norm = resolve_study_period(years)
+        categories = normalize_ar6_categories(category)
         if figures and not harmonization:
             raise ValueError(
                 "figures=True is only supported when harmonization=True because the figure "
@@ -180,8 +192,13 @@ def process_ar6(
             figure_output_format=str(figure_format_norm["format"]),
             figure_dpi=int(figure_format_norm["dpi"]),
             sampling_config=sampling_config,
-            signature=process_signature(study_period_norm, harmonization, harmonization_method),
-            categories=list(DEFAULT_CATEGORIES),
+            signature=process_signature(
+                study_period_norm,
+                harmonization,
+                harmonization_method,
+                categories,
+            ),
+            categories=categories,
             ssps=[int(value) for value in DEFAULT_SSPS],
             variables_output=list(DEFAULT_VARIABLES_OUTPUT),
             database=DEFAULT_DATABASE,

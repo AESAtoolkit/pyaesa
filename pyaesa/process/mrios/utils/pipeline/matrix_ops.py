@@ -12,6 +12,8 @@ import pandas as pd
 import pymrio
 
 from pyaesa.download.mrios.utils.logging import suppress_pymrio_logging
+from pyaesa.process.mrios.utils.aggregation.aggregation import AggregationSpec
+from pyaesa.process.mrios.utils.pipeline.weighted_aggregation import aggregate_iosys_weighted
 
 _PRODUCT_AXIS_NAMES = ("region", "sector")
 
@@ -73,13 +75,13 @@ def _normalize_mrio_axes(iosys: pymrio.IOSystem) -> None:
             fy_obj.columns = _normal_final_demand_axis(fy_obj.columns)
 
 
-def _build_product_group_key(
+def _build_product_agg_key(
     axis: pd.Index,
     *,
     region_map: dict[str, str],
     sector_map: dict[str, str],
 ) -> pd.MultiIndex:
-    """Build grouped product key (region, sector) for a product axis."""
+    """Build aggregated product key (region, sector) for a product axis."""
     product_axis = _normal_product_axis(axis)
     region_values = product_axis.get_level_values("region")
     sector_values = product_axis.get_level_values("sector")
@@ -92,12 +94,12 @@ def _build_product_group_key(
     )
 
 
-def _build_fd_group_key(
+def _build_fd_agg_key(
     columns: pd.Index,
     *,
     region_map: dict[str, str],
 ) -> pd.Index | pd.MultiIndex:
-    """Build grouped final demand column key (region remapped, other levels kept)."""
+    """Build aggregated final demand column key (region remapped, other levels kept)."""
     normal_columns = _normal_final_demand_axis(columns)
     if isinstance(normal_columns, pd.MultiIndex):
         mapped_region = _map_values(normal_columns.get_level_values("region"), region_map)
@@ -118,7 +120,7 @@ def _aggregate_rows(df: pd.DataFrame, key: pd.Index | pd.MultiIndex) -> pd.DataF
         out.index = _multiindex_from_labels(
             out.index,
             names=list(key.names),
-            label="Grouped row index",
+            label="Aggregated row index",
         )
     return out
 
@@ -129,13 +131,13 @@ def _aggregate_columns(
 ) -> pd.DataFrame:
     """Aggregate DataFrame columns using ``key``."""
     df_transposed = cast(pd.DataFrame, df.T)
-    grouped = cast(pd.DataFrame, df_transposed.groupby(key, sort=False).sum(min_count=1))
-    out = cast(pd.DataFrame, grouped.T)
+    aggregated = cast(pd.DataFrame, df_transposed.groupby(key, sort=False).sum(min_count=1))
+    out = cast(pd.DataFrame, aggregated.T)
     if isinstance(key, pd.MultiIndex) and not isinstance(out.columns, pd.MultiIndex):
         out.columns = _multiindex_from_labels(
             out.columns,
             names=list(key.names),
-            label="Grouped column index",
+            label="Aggregated column index",
         )
     return out
 
@@ -146,12 +148,39 @@ def _multiindex_from_labels(
     names: Sequence[Hashable | None],
     label: str,
 ) -> pd.MultiIndex:
-    """Return a MultiIndex built from grouped tuple labels."""
+    """Return a MultiIndex built from aggregated tuple labels."""
     del label
     return pd.MultiIndex.from_tuples(
         cast(list[tuple[Hashable, ...]], index.tolist()),
         names=list(names),
     )
+
+
+def _strict_spec_from_map(
+    labels: list[str],
+    mapping: dict[str, str],
+) -> AggregationSpec:
+    """Build a strict aggregation spec from the current mapping contract."""
+    aggregated = _map_values(pd.Index(labels), mapping)
+    aggregated_labels = tuple(dict.fromkeys(aggregated))
+    aggregated_index = {label: idx for idx, label in enumerate(aggregated_labels)}
+    return AggregationSpec(
+        original_order=tuple(labels),
+        aggregated_labels=aggregated_labels,
+        weighted=False,
+        rows=tuple(
+            (original_idx, aggregated_index[aggregated_label], 1.0)
+            for original_idx, aggregated_label in enumerate(aggregated)
+        ),
+    )
+
+
+def _strict_map_from_spec(spec: AggregationSpec) -> dict[str, str]:
+    """Return strict aggregation labels keyed by original label."""
+    return {
+        spec.original_order[original_idx]: spec.aggregated_labels[aggregated_idx]
+        for original_idx, aggregated_idx, _ in spec.rows
+    }
 
 
 def _clear_extension_derived_accounts(ext: Any) -> None:
@@ -181,9 +210,11 @@ def _clear_extension_derived_accounts(ext: Any) -> None:
 def _aggregate_iosys_fast(
     *,
     iosys: pymrio.IOSystem,
-    group_reg: bool,
-    region_map: dict[str, str],
-    sector_map: dict[str, str],
+    agg_reg: bool,
+    region_map: dict[str, str] | None = None,
+    sector_map: dict[str, str] | None = None,
+    region_spec: AggregationSpec | None = None,
+    sector_spec: AggregationSpec | None = None,
 ) -> None:
     """Aggregate only the matrices required by the minimal UNCASExt path.
 
@@ -196,12 +227,35 @@ def _aggregate_iosys_fast(
     z = cast(pd.DataFrame, iosys.Z)
     y = cast(pd.DataFrame, iosys.Y)
 
-    product_row_key = _build_product_group_key(
+    regions, sectors = _labels_from_product_index(z.index)
+    if region_spec is None:
+        region_spec = _strict_spec_from_map(regions, region_map or {})
+    if sector_spec is None:
+        sector_spec = _strict_spec_from_map(sectors, sector_map or {})
+
+    if region_spec.weighted or sector_spec.weighted:
+        aggregate_iosys_weighted(
+            iosys=iosys,
+            agg_reg=agg_reg,
+            region_spec=region_spec,
+            sector_spec=sector_spec,
+            clear_extension_derived_accounts=_clear_extension_derived_accounts,
+        )
+        iosys.x = None
+        iosys.A = None
+        iosys.L = None
+        iosys.G = None
+        return
+
+    region_map = _strict_map_from_spec(region_spec)
+    sector_map = _strict_map_from_spec(sector_spec)
+
+    product_row_key = _build_product_agg_key(
         z.index,
         region_map=region_map,
         sector_map=sector_map,
     )
-    product_col_key = _build_product_group_key(
+    product_col_key = _build_product_agg_key(
         z.columns,
         region_map=region_map,
         sector_map=sector_map,
@@ -212,28 +266,28 @@ def _aggregate_iosys_fast(
     iosys.Z = z_agg
 
     y_agg = _aggregate_rows(y, product_row_key)
-    if group_reg:
-        y_col_key = _build_fd_group_key(y_agg.columns, region_map=region_map)
+    if agg_reg:
+        y_col_key = _build_fd_agg_key(y_agg.columns, region_map=region_map)
         y_agg = _aggregate_columns(y_agg, y_col_key)
     iosys.Y = y_agg
 
     unit_obj = getattr(iosys, "unit", None)
     if isinstance(unit_obj, pd.DataFrame) and unit_obj.index.equals(z.index):
-        grouped_unit = cast(pd.DataFrame, unit_obj.groupby(product_row_key, sort=False).first())
-        grouped_unit.index = _multiindex_from_labels(
-            grouped_unit.index,
+        aggregated_unit = cast(pd.DataFrame, unit_obj.groupby(product_row_key, sort=False).first())
+        aggregated_unit.index = _multiindex_from_labels(
+            aggregated_unit.index,
             names=list(product_row_key.names),
-            label="Grouped unit DataFrame index",
+            label="Aggregated unit DataFrame index",
         )
-        iosys.unit = grouped_unit
+        iosys.unit = aggregated_unit
     elif isinstance(unit_obj, pd.Series) and unit_obj.index.equals(z.index):
-        grouped_unit = cast(pd.Series, unit_obj.groupby(product_row_key, sort=False).first())
-        grouped_unit.index = _multiindex_from_labels(
-            grouped_unit.index,
+        aggregated_unit = cast(pd.Series, unit_obj.groupby(product_row_key, sort=False).first())
+        aggregated_unit.index = _multiindex_from_labels(
+            aggregated_unit.index,
             names=list(product_row_key.names),
-            label="Grouped unit Series index",
+            label="Aggregated unit Series index",
         )
-        iosys.unit = grouped_unit
+        iosys.unit = aggregated_unit
 
     get_extensions = getattr(iosys, "get_extensions", None)
     if callable(get_extensions):
@@ -241,17 +295,17 @@ def _aggregate_iosys_fast(
         for ext in ext_iterable:
             f_obj = getattr(ext, "F", None)
             if isinstance(f_obj, pd.DataFrame):
-                f_col_key = _build_product_group_key(
+                f_col_key = _build_product_agg_key(
                     f_obj.columns,
                     region_map=region_map,
                     sector_map=sector_map,
                 )
                 ext.F = _aggregate_columns(f_obj, f_col_key)
 
-            if group_reg:
+            if agg_reg:
                 fy_obj = getattr(ext, "F_Y", None)
                 if isinstance(fy_obj, pd.DataFrame):
-                    fy_col_key = _build_fd_group_key(fy_obj.columns, region_map=region_map)
+                    fy_col_key = _build_fd_agg_key(fy_obj.columns, region_map=region_map)
                     ext.F_Y = _aggregate_columns(fy_obj, fy_col_key)
 
             _clear_extension_derived_accounts(ext)
@@ -262,11 +316,11 @@ def _aggregate_iosys_fast(
     iosys.G = None
 
 
-def _calc_grouped_full_system_after_fast_aggregation(*, iosys: pymrio.IOSystem) -> None:
-    """Rebuild the grouped core system, then let PyMRIO expand extensions.
+def _calc_aggregated_full_system_after_fast_aggregation(*, iosys: pymrio.IOSystem) -> None:
+    """Rebuild the aggregated core system, then let PyMRIO expand extensions.
 
-    After ``_aggregate_iosys_fast(...)`` groups the matrices, full grouped
-    runs need the core matrices rebuilt on the same grouped basis before
+    After ``_aggregate_iosys_fast(...)`` aggregates the matrices, full aggregated
+    runs need the core matrices rebuilt on the same aggregated basis before
     PyMRIO computes extension accounts.
     """
     _calc_core_system_minimal(
@@ -277,13 +331,13 @@ def _calc_grouped_full_system_after_fast_aggregation(*, iosys: pymrio.IOSystem) 
         iosys.calc_extensions(include_ghosh=True)
 
 
-def _group_final_demand_by_region(y: pd.DataFrame) -> pd.DataFrame:
+def _agg_final_demand_by_region(y: pd.DataFrame) -> pd.DataFrame:
     """Aggregate final demand columns to regions."""
     columns = _normal_final_demand_axis(y.columns)
     y = y.copy(deep=False)
     y.columns = columns
-    grouped = cast(pd.DataFrame, y.T.groupby(level="region", sort=False).sum(min_count=1))
-    return cast(pd.DataFrame, grouped.T)
+    aggregated = cast(pd.DataFrame, y.T.groupby(level="region", sort=False).sum(min_count=1))
+    return cast(pd.DataFrame, aggregated.T)
 
 
 def _labels_from_product_index(index: pd.Index) -> tuple[list[str], list[str]]:
@@ -299,7 +353,7 @@ def _labels_from_product_index(index: pd.Index) -> tuple[list[str], list[str]]:
 
 def _calc_x_from_clipped_fd(*, z: pd.DataFrame, y: pd.DataFrame) -> pd.DataFrame:
     """Compute output vector from ``Z`` and region aggregated clipped final demand."""
-    y_reg_clipped = _group_final_demand_by_region(y).clip(lower=0.0)
+    y_reg_clipped = _agg_final_demand_by_region(y).clip(lower=0.0)
     x_series = z.sum(axis=1, min_count=1).add(
         y_reg_clipped.sum(axis=1, min_count=1),
         fill_value=0.0,

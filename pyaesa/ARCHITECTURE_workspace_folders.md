@@ -68,7 +68,7 @@ README guidance, and runnable CSV examples:
 - `<project_name>/A_lca/external_lca/templates/`
 
 External LCA figure folders are created by the external LCA figure renderer
-when figures are requested.
+when `figures=True` (default).
 
 ## Testing And Quality Gates
 

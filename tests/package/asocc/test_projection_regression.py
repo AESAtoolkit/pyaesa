@@ -30,18 +30,18 @@ def _clip_counts(*, proj_base: Path) -> dict[tuple[str, ...], int]:
         fit_start_year=2018,
         fit_end_year=2021,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
 
 
-def test_projection_clipping_counts_cover_empty_and_grouped_files(tmp_path: Path) -> None:
+def test_projection_clipping_counts_cover_empty_and_aggregated_files(tmp_path: Path) -> None:
     state = _state(runtime_proj_base=tmp_path)
     assert _clip_counts(proj_base=tmp_path) == {}
 
     clip_dir = allocate_regression_logs_dir(
         proj_base=tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     clip_dir.mkdir(parents=True, exist_ok=True)
     clip_path = clip_dir / "projection_clipping_log.csv"

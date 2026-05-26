@@ -71,6 +71,7 @@ def run_process_ar6_workflow(
         study_period,
         harmonization=harmonization,
         harmonization_method=harmonization_method,
+        category=categories,
     )
     out_file = processed_dir / processed_workbook_name(harmonization=harmonization)
     log_file = logs_dir / harmonization_log_workbook_name() if harmonization else None

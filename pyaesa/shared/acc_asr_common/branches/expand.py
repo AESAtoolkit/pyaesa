@@ -6,6 +6,11 @@ from pyaesa.process.ar6.utils.pipeline.study_period import resolve_study_period
 from pyaesa.shared.lcia.contracts import dynamic_cc_compatible_methods
 
 
+def has_dynamic_ar6_branch(*, branches: list[dict[str, Any]]) -> bool:
+    """Return whether expanded CC branches include dynamic AR6 carrying capacity."""
+    return any(branch["cc_type"] == "dynamic_ar6" for branch in branches)
+
+
 def iter_cc_method_branches(
     *,
     lcia_methods: list[str],
@@ -29,9 +34,9 @@ def iter_cc_method_branches(
         if not compatible:
             raise ValueError(
                 "base_cc_args.dynamic_ar6 requires at least one LCIA method with a "
-                "dynamic carrying capacity compatibility. "
+                "static carrying capacity row for impact 'GWP_100'. "
                 f"Requested lcia_method values: {lcia_methods}. "
-                "Supported methods are defined in shared LCIA method rules."
+                "Requested methods without that row use steady state carrying capacities only."
             )
         for lcia_method in compatible:
             branch = dict(base_cc_args["dynamic_ar6"])

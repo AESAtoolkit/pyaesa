@@ -35,7 +35,7 @@ from .lcia_helpers import (
 
 # L2 logic (non-L2*b): sum to one checks on L2 outputs.
 _L2_STATIC_FIELDS: dict[str, object] = {
-    "aggreg_indices": "ungrouped",
+    "group_indices": "ungrouped",
 }
 
 
@@ -102,8 +102,8 @@ def _lcia_weight_request(
     return LciaWeightingRequest(
         validation_project_name_root=file_context.run.validation_project_name_root,
         source=file_context.run.source,
-        group_reg=file_context.run.group_reg,
-        aggreg_indices=file_context.run.aggreg_indices,
+        agg_reg=file_context.run.agg_reg,
+        group_indices=file_context.run.group_indices,
         l1_mode=file_context.run.l1_mode,
         output_format=file_context.run.output_format,
         l1_method=l1_method,

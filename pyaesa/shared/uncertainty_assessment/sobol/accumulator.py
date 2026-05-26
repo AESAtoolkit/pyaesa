@@ -5,7 +5,7 @@ from statistics import NormalDist
 
 import numpy as np
 
-SOBOL_OUTPUT_CHUNK_COLUMNS = 32
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 
 
 @dataclass(frozen=True)
@@ -219,7 +219,7 @@ def _add_unweighted_moments(
     sumsq: np.ndarray | None,
     values: tuple[np.ndarray, ...],
 ) -> None:
-    for start, stop in _column_chunks(values[0].shape[1]):
+    for start, stop in _column_chunks(width=values[0].shape[1], row_count=values[0].shape[0]):
         for block in values:
             chunk = block[:, start:stop]
             valid = np.isfinite(chunk)
@@ -238,7 +238,11 @@ def _add_weighted_moments(
     sumsq: np.ndarray | None,
     values: tuple[np.ndarray, ...],
 ) -> None:
-    for start, stop in _column_chunks(values[0].shape[1]):
+    for start, stop in _column_chunks(
+        width=values[0].shape[1],
+        row_count=values[0].shape[0],
+        confidence_resamples=weights.shape[0],
+    ):
         for block in values:
             chunk = block[:, start:stop]
             valid = np.isfinite(chunk)
@@ -347,8 +351,28 @@ def _confidence_half_width_array(*, values: np.ndarray, z_value: float) -> np.nd
     return out
 
 
-def _column_chunks(width: int) -> tuple[tuple[int, int], ...]:
-    return tuple(
-        (start, min(start + SOBOL_OUTPUT_CHUNK_COLUMNS, width))
-        for start in range(0, width, SOBOL_OUTPUT_CHUNK_COLUMNS)
+def _column_chunks(
+    *,
+    width: int,
+    row_count: int,
+    confidence_resamples: int = 0,
+) -> tuple[tuple[int, int], ...]:
+    chunk_columns = _moment_chunk_columns(
+        row_count=row_count,
+        confidence_resamples=confidence_resamples,
     )
+    return tuple(
+        (start, min(start + chunk_columns, width)) for start in range(0, width, chunk_columns)
+    )
+
+
+def _moment_chunk_columns(*, row_count: int, confidence_resamples: int) -> int:
+    row_bytes = np.dtype(np.float64).itemsize * int(row_count) * len(("clean_values",))
+    row_bytes += np.dtype(np.bool_).itemsize * int(row_count) * len(("valid_mask",))
+    if confidence_resamples:
+        row_bytes += (
+            np.dtype(np.float64).itemsize
+            * int(confidence_resamples)
+            * len(("weighted_count", "weighted_sum", "weighted_sumsq"))
+        )
+    return memory_bounded_rows(bytes_per_row=max(1, row_bytes))

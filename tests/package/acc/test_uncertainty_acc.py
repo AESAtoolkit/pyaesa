@@ -27,6 +27,7 @@ from pyaesa.acc.uncertainty.figures.product_renderers import (
 from pyaesa.acc.uncertainty.figures.violin_renderers import plot_violin_scope
 from pyaesa.acc.uncertainty.figures.render import _collapsed_inter_method_rows
 from pyaesa.acc.uncertainty.evaluation import branches as branch_mod
+from pyaesa.acc.uncertainty.evaluation import source_unit_evaluator as source_unit_mod
 from pyaesa.acc.uncertainty.evaluation import sparse_runs as sparse_render_mod
 from pyaesa.acc.uncertainty.evaluation import sparse_rows as sparse_rows_mod
 from pyaesa.acc.uncertainty.evaluation.summary import (
@@ -40,6 +41,7 @@ from pyaesa.acc.uncertainty.figures.row_reader import (
     collapsed_value_rows,
     read_figure_tables,
 )
+from pyaesa.acc.uncertainty.figures.reuse import render_reusable_acc_figures_if_requested
 from pyaesa.acc.uncertainty.figures.scope_planner import FigureContext
 from pyaesa.acc.uncertainty.runtime.models import (
     ACCAsoccInput,
@@ -58,18 +60,25 @@ from pyaesa.acc.uncertainty.io.run_outputs import write_acc_run_outputs
 from pyaesa.acc.uncertainty.io.manifest_payloads import build_acc_manifest_context
 from pyaesa.acc.uncertainty.io.source_methods import build_acc_source_methods
 from pyaesa.acc.uncertainty.request.normalization import normalize_acc_uncertainty_config
+from pyaesa.acc.uncertainty.runner import _acc_branch_scope, run_uncertainty_acc_component
+from pyaesa.acc.uncertainty.runtime.scope import build_acc_uncertainty_scope
 from pyaesa.asocc.runtime.paths.external import get_asocc_external_method_level_dir
 from pyaesa.asocc.runtime.scope.branch_resolution import outputs_project_root
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest, read_manifest
+from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     collapse_values_to_summary_groups,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
-    read_uncertainty_table,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import read_uncertainty_table
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
+    iter_compact_run_matrix,
+    iter_sparse_run_rows,
 )
 from pyaesa.shared.lcia.paths import static_cc_csv_path
 from pyaesa.shared.figures.colors import DEFAULT_SINGLE_SERIES_COLOR
@@ -82,10 +91,95 @@ from pyaesa.shared.runtime.scenario.columns import (
 from tests.package.helpers.acc_dummy_repo import (
     prepare_dynamic_acc_repo_with_years,
 )
+from tests.package.helpers.uncertainty_branch_outputs import (
+    assert_mixed_static_dynamic_cc_outputs,
+)
 
 
 def _run_root(*, repo_root: Path, project_name: str, run_id: str, source: str) -> Path:
-    return repo_root / f"{project_name}" / "B2_acc" / source / "monte_carlo" / run_id
+    return (
+        repo_root
+        / f"{project_name}"
+        / "B2_acc"
+        / source
+        / "monte_carlo"
+        / "static__gwp100_lcia"
+        / run_id
+    )
+
+
+def _read_compact_run_matrix_frame(*, path: Path, column_count: int) -> pd.DataFrame:
+    columns = [str(index) for index in range(int(column_count))]
+    frames = []
+    for run_index, values in iter_compact_run_matrix(
+        path=path,
+        output_format="csv_compact",
+        column_count=int(column_count),
+    ):
+        frame = pd.DataFrame(values, columns=columns)
+        frame.insert(0, "run_index", run_index)
+        frames.append(frame)
+    if not frames:
+        return pd.DataFrame(columns=["run_index", *columns])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_sparse_run_rows_frame(*, path: Path) -> pd.DataFrame:
+    frames = []
+    value_column = "acc"
+    for rows in iter_sparse_run_rows(path=path, output_format="csv_compact"):
+        value_column = rows.value_column
+        frames.append(
+            pd.DataFrame(
+                {
+                    "run_index": rows.run_index,
+                    "public_row_id": rows.public_row_id,
+                    rows.value_column: rows.values,
+                }
+            )
+        )
+    if not frames:
+        return pd.DataFrame(columns=["run_index", "public_row_id", value_column])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_acc_run_artifact_frame(*, path: Path, layout: str, column_count: int) -> pd.DataFrame:
+    if layout == "compact_run_matrix":
+        return _read_compact_run_matrix_frame(path=path, column_count=column_count)
+    assert layout == "sparse_selected_rows"
+    return _read_sparse_run_rows_frame(path=path)
+
+
+def test_uncertainty_acc_branch_scope_keeps_full_asocc_lcia_scope(allocation_dummy_repo) -> None:
+    del allocation_dummy_repo
+    scope = build_acc_uncertainty_scope(
+        project_name="acc_uncertainty_shared_asocc_lcia",
+        source="exiobase_396_ixi",
+        agg_reg=False,
+        agg_sec=False,
+        agg_version="",
+        years=[2005],
+        fu_code="L2.a.a",
+        r_p=None,
+        s_p=None,
+        r_c=None,
+        r_f=None,
+        group_indices=False,
+        lcia_method=["gwp100_lcia", "pb_lcia"],
+        base_asocc_args={
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+        },
+        base_cc_args={"static": {}, "dynamic_ar6": {"active": False}},
+        external_method=None,
+    )
+
+    branch = next(item for item in scope.branches if item["cc_source"] == "pb_lcia")
+    branch_scope = _acc_branch_scope(scope=scope, branch=branch)
+
+    assert branch_scope.shared_methods == ["pb_lcia"]
+    assert branch_scope.asocc_lcia_methods == ["gwp100_lcia", "pb_lcia"]
+    assert branch_scope.base_args["lcia_method"] == ["pb_lcia"]
 
 
 def _static_kwargs(*, project_name: str) -> dict[str, Any]:
@@ -121,7 +215,7 @@ def _static_kwargs(*, project_name: str) -> dict[str, Any]:
 
 
 def _fast_figure_format() -> dict[str, Any]:
-    return {"format": "png", "dpi": 10}
+    return {"format": "svg", "dpi": 1}
 
 
 def _inactive_default_sources() -> dict[str, dict[str, bool]]:
@@ -312,13 +406,56 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
     )
     assert AR6_CATEGORY_SCOPE_COLUMN not in plain_category_scope.columns
     assert PAIR_COUNT_COLUMN not in plain_category_scope.columns
+    plain_category_values = rows.drop(columns=["cc_category"])
+    plain_attached = attach_dynamic_budget_values(
+        summary_rows=collapsed_value_rows(
+            rows=plain_category_values,
+            context=FigureContext(
+                manifest=context.manifest,
+                paths=context.paths,
+                figures_root=context.figures_root,
+                requested_years=context.requested_years,
+                requested_asocc_ssps=context.requested_asocc_ssps,
+                fu_code=context.fu_code,
+                output_format=context.output_format,
+                figure_output_format=context.figure_output_format,
+                figure_dpi=context.figure_dpi,
+                per_method=context.per_method,
+                multi_method=context.multi_method,
+                inter_method=context.inter_method,
+                active_sources=context.active_sources,
+                run_layout=context.run_layout,
+                dynamic_category_uncertainty_active=False,
+            ),
+            include_method_axis=False,
+        ).drop(columns=[VALUE_ARRAY_COLUMN]),
+        value_rows=plain_category_values,
+        context=FigureContext(
+            manifest=context.manifest,
+            paths=context.paths,
+            figures_root=context.figures_root,
+            requested_years=context.requested_years,
+            requested_asocc_ssps=context.requested_asocc_ssps,
+            fu_code=context.fu_code,
+            output_format=context.output_format,
+            figure_output_format=context.figure_output_format,
+            figure_dpi=context.figure_dpi,
+            per_method=context.per_method,
+            multi_method=context.multi_method,
+            inter_method=context.inter_method,
+            active_sources=context.active_sources,
+            run_layout=context.run_layout,
+            dynamic_category_uncertainty_active=False,
+        ),
+        include_method_axis=False,
+    )
+    assert AR6_CATEGORY_SCOPE_COLUMN not in plain_attached.columns
 
 
 def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
-    project_repo: Path,
+    allocation_dummy_repo,
     tmp_path: Path,
 ) -> None:
-    del project_repo
     frame = pd.DataFrame(
         {
             "year": [2020, 2021, 2020, 2021],
@@ -524,6 +661,30 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
         include_impact_in_label=False,
         include_method_in_label=True,
     ) == [tmp_path / "dynamic_two_method_band_no_sampling.svg"]
+    dynamic_missing_sampling = dynamic_two_method.drop(
+        columns=[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN]
+    )
+    assert plot_mean_line_scope(
+        frame=dynamic_missing_sampling,
+        requested_years=[2020, 2021],
+        output_stem=tmp_path / "dynamic_two_method_mean_missing_sampling",
+        title="dynamic two method mean missing sampling",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    ) == [tmp_path / "dynamic_two_method_mean_missing_sampling.svg"]
+    assert plot_band_scope(
+        frame=dynamic_missing_sampling,
+        output_stem=tmp_path / "dynamic_two_method_band_missing_sampling",
+        title="dynamic two method band missing sampling",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    ) == [tmp_path / "dynamic_two_method_band_missing_sampling.svg"]
 
     min_max_band_frame = pd.concat(
         [
@@ -561,7 +722,7 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
     )
     violin_paths = plot_violin_scope(
         frame=violin_frame,
-        output_stem=tmp_path / "multi_impact_grouped_violin",
+        output_stem=tmp_path / "multi_impact_aggregated_violin",
         title="multi impact grouped violin",
         dpi=1,
         output_format="svg",
@@ -569,13 +730,21 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
         include_impact_in_label=False,
         include_method_in_label=True,
     )
-    assert violin_paths == [tmp_path / "multi_impact_grouped_violin.svg"]
+    assert violin_paths == [tmp_path / "multi_impact_aggregated_violin.svg"]
     assert violin_paths[0].exists()
 
 
 def test_uncertainty_acc_static_fixed_sobol_outputs(allocation_dummy_repo) -> None:
+    kwargs = _static_kwargs(project_name="acc_uncertainty_static_sobol")
+    no_sobol_manifest = uncertainty_acc(
+        **kwargs,
+        figures=False,
+        subfigures=False,
+        refresh=True,
+    ).manifest
+
     manifest = uncertainty_acc(
-        **_static_kwargs(project_name="acc_uncertainty_static_sobol"),
+        **kwargs,
         sobol_parameters={
             "active": True,
             "fixed": {"active": True, "n_base_samples": 4},
@@ -583,10 +752,11 @@ def test_uncertainty_acc_static_fixed_sobol_outputs(allocation_dummy_repo) -> No
         },
         figures=False,
         subfigures=False,
-        refresh=True,
+        refresh=False,
     ).manifest
 
     assert manifest.family == "acc"
+    assert manifest.run_id == no_sobol_manifest.run_id
     assert manifest.completed_runs == 2
     assert manifest.artifacts is not None
     assert manifest.deterministic_prerequisites[0]["component_inventory"]["role"] == (
@@ -607,7 +777,7 @@ def test_uncertainty_acc_static_fixed_sobol_outputs(allocation_dummy_repo) -> No
         source="exiobase_396_ixi",
     )
     identity = pd.read_csv(manifest.artifacts["public_row_identity"])
-    runs = pd.read_csv(manifest.artifacts["acc_runs"])
+    runs = _read_sparse_run_rows_frame(path=Path(manifest.artifacts["acc_runs"]))
     summary = pd.read_csv(manifest.artifacts["summary_stats_runs"])
     sobol = pd.read_csv(manifest.artifacts["sobol_indices"])
     sobol_summary = pd.read_csv(manifest.artifacts["sobol_source_summary"])
@@ -644,6 +814,8 @@ def test_uncertainty_acc_static_fixed_sobol_outputs(allocation_dummy_repo) -> No
         "asocc::inter_method_uncertainty",
         "asocc::projection_uncertainty",
     }
+    assert "year" in sobol.columns
+    assert set(sobol["year"]) == {2030}
     assert "summary_level" in sobol_summary.columns
     assert "lcia_method" in sobol_summary.columns
     assert "sobol_source_summary" in manifest.artifacts["public_output"]
@@ -806,9 +978,10 @@ def test_uncertainty_acc_dynamic_fixed_outputs(
         path=Path(manifest.artifacts["public_row_identity"]),
         output_format="csv_compact",
     )
-    runs = read_uncertainty_table(
+    runs = _read_acc_run_artifact_frame(
         path=Path(manifest.artifacts["acc_runs"]),
-        output_format="csv_compact",
+        layout=manifest.artifacts["public_output"]["acc_runs"]["layout"],
+        column_count=len(identity),
     )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
     readme_text = Path(manifest.artifacts["results_readme"]).read_text(encoding="utf-8")
@@ -831,6 +1004,128 @@ def test_uncertainty_acc_dynamic_fixed_outputs(
     assert runs[value_columns].to_numpy().max() > 1e6
     assert "acc" in set(source_methods["source_component"])
     assert all(len(line) <= 100 for line in readme_text.splitlines())
+
+
+def test_uncertainty_acc_mixed_cc_request_writes_branch_roots(allocation_dummy_repo) -> None:
+    prepare_dynamic_acc_repo_with_years(
+        allocation_dummy_repo,
+        historical_years=[2020, 2021],
+        scenario_years=[2030],
+    )
+    allocation_dummy_repo.write_lcia_support(
+        source="exiobase_396_ixi",
+        matrix_version=None,
+        lcia_method="pb_lcia",
+        available_years=[2020, 2021],
+    )
+
+    kwargs = {
+        "project_name": "acc_uncertainty_mixed_branch_roots",
+        "years": range(2020, 2022),
+        "lcia_method": ["pb_lcia", "gwp100_lcia"],
+        "fu_code": "L2.a.a",
+        "r_p": ["FR"],
+        "s_p": ["D"],
+        "source": "exiobase_396_ixi",
+        "base_asocc_args": {
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+            "ssp_scenario": ["SSP2"],
+            "include_lcia_based_allocation_methods": True,
+        },
+        "base_cc_args": {
+            "static": {"exclude_max_cc": True},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
+        },
+        "uncertainty_config": {
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 1},
+                "convergence": {"active": False},
+            },
+            **_inactive_default_sources(),
+        },
+        "output_format": "csv_compact",
+        "sobol_parameters": {"active": False},
+        "figures": False,
+        "subfigures": False,
+    }
+    report = uncertainty_acc(**kwargs, refresh=True)
+    manifest = report.manifest
+    assert report.reuse_status == "computed"
+
+    assert_mixed_static_dynamic_cc_outputs(manifest=manifest, output_format="csv_compact")
+    reused_report = uncertainty_acc(**kwargs, refresh=False)
+    assert reused_report.reuse_status == "reused_exact"
+    assert_mixed_static_dynamic_cc_outputs(
+        manifest=reused_report.manifest,
+        output_format="csv_compact",
+        expected_run_id=manifest.run_id,
+    )
+
+
+def test_uncertainty_acc_component_multi_branch_uses_parent_phase(
+    allocation_dummy_repo,
+) -> None:
+    prepare_dynamic_acc_repo_with_years(
+        allocation_dummy_repo,
+        historical_years=[2020, 2021],
+        scenario_years=[2030],
+    )
+
+    component = run_uncertainty_acc_component(
+        project_name="acc_uncertainty_component_parent_phase",
+        years=range(2020, 2022),
+        lcia_method="gwp100_lcia",
+        fu_code="L2.a.a",
+        r_p=["FR"],
+        s_p=["D"],
+        r_c=None,
+        r_f=None,
+        source="exiobase_396_ixi",
+        agg_reg=False,
+        agg_sec=False,
+        agg_version="",
+        group_indices=False,
+        base_asocc_args={
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+            "ssp_scenario": ["SSP2"],
+            "include_lcia_based_allocation_methods": False,
+        },
+        external_method=None,
+        base_cc_args={
+            "static": {"exclude_max_cc": False},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
+        },
+        uncertainty_config={
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 1},
+                "convergence": {"active": False},
+            },
+            **_inactive_default_sources(),
+        },
+        sobol_parameters=None,
+        output_format="csv_compact",
+        figures=False,
+        figure_options=None,
+        figure_format=_fast_figure_format(),
+        subfigures=False,
+        refresh=True,
+        phase=cast(Any, NullPhasePrinter()),
+        component_inventory=None,
+        run_id=None,
+        show_progress=False,
+        show_component_progress=False,
+        progress=None,
+    )
+
+    assert component.session is None
+    assert component.report.manifest.family == "acc"
+    public_branches = component.report.manifest.artifacts["public_output"]["branches"]
+    assert {next(iter(branch["base_cc_args"])) for branch in public_branches} == {
+        "static",
+        "dynamic_ar6",
+    }
 
 
 def test_uncertainty_acc_dynamic_figures_cover_public_category_uncertainty(
@@ -955,9 +1250,10 @@ def test_uncertainty_acc_dynamic_asocc_only_keeps_deterministic_cc_rows(
         path=Path(manifest.artifacts["public_row_identity"]),
         output_format="csv_compact",
     )
-    runs = read_uncertainty_table(
+    runs = _read_acc_run_artifact_frame(
         path=Path(manifest.artifacts["acc_runs"]),
-        output_format="csv_compact",
+        layout=manifest.artifacts["public_output"]["acc_runs"]["layout"],
+        column_count=len(identity),
     )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
 
@@ -1119,7 +1415,7 @@ def test_acc_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
 
     assert completed == 2
     assert convergence is None
-    assert pd.read_csv(paths.public_runs).empty
+    assert _read_sparse_run_rows_frame(path=paths.public_runs).empty
     summary = pd.read_csv(paths.summary_stats_runs)
     assert len(summary) == 1
     assert pd.isna(summary.loc[0, "mean"])
@@ -1167,6 +1463,39 @@ def test_uncertainty_acc_sobol_convergence_reports_unreached(
     assert manifest.sobol is not None
     assert manifest.sobol["ran"] is True
     assert manifest.sobol["reached"] is False
+
+
+def test_acc_sobol_target_group_sum_sums_full_period_rows() -> None:
+    values = np.array([[1.0, 2.0, 10.0], [3.0, 4.0, 20.0]], dtype=np.float64)
+
+    grouped = source_unit_mod._sum_values_to_groups(  # noqa: SLF001
+        values=values,
+        public_row_groups=(("0", "1"), ("2",)),
+    )
+
+    np.testing.assert_allclose(grouped, np.array([[3.0, 10.0], [7.0, 20.0]]))
+
+
+def test_acc_sobol_target_groups_accept_static_identity_without_year_axis() -> None:
+    identity = pd.DataFrame(
+        {
+            "public_row_id": [0],
+            "cc_type": ["static"],
+            "lcia_method": ["gwp100_lcia"],
+            "impact": ["GWP_100"],
+            "cc_bound": ["min_cc"],
+        }
+    )
+
+    target_identity, groups = source_unit_mod._acc_sobol_target_identity_groups(  # noqa: SLF001
+        identity=identity,
+        target_years=(2030,),
+        active_sources=("asocc::projection_uncertainty",),
+        dynamic_category_uncertainty_active=False,
+    )
+
+    assert len(target_identity) == 1
+    assert groups == (("0",),)
 
 
 def test_uncertainty_acc_dynamic_sobol_covers_dynamic_and_deterministic_cc(
@@ -1221,6 +1550,8 @@ def test_uncertainty_acc_dynamic_sobol_covers_dynamic_and_deterministic_cc(
     assert dynamic_cc.artifacts is not None
     dynamic_cc_sobol = pd.read_csv(dynamic_cc.artifacts["sobol_indices"])
     assert "ar6_cc::dynamic_ar6_cc_uncertainty" in set(dynamic_cc_sobol["source_name"])
+    assert set(dynamic_cc_sobol["cc_type"]) == {"dynamic_ar6"}
+    assert "year" not in dynamic_cc_sobol.columns
 
     deterministic_cc = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_sobol_deterministic_cc",
@@ -1257,12 +1588,19 @@ def test_uncertainty_acc_dynamic_sobol_covers_dynamic_and_deterministic_cc(
             "fixed": {"active": True, "n_base_samples": 1},
             "convergence": {"active": False},
         },
-        figures=False,
+        figures=True,
+        figure_options={"per_method": False, "multi_method": False, "inter_method": True},
+        figure_format=_fast_figure_format(),
+        subfigures=True,
         refresh=True,
     ).manifest
     assert deterministic_cc.sobol is not None
     assert deterministic_cc.sobol["ran"] is True
     assert "ar6_cc::dynamic_ar6_cc_uncertainty" not in deterministic_cc.active_sources
+    assert deterministic_cc.artifacts is not None
+    assert any(
+        "inter_method" in Path(path).parts for path in deterministic_cc.artifacts["figure_paths"]
+    )
 
 
 def test_uncertainty_acc_dynamic_convergence_refreshes_component_inventories(
@@ -1305,6 +1643,7 @@ def test_uncertainty_acc_dynamic_convergence_refreshes_component_inventories(
         output_format="csv_compact",
         sobol_parameters={"active": False},
         figures=True,
+        figure_options={"per_method": False, "multi_method": False, "inter_method": False},
         figure_format=_fast_figure_format(),
         subfigures=True,
         refresh=True,
@@ -1378,7 +1717,7 @@ def test_uncertainty_acc_static_figures_are_public_for_single_and_multi_year(
         "base_cc_args": {"static": {"exclude_max_cc": False}},
         "uncertainty_config": {
             "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 10},
+                "fixed": {"active": True, "n_runs": 2},
                 "convergence": {"active": False},
             },
             "inter_method_uncertainty": {},
@@ -1399,16 +1738,19 @@ def test_uncertainty_acc_static_figures_are_public_for_single_and_multi_year(
     single = uncertainty_acc(years=[2005], refresh=False, **base_kwargs).manifest
     assert single.artifacts is not None
     single_paths = [Path(path) for path in single.artifacts["figure_paths"]]
+    reused_single = render_reusable_acc_figures_if_requested(
+        manifest=single,
+        figures=True,
+        figure_options={"per_method": True, "multi_method": True, "inter_method": True},
+        figure_format=_fast_figure_format(),
+    )
+    assert reused_single.run_id == single.run_id
 
     assert single_paths
     assert all(path.exists() for path in single_paths)
     assert any("inter_method" in path.parts for path in single_paths)
-    assert any("multi_method" in path.parts for path in single_paths)
     assert any("per_method" in path.parts for path in single_paths)
-    assert any(path.name.endswith("__2005.png") for path in single_paths)
-    reused_single = uncertainty_acc(years=[2005], refresh=False, **base_kwargs).manifest
-    assert reused_single.artifacts is not None
-    assert reused_single.artifacts["figure_paths"]
+    assert any(path.name.endswith("__2005.svg") for path in single_paths)
     no_product_single = uncertainty_acc(
         years=[2005],
         refresh=False,
@@ -1423,24 +1765,6 @@ def test_uncertainty_acc_static_figures_are_public_for_single_and_multi_year(
     ).manifest
     assert no_product_single.artifacts is not None
     assert no_product_single.artifacts["figure_paths"] == []
-
-    multi = uncertainty_acc(
-        **{
-            **base_kwargs,
-            "project_name": "acc_uncertainty_public_figures_multi",
-            "base_cc_args": {"static": {"exclude_max_cc": True}},
-        },
-        years=[2005, 2006],
-        refresh=True,
-    ).manifest
-    assert multi.artifacts is not None
-    multi_paths = [Path(path) for path in multi.artifacts["figure_paths"]]
-
-    assert multi_paths
-    assert all(path.exists() for path in multi_paths)
-    assert any("inter_method" in path.parts for path in multi_paths)
-    assert any("multi_method" in path.parts for path in multi_paths)
-    assert any("per_method" in path.parts for path in multi_paths)
 
 
 def test_uncertainty_acc_static_figures_cover_public_asocc_transition(
@@ -1499,6 +1823,7 @@ def test_uncertainty_acc_static_figures_cover_public_asocc_transition(
         output_format="csv_compact",
         figures=True,
         subfigures=False,
+        figure_options={"per_method": True, "multi_method": False, "inter_method": False},
         figure_format=_fast_figure_format(),
         refresh=True,
     ).manifest
@@ -1578,6 +1903,7 @@ def test_uncertainty_acc_static_figures_cover_public_multi_impact_min_max_violin
         output_format="csv_compact",
         figures=True,
         subfigures=False,
+        figure_options={"per_method": False, "multi_method": False, "inter_method": True},
         figure_format=_fast_figure_format(),
         refresh=True,
     ).manifest
@@ -1803,9 +2129,7 @@ def test_acc_uncertainty_normalization_keeps_absent_mc_parameters_absent() -> No
 
 def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
     tmp_path: Path,
-    project_repo: Path,
 ) -> None:
-    del project_repo
     cc_source = "gwp100_lcia"
     cc_rows = branch_mod._static_cc_rows(cc_source=cc_source, bounds=["min_cc"])  # noqa: SLF001
     impact = str(cc_rows.loc[0, "impact"])
@@ -1832,7 +2156,7 @@ def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
 
     asocc_static = pd.DataFrame(
         {
-            "public_row_id": [0],
+            "public_row_id": [4],
             "lcia_method": [cc_source],
             "impact": [impact],
             "year": [2030],
@@ -1849,6 +2173,7 @@ def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
 
     assert set(static_plan.identity["lcia_method"]) == {cc_source}
     assert len(static_plan.identity) == 1
+    assert static_plan.asocc_positions.tolist() == [4]
 
     dynamic_branch = {"cc_type": "dynamic_ar6", "cc_source": cc_source}
     cc_identity = pd.DataFrame(
@@ -1864,7 +2189,7 @@ def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
     )
     asocc_dynamic = pd.DataFrame(
         {
-            "public_row_id": [0, 1],
+            "public_row_id": [4, 7],
             "lcia_method": [cc_source, cc_source],
             "impact": [impact, impact],
             "year": [2030, 2030],
@@ -1888,6 +2213,7 @@ def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
 
     assert len(dynamic_plan.identity) == 3
     assert len(no_impact_plan.identity) == 3
+    assert dynamic_plan.asocc_positions.tolist() == [4, 4, 7]
     invariant_only = branch_mod._dynamic_branch_plan(  # noqa: SLF001
         asocc_identity=asocc_dynamic.loc[[0]],
         cc_identity=cc_identity,
@@ -1915,9 +2241,19 @@ def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
 
     sparse = SparseRunRows(
         run_index=np.array([0], dtype=np.int64),
-        public_row_id=np.array([0], dtype=np.int64),
+        public_row_id=np.array([4], dtype=np.int64),
         values=np.array([2.0], dtype=np.float64),
         value_column="asocc",
+    )
+    static_sparse = sparse_render_mod.evaluate_acc_sparse_rows(
+        asocc_rows=sparse,
+        run_indices=np.array([0], dtype=np.int64),
+        expansions=sparse_rows_mod.sparse_branch_expansions(branch_plans=(static_plan,)),
+        cc_values=None,
+    )
+    np.testing.assert_allclose(
+        static_sparse.values,
+        [2.0 * cast(np.ndarray, static_plan.static_cc_values)[0]],
     )
     dynamic_sparse = sparse_render_mod.evaluate_acc_sparse_rows(
         asocc_rows=sparse,

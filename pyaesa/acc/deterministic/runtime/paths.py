@@ -19,7 +19,7 @@ class ACCDeterministicPathContext:
 
     proj_base: Path
     source_label: str
-    group_version: str | None
+    agg_version: str | None
     cc_source: str
     cc_type: str
     public_result_root_name: str | None = None
@@ -29,7 +29,7 @@ def build_acc_path_context(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
     cc_source: str,
     cc_type: str,
     public_result_root_name: str | None = None,
@@ -38,7 +38,7 @@ def build_acc_path_context(
     return ACCDeterministicPathContext(
         proj_base=Path(proj_base),
         source_label=str(source_label).strip(),
-        group_version=group_version,
+        agg_version=agg_version,
         cc_source=str(cc_source).strip(),
         cc_type=str(cc_type).strip().lower(),
         public_result_root_name=(
@@ -50,12 +50,12 @@ def build_acc_path_context(
 def build_acc_scope_label(
     *,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
     cc_source: str,
     cc_type: str,
 ) -> str:
     """Return the deterministic aCC metadata scope label."""
-    source_token = asocc_source_version_token(source=source_label, group_version=group_version)
+    source_token = asocc_source_version_token(source=source_label, agg_version=agg_version)
     return f"{source_token}__{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
 
 
@@ -65,7 +65,7 @@ def get_acc_branch_root(*, context: ACCDeterministicPathContext) -> Path:
         get_acc_root(
             proj_base=context.proj_base,
             source_label=context.source_label,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         / "deterministic"
         / cc_branch_token(cc_source=context.cc_source, cc_type=context.cc_type)

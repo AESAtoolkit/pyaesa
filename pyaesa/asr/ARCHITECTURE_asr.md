@@ -11,7 +11,7 @@ semantics and unit conversion contract owned by the deterministic ASR runtime.
 | Public function | Canonical owner | Responsibility |
 | --- | --- | --- |
 | `deterministic_asr(...)` | `pyaesa/asr/deterministic_asr.py` | Resolve deterministic aCC and LCA prerequisites, align numerator and denominator rows, compute ASR values, and write deterministic tables and figures. |
-| `uncertainty_asr(...)` | `pyaesa/asr/uncertainty_asr.py` | Resolve upstream aCC uncertainty and LCA uncertainty inputs, compute ASR run values, write exact summaries, and run optional Sobol analysis. |
+| `uncertainty_asr(...)` | `pyaesa/asr/uncertainty_asr.py` | Resolve upstream aCC uncertainty and LCA uncertainty inputs, compute ASR run values, write summaries, and run optional Sobol analysis. |
 
 Both functions are exported at package level through `pyaesa.__init__`.
 
@@ -47,7 +47,7 @@ defensive validation for invariants already guaranteed by those owners.
 | --- | --- |
 | `deterministic/` | Deterministic ASR runner, prerequisite resolution, row computation, dynamic cumulative assembly, state, reports, and figures. |
 | `shared/` | ASR path helpers, LCA route request normalization, deterministic external LCA helpers, component unit conversion contracts, and ASR figure shared utilities. |
-| `uncertainty/` | ASR uncertainty runner with responsibility subfolders for IO, runtime component inputs, checkpoint orchestration, LCA sources, source keys, vectorized run evaluation, exact summaries, manifests, source methods, figures, and Sobol evaluation. The `uncertainty/evaluation/` package is split by owner: `planning.py` builds the ASR plan from upstream manifests, `alignment.py` owns numerator denominator row alignment, `runs.py` owns yearly ASR run products, `cumulative.py` owns dynamic AR6 full period cumulative ASR identities and values, and `summary.py` owns ASR summary identities and frequency of no-transgression metric collapse. |
+| `uncertainty/` | ASR uncertainty runner with responsibility subfolders for IO, runtime component inputs, checkpoint orchestration, LCA sources, source keys, vectorized run evaluation, summaries, manifests, source methods, figures, and Sobol evaluation. The `uncertainty/evaluation/` package is split by owner: `planning.py` builds the ASR plan from upstream manifests, `alignment.py` owns numerator denominator row alignment, `runs.py` owns yearly ASR run products, `cumulative.py` owns dynamic AR6 full period cumulative ASR identities and values, and `summary.py` owns ASR summary identities and frequency of no-transgression metric collapse. |
 | `pyaesa/shared/acc_asr_common/` | Shared aCC and ASR branch expansion, deterministic downstream loading, shared branch identity guards, and request payload helpers. |
 | `pyaesa/external_inputs/lca/` | Canonical external LCA filename parsing, templates, deterministic loading, Monte Carlo loading, validation, and manifest identity. |
 
@@ -93,7 +93,7 @@ Uncertainty ASR:
    metric and is not assigned to one studied year or one aSoCC time route.
    Static ASR writes yearly
    ASR and yearly frequency of no-transgression summaries only.
-6. Write public row identity, run values, exact summaries, source methods,
+6. Write public row identity, run values, summaries, source methods,
    README, and `scope_manifest.json`. `uncertainty/io/manifest_payloads.py`
    owns ASR manifest payload assembly and output column metadata. The
    uncertainty manifest uses the same top level `function`, `arguments`,
@@ -158,6 +158,28 @@ The LCIA method is filename owned. External LCA row tables must not provide a
 | Shared uncertainty run folders and manifests | `pyaesa/shared/uncertainty_assessment/` |
 
 ASR outputs are scoped by source branch and LCA route under `C_asr/`.
+Single branch uncertainty outputs are further scoped by carrying capacity
+branch token:
+
+```text
+C_asr/<source_token>/<lca_route>/monte_carlo/<branch_token>/<run_id>/
+    results/public_row_identity.<ext>
+    results/asr_runs.<ext>
+    results/summary_stats_runs.<ext>
+    results/cumulative_row_identity.<ext>
+    results/cumulative_asr_runs.<ext>
+    results/cumulative_summary_stats_runs.<ext>
+    results/sobol/
+    logs/scope_manifest.json
+```
+
+The branch token is `static__<lcia_method>` or
+`dynamic_ar6__<lcia_method>`. A mixed public request that includes several
+static or dynamic carrying capacity branches writes a branch set manifest at
+`C_asr/<source_token>/<lca_route>/monte_carlo/<run_id>/logs/scope_manifest.json`.
+The branch set manifest records the branch scope manifests and branch run
+roots; each branch still stores its complete ASR artifacts under
+`monte_carlo/<branch_token>/<run_id>/`.
 
 ## Runtime Contracts
 
@@ -178,7 +200,7 @@ ASR outputs are scoped by source branch and LCA route under `C_asr/`.
   `uncertainty/runtime/component_inputs.py`, convergence checkpoint execution
   by `uncertainty/runtime/checkpoints.py`, and request scope normalization by
   `uncertainty/runtime/scope.py`.
-- ASR exact reused figure rendering is owned by
+- ASR reused figure rendering is owned by
   `uncertainty/figures/reuse.py` and records updated figure paths in the run
   manifest for the reused Monte Carlo folder.
 - Compact ASR run tables contain every requested public row id and are used
@@ -224,7 +246,7 @@ ASR outputs are scoped by source branch and LCA route under `C_asr/`.
 | Progress cleanup | Clear upstream progress before ASR work and before failures return. |
 | Subfigures | Forward `subfigures=True` to upstream aCC and LCA prerequisites. aCC then renders deterministic figures for fixed aSoCC or AR6 CC lanes and uncertainty figures for active stochastic lanes. |
 | Figure summaries | Public summaries use `Figures available` and `Figures folder`. |
-| Refresh scope | Refresh affects ASR reuse and deterministic IO-LCA prerequisites only. |
+| Refresh scope | Refresh affects the resolved ASR Monte Carlo branch or branch set and deterministic IO-LCA prerequisites only. |
 
 ## Testing And Quality Gates
 

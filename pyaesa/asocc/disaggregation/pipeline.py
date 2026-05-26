@@ -54,7 +54,7 @@ def _disaggregated_context(
     parsed: ParsedArgs,
     selector,
     mode: str,
-    aggreg_indices: bool,
+    group_indices: bool,
     l1_methods: list[str],
     combined_methods: list[tuple[str, str]],
     one_step_methods: list[str],
@@ -67,10 +67,10 @@ def _disaggregated_context(
         combined_methods=combined_methods,
         one_step_methods=one_step_methods,
         l1_reg_aggreg=mode,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         variant_tag=None,
         output_format=parsed.output_format,
-        output_source_label=parsed.disaggregation.new_disaggregated_version_name,
+        output_source_label=parsed.disaggregation.new_disagg_version_name,
     )
     context, _state, _skipped = _prepare_context(request=request)
     return PreparedBranchContext(
@@ -87,7 +87,7 @@ def _match_runs(
     *,
     parsed: ParsedArgs,
     mode: str,
-    aggreg_indices: bool,
+    group_indices: bool,
     l1_methods: list[str],
     combined_methods: list[tuple[str, str]],
     one_step_methods: list[str],
@@ -95,16 +95,16 @@ def _match_runs(
 ) -> dict[str, MatchedRun]:
     """Match all prerequisite deterministic selector scopes for one branch."""
     validate_region_compatibility(
-        target_selector=parsed.disaggregation.target_grouped_run,
-        ref_grouped_selector=parsed.disaggregation.ref_grouped_run,
-        ref_split_selector=parsed.disaggregation.ref_split_run,
+        target_selector=parsed.disaggregation.target_agg_run,
+        ref_aggregated_selector=parsed.disaggregation.ref_agg_run,
+        ref_disaggregate_selector=parsed.disaggregation.ref_disagg_run,
         base_allocate_args=parsed.base_allocate_args,
         combined_methods=combined_methods,
     )
     selectors = {
-        "target_grouped_run": parsed.disaggregation.target_grouped_run,
-        "ref_grouped_run": parsed.disaggregation.ref_grouped_run,
-        "ref_split_run": parsed.disaggregation.ref_split_run,
+        "target_agg_run": parsed.disaggregation.target_agg_run,
+        "ref_agg_run": parsed.disaggregation.ref_agg_run,
+        "ref_disagg_run": parsed.disaggregation.ref_disagg_run,
     }
     matched_runs: dict[str, MatchedRun] = {}
     for name, selector in selectors.items():
@@ -115,7 +115,7 @@ def _match_runs(
             combined_methods=combined_methods,
             one_step_methods=one_step_methods,
             l1_reg_aggreg=mode,
-            aggreg_indices=aggreg_indices,
+            group_indices=group_indices,
             variant_tag=None,
         )
         matched_runs[name] = match_selector_scope(
@@ -139,10 +139,10 @@ def _scope_for_matched_run(matched_run, *, context_label: str):
 def _run_family(
     *,
     target_scope,
-    ref_grouped_scope,
-    ref_split_scope,
+    ref_aggregated_scope,
+    ref_disaggregate_scope,
     disagg_scope,
-    grouped_sector_by_split: dict[str, str],
+    aggregated_sector_by_disaggregate: dict[str, str],
     bucket: str,
     stem_prefix: str,
     requested_years: list[int],
@@ -155,23 +155,23 @@ def _run_family(
         requested_years=requested_years,
         require_requested_coverage=True,
     )
-    ref_grouped_rows, _ = load_partitioned_rows(
-        root=asocc_l2_dir(scope=ref_grouped_scope, bucket=bucket, lcia_sub=None),
+    ref_aggregated_rows, _ = load_partitioned_rows(
+        root=asocc_l2_dir(scope=ref_aggregated_scope, bucket=bucket, lcia_sub=None),
         stem_prefix=stem_prefix,
         requested_years=requested_years,
         require_requested_coverage=True,
     )
-    ref_split_rows, _ = load_partitioned_rows(
-        root=asocc_l2_dir(scope=ref_split_scope, bucket=bucket, lcia_sub=None),
+    ref_disaggregate_rows, _ = load_partitioned_rows(
+        root=asocc_l2_dir(scope=ref_disaggregate_scope, bucket=bucket, lcia_sub=None),
         stem_prefix=stem_prefix,
         requested_years=requested_years,
         require_requested_coverage=True,
     )
     output_rows, audit = disaggregate_rows(
         target_rows=target_rows,
-        ref_grouped_rows=ref_grouped_rows,
-        ref_split_rows=ref_split_rows,
-        grouped_sector_by_split=grouped_sector_by_split,
+        ref_aggregated_rows=ref_aggregated_rows,
+        ref_disaggregate_rows=ref_disaggregate_rows,
+        aggregated_sector_by_disaggregate=aggregated_sector_by_disaggregate,
     )
     written = write_partitioned_rows(
         rows=output_rows,
@@ -188,7 +188,7 @@ def _time_route_warning_lines(*, audit_frame: pd.DataFrame) -> list[str]:
     """Return report warning lines for source-specific time-route bridges."""
     bridge_columns = [
         column
-        for column in ("ref_grouped_time_route_bridge", "ref_split_time_route_bridge")
+        for column in ("ref_aggregated_time_route_bridge", "ref_disaggregate_time_route_bridge")
         if column in audit_frame.columns
     ]
     if audit_frame.empty or not bridge_columns:
@@ -200,10 +200,10 @@ def _time_route_warning_lines(*, audit_frame: pd.DataFrame) -> list[str]:
     years = sorted({int(year) for year in year_values.tolist()})
     return wrap_user_text_lines(
         [
-            "WARNING: The target grouped run required a time-route bridge for selected "
+            "WARNING: The target aggregated run required a time-route bridge for selected "
             f"source rows in years {format_summary_years(years)} because one selected MRIO "
             "run is historical while the other is prospective. Disaggregation kept the "
-            "target grouped run year and asocc_time_route: regression target rows used "
+            "target aggregated run year and asocc_time_route: regression target rows used "
             "selected source values from the same studied year, and historical_reuse target "
             "rows used selected source values matched on the same l2_reuse_year. These "
             "affected years are automatically skipped for inter-MRIO uncertainty of "
@@ -226,13 +226,13 @@ def _branch_artifact_paths(
     audit_path = disaggregation_audit_path(
         logs_dir=logs_dir,
         mode=str(prepared.disagg_run_signature["l1_reg_aggreg"]),
-        aggreg_indices=bool(prepared.disagg_run_signature["aggreg_indices"]),
+        group_indices=bool(prepared.disagg_run_signature["group_indices"]),
     )
     metadata_path = disaggregation_metadata_path(
         proj_base=prepared.disagg_proj_base,
         source_label=source_label,
         mode=str(prepared.disagg_run_signature["l1_reg_aggreg"]),
-        aggreg_indices=bool(prepared.disagg_run_signature["aggreg_indices"]),
+        group_indices=bool(prepared.disagg_run_signature["group_indices"]),
     )
     ensure_file_parent(audit_path)
     ensure_file_parent(metadata_path)
@@ -250,7 +250,7 @@ def _branch_mode_result(
     if output_paths is None:
         _audit_path, metadata_path = _branch_artifact_paths(
             prepared=prepared,
-            source_label=parsed.disaggregation.new_disaggregated_version_name,
+            source_label=parsed.disaggregation.new_disagg_version_name,
         )
         output_paths = [
             Path(str(path))
@@ -258,7 +258,7 @@ def _branch_mode_result(
         ]
     return SimpleNamespace(
         proj_base=prepared.disagg_proj_base,
-        output_source_label=parsed.disaggregation.new_disaggregated_version_name,
+        output_source_label=parsed.disaggregation.new_disagg_version_name,
         fu_code=parsed.base_allocate_args["fu_code"],
         requested_years=list(prepared.requested_years),
         lcia_methods=None,
@@ -277,7 +277,7 @@ def _format_method_progress_message(
 ) -> str:
     """Return one transient status line for method scoped disaggregation progress."""
     return (
-        f"[disaggregate_asocc] disaggregating method {method_index}/{total_methods} ({stem_prefix})"
+        f"[disaggregate_asocc] disaggregation method {method_index}/{total_methods} ({stem_prefix})"
     )
 
 
@@ -288,37 +288,37 @@ def run_disaggregation(
 ) -> DisaggregationReport:
     """Execute published-output disaggregation across all requested branch modes."""
     run_plan = build_disaggregation_run_plan(parsed)
-    grouped_sector_by_split = {
-        spec.split_sector_label: spec.grouped_sector_label
+    aggregated_sector_by_disaggregate = {
+        spec.disagg_sector_label: spec.agg_sector_label
         for spec in parsed.disaggregation.disaggregation_specs
     }
     branch_reports: list[DisaggregationBranchReport] = []
     initial_context = _disaggregated_context(
         parsed=parsed,
-        selector=parsed.disaggregation.ref_split_run,
+        selector=parsed.disaggregation.ref_disagg_run,
         mode=run_plan.l1_reg_aggreg,
-        aggreg_indices=run_plan.aggreg_indices,
+        group_indices=run_plan.group_indices,
         l1_methods=run_plan.l1_methods,
         combined_methods=run_plan.combined_non_lcia,
         one_step_methods=run_plan.one_step_non_lcia,
     )
     refresh_root = disaggregation_source_root(
         proj_base=initial_context.disagg_proj_base,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
     )
     if parsed.refresh:
         close_loggers_for_scope(refresh_root)
         shutil.rmtree(refresh_root, ignore_errors=True)
-    aggreg_indices = run_plan.aggreg_indices
+    group_indices = run_plan.group_indices
     mode = run_plan.l1_reg_aggreg
     branch_label = (
-        f"l1_reg_aggreg={mode}, aggreg_indices={'grouped' if aggreg_indices else 'ungrouped'}"
+        f"l1_reg_aggreg={mode}, group_indices={'grouped' if group_indices else 'ungrouped'}"
     )
     prepared = _disaggregated_context(
         parsed=parsed,
-        selector=parsed.disaggregation.ref_split_run,
+        selector=parsed.disaggregation.ref_disagg_run,
         mode=mode,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         l1_methods=run_plan.l1_methods,
         combined_methods=run_plan.combined_non_lcia,
         one_step_methods=run_plan.one_step_non_lcia,
@@ -326,7 +326,7 @@ def run_disaggregation(
     matched_runs = _match_runs(
         parsed=parsed,
         mode=mode,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         l1_methods=run_plan.l1_methods,
         combined_methods=run_plan.combined_non_lcia,
         one_step_methods=run_plan.one_step_non_lcia,
@@ -341,7 +341,7 @@ def run_disaggregation(
         branch_complete=is_disaggregation_branch_complete(
             parsed=parsed,
             proj_base=prepared.disagg_proj_base,
-            source_label=parsed.disaggregation.new_disaggregated_version_name,
+            source_label=parsed.disaggregation.new_disagg_version_name,
             run_signature=prepared.disagg_run_signature,
             requested_years=prepared.requested_years,
             matched_runs=matched_runs,
@@ -365,12 +365,12 @@ def run_disaggregation(
         )
         audit_path, metadata_path = _branch_artifact_paths(
             prepared=prepared,
-            source_label=parsed.disaggregation.new_disaggregated_version_name,
+            source_label=parsed.disaggregation.new_disagg_version_name,
         )
         branch_reports.append(
             DisaggregationBranchReport(
                 l1_reg_aggreg=mode,
-                aggreg_indices=bool(aggreg_indices),
+                group_indices=bool(group_indices),
                 summaries=[
                     "Run status: reused exactly.",
                     (f"Requested years: {format_summary_years(prepared.requested_years)}"),
@@ -384,26 +384,26 @@ def run_disaggregation(
             )
         )
         return DisaggregationReport(
-            source_label=parsed.disaggregation.new_disaggregated_version_name,
+            source_label=parsed.disaggregation.new_disagg_version_name,
             branch_reports=branch_reports,
         )
     phase.log_message(f"[disaggregate_asocc] Starting branch: {branch_label}", persistent=True)
     phase.status("matching prerequisite scopes", owner="disaggregate_asocc")
     target_scope = _scope_for_matched_run(
-        matched_runs["target_grouped_run"],
+        matched_runs["target_agg_run"],
         context_label="Disaggregation target scope",
     )
-    ref_grouped_scope = _scope_for_matched_run(
-        matched_runs["ref_grouped_run"],
-        context_label="Disaggregation reference-grouped scope",
+    ref_aggregated_scope = _scope_for_matched_run(
+        matched_runs["ref_agg_run"],
+        context_label="Disaggregation reference-aggregated scope",
     )
-    ref_split_scope = _scope_for_matched_run(
-        matched_runs["ref_split_run"],
-        context_label="Disaggregation reference-split scope",
+    ref_disaggregate_scope = _scope_for_matched_run(
+        matched_runs["ref_disagg_run"],
+        context_label="Disaggregation reference-disaggregate scope",
     )
     disagg_scope = path_scope_from_signature(
         proj_base=prepared.disagg_proj_base,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
         run_signature=prepared.disagg_run_signature,
         context_label="Disaggregated output scope",
     )
@@ -424,10 +424,10 @@ def run_disaggregation(
         )
         written, audit = _run_family(
             target_scope=target_scope,
-            ref_grouped_scope=ref_grouped_scope,
-            ref_split_scope=ref_split_scope,
+            ref_aggregated_scope=ref_aggregated_scope,
+            ref_disaggregate_scope=ref_disaggregate_scope,
             disagg_scope=disagg_scope,
-            grouped_sector_by_split=grouped_sector_by_split,
+            aggregated_sector_by_disaggregate=aggregated_sector_by_disaggregate,
             bucket="l2_vs_global",
             stem_prefix=l2_method,
             requested_years=prepared.requested_years,
@@ -450,10 +450,10 @@ def run_disaggregation(
         )
         written_final, audit_final = _run_family(
             target_scope=target_scope,
-            ref_grouped_scope=ref_grouped_scope,
-            ref_split_scope=ref_split_scope,
+            ref_aggregated_scope=ref_aggregated_scope,
+            ref_disaggregate_scope=ref_disaggregate_scope,
             disagg_scope=disagg_scope,
-            grouped_sector_by_split=grouped_sector_by_split,
+            aggregated_sector_by_disaggregate=aggregated_sector_by_disaggregate,
             bucket="l2_vs_global",
             stem_prefix=stem_prefix,
             requested_years=prepared.requested_years,
@@ -463,7 +463,7 @@ def run_disaggregation(
         audit_chunks.append(audit_final)
     audit_path, metadata_path = _branch_artifact_paths(
         prepared=prepared,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
     )
     audit_frame = (
         pd.concat(audit_chunks, ignore_index=True)
@@ -511,7 +511,7 @@ def run_disaggregation(
     branch_reports.append(
         DisaggregationBranchReport(
             l1_reg_aggreg=mode,
-            aggreg_indices=bool(aggreg_indices),
+            group_indices=bool(group_indices),
             summaries=[
                 "Run status: computed.",
                 (f"Requested years: {format_summary_years(prepared.requested_years)}"),
@@ -528,6 +528,6 @@ def run_disaggregation(
         )
     )
     return DisaggregationReport(
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
         branch_reports=branch_reports,
     )

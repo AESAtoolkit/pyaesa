@@ -89,7 +89,7 @@ def _store_l1_frame(
                 ssp_scenario=run.ssp_scenario,
                 scenario_dependent=is_scenario_dependent_l1(payload.resolved_name),
             ),
-            grouped_mode=bool(run.context.aggreg_indices),
+            grouped_mode=bool(run.context.group_indices),
             state=run.state,
         )
         run.state.l1_results_by_ssp_scenario[run.ssp_scenario].setdefault(spec, []).append(

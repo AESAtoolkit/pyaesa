@@ -109,6 +109,33 @@ DEFAULT_META_COLUMNS = [
     "Literature Reference (if applicable)",
 ]
 
-DEFAULT_CATEGORIES = ["C1", "C2", "C3", "C4"]
+RECOMMENDED_AR6_CATEGORIES = ["C1", "C2", "C3", "C4"]
+VALID_AR6_CATEGORIES = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"]
+DEFAULT_CATEGORIES = list(RECOMMENDED_AR6_CATEGORIES)
 DEFAULT_SSPS = [1, 2, 3, 4, 5]
 DEFAULT_VARIABLES_OUTPUT = list(PROCESSED_OUTPUT_VARIABLES)
+
+
+def normalize_ar6_categories(category: str | list[str] | None) -> list[str]:
+    """Normalize and validate AR6 category selectors."""
+    if category is None:
+        return list(RECOMMENDED_AR6_CATEGORIES)
+    if isinstance(category, str):
+        values = [category]
+    elif isinstance(category, list):
+        values = category
+    else:
+        raise ValueError("category must be a non empty AR6 category string or list.")
+    if not values or any(not isinstance(item, str) for item in values):
+        raise ValueError("category must be a non empty AR6 category string or list.")
+    categories = [item.strip().upper() for item in values]
+    if not categories or any(not item for item in categories):
+        raise ValueError("category must be a non empty AR6 category string or list.")
+    invalid = sorted(set(categories) - set(VALID_AR6_CATEGORIES))
+    if invalid:
+        valid = ", ".join(VALID_AR6_CATEGORIES)
+        received = ", ".join(invalid)
+        raise ValueError(
+            f"category must contain only AR6 categories {valid}. Received: {received}."
+        )
+    return sorted(dict.fromkeys(categories))

@@ -127,7 +127,7 @@ def _base_meta_row(
         "Vetting_future": "Pass",
         "Time horizon": "long",
         "Category": category,
-        "Category_name": f"{category} scenario group",
+        "Category_name": f"{category} scenario aggregate",
         "Category_subset": f"{category}-subset",
         "Category_definition": f"{category} definition",
         "Cumulative net CO2 (2020-2100, Gt CO2) (Harm-Infilled)": 100.0,

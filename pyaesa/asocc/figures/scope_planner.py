@@ -19,9 +19,9 @@ class RunScope:
 
     proj_base: Path
     source: str
-    group_version: str | None
-    group_reg: bool
-    aggreg_indices: bool
+    agg_version: str | None
+    agg_reg: bool
+    group_indices: bool
     l1_reg_aggreg: str
 
     @classmethod
@@ -36,9 +36,9 @@ class RunScope:
         return cls(
             proj_base=Path(proj_base),
             source=str(source),
-            group_version=_optional_text(signature.get("group_version")),
-            group_reg=bool(signature.get("group_reg")),
-            aggreg_indices=bool(signature.get("aggreg_indices")),
+            agg_version=_optional_text(signature.get("agg_version")),
+            agg_reg=bool(signature.get("agg_reg")),
+            group_indices=bool(signature.get("group_indices")),
             l1_reg_aggreg=str(signature.get("l1_reg_aggreg", "post")),
         )
 
@@ -102,14 +102,14 @@ def scoped_output_paths(
     l1_root = _get_asocc_l1_dir(
         proj_base=scope.proj_base,
         source=scope.source,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
         lcia_sub=None,
         owning_fu_level=_owning_fu_level_for_code(fu_code=fu_code),
     )
     l2_root = _get_asocc_l2_dir(
         proj_base=scope.proj_base,
         source=scope.source,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
         bucket="l2_vs_global",
         lcia_sub=None,
     )

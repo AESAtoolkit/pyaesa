@@ -49,7 +49,7 @@ def _validate_external_method_label(method_label: str, *, name: str) -> str:
     except ValueError as exc:
         raise ValueError(
             f"'{name}' method labels must use the scientific method-label form "
-            "used by inter-method tree grouping, for example 'CO(S)', "
+            "used by inter-method tree aggregation, for example 'CO(S)', "
             "'CO-HR(S,cum)', or 'AR(E^{CBA_FD})'. "
             f"Received {text!r}."
         ) from exc

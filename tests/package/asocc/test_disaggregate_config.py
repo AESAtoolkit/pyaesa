@@ -7,32 +7,32 @@ from pyaesa.asocc.disaggregation.config import parse_disaggregate_args
 
 def _base_config() -> dict:
     return {
-        "target_grouped_run": {
+        "target_agg_run": {
             "source": "oecd_v2025",
-            "group_reg": False,
-            "group_sec": False,
-            "group_version": None,
+            "agg_reg": False,
+            "agg_sec": False,
+            "agg_version": None,
             "s_p": ["D"],
         },
-        "ref_grouped_run": {
+        "ref_agg_run": {
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": "oecd_d",
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": "oecd_d",
             "s_p": ["D"],
         },
-        "ref_split_run": {
+        "ref_disagg_run": {
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": "elec",
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": "elec",
             "s_p": ["Electricity_coal", "Electricity_gas"],
         },
         "disaggregation_specs": [
-            {"grouped_sector_label": "D", "split_sector_label": "Electricity_coal"},
-            {"grouped_sector_label": "D", "split_sector_label": "Electricity_gas"},
+            {"agg_sector_label": "D", "disagg_sector_label": "Electricity_coal"},
+            {"agg_sector_label": "D", "disagg_sector_label": "Electricity_gas"},
         ],
-        "new_disaggregated_version_name": "disagg_oecd",
+        "new_disagg_version_name": "disagg_oecd",
     }
 
 
@@ -65,16 +65,16 @@ def test_parse_disaggregate_args_success_with_multiple_splits() -> None:
         base_allocate_args=_base_allocate_args(),
         **_runtime_args(),
     )
-    assert parsed.disaggregation.new_disaggregated_version_name == "disagg_oecd"
+    assert parsed.disaggregation.new_disagg_version_name == "disagg_oecd"
     assert len(parsed.disaggregation.disaggregation_specs) == 2
     assert parsed.base_allocate_args["fu_code"] == "L2.c.b"
 
 
-def test_parse_disaggregate_args_rejects_split_mapped_to_two_grouped() -> None:
+def test_parse_disaggregate_args_rejects_disaggregate_mapped_to_two_aggregated() -> None:
     config = _base_config()
     config["disaggregation_specs"] = [
-        {"grouped_sector_label": "D", "split_sector_label": "Electricity_coal"},
-        {"grouped_sector_label": "E", "split_sector_label": "Electricity_coal"},
+        {"agg_sector_label": "D", "disagg_sector_label": "Electricity_coal"},
+        {"agg_sector_label": "E", "disagg_sector_label": "Electricity_coal"},
     ]
     with pytest.raises(ValueError):
         parse_disaggregate_args(
@@ -113,8 +113,8 @@ def test_parse_disaggregate_args_rejects_forbidden_base_args() -> None:
 
 def test_parse_disaggregate_args_rejects_selector_spec_mismatch() -> None:
     config = _base_config()
-    config["target_grouped_run"]["s_p"] = ["X"]
-    with pytest.raises(ValueError, match="target_grouped_run.s_p"):
+    config["target_agg_run"]["s_p"] = ["X"]
+    with pytest.raises(ValueError, match="target_agg_run.s_p"):
         parse_disaggregate_args(
             disaggregation_config=config,
             base_allocate_args=_base_allocate_args(),
@@ -139,6 +139,6 @@ def test_parse_disaggregate_args_applies_allocate_cc_defaults() -> None:
     )
     args = parsed.base_allocate_args
     assert args["method_plan"] == "default"
-    assert args["aggreg_indices"] is False
+    assert args["group_indices"] is False
     assert args["l1_reg_aggreg"] == "post"
     assert args["reg_window"] is None

@@ -118,7 +118,7 @@ MRIO handler contract:
 | `download_year(...)` | Owns source family acquisition for one effective unit. |
 | `list_existing_years(...)` | Reports raw years visible on disk. |
 | `full_exists(...)` | Detects manually supplied complete raw archives or CSVs. |
-| Optional `coalesce_pending_years(...)` | Groups public years for bundled downloads. |
+| Optional `coalesce_pending_years(...)` | Aggregates public years for bundled downloads. |
 | Optional `progress_label(...)` | Provides progress labels for coalesced units. |
 
 `download_year(...)` receives the requested public years and a run local

@@ -35,7 +35,7 @@ def test_title_contracts_cover_selector_and_prospective_scope() -> None:
     with pytest.raises(ValueError):
         title_mod.resolve_prospective_scope(frame)
 
-    prospective_slices = title_mod.prospective_scope_slices(frame)
+    prospective_slices = list(title_mod.prospective_scope_slices(frame))
     assert [(token, title) for token, title, _ in prospective_slices] == [
         ("prospective_SSP1", "Prospective: SSP1"),
         ("prospective_SSP2", "Prospective: SSP2"),
@@ -48,16 +48,18 @@ def test_title_contracts_cover_selector_and_prospective_scope() -> None:
     assert prospective_slices[0][2].iloc[1]["r_p"] == "FR"
     assert pd.isna(prospective_slices[0][2].iloc[1][ASOCC_SSP_SCENARIO_COLUMN])
     assert float(prospective_slices[0][2].iloc[1]["value"]) == 2.0
-    assert title_mod.prospective_scope_slices(
-        pd.DataFrame(
-            [
-                {ASOCC_SSP_SCENARIO_COLUMN: "SSP 1", "value": 1.0},
-                {ASOCC_SSP_SCENARIO_COLUMN: "Net Zero", "value": 2.0},
-                {ASOCC_SSP_SCENARIO_COLUMN: None, "value": 3.0},
-            ]
+    assert list(
+        title_mod.prospective_scope_slices(
+            pd.DataFrame(
+                [
+                    {ASOCC_SSP_SCENARIO_COLUMN: "SSP 1", "value": 1.0},
+                    {ASOCC_SSP_SCENARIO_COLUMN: "Net Zero", "value": 2.0},
+                    {ASOCC_SSP_SCENARIO_COLUMN: None, "value": 3.0},
+                ]
+            )
         )
     )[0][0:2] == ("prospective_Net_Zero", "Prospective: Net Zero")
-    no_scope_slices = title_mod.prospective_scope_slices(pd.DataFrame({"value": [1.0]}))
+    no_scope_slices = list(title_mod.prospective_scope_slices(pd.DataFrame({"value": [1.0]})))
     assert len(no_scope_slices) == 1
     assert no_scope_slices[0][0] == "all"
     assert no_scope_slices[0][1] is None
@@ -318,7 +320,7 @@ def test_selector_slices_cover_grouping_and_matching_masks() -> None:
         }
     )
     scope_request = title_mod.SelectorScopeRequest(axes=(("r_p", None),))
-    slices = slices_mod.selector_slices(frame, selector_scope_request=scope_request)
+    slices = list(slices_mod.selector_slices(frame, selector_scope_request=scope_request))
     assert [(token, scope) for token, scope, _ in slices] == [
         ("rp_FR__sp_A", "r_p=FR | s_p=A"),
         ("rp_FR__sp_B", "r_p=FR | s_p=B"),
@@ -347,14 +349,16 @@ def test_selector_slices_cover_grouping_and_matching_masks() -> None:
     assert [(token, scope) for token, scope, _frame in slices_mod.selector_slices(fu_frame)] == [
         ("sp_Electricity__rc_FR", "s_p=Electricity | r_c=FR")
     ]
-    unsliced = slices_mod.selector_slices(pd.DataFrame({"value": [1.0]}))
+    unsliced = list(slices_mod.selector_slices(pd.DataFrame({"value": [1.0]})))
     assert len(unsliced) == 1
     assert unsliced[0][0] == "all"
     assert unsliced[0][1] == ""
     assert unsliced[0][2].equals(pd.DataFrame({"value": [1.0]}))
-    empty_slices = slices_mod.selector_slices(
-        pd.DataFrame(columns=["r_p", "value"]),
-        selector_scope_request=scope_request,
+    empty_slices = list(
+        slices_mod.selector_slices(
+            pd.DataFrame(columns=["r_p", "value"]),
+            selector_scope_request=scope_request,
+        )
     )
     assert len(empty_slices) == 1
     assert empty_slices[0][0] == "all"
@@ -390,7 +394,7 @@ def test_method_identity_and_series_labels_cover_visible_and_failure_paths() -> 
     ) == ["l2_method", "l1_method", "region"]
     assert method_mod.visible_method_identity(frame) == "eq|m1"
     assert method_mod.visible_method_identity(pd.DataFrame({"l2_method": [None, ""]})) is None
-    unsliced = method_mod.method_scope_slices(pd.DataFrame({"value": [1.0, 2.0]}))
+    unsliced = list(method_mod.method_scope_slices(pd.DataFrame({"value": [1.0, 2.0]})))
     assert len(unsliced) == 1
     assert unsliced[0][0] is None
     assert unsliced[0][1].equals(pd.DataFrame({"value": [1.0, 2.0]}))
@@ -441,13 +445,15 @@ def test_method_identity_and_series_labels_cover_visible_and_failure_paths() -> 
         )
         == "eq|m1, l2_reuse_year=2040"
     )
-    scoped = method_mod.method_scope_slices(
-        pd.DataFrame(
-            {
-                "l1_l2_method": ["eq|m1", "eq|m2"],
-                "l2_method": ["m1", "m2"],
-                "value": [1.0, 2.0],
-            }
+    scoped = list(
+        method_mod.method_scope_slices(
+            pd.DataFrame(
+                {
+                    "l1_l2_method": ["eq|m1", "eq|m2"],
+                    "l2_method": ["m1", "m2"],
+                    "value": [1.0, 2.0],
+                }
+            )
         )
     )
     assert [label for label, _frame in scoped] == ["eq|m1", "eq|m2"]
@@ -639,36 +645,38 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
             "value": [1.0, 2.0, 3.0],
         }
     )
-    method_slices = scope_mod.lcia_method_slices(scope_frame)
+    method_slices = list(scope_mod.lcia_method_slices(scope_frame))
     assert [(token, title, lcia_method) for token, title, _, lcia_method in method_slices] == [
         ("gwp100_lcia", "gwp100_lcia", "gwp100_lcia"),
         ("pb_lcia", "pb_lcia", "pb_lcia"),
     ]
-    method_slices_without_generic_fill = scope_mod.lcia_method_slices(
-        scope_frame,
-        fill_generic_method=False,
+    method_slices_without_generic_fill = list(
+        scope_mod.lcia_method_slices(
+            scope_frame,
+            fill_generic_method=False,
+        )
     )
     first_method_scope = method_slices_without_generic_fill[0][2]
     assert isinstance(first_method_scope, pd.DataFrame)
     assert bool(first_method_scope["lcia_method"].isna().any())
     assert (
-        scope_mod.lcia_method_slices(pd.DataFrame()).__repr__()
+        list(scope_mod.lcia_method_slices(pd.DataFrame())).__repr__()
         == "[('all', '', Empty DataFrame\nColumns: []\nIndex: [], None)]"
     )  # noqa: E501
     no_method_column = pd.DataFrame({"value": [1.0]})
-    no_method_slices = scope_mod.lcia_method_slices(no_method_column)
+    no_method_slices = list(scope_mod.lcia_method_slices(no_method_column))
     assert len(no_method_slices) == 1
     assert no_method_slices[0][0:2] == ("all", "")
     assert no_method_slices[0][2].equals(no_method_column)
     assert no_method_slices[0][3] is None
     missing_only = pd.DataFrame({"lcia_method": [None, pd.NA], "value": [1.0, 2.0]})
-    missing_only_slices = scope_mod.lcia_method_slices(missing_only)
+    missing_only_slices = list(scope_mod.lcia_method_slices(missing_only))
     assert len(missing_only_slices) == 1
     assert missing_only_slices[0][0:2] == ("all", "")
     assert missing_only_slices[0][2].equals(missing_only)
     assert missing_only_slices[0][3] is None
     generic_only = pd.DataFrame({"impact": [None], "lcia_method": [None], "value": [1.0]})
-    generic_lcia_impact_slices = scope_mod.combined_lcia_impact_slices(generic_only)
+    generic_lcia_impact_slices = list(scope_mod.combined_lcia_impact_slices(generic_only))
     assert generic_lcia_impact_slices[0][0:2] == ("all", "")
     assert generic_lcia_impact_slices[0][2].equals(generic_only)
     assert generic_lcia_impact_slices[0][3] is None
@@ -685,55 +693,67 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
         is None
     )
 
-    impact_slices = scope_mod.impact_slices(
-        scope_frame,
-        impact_column="impact",
-        repeat_generic=True,
+    impact_slices = list(
+        scope_mod.impact_slices(
+            scope_frame,
+            impact_column="impact",
+            repeat_generic=True,
+        )
     )
     assert [token for token, _ in impact_slices] == [first_impact, "co2"]
     assert (
-        scope_mod.impact_slices(
-            pd.DataFrame({"impact": [None], "value": [1.0]}),
-            impact_column="impact",
-            repeat_generic=True,
+        list(
+            scope_mod.impact_slices(
+                pd.DataFrame({"impact": [None], "value": [1.0]}),
+                impact_column="impact",
+                repeat_generic=True,
+            )
         )[0][0]
         == "value"
     )
     assert (
-        scope_mod.impact_slices(
-            pd.DataFrame({"impact": ["  AAL  "], "value": [1.0]}),
-            impact_column="impact",
-            repeat_generic=False,
+        list(
+            scope_mod.impact_slices(
+                pd.DataFrame({"impact": ["  AAL  "], "value": [1.0]}),
+                impact_column="impact",
+                repeat_generic=False,
+            )
         )[0][0]
         == "value"
     )
-    no_impact_slices = scope_mod.impact_slices(
-        pd.DataFrame({"value": [1.0]}),
-        impact_column=None,
-        repeat_generic=False,
+    no_impact_slices = list(
+        scope_mod.impact_slices(
+            pd.DataFrame({"value": [1.0]}),
+            impact_column=None,
+            repeat_generic=False,
+        )
     )
     assert len(no_impact_slices) == 1
     assert no_impact_slices[0][0] == "value"
     assert no_impact_slices[0][1].equals(pd.DataFrame({"value": [1.0]}))
 
-    combined = scope_mod.combined_impact_slices(
-        pd.DataFrame(
-            {
-                "impact": [first_impact, None],
-                "lcia_method": ["pb_lcia", None],
-                "value": [1.0, 2.0],
-            }
+    combined = list(
+        scope_mod.combined_impact_slices(
+            pd.DataFrame(
+                {
+                    "impact": [first_impact, None],
+                    "lcia_method": ["pb_lcia", None],
+                    "value": [1.0, 2.0],
+                }
+            )
         )
     )
     assert combined[0][0] == first_impact
     assert combined[0][1] == impact_title
-    lcia_impact_combined = scope_mod.combined_lcia_impact_slices(
-        pd.DataFrame(
-            {
-                "impact": [first_impact, None, "co2"],
-                "lcia_method": ["pb_lcia", None, "gwp100_lcia"],
-                "value": [1.0, 2.0, 3.0],
-            }
+    lcia_impact_combined = list(
+        scope_mod.combined_lcia_impact_slices(
+            pd.DataFrame(
+                {
+                    "impact": [first_impact, None, "co2"],
+                    "lcia_method": ["pb_lcia", None, "gwp100_lcia"],
+                    "value": [1.0, 2.0, 3.0],
+                }
+            )
         )
     )
     assert [(token, method) for token, _title, _frame, method in lcia_impact_combined] == [
@@ -742,49 +762,68 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     ]
     assert all(len(frame) == 2 for _token, _title, frame, _method in lcia_impact_combined)
     assert (
-        scope_mod.combined_impact_slices(pd.DataFrame()).__repr__()
+        list(scope_mod.combined_impact_slices(pd.DataFrame())).__repr__()
         == "[('all', '', Empty DataFrame\nColumns: []\nIndex: [])]"
     )  # noqa: E501
     assert (
-        scope_mod.combined_lcia_impact_slices(pd.DataFrame()).__repr__()
+        list(scope_mod.combined_lcia_impact_slices(pd.DataFrame())).__repr__()
         == "[('all', '', Empty DataFrame\nColumns: []\nIndex: [], None)]"
     )  # noqa: E501
-    no_impact_combined = scope_mod.combined_impact_slices(pd.DataFrame({"value": [1.0]}))
+    no_impact_combined = list(scope_mod.combined_impact_slices(pd.DataFrame({"value": [1.0]})))
     assert len(no_impact_combined) == 1
     assert no_impact_combined[0][0:2] == ("all", "")
     assert no_impact_combined[0][2].equals(pd.DataFrame({"value": [1.0]}))
-    missing_impact_combined = scope_mod.combined_impact_slices(
-        pd.DataFrame({"impact": [None], "lcia_method": [None], "value": [1.0]})
+    missing_impact_combined = list(
+        scope_mod.combined_impact_slices(
+            pd.DataFrame({"impact": [None], "lcia_method": [None], "value": [1.0]})
+        )
     )
     assert len(missing_impact_combined) == 1
     assert missing_impact_combined[0][0:2] == ("all", "")
-    whitespace_combined = scope_mod.combined_impact_slices(
-        pd.DataFrame({"impact": ["  AAL  "], "lcia_method": ["pb_lcia"], "value": [1.0]})
+    whitespace_combined = list(
+        scope_mod.combined_impact_slices(
+            pd.DataFrame({"impact": ["  AAL  "], "lcia_method": ["pb_lcia"], "value": [1.0]})
+        )
     )
     assert len(whitespace_combined) == 1
     assert whitespace_combined[0][0:2] == ("all", "")
+    whitespace_lcia_combined = list(
+        scope_mod.combined_lcia_impact_slices(
+            pd.DataFrame({"impact": ["  AAL  "], "lcia_method": ["pb_lcia"], "value": [1.0]})
+        )
+    )
+    assert len(whitespace_lcia_combined) == 1
+    assert whitespace_lcia_combined[0][0:2] == ("all", "")
     assert scope_mod.suffix_path(Path("plots/demo.png"), "impact co2") == Path(
         "plots/demo.png__impact_co2"
     )
     with pytest.raises(ValueError):
-        scope_mod.combined_impact_slices(pd.DataFrame({"impact": [first_impact]}))
+        list(scope_mod.combined_impact_slices(pd.DataFrame({"impact": [first_impact]})))
     with pytest.raises(ValueError):
-        scope_mod.combined_lcia_impact_slices(pd.DataFrame({"impact": [first_impact]}))
+        list(scope_mod.combined_lcia_impact_slices(pd.DataFrame({"impact": [first_impact]})))
     with pytest.raises(ValueError):
-        scope_mod.combined_impact_slices(
-            pd.DataFrame({"impact": [first_impact], "lcia_method": [None]})
+        list(
+            scope_mod.combined_impact_slices(
+                pd.DataFrame({"impact": [first_impact], "lcia_method": [None]})
+            )
         )
     with pytest.raises(ValueError):
-        scope_mod.combined_lcia_impact_slices(
-            pd.DataFrame({"impact": [first_impact], "lcia_method": [None]})
+        list(
+            scope_mod.combined_lcia_impact_slices(
+                pd.DataFrame({"impact": [first_impact], "lcia_method": [None]})
+            )
         )
     with pytest.raises(ValueError):
-        scope_mod.impact_slices(
-            pd.DataFrame({"impact": [None], "lcia_method": ["pb_lcia"], "value": [1.0]}),
-            impact_column="impact",
-            repeat_generic=True,
+        list(
+            scope_mod.impact_slices(
+                pd.DataFrame({"impact": [None], "lcia_method": ["pb_lcia"], "value": [1.0]}),
+                impact_column="impact",
+                repeat_generic=True,
+            )
         )
     with pytest.raises(ValueError):
-        scope_mod.combined_impact_slices(
-            pd.DataFrame({"impact": [None], "lcia_method": ["pb_lcia"], "value": [1.0]})
+        list(
+            scope_mod.combined_impact_slices(
+                pd.DataFrame({"impact": [None], "lcia_method": ["pb_lcia"], "value": [1.0]})
+            )
         )

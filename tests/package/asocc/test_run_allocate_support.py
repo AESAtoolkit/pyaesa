@@ -52,9 +52,9 @@ def _context(
     *,
     proj_base: Path,
     source: str = "oecd_v2025",
-    group_reg: bool = False,
-    group_sec: bool = False,
-    aggreg_indices: bool = False,
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    group_indices: bool = False,
     l1_reg_aggreg: str = "post",
     requested_years: list[int] | None = None,
     resolved_years: list[int] | None = None,
@@ -68,10 +68,10 @@ def _context(
     return SimpleNamespace(
         source=source,
         proj_base=proj_base,
-        group_version=None,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        aggreg_indices=aggreg_indices,
+        agg_version=None,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        group_indices=group_indices,
         l1_reg_aggreg=l1_reg_aggreg,
         projection_context=projection_context,
         output_format="csv",
@@ -142,23 +142,23 @@ def test_format_and_selection_cover_all_branches() -> None:
     assert not has_multi_selected_indices({"r_p": ["FR"], "s_p": ["A"], "r_c": None, "r_f": []})
     assert (
         format_branch_label(
-            context=SimpleNamespace(group_reg=True, filters={"r_p": ["FR", "DE"]}),
+            context=SimpleNamespace(agg_reg=True, filters={"r_p": ["FR", "DE"]}),
             mode="post",
             grouped_mode=True,
         )
-        == "l1_reg_aggreg=post, aggreg_indices=grouped"
+        == "l1_reg_aggreg=post, group_indices=grouped"
     )
     assert (
         format_branch_label(
-            context=SimpleNamespace(group_reg=False, filters={"r_p": ["FR"], "s_p": ["A", "B"]}),
+            context=SimpleNamespace(agg_reg=False, filters={"r_p": ["FR"], "s_p": ["A", "B"]}),
             mode="post",
             grouped_mode=False,
         )
-        == "aggreg_indices=ungrouped"
+        == "group_indices=ungrouped"
     )
     assert (
         format_branch_label(
-            context=SimpleNamespace(group_reg=False, filters={"r_p": ["FR"], "s_p": ["A"]}),
+            context=SimpleNamespace(agg_reg=False, filters={"r_p": ["FR"], "s_p": ["A"]}),
             mode="post",
             grouped_mode=False,
         )
@@ -356,8 +356,8 @@ def test_persisted_figure_paths_and_summary_cover_report_paths(
     projection_context = SimpleNamespace(mode="regression", reg_window=(2005, 2010))
     context = _context(
         proj_base=tmp_path,
-        group_reg=True,
-        aggreg_indices=True,
+        agg_reg=True,
+        group_indices=True,
         projection_context=projection_context,
         output_source_label="oecd_v2025",
     )
@@ -365,7 +365,7 @@ def test_persisted_figure_paths_and_summary_cover_report_paths(
     metadata_path = _get_allocate_run_metadata_path(
         tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     figure_a = tmp_path / "figures" / "figure_a.png"
@@ -394,7 +394,7 @@ def test_persisted_figure_paths_and_summary_cover_report_paths(
     log_path = _get_allocate_summary_log_path(
         tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text("log", encoding="utf-8")
@@ -402,7 +402,7 @@ def test_persisted_figure_paths_and_summary_cover_report_paths(
         proj_base=tmp_path,
         output_format="csv",
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     stats_path.parent.mkdir(parents=True, exist_ok=True)
     stats_path.write_text("stats", encoding="utf-8")
@@ -410,7 +410,7 @@ def test_persisted_figure_paths_and_summary_cover_report_paths(
         proj_base=tmp_path,
         output_format="csv",
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     fit_inputs_path.write_text("fit", encoding="utf-8")
 
@@ -579,7 +579,7 @@ def test_metadata_and_summary_cover_validation_and_false_branches(
     metadata_path = _get_allocate_run_metadata_path(
         tmp_path,
         source=context.output_source,
-        group_version=None,
+        agg_version=None,
     )
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     base_payload = {

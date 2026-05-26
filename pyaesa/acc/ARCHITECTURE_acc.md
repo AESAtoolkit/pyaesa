@@ -24,7 +24,7 @@ Both public functions are exported at package level through `pyaesa.__init__`.
 - static and dynamic aCC branch expansion from public aCC arguments
 - aCC result path resolution under `B2_acc/`
 - deterministic aCC row identity and value writing
-- aCC Monte Carlo row identity, source dependent run layout, exact summaries,
+- aCC Monte Carlo row identity, source dependent run layout, summaries,
   source methods, manifest, and Sobol outputs
 - vectorized aCC value evaluation from compact aSoCC and CC component matrices
 
@@ -96,14 +96,14 @@ Uncertainty aCC:
    orchestration by `uncertainty/runtime/checkpoints.py`, and request scope
    normalization by `uncertainty/runtime/scope.py`.
    `uncertainty/io/run_outputs.py` is the aCC owner for shared downstream
-   run writer. Family neutral run table writes, exact summary cache writes,
+   run writer. Family neutral run table writes, summary cache writes,
    and Monte Carlo convergence mechanics are owned by
    `pyaesa/shared/uncertainty_assessment/io/downstream_run_outputs.py`.
-5. Write aCC uncertainty artifacts under `monte_carlo/<run_id>/`. aCC summary
-   statistics collapse sampled upstream aSoCC axes in the same way as aSoCC
-   uncertainty summaries. `uncertainty/io/manifest_payloads.py` is the canonical
-   owner for aCC manifest compatibility payloads and public output column
-   metadata.
+5. Write aCC uncertainty artifacts under branch token Monte Carlo roots. aCC
+   summary statistics collapse sampled upstream aSoCC axes in the same way as
+   aSoCC uncertainty summaries. `uncertainty/io/manifest_payloads.py` is the
+   canonical owner for aCC manifest compatibility payloads and public output
+   column metadata.
 6. When requested, run aCC Sobol by reusing shared Sobol design and family
    neutral accumulators while aCC owns only formula evaluation and aCC source
    summary grouping.
@@ -116,10 +116,10 @@ aCC path and public artifact ownership is split by scope:
 | --- | --- |
 | Shared aCC family root and source token resolution | `pyaesa/acc/shared/runtime/paths.py` |
 | Deterministic branch roots, result paths, and branch metadata paths | `pyaesa/acc/deterministic/runtime/paths.py` |
-| Monte Carlo run roots, result files, Sobol files, and log files | `pyaesa/acc/uncertainty/io/paths.py` |
+| Monte Carlo branch roots, result files, Sobol files, and log files | `pyaesa/acc/uncertainty/io/paths.py` |
 | aCC uncertainty manifest compatibility payloads and public output metadata | `pyaesa/acc/uncertainty/io/manifest_payloads.py` |
 | aCC pyaesa owned component inputs and convergence checkpoints | `pyaesa/acc/uncertainty/runtime/component_inputs.py`, `pyaesa/acc/uncertainty/runtime/checkpoints.py` |
-| aCC exact reused figure rendering | `pyaesa/acc/uncertainty/figures/reuse.py` |
+| aCC reused figure rendering | `pyaesa/acc/uncertainty/figures/reuse.py` |
 | Family neutral completed run reuse and appendable run selection | `pyaesa/shared/uncertainty_assessment/run_state/runs.py` |
 
 The deterministic branch root is keyed only by the source token, carrying
@@ -136,10 +136,10 @@ B2_acc/<source_token>/deterministic/
     dynamic_ar6__<lcia_method>/
 ```
 
-Uncertainty outputs:
+Single branch uncertainty outputs:
 
 ```text
-B2_acc/<source_token>/monte_carlo/<run_id>/
+B2_acc/<source_token>/monte_carlo/<branch_token>/<run_id>/
     results/public_row_identity.<ext>
     results/acc_runs.<ext>
     results/summary_stats_runs.<ext>
@@ -150,6 +150,14 @@ B2_acc/<source_token>/monte_carlo/<run_id>/
     logs/source_methods.csv
     logs/scope_manifest.json
 ```
+
+The branch token is `static__<lcia_method>` or
+`dynamic_ar6__<lcia_method>`. A mixed public request that includes several
+static or dynamic carrying capacity branches writes a branch set manifest at
+`B2_acc/<source_token>/monte_carlo/<run_id>/logs/scope_manifest.json`. The
+branch set manifest records the branch scope manifests and branch run roots;
+each branch still stores its complete run artifacts under
+`monte_carlo/<branch_token>/<run_id>/`.
 
 `acc_runs` is compact only when every upstream run input can be represented
 as a compact fixed row matrix. Sparse selected aSoCC rows or sparse dynamic
@@ -173,7 +181,7 @@ scenario transition metadata, branch identity guards, and tabular IO live under
 
 Shared uncertainty owners live under `pyaesa/shared/uncertainty_assessment/`.
 aCC uncertainty must use those shared owners for request normalization, run
-reuse, compact table IO, exact summaries, convergence, Sobol design, Sobol
+reuse, compact table IO, summaries, convergence, Sobol design, Sobol
 estimators, Sobol diagnostics, and README or manifest method payloads.
 
 Static carrying capacity CSV loading and bound validation are owned by
@@ -208,7 +216,7 @@ dynamic AR6 CC sources as `ar6_cc::<source_name>`.
 | Progress cleanup | Clear upstream progress before aCC work and before failures return. |
 | Subfigures | Render deterministic prerequisite figures for fixed lanes and uncertainty figures for active stochastic lanes. |
 | Figure summaries | Public summaries use `Figures available` and `Figures folder`. |
-| Refresh scope | Refresh affects only the aCC Monte Carlo scope. |
+| Refresh scope | Refresh affects only the resolved aCC Monte Carlo branch or branch set scope. |
 
 ## Testing And Quality Gates
 

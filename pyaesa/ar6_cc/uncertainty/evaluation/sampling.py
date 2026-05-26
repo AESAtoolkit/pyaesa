@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import RunBatch
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 from pyaesa.ar6_cc.deterministic.request.contracts import CC_FLOW_NEGATIVE
 from pyaesa.ar6_cc.uncertainty.request.normalization import AR6_DYNAMIC_CC_SOURCE
 

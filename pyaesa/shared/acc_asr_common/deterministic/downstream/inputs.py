@@ -100,7 +100,7 @@ def native_asocc_shares(
     scope = build_asocc_deterministic_path_scope(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=base_allocate_args["group_version"],
+        agg_version=base_allocate_args["agg_version"],
     )
     l1_root = asocc_l1_dir(scope=scope, lcia_sub=None, fu_code=fu_code)
     l2_vs_global_root = asocc_l2_dir(scope=scope, bucket="l2_vs_global", lcia_sub=None)

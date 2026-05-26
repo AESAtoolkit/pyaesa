@@ -188,12 +188,14 @@ def normalize_ssp_rows(frame: pd.DataFrame, *, ssp_scenarios: list[str | None]) 
         normalized.loc[scenario_mask, ASOCC_SSP_SCENARIO_COLUMN] = (
             scenario_series.loc[scenario_mask].astype(str).str.upper()
         )
-    scoped = repeat_invariant_rows_into_scenarios(
-        normalized,
-        scenario_column=ASOCC_SSP_SCENARIO_COLUMN,
-        scope_column="__figure_ssp_scope",
-        requested_scenarios=requested,
-        identity_excluded_columns={"asocc"},
+    scoped = list(
+        repeat_invariant_rows_into_scenarios(
+            normalized,
+            scenario_column=ASOCC_SSP_SCENARIO_COLUMN,
+            scope_column="__figure_ssp_scope",
+            requested_scenarios=requested,
+            identity_excluded_columns={"asocc"},
+        )
     )
     return pd.concat(scoped, ignore_index=True) if scoped else normalized.iloc[0:0].copy()
 

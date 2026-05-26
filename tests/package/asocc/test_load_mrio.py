@@ -76,7 +76,7 @@ def test_metric_loaders_cover_success_unknown_metrics_and_invalid_stored_types(
     saved_dir = _get_mrio_year_dir(
         source="oecd_v2025",
         year=2005,
-        group_version=None,
+        agg_version=None,
     )
 
     l1_payload = {
@@ -104,7 +104,7 @@ def test_metric_loaders_cover_success_unknown_metrics_and_invalid_stored_types(
     assert set(utility_payload) == {"x_to_rc", "kappa", "omega_reg"}
     assert isinstance(utility_payload["omega_reg"], pd.DataFrame)
 
-    assert mod._years_from_metadata(source="oecd_v2025", group_version=None) == [2005, 2006]
+    assert mod._years_from_metadata(source="oecd_v2025", agg_version=None) == [2005, 2006]
 
     invalid_saved_dir = tmp_path / "invalid_saved_dir"
     (invalid_saved_dir / "enacting_metrics" / "level_1").mkdir(parents=True, exist_ok=True)

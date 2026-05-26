@@ -12,7 +12,6 @@ from pyaesa.asocc.uncertainty.inputs.external_rows import (
 )
 from pyaesa.asocc.uncertainty.inputs.deterministic_rows import ASOCC_VALUE_COLUMN
 from pyaesa.asocc.uncertainty.schema.public_rows import (
-    ASOCC_PUBLIC_VALUE_COLUMN,
     align_asocc_lcia_public_axis,
     finalize_asocc_public_row_identity,
     lcia_public_axis,
@@ -28,12 +27,11 @@ from pyaesa.asocc.uncertainty.sources.reference_year import (
     collapse_reference_year_public_template,
 )
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
 
 
 @dataclass(frozen=True)
 class InterMethodBranchRowIds:
-    """Public row ids selected by one inter method branch."""
+    """Public row ids selected by one inter-method branch."""
 
     label: str
     public_row_ids: np.ndarray
@@ -41,7 +39,7 @@ class InterMethodBranchRowIds:
 
 @dataclass(frozen=True)
 class InterMethodRowUniverse:
-    """Complete sparse inter method public identity and branch row mapping."""
+    """Complete sparse inter-method public identity and branch row mapping."""
 
     identity: pd.DataFrame
     public_lcia_axis: pd.DataFrame
@@ -49,7 +47,7 @@ class InterMethodRowUniverse:
 
 
 def execution_external_plan_from_branches(*, branches: tuple[Any, ...]) -> ExternalAsoccRowsPlan:
-    """Return the union external aSoCC plan represented by inter method branches."""
+    """Return the union external aSoCC plan represented by inter-method branches."""
     return ExternalAsoccRowsPlan(
         method_labels=tuple(
             sorted({label for branch in branches for label in branch.external_plan.method_labels})
@@ -140,7 +138,7 @@ def public_row_ids_for_branch(
     row_universe: InterMethodRowUniverse,
     label: str,
 ) -> np.ndarray:
-    """Return the public row ids selected by one inter method branch."""
+    """Return the public row ids selected by one inter-method branch."""
     return next(
         branch.public_row_ids
         for branch in row_universe.branch_row_ids
@@ -179,17 +177,3 @@ def public_row_ids(
         sort=False,
     )
     return merged["public_row_id"].to_numpy(dtype=np.int64)
-
-
-def concat_sparse_rows(*, pieces: list[SparseRunRows]) -> SparseRunRows:
-    """Return sparse rows sorted by run index and public row id."""
-    run_index = np.concatenate([piece.run_index for piece in pieces])
-    public_row_id = np.concatenate([piece.public_row_id for piece in pieces])
-    values = np.concatenate([piece.values for piece in pieces])
-    order = np.lexsort((public_row_id, run_index))
-    return SparseRunRows(
-        run_index=run_index[order],
-        public_row_id=public_row_id[order],
-        values=values[order],
-        value_column=ASOCC_PUBLIC_VALUE_COLUMN,
-    )

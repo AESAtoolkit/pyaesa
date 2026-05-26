@@ -5,7 +5,7 @@ from pyaesa.shared.selectors.path_tokens import build_selector_filter_segment
 from ....data.source_schema import ISO3_SOURCE_KEY
 from ....methods.registry.registry import REGISTRY, normalize_fu_code, resolve_required_indices
 from ....runtime.methods.labels import l1_l2_method_label
-from pyaesa.asocc.orchestration.setup.request.types import _GroupingBundle, _SelectionBundle
+from pyaesa.asocc.orchestration.setup.request.types import _AggregationBundle, _SelectionBundle
 
 _ISO3_ALLOWED_L1_METHODS = {"EG(Pop)", "PR(GDPcap)"}
 _FILTER_KEYS = {
@@ -89,32 +89,33 @@ def needs_lcia(
     return l2_needs or any(REGISTRY.method_requires_lcia(name, None) for name in selected_l1)
 
 
-def _validate_td_grouped_output(*, fu_code: str, aggreg_indices: bool) -> None:
-    """Reject unsupported grouped outputs for TD functional units."""
-    if aggreg_indices and fu_code in {"L2.a.b", "L2.b.b", "L2.c.b"}:
+def _validate_td_grouped_output(*, fu_code: str, group_indices: bool) -> None:
+    """Reject unsupported grouped index outputs for TD functional units."""
+    if group_indices and fu_code in {"L2.a.b", "L2.b.b", "L2.c.b"}:
         raise ValueError(
-            "aggreg_indices=True is not allowed for L2.a.b/L2.b.b/L2.c.b because "
-            "CBA_TD perimeters can introduce double counting when aggregating "
-            "allocation outputs. Run MRIO processing with grouping enabled "
-            "(group_reg/group_sec with group_version) so grouped matrices are "
-            "saved under the grouped MRIO version (custom_classification_<group_version>), then "
-            "run deterministic_asocc on that grouped version."
+            "group_indices=True is not allowed for L2.a.b/L2.b.b/L2.c.b because "
+            "CBA_TD perimeters can introduce double counting when grouped "
+            "allocation outputs. Run MRIO processing with MRIO aggregation "
+            "and disaggregation enabled "
+            "(agg_reg/agg_sec with agg_version) so aggregated matrices are "
+            "saved under the aggregated MRIO version (custom_classification_<agg_version>), then "
+            "run deterministic_asocc on that aggregated version."
         )
 
 
-def _resolve_grouping(
+def _resolve_aggregation(
     *,
-    group_reg: bool | None,
-    group_sec: bool | None,
-    group_version: str | None,
-) -> _GroupingBundle:
-    """Resolve grouping flags to deterministic booleans and region version."""
-    apply_group_reg = bool(group_reg) if group_reg is not None else False
-    apply_group_sec = bool(group_sec) if group_sec is not None else False
-    return _GroupingBundle(
-        apply_group_reg=apply_group_reg,
-        apply_group_sec=apply_group_sec,
-        group_version_reg=group_version if apply_group_reg else None,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
+    agg_version: str | None,
+) -> _AggregationBundle:
+    """Resolve aggregation flags to deterministic booleans and region version."""
+    apply_agg_reg = bool(agg_reg) if agg_reg is not None else False
+    apply_agg_sec = bool(agg_sec) if agg_sec is not None else False
+    return _AggregationBundle(
+        apply_agg_reg=apply_agg_reg,
+        apply_agg_sec=apply_agg_sec,
+        agg_version_reg=agg_version if apply_agg_reg else None,
     )
 
 
@@ -282,18 +283,18 @@ def _resolve_filters(
 def _resolve_output_domain_tag(
     *,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> str | None:
     """Resolve output domain folder tag for MRIO runs.
 
     Mirrors processed MRIO matrix version tagging:
-    - MRIO source + no group_version -> ``original_classification``
-    - MRIO source + group_version -> ``custom_classification_<group_version>``
+    - MRIO source + no agg_version -> ``original_classification``
+    - MRIO source + agg_version -> ``custom_classification_<agg_version>``
     - ISO3 source -> no domain tag
     """
     if source == ISO3_SOURCE_KEY:
         return None
-    return _resolve_version_tag(group_version)
+    return _resolve_version_tag(agg_version)
 
 
 def _l1_methods_in_scope(selection: _SelectionBundle) -> set[str]:
@@ -306,11 +307,11 @@ def _l1_methods_in_scope(selection: _SelectionBundle) -> set[str]:
 def _uses_l1_post_original_domain(
     *,
     selection: _SelectionBundle,
-    grouping: _GroupingBundle,
+    aggregation: _AggregationBundle,
     l1_reg_aggreg: str,
 ) -> bool:
     """Return whether this run requires original domain L1 post computation."""
-    if l1_reg_aggreg != "post" or grouping.group_version_reg is None:
+    if l1_reg_aggreg != "post" or aggregation.agg_version_reg is None:
         return False
     families = {
         REGISTRY.method_family(name, level="L1") for name in _l1_methods_in_scope(selection)

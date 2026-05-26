@@ -38,7 +38,7 @@ def test_persisted_scope_contracts_cover_success_paths() -> None:
     signature_payload = {
         "source": "oecd_v2025",
         "variant_tag": " demo_variant ",
-        "aggreg_indices": True,
+        "group_indices": True,
         "output_format": "csv",
         "intermediate_outputs": False,
     }
@@ -66,14 +66,14 @@ def test_persisted_scope_contracts_cover_success_paths() -> None:
     assert persisted_signature.as_dict() == signature_payload
     assert persisted_signature.source == "oecd_v2025"
     assert persisted_signature.variant_tag == "demo_variant"
-    assert persisted_signature.aggreg_indices is True
+    assert persisted_signature.group_indices is True
     assert persisted_signature.output_format == "csv"
     assert persisted_signature.intermediate_outputs is False
     assert (
         AsoccPersistedComputeSignature(
             payload={
                 "source": "oecd_v2025",
-                "aggreg_indices": False,
+                "group_indices": False,
                 "output_format": "csv",
             }
         ).intermediate_outputs
@@ -83,7 +83,7 @@ def test_persisted_scope_contracts_cover_success_paths() -> None:
         AsoccPersistedComputeSignature(
             payload={
                 "source": "oecd_v2025",
-                "aggreg_indices": False,
+                "group_indices": False,
                 "output_format": "csv",
             }
         ).variant_tag
@@ -93,7 +93,7 @@ def test_persisted_scope_contracts_cover_success_paths() -> None:
         AsoccPersistedComputeSignature(
             payload={
                 "source": "oecd_v2025",
-                "aggreg_indices": False,
+                "group_indices": False,
                 "output_format": "csv",
                 "variant_tag": "   ",
             }
@@ -118,7 +118,7 @@ def test_persisted_scope_contracts_cover_success_paths() -> None:
     assert persisted_scope.compute_signature.as_dict() == signature_payload
     assert persisted_scope.source == "oecd_v2025"
     assert persisted_scope.variant_tag == "demo_variant"
-    assert persisted_scope.aggreg_indices is True
+    assert persisted_scope.group_indices is True
     assert persisted_scope.output_format == "csv"
     assert persisted_scope.intermediate_outputs is False
     assert persisted_scope.covers_years(None) is True
@@ -161,7 +161,7 @@ def test_persisted_scope_contracts_parse_catalog_scope_fields() -> None:
     }
     signature = {
         "source": "oecd_v2025",
-        "aggreg_indices": False,
+        "group_indices": False,
         "output_format": "csv",
     }
     catalog = load_asocc_persisted_run_catalog(

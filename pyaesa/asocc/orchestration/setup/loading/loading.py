@@ -9,9 +9,9 @@ from pyaesa.asocc.orchestration.setup.formatting.formatting import (
     _process_mrio_hint,
 )
 from pyaesa.asocc.orchestration.setup.request.types import _YearBundle
-from pyaesa.process.mrios.utils.grouping.grouping import read_group_map
+from pyaesa.process.mrios.utils.aggregation.aggregation import read_agg_map
 from pyaesa.process.mrios.utils.io.metadata import _read_metadata
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path, _get_metadata_path
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path, _get_metadata_path
 
 from ....data.load_mrio import _years_from_metadata
 from ....data.load_pop_gdp import _load_processed_table
@@ -47,14 +47,14 @@ def _resolve_years(
     *,
     years: int | list[int] | range | None,
     source: str,
-    group_version: str | None,
-    group_reg: bool | None = None,
-    group_sec: bool | None = None,
+    agg_version: str | None,
+    agg_reg: bool | None = None,
+    agg_sec: bool | None = None,
     historical_year_cap: int | None = None,
     upstream_analysis: bool = False,
 ):
     """Resolve studied and historical years from metadata."""
-    available_all_years = _years_from_metadata(source, group_version)
+    available_all_years = _years_from_metadata(source, agg_version)
     if not available_all_years:
         raise ValueError("No processed historical MRIO years are available for this source/domain.")
     coverage_min = int(min(available_all_years))
@@ -84,9 +84,9 @@ def _resolve_years(
         process_hint = _process_mrio_hint(
             source=source,
             years=blocking_missing,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             keep_intermediate_uncasext=upstream_analysis,
         )
         raise ValueError(
@@ -110,9 +110,9 @@ def _resolve_years(
         process_hint = _process_mrio_hint(
             source=source,
             years=missing_historical,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             keep_intermediate_uncasext=upstream_analysis,
         )
         raise ValueError(
@@ -177,8 +177,8 @@ def _validate_pop_gdp_year_coverage(
 def _validate_region_filter_labels(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool | None,
+    agg_version: str | None,
+    agg_reg: bool | None,
     filters: dict[str, list[str] | None],
     wb_df: pd.DataFrame,
     ssp_df: pd.DataFrame,
@@ -198,14 +198,14 @@ def _validate_region_filter_labels(
     region_col = region_code_column_for_source(source)
     allowed = set(wb_df[region_col].dropna().astype(str))
     allowed.update(ssp_df[region_col].dropna().astype(str))
-    if group_reg and group_version:
-        map_path = _get_group_map_path(
+    if agg_reg and agg_version:
+        map_path = _get_agg_map_path(
             source,
             kind="reg",
-            group_version=group_version,
+            agg_version=agg_version,
         )
-        map_df = read_group_map(map_path)
-        allowed.update(map_df["grouped_mrio"].dropna().astype(str))
+        map_df = read_agg_map(map_path)
+        allowed.update(map_df["aggregated_mrio"].dropna().astype(str))
 
     invalid = sorted(v for v in requested if v not in allowed)
     if not invalid:
@@ -219,7 +219,7 @@ def _validate_region_filter_labels(
 def _validate_sector_filter_labels(
     *,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     filters: dict[str, list[str] | None],
 ) -> None:
     """Validate sector filter labels against processed MRIO metadata labels."""
@@ -233,11 +233,9 @@ def _validate_sector_filter_labels(
     if not requested:
         return
 
-    metadata_path = _get_metadata_path(source, matrix_version=group_version)
-    domain_label = (
-        f"source='{source}', matrix_version='{group_version or 'original_classification'}'"
-    )
-    metadata = _read_metadata(source, matrix_version=group_version)
+    metadata_path = _get_metadata_path(source, matrix_version=agg_version)
+    domain_label = f"source='{source}', matrix_version='{agg_version or 'original_classification'}'"
+    metadata = _read_metadata(source, matrix_version=agg_version)
     sectors_used = metadata["labels"]["sectors_used"]
     allowed = {str(value).strip() for value in sectors_used if str(value).strip()}
     invalid = sorted(value for value in requested if value not in allowed)
@@ -256,9 +254,9 @@ def _resolve_reference_years(
     reference_years: int | list[int] | range | None,
     historical_years: list[int],
     source: str,
-    group_version: str | None,
-    group_reg: bool | None,
-    group_sec: bool | None,
+    agg_version: str | None,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
 ) -> list[int] | None:
     """Normalize and validate reference years against historical MRIO years."""
     if reference_years is None:
@@ -276,9 +274,9 @@ def _resolve_reference_years(
         process_hint = _process_mrio_hint(
             source=source,
             years=missing_ref,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
         )
         raise ValueError(
             "Requested reference_years are not available in historical "
@@ -308,5 +306,5 @@ def _aggregate_pop_gdp_to_source_regions(*, df: pd.DataFrame, source: str) -> pd
     if "ssp_scenario" in df.columns:
         key_cols = ["ssp_scenario", *key_cols]
     work = df[key_cols + year_cols].copy()
-    grouped = work.groupby(key_cols, as_index=False, dropna=False)[year_cols].sum(min_count=1)
-    return cast(pd.DataFrame, grouped)
+    aggregated = work.groupby(key_cols, as_index=False, dropna=False)[year_cols].sum(min_count=1)
+    return cast(pd.DataFrame, aggregated)

@@ -19,7 +19,7 @@ class _Logger:
 def _context(*, logger: _Logger, needs_lcia: bool = True) -> SimpleNamespace:
     return SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         needs_lcia=needs_lcia,
         lcia_methods=["gwp100_lcia"],
         fu_code="L1.a",
@@ -33,7 +33,7 @@ def _context(*, logger: _Logger, needs_lcia: bool = True) -> SimpleNamespace:
 def _l2_context(*, logger: _Logger) -> SimpleNamespace:
     return SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         needs_lcia=True,
         lcia_methods=["gwp100_lcia"],
         fu_code="L2.a.a",
@@ -76,7 +76,7 @@ def test_available_lcia_years_for_method_covers_cache_saved_dirs_and_metadata_co
     year_2006_dir = _get_mrio_year_dir(
         source="oecd_v2025",
         year=2006,
-        group_version=None,
+        agg_version=None,
     )
     shutil.rmtree(year_2006_dir)
     assert mod._available_lcia_years_for_method(
@@ -112,7 +112,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
     saved_dir_2005 = _get_mrio_year_dir(
         source="oecd_v2025",
         year=2005,
-        group_version=None,
+        agg_version=None,
     )
     logger = _Logger()
     assert (
@@ -157,7 +157,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         state=cached_cf_state,
         year=2005,
         saved_dir=saved_dir_2005,
-        group_version_override=None,
+        agg_version_override=None,
     )
     assert cached_cf is not None
     assert "gwp100_lcia" in cached_cf
@@ -181,7 +181,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         saved_dir=_get_mrio_year_dir(
             source="oecd_v2025",
             year=2005,
-            group_version=None,
+            agg_version=None,
         ),
     )
     assert l2_loaded is not None
@@ -197,7 +197,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
     fallback_saved_dir_2006 = _get_mrio_year_dir(
         source="oecd_v2025",
         year=2006,
-        group_version=None,
+        agg_version=None,
     )
     fallback_state = _state()
     fallback_year_out: dict[str, int] = {}
@@ -222,7 +222,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
     unavailable_saved_dir_2006 = _get_mrio_year_dir(
         source="oecd_v2025",
         year=2006,
-        group_version=None,
+        agg_version=None,
     )
     unavailable_logger = _Logger()
     unavailable_state = _state()

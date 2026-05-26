@@ -15,17 +15,17 @@ def apply_parent_aggregation(
 ) -> pd.DataFrame:
     """Aggregate child regions into parent records when requested by MRIO metadata."""
     df_work = df.copy()
-    if "group_parent" not in mapping_df.columns:
+    if "agg_parent" not in mapping_df.columns:
         return df_work
-    group_rows = mapping_df[mapping_df["group_parent"].str.upper() == "YES"]
-    if group_rows.empty:
+    agg_rows = mapping_df[mapping_df["agg_parent"].str.upper() == "YES"]
+    if agg_rows.empty:
         return df_work
     year_list = list(year_cols)
     df_work[year_list] = df_work[year_list].apply(pd.to_numeric, errors="raise")
-    grouped_children = group_rows.groupby("parent_iso3_code")["iso3_code"].apply(list)
+    children_by_parent = agg_rows.groupby("parent_iso3_code")["iso3_code"].apply(list)
     aggregated_children: set[str] = set()
 
-    for parent_iso3, child_codes in grouped_children.items():
+    for parent_iso3, child_codes in children_by_parent.items():
         valid_children = [code for code in child_codes if isinstance(code, str) and code]
         if not parent_iso3 or not valid_children:
             continue
@@ -34,11 +34,11 @@ def apply_parent_aggregation(
         if subset.empty:
             continue
 
-        grouped_sum = cast(
+        aggregated_sum = cast(
             pd.DataFrame,
             subset.groupby(list(group_columns))[year_list].sum(min_count=1),
         )
-        sums = cast(pd.DataFrame, grouped_sum.reset_index())
+        sums = cast(pd.DataFrame, aggregated_sum.reset_index())
         parent_name_series = subset.loc[subset["iso3_code"] == parent_iso3, name_column].dropna()
         parent_name = (
             str(parent_name_series.iloc[0]) if not parent_name_series.empty else str(parent_iso3)

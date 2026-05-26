@@ -68,6 +68,7 @@ class ExternalLCAMonteCarloSource:
     run_indices: np.ndarray
     paths: tuple[Path, ...]
     values_for_runs: Callable[[np.ndarray], np.ndarray]
+    values_for_run_rows: Callable[[np.ndarray, np.ndarray], np.ndarray] | None = None
 
 
 @dataclass(frozen=True)
@@ -159,20 +160,30 @@ def load_external_lca_monte_carlo_source_from_path(
         year_mask = identity["year"].astype(int).isin([int(year) for year in years])
         if not bool(year_mask.any()):
             raise external_lca_no_requested_year_rows_error(path=source_path, years=years)
-        selected_columns = year_mask.to_numpy(dtype=bool)
+        selected_source_positions = np.flatnonzero(year_mask.to_numpy(dtype=bool)).astype(np.int64)
         identity = identity.loc[year_mask, :].reset_index(drop=True)
         identity["public_row_id"] = np.arange(len(identity), dtype=np.int64)
         identity = with_lca_ssp_start_year(identity)
         identity.insert(1, "lcia_method", str(lcia_method))
+
+        def compact_values(requested: np.ndarray, row_positions: np.ndarray) -> np.ndarray:
+            source_positions = selected_source_positions[np.asarray(row_positions, dtype=np.int64)]
+            return compact.values_for_run_rows(
+                np.asarray(requested, dtype=np.int64),
+                source_positions,
+            )
+
         return ExternalLCAMonteCarloSource(
             version_name=version,
             lcia_method=str(lcia_method),
             identity=identity,
             run_indices=compact.run_indices,
             paths=(source_path,),
-            values_for_runs=lambda requested: compact.values_for_runs(
-                np.asarray(requested, dtype=np.int64)
-            )[:, selected_columns],
+            values_for_runs=lambda requested: compact_values(
+                np.asarray(requested, dtype=np.int64),
+                np.arange(len(selected_source_positions), dtype=np.int64),
+            ),
+            values_for_run_rows=compact_values,
         )
     if source_path.suffix.lower() in {".csv", ".parquet"}:
         source = load_external_lca_long_matrix_source(
@@ -186,6 +197,12 @@ def load_external_lca_monte_carlo_source_from_path(
 
         def values_for_runs(requested: np.ndarray) -> np.ndarray:
             return source.values_for_runs(np.asarray(requested, dtype=np.int64))
+
+        def values_for_run_rows(requested: np.ndarray, row_positions: np.ndarray) -> np.ndarray:
+            return source.values_for_run_rows(
+                np.asarray(requested, dtype=np.int64),
+                np.asarray(row_positions, dtype=np.int64),
+            )
     else:
         rows = _normalize_rows(
             frame=read_external_lca(source_path),
@@ -213,6 +230,12 @@ def load_external_lca_monte_carlo_source_from_path(
                 requested_runs=np.asarray(requested, dtype=np.int64),
             )
 
+        def values_for_run_rows(requested: np.ndarray, row_positions: np.ndarray) -> np.ndarray:
+            return values_for_runs(np.asarray(requested, dtype=np.int64))[
+                :,
+                np.asarray(row_positions, dtype=np.int64),
+            ]
+
     identity.insert(1, "lcia_method", str(lcia_method))
     return ExternalLCAMonteCarloSource(
         version_name=version,
@@ -221,6 +244,7 @@ def load_external_lca_monte_carlo_source_from_path(
         run_indices=run_indices,
         paths=(source_path,),
         values_for_runs=values_for_runs,
+        values_for_run_rows=values_for_run_rows,
     )
 
 
@@ -237,8 +261,36 @@ def external_lca_values_for_runs(
     missing = requested[(requested < 0) | (requested >= available)]
     if missing.size == 0:
         return source.values_for_runs(requested)
+    raise _run_inventory_exhausted_error(source=source, missing=missing)
+
+
+def external_lca_values_for_run_rows(
+    *,
+    source: ExternalLCAMonteCarloSource,
+    run_indices: np.ndarray,
+    row_positions: np.ndarray,
+) -> np.ndarray:
+    """Return external LCA values for selected source row positions."""
+    requested = np.asarray(run_indices, dtype=np.int64)
+    rows = np.asarray(row_positions, dtype=np.int64)
+    if rows.size == 0:
+        return np.empty((len(requested), 0), dtype=np.float64)
+    available = len(source.run_indices)
+    missing = requested[(requested < 0) | (requested >= available)]
+    if missing.size:
+        raise _run_inventory_exhausted_error(source=source, missing=missing)
+    if source.values_for_run_rows is not None:
+        return source.values_for_run_rows(requested, rows)
+    return source.values_for_runs(requested)[:, rows]
+
+
+def _run_inventory_exhausted_error(
+    *,
+    source: ExternalLCAMonteCarloSource,
+    missing: np.ndarray,
+) -> ExternalLCARunInventoryExhausted:
     first_missing = len(source.run_indices)
-    raise ExternalLCARunInventoryExhausted(
+    return ExternalLCARunInventoryExhausted(
         "External LCA Monte Carlo run inventory was exhausted before ASR Monte Carlo "
         "convergence was reached. "
         f"version_name='{source.version_name}', lcia_method='{source.lcia_method}', "

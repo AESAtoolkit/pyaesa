@@ -32,7 +32,7 @@ from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     run_positions_in_window,
 )
 from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import iter_sparse_run_rows
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 def iter_acc_sparse_run_batches(
@@ -41,6 +41,7 @@ def iter_acc_sparse_run_batches(
     output_format: str,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    batch_size: int | None = None,
 ):
     """Yield sparse ACC run row batches for selected upstream source rows."""
     source_layout = asocc_layout(asocc_input=plan.asocc_input)
@@ -53,6 +54,7 @@ def iter_acc_sparse_run_batches(
             output_format=output_format,
             start_run_index=start_run_index,
             stop_run_index=stop_run_index,
+            batch_size=batch_size,
         )
         return
     if source_layout == "sparse_selected_rows":
@@ -62,6 +64,7 @@ def iter_acc_sparse_run_batches(
             output_format=output_format,
             start_run_index=start_run_index,
             stop_run_index=stop_run_index,
+            batch_size=batch_size,
         )
         return
     yield from _iter_compact_asocc_sparse_cc(
@@ -69,6 +72,7 @@ def iter_acc_sparse_run_batches(
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        batch_size=batch_size,
     )
 
 
@@ -172,13 +176,19 @@ def _iter_sparse_asocc_fixed_cc(
     output_format: str,
     start_run_index: int,
     stop_run_index: int | None,
+    batch_size: int | None,
 ):
     expansions = sparse_branch_expansions(branch_plans=plan.branch_plans)
+    max_rows_per_chunk = _source_rows_per_batch(
+        row_count_per_run=_selected_asocc_source_row_count(plan=plan),
+        batch_size=batch_size,
+    )
     for asocc_rows in iter_sparse_run_rows(
         path=asocc_paths.public_runs,
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=max_rows_per_chunk,
     ):
         run_indices = np.unique(asocc_rows.run_index)
         yield (
@@ -202,24 +212,34 @@ def _iter_sparse_asocc_sparse_cc(
     output_format: str,
     start_run_index: int,
     stop_run_index: int | None,
+    batch_size: int | None,
 ):
+    cc_expansions = cc_sparse_branch_expansions(branch_plans=plan.branch_plans)
     cc_chunks = iter_sparse_run_rows(
         path=dynamic_cc_paths(dynamic_cc_input=plan.dynamic_cc_input).public_runs,
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=_source_rows_per_batch(
+            row_count_per_run=_selected_cc_source_row_count(expansions=cc_expansions),
+            batch_size=batch_size,
+        ),
     )
     pending = empty_cc_sparse_rows()
-    dynamic_expansions = cc_sparse_branch_expansions(branch_plans=plan.branch_plans)
     static_expansions = sparse_branch_expansions(
         branch_plans=plan.branch_plans,
         cc_type="static",
+    )
+    max_asocc_rows_per_chunk = _source_rows_per_batch(
+        row_count_per_run=_selected_asocc_source_row_count(plan=plan),
+        batch_size=batch_size,
     )
     for asocc_rows in iter_sparse_run_rows(
         path=asocc_paths.public_runs,
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=max_asocc_rows_per_chunk,
     ):
         run_indices = np.unique(asocc_rows.run_index)
         pending, cc_rows = collect_sparse_rows_for_range(
@@ -241,7 +261,7 @@ def _iter_sparse_asocc_sparse_cc(
                     evaluate_acc_sparse_source_rows(
                         asocc_rows=asocc_rows,
                         cc_rows=cc_rows,
-                        expansions=dynamic_expansions,
+                        expansions=cc_expansions,
                     ),
                 ]
             ),
@@ -254,15 +274,20 @@ def _iter_compact_asocc_sparse_cc(
     output_format: str,
     start_run_index: int,
     stop_run_index: int | None,
+    batch_size: int | None,
 ):
+    expansions = cc_sparse_branch_expansions(branch_plans=plan.branch_plans)
     cc_chunks = iter_sparse_run_rows(
         path=dynamic_cc_paths(dynamic_cc_input=plan.dynamic_cc_input).public_runs,
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=_source_rows_per_batch(
+            row_count_per_run=_selected_cc_source_row_count(expansions=expansions),
+            batch_size=batch_size,
+        ),
     )
     pending = empty_cc_sparse_rows()
-    expansions = cc_sparse_branch_expansions(branch_plans=plan.branch_plans)
     for run_indices, asocc_values in iter_asocc_values(
         asocc_input=plan.asocc_input,
         output_format=output_format,
@@ -322,6 +347,24 @@ def _evaluate_compact_static_rows(
         row_blocks=row_blocks,
         value_blocks=value_blocks,
     )
+
+
+def _selected_asocc_source_row_count(*, plan: ACCUncertaintyPlan) -> int:
+    selected = np.concatenate([branch.asocc_positions for branch in plan.branch_plans])
+    return int(np.unique(selected).size)
+
+
+def _selected_cc_source_row_count(*, expansions: tuple[CCSparseBranchExpansion, ...]) -> int:
+    selected = np.concatenate([expansion.cc_positions for expansion in expansions])
+    return int(np.unique(selected).size)
+
+
+def _source_rows_per_batch(*, row_count_per_run: int, batch_size: int | None) -> int | None:
+    if batch_size is None:
+        return None
+    # The shared sparse reader withholds the final run in each chunk; one extra
+    # run provides the boundary without evaluating the following output window.
+    return max(1, int(row_count_per_run) * (int(batch_size) + 1))
 
 
 def _evaluate_compact_asocc_sparse_cc_rows(

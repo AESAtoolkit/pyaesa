@@ -32,7 +32,7 @@ User Documentation
 Developer Documentation
 -----------------------
 
-The pages below are for Python developers changing package code or adding
+The pages below are for Python developers changing source code or adding
 allocation methods to the package.
 
 .. toctree::

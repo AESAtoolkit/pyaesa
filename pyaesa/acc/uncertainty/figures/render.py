@@ -1,6 +1,6 @@
 """aCC uncertainty figure orchestration."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -88,8 +88,15 @@ def render_acc_uncertainty_figures(
     )
     validate_inactive_axes_for_figures(identity=tables.identity, context=context)
     clear_uncertainty_figure_scope(paths=paths)
-    jobs = _uncertainty_jobs(context=context, identity=tables.identity, summary=tables.summary)
-    return render_figure_jobs(source="uncertainty_acc", jobs=jobs, status=status)
+    return render_figure_jobs(
+        source="uncertainty_acc",
+        jobs=lambda: _uncertainty_jobs(
+            context=context,
+            identity=tables.identity,
+            summary=tables.summary,
+        ),
+        status=status,
+    )
 
 
 def _uncertainty_jobs(
@@ -97,13 +104,15 @@ def _uncertainty_jobs(
     context: FigureContext,
     identity: pd.DataFrame,
     summary: pd.DataFrame,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if single_requested_year(context) is None:
         return _multi_year_jobs(context=context, identity=identity, summary=summary)
     return _single_year_jobs(context=context, identity=identity)
 
 
-def _single_year_jobs(*, context: FigureContext, identity: pd.DataFrame) -> list[PlannedFigureJob]:
+def _single_year_jobs(
+    *, context: FigureContext, identity: pd.DataFrame
+) -> Iterator[PlannedFigureJob]:
     identity_rows = prepared_identity_rows(context=context, identity=identity)
     value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
     method_rows = collapsed_value_rows(
@@ -111,39 +120,27 @@ def _single_year_jobs(*, context: FigureContext, identity: pd.DataFrame) -> list
         context=context,
         include_method_axis=True,
     )
-    jobs = [
-        *(
-            _plan_multi_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-            )
-            if context.multi_method
-            else []
-        ),
-        *(
-            _plan_per_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-            )
-            if context.per_method
-            else []
-        ),
-    ]
     if context.inter_method and ASOCC_INTER_METHOD_SOURCE in set(context.active_sources):
-        jobs = [
-            *_plan_inter_method_jobs(
-                rows=_collapsed_inter_method_rows(rows=value_rows, context=context),
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-            ),
-            *jobs,
-        ]
-    return jobs
+        yield from _plan_inter_method_jobs(
+            rows=_collapsed_inter_method_rows(rows=value_rows, context=context),
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+        )
+    if context.multi_method:
+        yield from _plan_multi_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+        )
+    if context.per_method:
+        yield from _plan_per_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+        )
 
 
 def _multi_year_jobs(
@@ -151,7 +148,7 @@ def _multi_year_jobs(
     context: FigureContext,
     identity: pd.DataFrame,
     summary: pd.DataFrame,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     active = set(context.active_sources)
     if ASOCC_INTER_METHOD_SOURCE in active:
         summary_rows = prepared_summary_rows(context=context, summary=summary)
@@ -184,39 +181,28 @@ def _multi_year_jobs(
                 include_method_axis=True,
             )
         inter_rows = method_rows.iloc[0:0].copy()
-    return [
-        *(
-            _plan_inter_method_jobs(
-                rows=inter_rows,
-                context=context,
-                plotter=plot_band_scope,
-                kind="multi_year",
-            )
-            if context.inter_method
-            else []
-        ),
-        *(
-            _plan_multi_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_mean_line_scope,
-                kind="multi_year",
-                mean_line=True,
-            )
-            if context.multi_method
-            else []
-        ),
-        *(
-            _plan_per_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_band_scope,
-                kind="multi_year",
-            )
-            if context.per_method
-            else []
-        ),
-    ]
+    if context.inter_method:
+        yield from _plan_inter_method_jobs(
+            rows=inter_rows,
+            context=context,
+            plotter=plot_band_scope,
+            kind="multi_year",
+        )
+    if context.multi_method:
+        yield from _plan_multi_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_mean_line_scope,
+            kind="multi_year",
+            mean_line=True,
+        )
+    if context.per_method:
+        yield from _plan_per_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_band_scope,
+            kind="multi_year",
+        )
 
 
 def _plan_per_method_jobs(
@@ -225,24 +211,20 @@ def _plan_per_method_jobs(
     context: FigureContext,
     plotter: Plotter,
     kind: str,
-) -> list[PlannedFigureJob]:
-    jobs: list[PlannedFigureJob] = []
+) -> Iterator[PlannedFigureJob]:
     for method in visible_values(rows, "__method"):
         method_rows = rows.loc[rows["__method"].astype(str).eq(str(method))].copy()
-        jobs.extend(
-            _plan_scope_jobs(
-                rows=method_rows,
-                context=context,
-                role="per_method",
-                label=str(method),
-                title_label=str(method),
-                plotter=plotter,
-                kind=kind,
-                group_legend=False,
-                include_method_in_label=False,
-            )
+        yield from _plan_scope_jobs(
+            rows=method_rows,
+            context=context,
+            role="per_method",
+            label=str(method),
+            title_label=str(method),
+            plotter=plotter,
+            kind=kind,
+            group_legend=False,
+            include_method_in_label=False,
         )
-    return jobs
 
 
 def _plan_multi_method_jobs(
@@ -252,10 +234,10 @@ def _plan_multi_method_jobs(
     plotter: Plotter,
     kind: str,
     mean_line: bool = False,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if len(visible_values(rows, "__method")) <= 1:
-        return []
-    return _plan_scope_jobs(
+        return
+    yield from _plan_scope_jobs(
         rows=rows,
         context=context,
         role="multi_method",
@@ -276,10 +258,10 @@ def _plan_inter_method_jobs(
     context: FigureContext,
     plotter: Plotter,
     kind: str,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if rows.empty:
-        return []
-    return _plan_scope_jobs(
+        return
+    yield from _plan_scope_jobs(
         rows=rows,
         context=context,
         role="inter_method",
@@ -305,8 +287,7 @@ def _plan_scope_jobs(
     include_method_in_label: bool,
     split_multi_year_impacts: bool = False,
     mean_line: bool = False,
-) -> list[PlannedFigureJob]:
-    jobs: list[PlannedFigureJob] = []
+) -> Iterator[PlannedFigureJob]:
     studied_year = single_requested_year(context)
     for scope in _figure_scopes(rows=rows, context=context):
         for selector_token, selector_title, selector_scope in selector_slices(scope):
@@ -319,8 +300,7 @@ def _plan_scope_jobs(
                 lcia_impact_slices(selector_scope) if split_impacts else [selector_scope]
             )
             for product_scope in product_scopes:
-                _append_scope_job(
-                    jobs=jobs,
+                yield _scope_job(
                     scope=product_scope,
                     context=context,
                     role=role,
@@ -336,12 +316,10 @@ def _plan_scope_jobs(
                     selector_token=selector_token,
                     selector_title=selector_title,
                 )
-    return jobs
 
 
-def _append_scope_job(
+def _scope_job(
     *,
-    jobs: list[PlannedFigureJob],
     scope: pd.DataFrame,
     context: FigureContext,
     role: str,
@@ -356,7 +334,8 @@ def _append_scope_job(
     include_impact: bool,
     selector_token: str,
     selector_title: str,
-) -> None:
+) -> PlannedFigureJob:
+    """Return one planned aCC uncertainty figure for a final figure scope."""
     output_base = (
         context.figures_root
         / role
@@ -376,21 +355,19 @@ def _append_scope_job(
         selector_title=selector_title,
         studied_year=studied_year,
     )
-    jobs.append(
-        PlannedFigureJob(
-            kind=kind,
-            label=output_base.name,
-            render=_planned_plot(
-                plotter=plotter,
-                frame=scope,
-                output_stem=output_base,
-                title=title,
-                context=context,
-                group_legend=group_legend,
-                include_method_in_label=include_method_in_label,
-                mean_line=mean_line,
-            ),
-        )
+    return PlannedFigureJob(
+        kind=kind,
+        label=output_base.name,
+        render=_planned_plot(
+            plotter=plotter,
+            frame=scope,
+            output_stem=output_base,
+            title=title,
+            context=context,
+            group_legend=group_legend,
+            include_method_in_label=include_method_in_label,
+            mean_line=mean_line,
+        ),
     )
 
 
@@ -432,15 +409,15 @@ def _planned_plot(
     return _render
 
 
-def _figure_scopes(*, rows: pd.DataFrame, context: FigureContext) -> list[pd.DataFrame]:
-    scopes: list[pd.DataFrame] = []
+def _figure_scopes(*, rows: pd.DataFrame, context: FigureContext) -> Iterator[pd.DataFrame]:
+    """Yield one aCC uncertainty figure scope at a time."""
     for cc_type, cc_rows in rows.groupby("cc_type", dropna=False, sort=True):
         if str(cc_type) == "static":
             for ssp_rows in static_asocc_ssp_slices(
                 cc_rows,
                 requested_ssps=context.requested_asocc_ssps,
             ):
-                scopes.extend(scope_slices(ssp_rows, ("lcia_method",)))
+                yield from scope_slices(ssp_rows, ("lcia_method",))
             continue
         dynamic_columns = [
             column
@@ -453,8 +430,7 @@ def _figure_scopes(*, rows: pd.DataFrame, context: FigureContext) -> list[pd.Dat
             )
             if column in cc_rows.columns
         ]
-        scopes.extend(scope_slices(cc_rows, tuple(dynamic_columns)))
-    return scopes
+        yield from scope_slices(cc_rows, tuple(dynamic_columns))
 
 
 def _collapsed_inter_method_rows(*, rows: pd.DataFrame, context: FigureContext) -> pd.DataFrame:

@@ -47,20 +47,20 @@ def _eu27_regions() -> list[str]:
         / "prerequisites"
         / "mrio"
         / "exiobase_3"
-        / "grouping"
-        / "group_reg_eu27.csv",
+        / "aggregation"
+        / "agg_reg_eu27.csv",
         encoding="latin1",
     )
     return sorted(
         {
             str(value).strip()
-            for value in frame.loc[frame["grouped_mrio"].eq("EU27"), "original_classification"]
+            for value in frame.loc[frame["aggregated_mrio"].eq("EU27"), "original_classification"]
             if str(value).strip() and str(value).strip() != "MT"
         }
     )
 
 
-def _fwc_stressors() -> list[str]:
+def _fwu_stressors() -> list[str]:
     frame = pd.read_csv(
         _repo_root()
         / "pyaesa"
@@ -75,7 +75,7 @@ def _fwc_stressors() -> list[str]:
     )
     mask = frame["extension"].astype(str).str.strip().eq("water") & frame["impact_parent"].astype(
         str
-    ).str.strip().eq("FWC")
+    ).str.strip().eq("FWU")
     return sorted(
         {str(value).strip() for value in frame.loc[mask, "stressor"] if str(value).strip()}
     )
@@ -102,7 +102,7 @@ def _build_workspace(tmp_path: Path, system: str) -> Path:
     regions = list(dict.fromkeys(["CN", "TW", "MT", "CH", "LU", *eu27_regions]))
     sectors = ["S_donor", "S_skip", "S_ch", "S_lu"]
     columns = _multiindex_columns(regions, sectors)
-    fwc_stressors = _fwc_stressors()
+    fwu_stressors = _fwu_stressors()
     donor_eu27_regions = [region for region in eu27_regions if region not in {"CH", "LU"}]
 
     for year in FULL_YEAR_RANGE:
@@ -114,7 +114,7 @@ def _build_workspace(tmp_path: Path, system: str) -> Path:
         )
         water = pd.DataFrame(
             0.0,
-            index=pd.Index(fwc_stressors, name="stressor"),
+            index=pd.Index(fwu_stressors, name="stressor"),
             columns=columns,
         )
         factor_inputs = pd.DataFrame(
@@ -148,10 +148,10 @@ def _build_workspace(tmp_path: Path, system: str) -> Path:
 
         lu_x = float(year - 1990)
         factor_inputs.loc["fi_pos", ("LU", "S_lu")] = lu_x
-        for stressor in fwc_stressors:
+        for stressor in fwu_stressors:
             water.loc[stressor, ("LU", "S_lu")] = 4.0 * lu_x
         if year == 2020:
-            for stressor in fwc_stressors:
+            for stressor in fwu_stressors:
                 water.loc[stressor, ("LU", "S_lu")] = 0.0
 
         zip_path = raw_dir / f"IOT_{year}_{system}.zip"
@@ -229,7 +229,7 @@ def _rewrite_extension_frame(
         archive.writestr(f"{extension}/F.txt", frame.to_csv(sep="\t"))
 
 
-def _minimal_corrected_values_frame(*, fwc_stressors: list[str]) -> pd.DataFrame:
+def _minimal_corrected_values_frame(*, fwu_stressors: list[str]) -> pd.DataFrame:
     """Return minimal corrected value rows for runtime application tests."""
     return pd.DataFrame(
         [
@@ -281,7 +281,7 @@ def _minimal_corrected_values_frame(*, fwc_stressors: list[str]) -> pd.DataFrame
             {
                 "source": "exiobase_3102_ixi",
                 "extension": "water",
-                "stressor": fwc_stressors[0],
+                "stressor": fwu_stressors[0],
                 "region": "LU",
                 "sector": "S_lu",
                 "year": 1995,
@@ -397,7 +397,7 @@ def test_write_outputs_and_runtime_application_use_raw_corrected_values(
     del project_repo
     corrected_values_root = tmp_path / "corrected_values"
     corrected_values_root.mkdir()
-    corrected_values = _minimal_corrected_values_frame(fwc_stressors=_fwc_stressors())
+    corrected_values = _minimal_corrected_values_frame(fwu_stressors=_fwu_stressors())
     corrected_values_path = corrected_values_root / "exiobase_3102_ixi_raw_corrected_values.csv"
     corrected_values.to_csv(corrected_values_path, index=False)
     assert "diagnostic_type" not in corrected_values.columns
@@ -440,12 +440,12 @@ def test_write_outputs_and_runtime_application_use_raw_corrected_values(
         name="water",
         F=pd.DataFrame(
             0.0,
-            index=pd.Index(_fwc_stressors(), name="stressor"),
+            index=pd.Index(_fwu_stressors(), name="stressor"),
             columns=products,
         ),
         unit=pd.DataFrame(
-            {"unit": ["m3"] * len(_fwc_stressors())},
-            index=pd.Index(_fwc_stressors(), name="stressor"),
+            {"unit": ["m3"] * len(_fwu_stressors())},
+            index=pd.Index(_fwu_stressors(), name="stressor"),
         ),
     )
     iosys = build_dummy_iosystem(

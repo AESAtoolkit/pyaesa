@@ -70,8 +70,10 @@ def uncertainty_ar6_cc(
               supported value is currently ``"offset"``.
               Ignored when ``harmonization=False``.
             - ``category``: AR6 category classification for global warming
-              trajectories, as a string or list. Defaults to
-              ``["C1", "C2", "C3", "C4"]``.
+              trajectories, as a string or list, such as ``"C3"`` or
+              ``["C1", "C2"]``. Valid values are ``"C1"`` through ``"C8"``.
+              Defaults to ``["C1", "C2", "C3", "C4"]``, the categories
+              aligned with the 2015 Paris Agreement.
             - ``ssp_scenario``: SSP label selector as a string, list, or
               ``None``. Defaults to
               ``["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"]``.
@@ -79,19 +81,20 @@ def uncertainty_ar6_cc(
               are ``"kyoto_gases"`` (default) and ``"co2"``.
               ``emission_type="kyoto_gases"`` uses the GWP100 Kyoto Gases
               aggregate; ``emission_type="co2"`` uses direct CO2 pathways.
-            - ``include_afolu``: Whether AFOLU is included inside the
-              selected ``emission_type``. Defaults to ``False``.
+            - ``include_afolu``: Whether AFOLU emissions are included inside
+              the selected ``emission_type``. Defaults to ``False``.
             - ``emissions_mode``: Dynamic AR6 emissions mode. Accepted values
               are ``"net"``, ``"gross"``, and ``"gross_alt"``. Defaults to
-              ``"gross_alt"``. ``"gross"`` removes all sequestration
-              sources from net emissions. ``"gross_alt"`` removes all
-              sequestration sources except CCS, as it does not directly
-              capture CO2 from the atmosphere; IPCC AR6 recommends treating
-              CCS separately from net negative sequestration.
-              Gross modes write positive emissions denominator rows and
-              signed negative sequestration companion rows; downstream
-              allocated carrying capacity (aCC) and absolute sustainability
-              ratio (ASR) consume only the denominator gross positive rows. See
+              ``"gross_alt"``. ``"net"`` uses net AR6 emissions pathways
+              directly. ``"gross"`` removes all sequestration sources from
+              net emissions. ``"gross_alt"`` removes all sequestration
+              sources except CCS. CCS is retained because IPCC AR6 treats CCS
+              as capture at fossil or industrial point sources rather than
+              direct removal of CO2 from the atmosphere, so it is kept
+              separate from net negative sequestration. Gross modes write
+              positive emissions rows and signed negative sequestration
+              companion rows; downstream aCC and ASR consume only the positive
+              emissions rows. See
               ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
               for the methodological explanation.
             - ``subset_version``: Optional selector for a subset of AR6

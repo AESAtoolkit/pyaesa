@@ -35,8 +35,8 @@ from ...data.paths import (
 )
 from ...data.writers import clear_scope_outputs
 from pyaesa.io_lca.orchestration.request.domain_checks import (
-    validate_aggreg_indices_requires_multi_selection,
-    validate_aggreg_indices_supported,
+    validate_group_indices_requires_multi_selection,
+    validate_group_indices_supported,
 )
 from pyaesa.io_lca.orchestration.pipeline.method_runner import run_io_lca_method
 from pyaesa.io_lca.orchestration.pipeline.progress import io_lca_banner, year_progress
@@ -45,29 +45,29 @@ from pyaesa.shared.runtime.reporting.progress import StatusProgressPrinter
 from pyaesa.shared.runtime.reporting.status import StatusSink
 
 
-def _read_signature_aggreg_indices(signature: dict[str, Any]) -> bool:
-    """Return persisted IO-LCA aggregation identity from deterministic metadata."""
-    return bool(signature["aggreg_indices"])
+def _read_signature_group_indices(signature: dict[str, Any]) -> bool:
+    """Return persisted IO-LCAn aggregation identity from deterministic metadata."""
+    return bool(signature["group_indices"])
 
 
-def _ensure_no_conflicting_aggreg_indices_project(
+def _ensure_no_conflicting_group_indices_project(
     *,
     paths: IOLCAPaths,
     current_metadata_path: Path,
     log_payload: dict[str, Any],
-    aggreg_indices: bool,
+    group_indices: bool,
 ) -> None:
     """Raise when one IO-LCA project tree already records the opposite aggregation identity."""
 
     def _scan_payload(payload: dict[str, Any]) -> None:
         for raw_scope in iter_scope_entries(payload=payload):
             signature = require_scope_signature(scope=raw_scope)
-            persisted_aggreg_indices = _read_signature_aggreg_indices(signature)
-            if persisted_aggreg_indices == aggreg_indices:
+            persisted_group_indices = _read_signature_group_indices(signature)
+            if persisted_group_indices == group_indices:
                 continue
             raise ValueError(
                 "deterministic_io_lca requires a different project_name when "
-                "aggreg_indices changes between True and False. Aggregated selector "
+                "group_indices changes between True and False. Grouped selector "
                 "outputs and non aggregated selector outputs must not coexist in one "
                 "project tree."
             )
@@ -160,9 +160,9 @@ def execute_io_lca_mode(
     *,
     project_name: str,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
     methods: list[str],
     spec,
     filters: dict[str, list[str] | None],
@@ -172,35 +172,35 @@ def execute_io_lca_mode(
     upstream_analysis: bool,
     stages: int,
     stage_outputs_enabled: bool,
-    aggreg_indices: bool,
+    group_indices: bool,
     output_format: str,
     refresh: bool,
     has_multi_indices: bool,
     status: StatusSink | None = None,
 ) -> IOLCAModeExecution:
-    """Execute one deterministic IO-LCA aggregation branch and persist metadata."""
-    validate_aggreg_indices_requires_multi_selection(
-        aggreg_indices=aggreg_indices,
+    """Execute one deterministic IO-LCAn aggregation branch and persist metadata."""
+    validate_group_indices_requires_multi_selection(
+        group_indices=group_indices,
         has_multi_indices=has_multi_indices,
     )
-    validate_aggreg_indices_supported(spec=spec, aggreg_indices=aggreg_indices)
-    mode_tag = mode_label(aggreg_indices=aggreg_indices)
+    validate_group_indices_supported(spec=spec, group_indices=group_indices)
+    mode_tag = mode_label(group_indices=group_indices)
     paths = resolve_io_lca_paths(
         project_name=project_name,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
     )
     io_run_metadata_path = io_metadata_path_for_source(paths=paths, source=source)
     log_payload = load_scope_manifest(
         path=io_run_metadata_path,
         function_name="deterministic_io_lca",
     )
-    _ensure_no_conflicting_aggreg_indices_project(
+    _ensure_no_conflicting_group_indices_project(
         paths=paths,
         current_metadata_path=io_run_metadata_path,
         log_payload=log_payload,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
     )
     if not refresh:
         _ensure_no_conflicting_flat_output_scope(
@@ -211,16 +211,16 @@ def execute_io_lca_mode(
     signature = build_io_lca_signature(
         project_name=project_name,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         years=resolved_years,
         methods=methods,
         fu_code=spec.fu_code,
         filters={key: value for key, value in filters.items() if key != "studied_indices_tag"},
         upstream_analysis=upstream_analysis,
         upstream_stages=stages,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         output_format=output_format,
     )
     scope_key, scope_existing = get_scope(payload=log_payload, signature=signature)
@@ -345,9 +345,9 @@ def execute_io_lca_mode(
             result = run_io_lca_method(
                 lcia_method=lcia_method,
                 source=source,
-                group_version=group_version,
-                group_reg=group_reg,
-                group_sec=group_sec,
+                agg_version=agg_version,
+                agg_reg=agg_reg,
+                agg_sec=agg_sec,
                 spec=spec,
                 filters=filters,
                 metadata=metadata,
@@ -357,7 +357,7 @@ def execute_io_lca_mode(
                 resolved_years=resolved_years,
                 upstream_analysis=upstream_analysis,
                 upstream_stages=stages,
-                aggreg_indices=aggreg_indices,
+                group_indices=group_indices,
                 output_format=output_format,
                 refresh=refresh,
                 method_progress=progress,

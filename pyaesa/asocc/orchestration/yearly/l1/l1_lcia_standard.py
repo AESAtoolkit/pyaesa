@@ -59,7 +59,7 @@ def _compute_l1_standard_lcia_method(
         pr_hr_parent_cum_cache=pr_hr_parent_cum_cache,
         pr_hr_fallback_callback=pr_hr_fallback_callback,
         source_key=run.context.source,
-        group_version_reg=run.context.group_version_reg,
+        agg_version_reg=run.context.agg_version_reg,
         l1_reg_aggreg=run.context.l1_reg_aggreg,
         region_label_override=region_label_override,
     )

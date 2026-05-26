@@ -10,7 +10,7 @@ from pyaesa.ar6_cc.uncertainty.runtime.models import (
 )
 from pyaesa.ar6_cc.uncertainty.request.normalization import AR6_DYNAMIC_CC_SOURCE
 from pyaesa.shared.runtime.manifest_contract import manifest_json_value
-from pyaesa.shared.uncertainty_assessment.io.tables import public_run_artifact_contract
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_contract
 from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import run_role_payload
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (

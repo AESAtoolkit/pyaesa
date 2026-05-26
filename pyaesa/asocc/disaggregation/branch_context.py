@@ -16,7 +16,7 @@ def _build_selector_request(
     combined_methods: list[tuple[str, str]] | None,
     one_step_methods: list[str] | None,
     l1_reg_aggreg: str,
-    aggreg_indices: bool,
+    group_indices: bool,
     variant_tag: str | None,
     output_format: str = "csv",
     output_source_label: str | None = None,
@@ -25,9 +25,9 @@ def _build_selector_request(
     return PrepareContextRequest(
         project_name=str(base_allocate_args["project_name"]),
         source=str(selector.source),
-        group_version=selector.group_version,
-        group_reg=bool(selector.group_reg),
-        group_sec=bool(selector.group_sec),
+        agg_version=selector.agg_version,
+        agg_reg=bool(selector.agg_reg),
+        agg_sec=bool(selector.agg_sec),
         years=base_allocate_args["years"],
         historical_year_cap=None,
         refresh=False,
@@ -47,7 +47,7 @@ def _build_selector_request(
         l2_reuse_years=base_allocate_args["l2_reuse_years"],
         l1_reg_aggreg=str(l1_reg_aggreg),
         variant_tag=variant_tag,
-        aggreg_indices=bool(aggreg_indices),
+        group_indices=bool(group_indices),
         output_format=str(output_format),
         intermediate_outputs=False,
         output_source_label=output_source_label,
@@ -62,22 +62,22 @@ def _region_filters(value: str | list[str] | None) -> list[str]:
 
 def _load_selector_regions(selector) -> list[str]:
     """Return the processed region labels declared for one selector."""
-    matrix_version = selector.group_version if (selector.group_reg or selector.group_sec) else None
+    matrix_version = selector.agg_version if (selector.agg_reg or selector.agg_sec) else None
     return read_processed_mrio_regions(str(selector.source), matrix_version=matrix_version)
 
 
 def validate_region_compatibility(
     *,
     target_selector,
-    ref_grouped_selector,
-    ref_split_selector,
+    ref_aggregated_selector,
+    ref_disaggregate_selector,
     base_allocate_args: dict[str, Any],
     combined_methods: list[tuple[str, str]],
 ) -> None:
     """Validate same-label studied-region compatibility for disaggregation."""
     target_regions = _load_selector_regions(target_selector)
-    ref_grouped_regions = _load_selector_regions(ref_grouped_selector)
-    ref_split_regions = _load_selector_regions(ref_split_selector)
+    ref_aggregated_regions = _load_selector_regions(ref_aggregated_selector)
+    ref_disaggregate_regions = _load_selector_regions(ref_disaggregate_selector)
     del combined_methods
     studied_regions = sorted(
         set(
@@ -89,12 +89,16 @@ def validate_region_compatibility(
     if not studied_regions:
         return
     missing_target = [item for item in studied_regions if item not in target_regions]
-    missing_ref_grouped = [item for item in studied_regions if item not in ref_grouped_regions]
-    missing_ref_split = [item for item in studied_regions if item not in ref_split_regions]
-    if missing_target or missing_ref_grouped or missing_ref_split:
+    missing_ref_aggregated = [
+        item for item in studied_regions if item not in ref_aggregated_regions
+    ]
+    missing_ref_disaggregate = [
+        item for item in studied_regions if item not in ref_disaggregate_regions
+    ]
+    if missing_target or missing_ref_aggregated or missing_ref_disaggregate:
         raise ValueError(
             "Studied regions must be present by the same label in all selected sources. "
             f"missing_target={missing_target}, "
-            f"missing_ref_grouped={missing_ref_grouped}, "
-            f"missing_ref_split={missing_ref_split}."
+            f"missing_ref_aggregated={missing_ref_aggregated}, "
+            f"missing_ref_disaggregate={missing_ref_disaggregate}."
         )

@@ -9,9 +9,9 @@ method selectors used by:
 - Only FU code: `deterministic_io_lca(...)` and `uncertainty_io_lca(...)`
 
 The functional unit (FU) and allocation method tables of this file summarize
-`methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf`.
+<a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
 That appendix provides the definitions and mathematical expressions for each
-allocation method available in <span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span>.
+allocation method available in <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
 ## Functional units
 
@@ -85,23 +85,23 @@ The last letter describes the accounting boundary:
 | `.b` | `CBA_TD` | Consumption-based accounting of outputs consumed by total demand, i.e. final demand and intermediate demand/B2B (Scopes 1, 2, and 3). |
 | `.c` | `PBA` | Production-based accounting of direct burdens in the producing sector-region pair (Scope 1). |
 
-N.B., `aggreg_indices=True` is not allowed for `L2.a.b`, `L2.b.b`, or `L2.c.b`
-because aggregating total demand CBA scopes can double count. For these FUs,
-define aggregation before running the study with `process_mrio(...)` grouping
-arguments: `group_reg`, `group_sec`, and `group_version`.
+N.B., `group_indices=True` is not allowed for `L2.a.b`, `L2.b.b`, or `L2.c.b`
+because summing total demand CBA output rows can double count. For these FUs,
+define the upstream MRIO aggregation and disaggregation scope before running the study
+with `process_mrio(...)` arguments: `agg_reg`, `agg_sec`, and `agg_version`.
 
 ## Allocation methods
 
 The definitions and mathematical expressions for each allocation method are
 provided in
-`methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf`.
-The allocation method labels below use the syntax accepted by <span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span>.
+<a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
+The allocation method labels below use the syntax accepted by <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
 ### Allocation paths overview
 
 ![Overview of allocation paths and methods across allocation levels and accounting system boundaries](https://raw.githubusercontent.com/AESAtoolkit/pyaesa/main/images/fig-asocc-paths.svg)
 
-**Figure 1: Overview of UNCASExt/<span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span> allocation paths and methods across
+**Figure 1: Overview of UNCASExt/<span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> allocation paths and methods across
 allocation levels and accounting system boundaries.** The figure summarizes the
 allocation routes and method labels available across levels and accounting
 system boundaries.
@@ -116,13 +116,13 @@ here named one-step `UT(TD)`. This one-step total demand approach is therefore
 neither consumption- nor production-anchored, analogously to one-step
 `AR(E^{CBA_TD})`.
 
-*L3 and L4 are not yet covered by <span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span> directly and can only be covered by
-doing "manual" postprocessing of <span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span> outputs. L3 and L4 require case study
+*L3 and L4 are not yet covered by <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> directly and can only be covered by
+doing "manual" postprocessing of <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> outputs. L3 and L4 require case study
 specific data. Examples include company revenues to scale a sector-level
 allocation to a firm-level allocation by comparing company turnover to total
 sector output in the MRIO, or activity data (e.g., passenger-kilometers
 delivered) benchmarked against corresponding totals at the relevant MRIO level.
-A future update of <span style="color:#366e9c"><strong><tt>py</tt></strong></span><span style="color:#c83737"><strong><tt>aesa</tt></strong></span> will include the possibility to address these levels
+A future update of <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> will include the possibility to address these levels
 via user provided L3 and L4 datasets.*
 
 ### Method label syntax
@@ -212,7 +212,7 @@ weight uses `L1.b`.
 
 ## What to do next
 
-Now that you have been through `tutorials/study_objectives/0_study_objectives.ipynb`
-and `tutorials/study_objectives/1_functional_units_and_allocation_methods.md`, go to the tutorial
-corresponding to your study end objective. The tutorials are located in
-subfolders under `tutorials/study_objectives/`.
+Now that you have been through [tutorials/study_objectives/0_study_objectives.md](0_study_objectives.md)
+and [tutorials/study_objectives/1_functional_units_and_allocation_methods.md](1_functional_units_and_allocation_methods.md), go to the tutorial
+corresponding to your study end objective. The available study objective notebooks are listed in
+[tutorials/study_objectives/0_study_objectives.md](0_study_objectives.md).

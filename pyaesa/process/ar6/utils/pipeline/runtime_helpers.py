@@ -2,11 +2,11 @@
 
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.download.ar6.utils.config import (
-    DEFAULT_CATEGORIES,
     DEFAULT_DATABASE,
     DEFAULT_SSPS,
     DEFAULT_VARIABLES_OUTPUT,
     DEFAULT_VARIABLES_RELEVANT,
+    normalize_ar6_categories,
 )
 
 DEFAULT_HARMONIZATION_METHOD = "offset"
@@ -29,11 +29,12 @@ def process_signature(
     study_period: list[int],
     harmonization: bool,
     harmonization_method: str,
+    category: str | list[str] | None = None,
 ) -> dict[str, object]:
     """Return the persisted process signature for one AR6 run."""
     signature = {
         "database": DEFAULT_DATABASE,
-        "categories": list(DEFAULT_CATEGORIES),
+        "categories": normalize_ar6_categories(category),
         "ssps": [int(value) for value in DEFAULT_SSPS],
         "variables_relevant": list(DEFAULT_VARIABLES_RELEVANT),
         "variables_output": list(DEFAULT_VARIABLES_OUTPUT),

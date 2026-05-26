@@ -12,6 +12,7 @@ from pyaesa.shared.runtime.reporting.output_roots import public_output_root_from
 from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
+    monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
     monte_carlo_run_progress_label,
 )
@@ -20,21 +21,6 @@ from pyaesa.shared.uncertainty_assessment.run_state.report import UncertaintyRun
 from pyaesa.shared.uncertainty_assessment.run_state.report_roots import (
     uncertainty_manifest_output_root,
 )
-
-
-def component_checkpoint_figures(*, runtime_mode: str, subfigures: bool) -> bool:
-    """Return whether pyaesa owned component figures render during checkpoints."""
-    return bool(subfigures) and str(runtime_mode) != "convergence"
-
-
-def final_component_figures_required(
-    *,
-    runtime_mode: str,
-    subfigures: bool,
-    completed_runs: int,
-) -> bool:
-    """Return whether convergence deferred component figures must render once."""
-    return bool(subfigures) and str(runtime_mode) == "convergence" and int(completed_runs) > 0
 
 
 def required_manifest_path(manifest: UncertaintyManifest) -> Path:
@@ -174,5 +160,13 @@ def progress_complete(
             mode=mode,
             component=component,
         ),
-        persistent=str(mode) == "fixed" if persistent is None else persistent,
+        persistent=(
+            monte_carlo_completion_is_persistent(
+                completed=completed,
+                max_runs=max_runs,
+                mode=mode,
+            )
+            if persistent is None
+            else persistent
+        ),
     )

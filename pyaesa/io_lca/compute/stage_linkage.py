@@ -3,6 +3,8 @@
 import numpy as np
 import pandas as pd
 
+from pyaesa.shared.runtime.memory import memory_bounded_rows
+
 
 def _pair_tokens(value: object) -> tuple[str, str]:
     """Return deterministic ``(region, sector)`` tokens from axis labels."""
@@ -32,7 +34,7 @@ def dominant_parent_link_map(
     child_labels = list(a_matrix.index)
     parent_labels = list(a_matrix.columns)
     out: dict[tuple[str, str], tuple[str, str]] = {}
-    chunk_size = 256
+    chunk_size = _dominant_parent_link_chunk_size(parent_count=len(parent_labels))
     for start in range(0, len(child_labels), chunk_size):
         stop = min(start + chunk_size, len(child_labels))
         weighted = a_values[start:stop, :] * q_values[None, :]
@@ -47,3 +49,9 @@ def dominant_parent_link_map(
             else:
                 out[child_pair] = _pair_tokens(parent_labels[int(best_parent_idx[offset])])
     return out
+
+
+def _dominant_parent_link_chunk_size(*, parent_count: int) -> int:
+    weighted_row_bytes = np.dtype(np.float64).itemsize * int(parent_count)
+    result_row_bytes = np.dtype(np.int64).itemsize + np.dtype(np.float64).itemsize
+    return memory_bounded_rows(bytes_per_row=max(1, weighted_row_bytes + result_row_bytes))

@@ -17,10 +17,8 @@ from pyaesa.shared.uncertainty_assessment.run_state.compatibility import (
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import run_role_payload
 from pyaesa.shared.uncertainty_assessment.sobol.plan import SobolPlan, sobol_plan_payload
-from pyaesa.shared.uncertainty_assessment.io.tables import (
-    public_run_artifact_contract,
-    uncertainty_table_columns,
-)
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_contract
+from pyaesa.shared.uncertainty_assessment.io.tables import uncertainty_table_columns
 from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (
     mc_parameters_payload,
     optional_sobol_artifact_paths,
@@ -81,7 +79,6 @@ def build_asr_manifest_context(
         "has_cumulative_outputs": plan.has_cumulative_outputs,
         "deterministic_prerequisites": list(compatibility_prerequisites),
         "external_inputs": strip_reporting_only_fields(list(plan.lca_input.external_inputs)),
-        "sobol": sobol_status,
     }
     return {
         "mc_parameters": mc_parameters_payload(runtime=runtime),

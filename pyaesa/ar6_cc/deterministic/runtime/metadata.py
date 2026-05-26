@@ -166,9 +166,15 @@ def build_cached_report(
     cc_dir: Path,
     logs_dir: Path,
     figure_paths: list[Path],
+    output_file: Path | None = None,
+    post_study_output_file: Path | None = None,
     reuse_status: str = "reused_exact",
 ) -> ComputeAR6CCReport:
     """Build one cached deterministic AR6 CC report from persisted metadata."""
+    stored_post_study_output = payload["artifacts"].get("post_study_output_file")
+    resolved_post_study_output = (
+        None if stored_post_study_output is None else Path(cast(str, stored_post_study_output))
+    )
     return ComputeAR6CCReport(
         study_period=study_period,
         harmonization=harmonization,
@@ -185,11 +191,13 @@ def build_cached_report(
         missing_pathway_combinations=_pathway_counts_from_payload(
             payload["execution"]["missing_pathway_combinations"]
         ),
-        output_file=Path(cast(str, payload["artifacts"]["output_file"])),
+        output_file=(
+            Path(cast(str, payload["artifacts"]["output_file"]))
+            if output_file is None
+            else output_file
+        ),
         post_study_output_file=(
-            None
-            if payload["artifacts"].get("post_study_output_file") is None
-            else Path(cast(str, payload["artifacts"]["post_study_output_file"]))
+            resolved_post_study_output if post_study_output_file is None else post_study_output_file
         ),
         figure_paths=figure_paths,
         meta_file=meta_file,

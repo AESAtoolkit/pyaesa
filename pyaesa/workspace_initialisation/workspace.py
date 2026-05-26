@@ -51,7 +51,7 @@ def project_outputs_root(*, project_name: str) -> Path:
         project_name: Project scoped analytical output name.
 
     Returns:
-        Absolute path to the project named folder beneath the active repository.
+        Absolute path to the project named folder beneath the configured repository.
 
     Raises:
         ValueError: If ``project_name`` is blank.

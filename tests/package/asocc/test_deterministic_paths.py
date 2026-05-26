@@ -16,7 +16,7 @@ def test_runtime_and_diagnostics_paths_cover_state_validation_and_filename_tags(
     state = SimpleNamespace(
         runtime_proj_base=tmp_path,
         runtime_output_source="oecd_v2025",
-        runtime_group_version="demo",
+        runtime_agg_version="demo",
     )
     runtime_logs_dir = paths_mod.runtime_regression_logs_dir(
         state=state,
@@ -24,7 +24,7 @@ def test_runtime_and_diagnostics_paths_cover_state_validation_and_filename_tags(
     assert runtime_logs_dir == paths_mod.allocate_regression_logs_dir(
         proj_base=tmp_path,
         source="oecd_v2025",
-        group_version="demo",
+        agg_version="demo",
     )
     assert (
         paths_mod.projection_clipping_log_path(
@@ -44,7 +44,7 @@ def test_allocate_scope_paths_cover_public_diagnostics_contracts(tmp_path: Path)
     common = {
         "proj_base": tmp_path,
         "source": "oecd_v2025",
-        "group_version": None,
+        "agg_version": None,
     }
     local_common = {key: value for key, value in common.items() if key != "proj_base"}
     refresh_root = paths_mod._get_allocate_refresh_scope_root(**common)  # noqa: SLF001
@@ -64,7 +64,7 @@ def test_allocate_scope_paths_cover_public_diagnostics_contracts(tmp_path: Path)
     regression_dir = paths_mod._get_projection_regression_dir(  # noqa: SLF001
         tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     assert regression_dir == logs_dir / "regression_proj"
     assert (

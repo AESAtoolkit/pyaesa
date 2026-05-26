@@ -1,6 +1,6 @@
 """Lean multi-method deterministic aSoCC figure renderer."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -29,11 +29,10 @@ def plan_multi_method_jobs(
     output_format: str,
     plotter: Callable[..., list[Path]],
     row_preparer: Callable[[pd.DataFrame], pd.DataFrame],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     """Plan method comparison products before per method products."""
     if not has_multiple_methods(rows):
-        return []
-    jobs: list[PlannedFigureJob] = []
+        return
     studied_year = single_requested_year(requested_years)
     single_year = studied_year is not None
     for scoped_rows in figure_ssp_slices(expand_generic_lcia_rows(rows)):
@@ -43,21 +42,18 @@ def plan_multi_method_jobs(
                 product_scopes = [prepared] if single_year else lcia_impact_slices(prepared)
                 include_impact = not single_year and len(visible_values(prepared, "impact")) > 1
                 for impact_rows in product_scopes:
-                    jobs.append(
-                        _multi_method_job(
-                            impact_rows=impact_rows,
-                            figures_root=figures_root,
-                            requested_years=requested_years,
-                            studied_year=studied_year,
-                            dpi=dpi,
-                            output_format=output_format,
-                            plotter=plotter,
-                            include_impact=include_impact,
-                            selector_token=selector_token,
-                            selector_title=selector_title,
-                        )
+                    yield _multi_method_job(
+                        impact_rows=impact_rows,
+                        figures_root=figures_root,
+                        requested_years=requested_years,
+                        studied_year=studied_year,
+                        dpi=dpi,
+                        output_format=output_format,
+                        plotter=plotter,
+                        include_impact=include_impact,
+                        selector_token=selector_token,
+                        selector_title=selector_title,
                     )
-    return jobs
 
 
 def _multi_method_job(

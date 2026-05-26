@@ -54,6 +54,7 @@ class ExternalLCALongMatrixSource:
     identity: pd.DataFrame
     run_indices: np.ndarray
     values_for_runs: Callable[[np.ndarray], np.ndarray]
+    values_for_run_rows: Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 def load_external_lca_long_matrix_source(
@@ -164,6 +165,15 @@ def load_external_lca_long_matrix_source(
             row_count=len(identity),
             requested_runs=np.asarray(requested, dtype=np.int64),
         ),
+        values_for_run_rows=lambda requested, row_positions: _long_values_for_runs(
+            path=path,
+            years=years,
+            lookup=matrix_lookup,
+            run_indices=run_index_array,
+            row_count=len(identity),
+            requested_runs=np.asarray(requested, dtype=np.int64),
+            row_positions=np.asarray(row_positions, dtype=np.int64),
+        ),
     )
 
 
@@ -175,12 +185,23 @@ def _long_values_for_runs(
     run_indices: np.ndarray,
     row_count: int,
     requested_runs: np.ndarray,
+    row_positions: np.ndarray | None = None,
 ) -> np.ndarray:
     if requested_runs.size == 0:
-        return np.empty((0, int(row_count)), dtype=np.float64)
+        width = int(row_count) if row_positions is None else int(len(row_positions))
+        return np.empty((0, width), dtype=np.float64)
     unique_runs = np.unique(requested_runs.astype(np.int64, copy=False))
     _validate_requested_runs(run_indices=run_indices, requested_runs=unique_runs, path=path)
-    values = np.full((len(unique_runs), int(row_count)), np.nan, dtype=np.float64)
+    selected_positions = (
+        np.arange(int(row_count), dtype=np.int64)
+        if row_positions is None
+        else np.asarray(row_positions, dtype=np.int64)
+    )
+    if selected_positions.size == 0:
+        return np.empty((len(requested_runs), 0), dtype=np.float64)
+    output_positions = np.full(int(row_count), -1, dtype=np.int64)
+    output_positions[selected_positions] = np.arange(len(selected_positions), dtype=np.int64)
+    values = np.full((len(unique_runs), len(selected_positions)), np.nan, dtype=np.float64)
     filled = np.zeros(values.shape, dtype=bool)
     for table in _iter_selected_tables(path=path, years=years):
         filtered = _filter_run_indices(table=table, run_indices=unique_runs)
@@ -188,12 +209,16 @@ def _long_values_for_runs(
             continue
         normalized = _normalize_table(table=filtered)
         run = _int64_numpy(normalized["run_index"])
+        source_positions = positions_for_arrow(table=normalized, lookup=lookup)
+        selected_mask = output_positions[source_positions] >= 0
+        if not bool(np.any(selected_mask)):
+            continue
         assign_values(
             values=values,
             filled=filled,
-            row_positions=np.searchsorted(unique_runs, run),
-            column_positions=positions_for_arrow(table=normalized, lookup=lookup),
-            source_values=_float64_numpy(normalized["value"]),
+            row_positions=np.searchsorted(unique_runs, run[selected_mask]),
+            column_positions=output_positions[source_positions[selected_mask]],
+            source_values=_float64_numpy(normalized["value"])[selected_mask],
         )
     require_complete_matrix(filled=filled)
     return values[np.searchsorted(unique_runs, requested_runs)]

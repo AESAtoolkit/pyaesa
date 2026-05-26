@@ -22,6 +22,7 @@ from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import (
     component_inventory_finalizes,
     component_inventory_payload,
     fixed_inventory_mc_parameters,
+    initial_component_inventory_finalizes,
     run_role_payload,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.convergence import (
@@ -43,6 +44,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
     manifest_figure_artifacts_current,
     manifest_with_figure_artifacts,
 )
+from pyaesa.shared.uncertainty_assessment.run_state.report import uncertainty_report
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.shared.uncertainty_assessment.run_state.runs import (
     CompatibleMonteCarloRun,
@@ -72,20 +74,35 @@ from pyaesa.shared.uncertainty_assessment.io.downstream_run_outputs import (
     write_downstream_run_outputs,
 )
 from pyaesa.shared.uncertainty_assessment.io.summary_kernels import group_block_stop
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.csv_fragments import (
+    CSV_COMPACT_RUN_FRAGMENT_SUFFIX,
+    csv_run_fragment_input,
+    max_abs_int,
+)
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
+)
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import (
+    RunIntervalWriterState,
     public_run_artifact_contract,
     public_run_artifact_readme_lines,
     read_run_interval_index,
-    read_uncertainty_table,
     run_interval_index_path,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import (
+    read_uncertainty_table,
     uncertainty_table_columns,
     write_uncertainty_table,
 )
 from pyaesa.shared.uncertainty_assessment.orchestration import progress_complete
 from pyaesa.shared.runtime.reporting.run_progress import RunProgressPrinter
+
+
+def _read_csv_fragment(path: Path) -> pd.DataFrame:
+    with csv_run_fragment_input(path=path) as source:
+        return pd.read_csv(source)
 
 
 def test_uncertainty_formats_reject_pickle() -> None:
@@ -245,10 +262,17 @@ def test_composite_convergence_checkpoints_and_inventory_payloads() -> None:
         component_inventory=inventory,
         finalize_component_inventory=True,
     )
+    assert initial_component_inventory_finalizes(checkpoints=(10,))
+    assert not initial_component_inventory_finalizes(checkpoints=(3, 6, 9, 10))
+    assert not initial_component_inventory_finalizes(
+        checkpoints=(10,),
+        finalize_outputs=False,
+    )
 
 
 def test_uncertainty_table_io_covers_complete_csv_and_parquet(tmp_path: Path) -> None:
-    frame = pd.DataFrame({"run_index": [0, 1], "value": [1.0, 2.0]})
+    high_precision = np.float64("0.37491753620123456")
+    frame = pd.DataFrame({"run_index": [0, 1], "value": [1.0, high_precision]})
     csv_path = tmp_path / "runs.csv"
     assert (
         write_uncertainty_table(
@@ -258,10 +282,16 @@ def test_uncertainty_table_io_covers_complete_csv_and_parquet(tmp_path: Path) ->
         )
         == csv_path
     )
+    read_csv = read_uncertainty_table(path=csv_path, output_format="csv_compact")
     pd.testing.assert_frame_equal(
-        read_uncertainty_table(path=csv_path, output_format="csv_compact"),
+        read_csv,
         frame,
         check_dtype=False,
+    )
+    assert format(float(high_precision), ".17g") in csv_path.read_text(encoding="utf-8")
+    assert np.array_equal(
+        read_csv["value"].to_numpy(dtype=np.float64),
+        frame["value"].to_numpy(dtype=np.float64),
     )
     assert uncertainty_table_columns(path=csv_path, output_format="csv_compact") == [
         "run_index",
@@ -304,40 +334,15 @@ def test_run_artifact_edge_contracts_use_interval_indexes(tmp_path: Path) -> Non
         path=tmp_path / "runs.parquet",
         output_format="parquet",
     )
-    assert csv_contract["artifact_kind"] == "csv_compact_file"
+    assert csv_contract["artifact_kind"] == "csv_compact_dataset_directory"
+    assert csv_contract["fragment_pattern"] == f"part-*{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}"
     assert parquet_contract["artifact_kind"] == "parquet_dataset_directory"
-    assert public_run_artifact_readme_lines(run_name="demo_runs")[0].startswith("- demo_runs:")
-
-    malformed_runs = tmp_path / "malformed_sparse.csv"
-    pd.DataFrame(
-        {
-            "run_index": [0],
-            "public_row_id": [0],
-            "value": [1.0],
-            "extra": [2.0],
-        }
-    ).to_csv(malformed_runs, index=False)
-    pd.DataFrame(
-        {
-            "batch_index": [0],
-            "run_start": [0],
-            "run_stop": [1],
-            "row_start": [0],
-            "row_count": [1],
-            "fragment": [""],
-        }
-    ).to_csv(run_interval_index_path(path=malformed_runs, output_format="csv_compact"), index=False)
-    with pytest.raises(ValueError, match="exactly one value column"):
-        list(iter_sparse_run_rows(path=malformed_runs, output_format="csv_compact"))
-
-    bad_index_path = tmp_path / "bad_interval_source.csv"
-    pd.DataFrame({"run_index": [0], "0": [1.0]}).to_csv(bad_index_path, index=False)
-    pd.DataFrame({"batch_index": [0]}).to_csv(
-        run_interval_index_path(path=bad_index_path, output_format="csv_compact"),
-        index=False,
-    )
-    with pytest.raises(ValueError, match="missing columns"):
-        read_run_interval_index(path=bad_index_path, output_format="csv_compact")
+    readme_lines = public_run_artifact_readme_lines(run_name="demo_runs")
+    readme_text = "\n".join(readme_lines)
+    assert readme_lines[0].startswith("- demo_runs:")
+    assert "part-*.csv.zst CSV fragments" in readme_text
+    assert "interval index" in readme_text
+    assert "read only requested run windows" in readme_text
 
     empty_sparse_parquet = tmp_path / "empty_sparse.parquet"
     empty_sparse_rows = SparseRunRows(
@@ -390,29 +395,6 @@ def test_run_artifact_edge_contracts_use_interval_indexes(tmp_path: Path) -> Non
     )
     assert list(iter_sparse_run_rows(path=corrupt_sparse_parquet, output_format="parquet")) == []
 
-    append_file_path = tmp_path / "append_file.parquet"
-    append_file_path.write_text("not a parquet dataset", encoding="utf-8")
-    pd.DataFrame(
-        {
-            "batch_index": [0],
-            "run_start": [0],
-            "run_stop": [1],
-            "row_start": [0],
-            "row_count": [1],
-            "fragment": ["part-00000000.parquet"],
-        }
-    ).to_parquet(
-        run_interval_index_path(path=append_file_path, output_format="parquet"),
-        index=False,
-    )
-    with pytest.raises(ValueError, match="must be a fragment directory"):
-        with CompactRunMatrixWriter(
-            path=append_file_path,
-            output_format="parquet",
-            append_existing=True,
-        ) as writer:
-            writer.write_batch(run_indices=[0], values=[[1.0]], batch_index=0)
-
     stale_csv = tmp_path / "stale.csv"
     stale_csv.write_text("old", encoding="utf-8")
     run_interval_index_path(path=stale_csv, output_format="csv_compact").write_text(
@@ -421,10 +403,14 @@ def test_run_artifact_edge_contracts_use_interval_indexes(tmp_path: Path) -> Non
     )
     with CompactRunMatrixWriter(path=stale_csv, output_format="csv_compact") as writer:
         writer.write_batch(run_indices=[0], values=[[2.0]], batch_index=0)
-    assert pd.read_csv(stale_csv)["0"].tolist() == [2.0]
+    assert stale_csv.is_dir()
+    assert not (stale_csv / "old.txt").exists()
+    assert _read_csv_fragment(stale_csv / f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}")[
+        "0"
+    ].tolist() == [2.0]
     assert read_run_interval_index(path=stale_csv, output_format="csv_compact")[
         "fragment"
-    ].tolist() == [""]
+    ].tolist() == [f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}"]
 
     stale_parquet = tmp_path / "stale.parquet"
     stale_parquet.mkdir()
@@ -433,6 +419,17 @@ def test_run_artifact_edge_contracts_use_interval_indexes(tmp_path: Path) -> Non
         writer.write_batch(run_indices=[0], values=[[3.0]], batch_index=0)
     assert not (stale_parquet / "old.txt").exists()
     assert pd.read_parquet(stale_parquet)["0"].tolist() == [3.0]
+
+    append_path = tmp_path / "append_missing.parquet"
+    append_state = RunIntervalWriterState.create(
+        path=append_path,
+        output_format="parquet",
+        append_existing=True,
+    )
+    append_state.prepare()
+    assert append_path.is_dir()
+
+    assert max_abs_int(values=np.array([], dtype=np.int64)) == 0
 
 
 def test_compact_run_matrix_writer_and_summary(tmp_path: Path) -> None:
@@ -455,8 +452,14 @@ def test_compact_run_matrix_writer_and_summary(tmp_path: Path) -> None:
             batch_index=1,
         )
 
-    matrix = pd.read_csv(matrix_path)
+    matrix = _read_csv_fragment(matrix_path / f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}")
     assert matrix.columns.tolist() == ["run_index", "0", "1"]
+    assert read_run_interval_index(path=matrix_path, output_format="csv_compact")[
+        "fragment"
+    ].tolist() == [
+        f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+        f"part-00000001{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+    ]
 
     summary = exact_summary_from_public_runs(
         identity_frame=identity,
@@ -517,6 +520,40 @@ def test_compact_run_matrix_writer_and_summary(tmp_path: Path) -> None:
     assert not empty_parquet_path.exists()
 
 
+@pytest.mark.parametrize(
+    "output_format,suffix",
+    [("csv_compact", CSV_COMPACT_RUN_FRAGMENT_SUFFIX), ("parquet", ".parquet")],
+)
+def test_compact_run_matrix_writer_splits_memory_bounded_fragments(
+    tmp_path: Path,
+    output_format: str,
+    suffix: str,
+) -> None:
+    runs_path = tmp_path / f"split_compact{suffix}"
+    values = np.arange(10, dtype=np.float64).reshape(5, 2)
+    with CompactRunMatrixWriter(
+        path=runs_path,
+        output_format=output_format,
+        memory_budget_bytes=80,
+    ) as writer:
+        writer.write_batch(
+            run_indices=np.arange(5, dtype=np.int64),
+            values=values,
+            batch_index=0,
+        )
+
+    intervals = read_run_interval_index(path=runs_path, output_format=output_format)
+    assert intervals["fragment"].nunique() > 1
+    assert sorted(path.name for path in runs_path.glob(f"part-*{suffix}")) == sorted(
+        intervals["fragment"].tolist()
+    )
+    chunks = list(
+        iter_compact_run_matrix(path=runs_path, output_format=output_format, column_count=2)
+    )
+    assert np.concatenate([chunk[0] for chunk in chunks]).tolist() == [0, 1, 2, 3, 4]
+    np.testing.assert_allclose(np.vstack([chunk[1] for chunk in chunks]), values)
+
+
 def test_sparse_render_rows_writer_keeps_selected_values_only(tmp_path: Path) -> None:
     rows = SparseRunRows(
         run_index=pd.Series([0, 0, 1]).to_numpy(),
@@ -536,9 +573,15 @@ def test_sparse_render_rows_writer_keeps_selected_values_only(tmp_path: Path) ->
             ),
             batch_index=1,
         )
-    csv_rows = pd.read_csv(csv_path)
+    csv_rows = _read_csv_fragment(csv_path / f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}")
     assert csv_rows.columns.tolist() == ["run_index", "public_row_id", "value"]
-    assert csv_rows["public_row_id"].tolist() == [2, 5, 2, 5]
+    assert [
+        chunk.public_row_id.tolist()
+        for chunk in iter_sparse_run_rows(
+            path=csv_path,
+            output_format="csv_compact",
+        )
+    ] == [[2, 5], [2], [5]]
 
     parquet_path = tmp_path / "run_values.parquet"
     with SparseRunRowsWriter(path=parquet_path, output_format="parquet") as writer:
@@ -579,6 +622,7 @@ def test_downstream_sparse_writer_counts_runs_without_selected_rows(tmp_path: Pa
         _output_format: str,
         start: int,
         stop: int,
+        _batch_size: int,
     ) -> Iterator[tuple[np.ndarray, SparseRunRows]]:
         run_indices = np.arange(start, stop, dtype=np.int64)
         mask = (rows.run_index >= start) & (rows.run_index < stop)
@@ -592,17 +636,6 @@ def test_downstream_sparse_writer_counts_runs_without_selected_rows(tmp_path: Pa
             ),
         )
 
-    def collapse_sparse(
-        sparse_rows: SparseRunRows,
-        run_indices: np.ndarray,
-        _public_row_group_index: np.ndarray,
-    ) -> np.ndarray:
-        values = np.full((len(run_indices), 1), np.nan, dtype=np.float64)
-        positions = {int(run): position for position, run in enumerate(run_indices)}
-        for run, value in zip(sparse_rows.run_index, sparse_rows.values, strict=True):
-            values[positions[int(run)], 0] = float(value)
-        return values
-
     paths = DownstreamRunOutputPaths(
         run_root=tmp_path,
         public_runs=tmp_path / "runs.csv",
@@ -612,11 +645,10 @@ def test_downstream_sparse_writer_counts_runs_without_selected_rows(tmp_path: Pa
         run_layout="sparse_selected_rows",
         summary_identity=identity,
         public_row_count=len(identity),
-        compact_batches=lambda _output_format, _start, _stop: iter(()),
+        compact_batches=lambda _output_format, _start, _stop, _batch_size: iter(()),
         sparse_batches=sparse_batches,
         collapse_compact=lambda values: values,
-        collapse_sparse=collapse_sparse,
-        sparse_public_row_group_index=lambda: np.array([0], dtype=np.int64),
+        sparse_public_row_group_membership_index=lambda: np.array([[0, 0]], dtype=np.int64),
         empty_sparse_rows=lambda: SparseRunRows(
             run_index=np.empty(0, dtype=np.int64),
             public_row_id=np.empty(0, dtype=np.int64),
@@ -703,6 +735,7 @@ def test_downstream_sparse_writer_counts_runs_without_selected_rows(tmp_path: Pa
         _output_format: str,
         start: int,
         stop: int,
+        _batch_size: int,
     ) -> Iterator[tuple[np.ndarray, SparseRunRows]]:
         run_indices = np.arange(start, stop, dtype=np.int64)
         mask = (rows_with_initial_gap.run_index >= start) & (rows_with_initial_gap.run_index < stop)
@@ -725,11 +758,10 @@ def test_downstream_sparse_writer_counts_runs_without_selected_rows(tmp_path: Pa
         run_layout="sparse_selected_rows",
         summary_identity=identity,
         public_row_count=len(identity),
-        compact_batches=lambda _output_format, _start, _stop: iter(()),
+        compact_batches=lambda _output_format, _start, _stop, _batch_size: iter(()),
         sparse_batches=sparse_gap_batches,
         collapse_compact=lambda values: values,
-        collapse_sparse=collapse_sparse,
-        sparse_public_row_group_index=lambda: np.array([0], dtype=np.int64),
+        sparse_public_row_group_membership_index=lambda: np.array([[0, 0]], dtype=np.int64),
         empty_sparse_rows=plan.empty_sparse_rows,
     )
     gap_state = new_downstream_run_output_state(paths=gap_paths)
@@ -787,6 +819,7 @@ def test_downstream_compact_writer_stops_after_convergence(tmp_path: Path) -> No
         _output_format: str,
         start: int,
         stop: int,
+        _batch_size: int,
     ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         run_indices = np.arange(start, stop, dtype=np.int64)
         yield run_indices, np.ones((len(run_indices), 1), dtype=np.float64)
@@ -801,18 +834,7 @@ def test_downstream_compact_writer_stops_after_convergence(tmp_path: Path) -> No
         summary_identity=identity,
         public_row_count=len(identity),
         compact_batches=compact_batches,
-        sparse_batches=lambda _output_format, _start, _stop: iter(()),
         collapse_compact=lambda values: values,
-        collapse_sparse=lambda _rows, run_indices, _group_index: np.empty(
-            (len(run_indices), 0), dtype=np.float64
-        ),
-        sparse_public_row_group_index=lambda: np.empty(0, dtype=np.int64),
-        empty_sparse_rows=lambda: SparseRunRows(
-            run_index=np.empty(0, dtype=np.int64),
-            public_row_id=np.empty(0, dtype=np.int64),
-            values=np.empty(0, dtype=np.float64),
-            value_column="value",
-        ),
     )
     intermediate_paths = DownstreamRunOutputPaths(
         run_root=tmp_path / "intermediate",
@@ -922,6 +944,19 @@ def test_run_matrix_readers_cover_csv_and_parquet_chunking(tmp_path: Path) -> No
             values=[[2.0, 4.0]],
             batch_index=1,
         )
+    compact_fragments = sorted(
+        path.name for path in compact_csv.glob(f"part-*{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}")
+    )
+    assert compact_fragments == [
+        f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+        f"part-00000001{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+    ]
+    assert read_run_interval_index(path=compact_csv, output_format="csv_compact")[
+        "fragment"
+    ].tolist() == [
+        f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+        f"part-00000001{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+    ]
     compact_csv_chunks = list(
         iter_compact_run_matrix(path=compact_csv, output_format="csv_compact", column_count=2)
     )
@@ -1054,7 +1089,19 @@ def test_run_matrix_readers_cover_csv_and_parquet_chunking(tmp_path: Path) -> No
             ),
             batch_index=1,
         )
-    sparse_csv_chunks = list(iter_sparse_run_rows(path=sparse_csv, output_format="csv_compact"))
+    assert read_run_interval_index(path=sparse_csv, output_format="csv_compact")[
+        "fragment"
+    ].tolist() == [
+        f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+        f"part-00000001{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}",
+    ]
+    sparse_csv_chunks = list(
+        iter_sparse_run_rows(
+            path=sparse_csv,
+            output_format="csv_compact",
+            max_rows_per_chunk=1,
+        )
+    )
     assert [chunk.run_index.tolist() for chunk in sparse_csv_chunks] == [[0, 0], [1, 1]]
     sparse_csv_first = list(
         iter_sparse_run_rows(
@@ -1128,7 +1175,13 @@ def test_run_matrix_readers_cover_csv_and_parquet_chunking(tmp_path: Path) -> No
             ),
             batch_index=1,
         )
-    sparse_parquet_chunks = list(iter_sparse_run_rows(path=sparse_parquet, output_format="parquet"))
+    sparse_parquet_chunks = list(
+        iter_sparse_run_rows(
+            path=sparse_parquet,
+            output_format="parquet",
+            max_rows_per_chunk=1,
+        )
+    )
     assert [chunk.values.tolist() for chunk in sparse_parquet_chunks] == [[0.5, 0.6], [0.7, 0.8]]
     sparse_parquet_first = list(
         iter_sparse_run_rows(
@@ -1160,7 +1213,7 @@ def test_run_matrix_readers_cover_csv_and_parquet_chunking(tmp_path: Path) -> No
         == []
     )
 
-    boundary_rows = 1_000_001
+    boundary_rows = 4
     boundary_sparse_parquet = tmp_path / "boundary_sparse.parquet"
     run_index = np.zeros(boundary_rows, dtype=np.int64)
     run_index[-1] = 1
@@ -1175,10 +1228,51 @@ def test_run_matrix_readers_cover_csv_and_parquet_chunking(tmp_path: Path) -> No
             batch_index=0,
         )
     boundary_chunks = list(
-        iter_sparse_run_rows(path=boundary_sparse_parquet, output_format="parquet")
+        iter_sparse_run_rows(
+            path=boundary_sparse_parquet,
+            output_format="parquet",
+            max_rows_per_chunk=3,
+        )
     )
     assert [chunk.run_index[0] for chunk in boundary_chunks] == [0, 1]
-    assert [len(chunk.run_index) for chunk in boundary_chunks] == [1_000_000, 1]
+    assert [len(chunk.run_index) for chunk in boundary_chunks] == [3, 1]
+
+
+@pytest.mark.parametrize(
+    "output_format,suffix",
+    [("csv_compact", CSV_COMPACT_RUN_FRAGMENT_SUFFIX), ("parquet", ".parquet")],
+)
+def test_sparse_run_rows_writer_splits_memory_bounded_fragments(
+    tmp_path: Path,
+    output_format: str,
+    suffix: str,
+) -> None:
+    runs_path = tmp_path / f"split_sparse{suffix}"
+    rows = SparseRunRows(
+        run_index=np.array([0, 0, 1, 1, 2], dtype=np.int64),
+        public_row_id=np.array([4, 5, 4, 5, 4], dtype=np.int64),
+        values=np.array([0.4, 0.5, 1.4, 1.5, 2.4], dtype=np.float64),
+        value_column="value",
+    )
+    with SparseRunRowsWriter(
+        path=runs_path,
+        output_format=output_format,
+        memory_budget_bytes=72,
+    ) as writer:
+        writer.write_batch(rows=rows, batch_index=0)
+
+    intervals = read_run_interval_index(path=runs_path, output_format=output_format)
+    assert intervals["fragment"].nunique() > 1
+    assert sorted(path.name for path in runs_path.glob(f"part-*{suffix}")) == sorted(
+        intervals["fragment"].tolist()
+    )
+    chunks = list(iter_sparse_run_rows(path=runs_path, output_format=output_format))
+    assert np.concatenate([chunk.run_index for chunk in chunks]).tolist() == rows.run_index.tolist()
+    assert (
+        np.concatenate([chunk.public_row_id for chunk in chunks]).tolist()
+        == rows.public_row_id.tolist()
+    )
+    np.testing.assert_allclose(np.concatenate([chunk.values for chunk in chunks]), rows.values)
 
 
 def test_sparse_run_row_windows_use_forward_chunks() -> None:
@@ -1276,14 +1370,6 @@ def test_public_grouped_summary_collapses_public_rows_by_run(tmp_path: Path) -> 
         )
         == 1
     )
-    with pytest.raises(ValueError, match="fewer rows"):
-        exact_summary_from_public_runs(
-            identity_frame=pd.DataFrame({"region": ["FR"]}),
-            runs_path=matrix_path,
-            output_format="csv_compact",
-            run_count=3,
-            public_row_groups=(("0",),),
-        )
 
 
 @pytest.mark.parametrize("output_format", ["csv_compact", "parquet"])
@@ -1293,18 +1379,46 @@ def test_sparse_public_summary_allows_overlapping_groups(
 ) -> None:
     suffix = ".csv" if output_format == "csv_compact" else ".parquet"
     runs_path = tmp_path / f"sparse_runs{suffix}"
-    rows = SparseRunRows(
-        run_index=np.array([0, 0, 1, 1], dtype=np.int64),
-        public_row_id=np.array([0, 1, 0, 1], dtype=np.int64),
-        values=np.array([0.5, 2.0, 0.2, 0.4], dtype=np.float64),
-        value_column="value",
-    )
     with SparseRunRowsWriter(path=runs_path, output_format=output_format) as writer:
-        writer.write_batch(rows=rows, batch_index=0)
+        writer.write_batch(
+            rows=SparseRunRows(
+                run_index=np.empty(0, dtype=np.int64),
+                public_row_id=np.empty(0, dtype=np.int64),
+                values=np.empty(0, dtype=np.float64),
+                value_column="value",
+            ),
+            batch_index=0,
+        )
+        writer.write_batch(
+            rows=SparseRunRows(
+                run_index=np.array([0, 0], dtype=np.int64),
+                public_row_id=np.array([0, 1], dtype=np.int64),
+                values=np.array([0.5, 2.0], dtype=np.float64),
+                value_column="value",
+            ),
+            batch_index=1,
+        )
+        writer.write_batch(
+            rows=SparseRunRows(
+                run_index=np.array([1, 1], dtype=np.int64),
+                public_row_id=np.array([0, 1], dtype=np.int64),
+                values=np.array([0.2, 0.4], dtype=np.float64),
+                value_column="value",
+            ),
+            batch_index=2,
+        )
 
-    row_groups = (("0",), ("1",), ("0", "1"))
+    row_groups = (("0",), ("1",), ("0", "1"), ("2",))
     summary, frequency = exact_summary_and_frequency_from_public_runs(
-        identity_frame=pd.DataFrame({"scope": ["per_a", "per_b", "inter"]}),
+        identity_frame=pd.DataFrame({"scope": ["per_a", "per_b", "inter", "missing"]}),
+        runs_path=runs_path,
+        output_format=output_format,
+        run_count=2,
+        public_row_groups=row_groups,
+        sparse=True,
+    )
+    summary_only = exact_summary_from_public_runs(
+        identity_frame=pd.DataFrame({"scope": ["per_a", "per_b", "inter", "missing"]}),
         runs_path=runs_path,
         output_format=output_format,
         run_count=2,
@@ -1318,13 +1432,29 @@ def test_sparse_public_summary_allows_overlapping_groups(
         run_count=2,
         sparse=True,
     )
+    bounded_summary, bounded_frequency = exact_summary_and_frequency_from_public_runs(
+        identity_frame=pd.DataFrame({"scope": ["per_a", "per_b", "inter", "missing"]}),
+        runs_path=runs_path,
+        output_format=output_format,
+        run_count=10**12,
+        public_row_groups=row_groups,
+        sparse=True,
+    )
 
-    assert summary["scope"].tolist() == ["per_a", "per_b", "inter"]
-    assert summary["mean"].tolist() == [0.35, 1.2, 0.775]
-    assert summary["median"].tolist() == [0.35, 1.2, 0.775]
+    assert summary["scope"].tolist() == ["per_a", "per_b", "inter", "missing"]
+    assert summary["mean"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
+    assert summary["median"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
+    assert pd.isna(summary.loc[3, "mean"])
+    assert summary_only["median"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
+    assert pd.isna(summary_only.loc[3, "median"])
     assert identity_summary["scope"].tolist() == ["per_a", "per_b"]
-    assert frequency.tolist() == [1.0, 0.5, 0.5]
+    assert frequency[:3].tolist() == [1.0, 0.5, 0.5]
+    assert pd.isna(frequency[3])
     assert identity_frequency.tolist() == [1.0, 0.5]
+    assert bounded_summary["median"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
+    assert pd.isna(bounded_summary.loc[3, "median"])
+    assert bounded_frequency[:3].tolist() == [1.0, 0.5, 0.5]
+    assert pd.isna(bounded_frequency[3])
 
 
 def test_manifest_allocates_run_ids_and_round_trips(tmp_path: Path) -> None:
@@ -1349,6 +1479,7 @@ def test_manifest_allocates_run_ids_and_round_trips(tmp_path: Path) -> None:
         deterministic_prerequisites=({"scope_key": "scope-a"},),
         external_inputs=({"path": "external.csv"},),
         artifacts={
+            "scope_manifest": tmp_path / "logs" / "scope_manifest.json",
             "asocc_runs": tmp_path / "runs.csv",
             "source_set": {"a", "b"},
             "public_output": {"run_columns": ["run_index", "asocc"]},
@@ -1382,7 +1513,28 @@ def test_manifest_allocates_run_ids_and_round_trips(tmp_path: Path) -> None:
         figure_paths=[figure_path],
         figure_options={"polar": {"polar_years": [2005]}},
         figure_format={"format": "png", "dpi": 10},
+        warning_messages=("figure warning", "figure warning"),
     )
+    assert figure_manifest.lineage is not None
+    latest_warning = figure_manifest.lineage["summary_records"][-1]
+    assert latest_warning["severity"] == "WARNING"
+    assert latest_warning["source"] == "figures"
+    assert "figure warning" in latest_warning["message"]
+    figure_report = uncertainty_report(
+        manifest=build_manifest(
+            family="asocc",
+            mode="fixed",
+            output_format="csv_compact",
+            active_sources=(),
+            completed_runs=1,
+            status="complete",
+            artifacts={"scope_manifest": tmp_path / "report" / "logs" / "scope_manifest.json"},
+            lineage=figure_manifest.lineage,
+        ),
+        reuse_status="computed",
+    )
+    assert "WARNING:" in str(figure_report)
+    assert "figure warning" in str(figure_report)
     assert manifest_figure_artifacts_current(
         manifest=figure_manifest,
         figure_options={"polar": {"polar_years": [2005]}},

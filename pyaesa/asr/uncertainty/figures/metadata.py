@@ -21,6 +21,7 @@ def write_run_figure_paths(
     figure_paths: list[Path],
     figure_options: dict[str, Any] | None,
     figure_format: dict[str, Any] | None,
+    warning_messages: tuple[str, ...] = (),
 ) -> None:
     """Persist ASR uncertainty figure paths in the run manifest artifacts."""
     write_manifest_figure_paths(
@@ -28,4 +29,5 @@ def write_run_figure_paths(
         figure_paths=figure_paths,
         figure_options=figure_options,
         figure_format=figure_format,
+        warning_messages=warning_messages,
     )

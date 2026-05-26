@@ -8,7 +8,7 @@ from pyaesa.asocc.runtime.paths.deterministic import (
     _get_allocate_run_metadata_path,
     _get_allocate_logs_dir,
 )
-from pyaesa.asocc.runtime.paths.family_roots import effective_group_version_for_source
+from pyaesa.asocc.runtime.paths.family_roots import effective_agg_version_for_source
 from pyaesa.asocc.runtime.paths.published import (
     _get_enacting_metric_dir,
     _get_asocc_l1_dir,
@@ -27,7 +27,7 @@ class AsoccDeterministicPathScope:
 
     proj_base: Path
     source_label: str
-    group_version: str | None
+    agg_version: str | None
 
 
 def outputs_project_root(*, project_name: str) -> Path:
@@ -44,20 +44,20 @@ def build_asocc_deterministic_path_scope(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> AsoccDeterministicPathScope:
     """Build one normalized deterministic aSoCC output path scope object."""
     source_clean = str(source_label).strip()
     if not source_clean:
         raise ValueError("source_label must be a non-empty string.")
-    published_group_version = effective_group_version_for_source(
+    published_agg_version = effective_agg_version_for_source(
         source=source_clean,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     return AsoccDeterministicPathScope(
         proj_base=Path(proj_base),
         source_label=source_clean,
-        group_version=published_group_version,
+        agg_version=published_agg_version,
     )
 
 
@@ -69,9 +69,9 @@ def resolve_allocate_path_scope(
     return build_asocc_deterministic_path_scope(
         proj_base=resolve_allocate_project_base(base_allocate_args=base_allocate_args),
         source_label=str(base_allocate_args["source"]),
-        group_version=effective_group_version_for_source(
+        agg_version=effective_agg_version_for_source(
             source=str(base_allocate_args["source"]),
-            group_version=base_allocate_args["group_version"],
+            agg_version=base_allocate_args["agg_version"],
         ),
     )
 
@@ -81,7 +81,7 @@ def allocate_run_metadata_path(*, scope: AsoccDeterministicPathScope) -> Path:
     return _get_allocate_run_metadata_path(
         scope.proj_base,
         source=scope.source_label,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
     )
 
 
@@ -95,7 +95,7 @@ def asocc_l1_dir(
     return _get_asocc_l1_dir(
         proj_base=scope.proj_base,
         source=scope.source_label,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
         lcia_sub=lcia_sub,
         owning_fu_level=_owning_fu_level_for_code(fu_code=fu_code),
     )
@@ -111,7 +111,7 @@ def asocc_l2_dir(
     return _get_asocc_l2_dir(
         proj_base=scope.proj_base,
         source=scope.source_label,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
         bucket=bucket,
         lcia_sub=lcia_sub,
     )
@@ -127,7 +127,7 @@ def asocc_enacting_metric_dir(
     return _get_enacting_metric_dir(
         proj_base=scope.proj_base,
         source=scope.source_label,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
         level=level,
         lcia_sub=None,
         owning_fu_level=_owning_fu_level_for_code(fu_code=fu_code),
@@ -139,7 +139,7 @@ def asocc_logs_root(*, scope: AsoccDeterministicPathScope) -> Path:
     return _get_allocate_logs_dir(
         scope.proj_base,
         source=scope.source_label,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
     )
 
 
@@ -177,7 +177,7 @@ def path_scope_from_signature(
     context_label: str,
 ) -> AsoccDeterministicPathScope:
     """Build one deterministic path scope from a persisted signature payload."""
-    required_keys = {"group_version"}
+    required_keys = {"agg_version"}
     missing = sorted(key for key in required_keys if key not in run_signature)
     if missing:
         raise ValueError(
@@ -187,7 +187,7 @@ def path_scope_from_signature(
     return build_asocc_deterministic_path_scope(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=run_signature.get("group_version"),
+        agg_version=run_signature.get("agg_version"),
     )
 
 
@@ -200,7 +200,7 @@ def resolve_disaggregation_path_scope(
     scope = build_asocc_deterministic_path_scope(
         proj_base=outputs_project_root(project_name=str(base_allocate_args["project_name"])),
         source_label=source_label,
-        group_version=None,
+        agg_version=None,
     )
     manifest_path = allocate_run_metadata_path(scope=scope)
     if not manifest_path.exists():

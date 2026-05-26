@@ -66,8 +66,9 @@ def apply_reference_year_uncertainty_to_matrix(
     """Sample reference year candidates directly into the compact value matrix."""
     if "reference_year" not in template.columns:
         return template, values
-    rows = admissible_reference_year_rows(frame=template).reset_index(drop=True)
-    rows["_input_position"] = rows.index
+    source_rows = template.copy()
+    source_rows["_input_position"] = np.arange(len(source_rows), dtype=np.int64)
+    rows = admissible_reference_year_rows(frame=source_rows).reset_index(drop=True)
     rows["reference_year"] = pd.to_numeric(
         pd.Series(rows.loc[:, "reference_year"], copy=False),
         errors="raise",

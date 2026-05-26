@@ -9,6 +9,7 @@ from pyaesa.shared.acc_asr_common.branches import config as config_mod
 from pyaesa.shared.acc_asr_common.branches import expand as expand_mod
 from pyaesa.shared.lcia.paths import static_cc_csv_path
 from pyaesa.shared.lcia.static_cc import read_static_cc, require_static_cc_bounds_available
+from pyaesa.workspace_initialisation.workspace import clear_default_repo_root
 
 
 def test_normalize_static_cc_config_covers_valid_inputs() -> None:
@@ -226,45 +227,48 @@ def test_normalize_base_cc_args_covers_static_dynamic_and_errors() -> None:
 def test_require_asr_static_cc_source_compatibility_covers_skip_success_and_failure(
     tmp_path: Path,
 ) -> None:
-    set_workspace(tmp_path / "workspace", refresh=True)
-    static_path = static_cc_csv_path(lcia_method="gwp100_lcia")
-    static_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        set_workspace(tmp_path / "workspace", refresh=True)
+        static_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+        static_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Bounds narrower than min/max skip disk validation by contract.
-    config_mod.require_asr_static_cc_source_compatibility(  # noqa: SLF001
-        cc_source="gwp100_lcia",
-        static_cc_bounds=["min_cc"],
-    )
+        # Bounds narrower than min/max skip disk validation by contract.
+        config_mod.require_asr_static_cc_source_compatibility(  # noqa: SLF001
+            cc_source="gwp100_lcia",
+            static_cc_bounds=["min_cc"],
+        )
 
-    pd.DataFrame(
-        [
-            {
-                "impact": "GWP_100",
-                "impact_unit": "kg CO2-eq",
-                "min_cc": 1.0,
-                "max_cc": 2.0,
-            }
-        ]
-    ).to_csv(static_path, index=False)
-    config_mod.require_asr_static_cc_source_compatibility(  # noqa: SLF001
-        cc_source="gwp100_lcia",
-        static_cc_bounds=["min_cc", "max_cc"],
-    )
-
-    pd.DataFrame(
-        [
-            {
-                "impact": "GWP_100",
-                "impact_unit": "kg CO2-eq",
-                "min_cc": 1.0,
-            }
-        ]
-    ).to_csv(static_path, index=False)
-    with pytest.raises(ValueError):
+        pd.DataFrame(
+            [
+                {
+                    "impact": "GWP_100",
+                    "impact_unit": "kg CO2-eq",
+                    "min_cc": 1.0,
+                    "max_cc": 2.0,
+                }
+            ]
+        ).to_csv(static_path, index=False)
         config_mod.require_asr_static_cc_source_compatibility(  # noqa: SLF001
             cc_source="gwp100_lcia",
             static_cc_bounds=["min_cc", "max_cc"],
         )
+
+        pd.DataFrame(
+            [
+                {
+                    "impact": "GWP_100",
+                    "impact_unit": "kg CO2-eq",
+                    "min_cc": 1.0,
+                }
+            ]
+        ).to_csv(static_path, index=False)
+        with pytest.raises(ValueError):
+            config_mod.require_asr_static_cc_source_compatibility(  # noqa: SLF001
+                cc_source="gwp100_lcia",
+                static_cc_bounds=["min_cc", "max_cc"],
+            )
+    finally:
+        clear_default_repo_root()
 
 
 def test_static_cc_reader_and_bounds_validate_malformed_inputs(tmp_path: Path) -> None:
@@ -317,7 +321,10 @@ def test_static_cc_reader_and_bounds_validate_malformed_inputs(tmp_path: Path) -
         )
 
 
-def test_cc_branch_expansion_covers_dynamic_rejection_and_branch_payloads() -> None:
+def test_cc_branch_expansion_covers_dynamic_rejection_and_branch_payloads(
+    read_only_project_repo: Path,
+) -> None:
+    del read_only_project_repo
     assert expand_mod.iter_cc_method_branches(  # noqa: SLF001
         lcia_methods=["gwp100_lcia"],
         base_cc_args={"static": {"bounds": ["min_cc"]}},

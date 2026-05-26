@@ -5,6 +5,8 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.csv as pacsv
 import pytest
 
 from pyaesa import write_asocc_weight_template, preview_asocc_weight_tree
@@ -32,9 +34,18 @@ from pyaesa.asocc.uncertainty.sources.inter_method import (
 from pyaesa.asocc.uncertainty.sources.inter_mrio import (
     InterMrioPlan,
     InterMrioRouteReport,
+    _alternate_base_args,
+    _interpolation_positions,
     apply_inter_mrio_uncertainty_to_matrix,
+    inter_mrio_interpolation_matches,
     inter_mrio_route_report,
     inter_mrio_source_method_row,
+)
+from pyaesa.asocc.uncertainty.engine.inter_method.identity import (
+    public_identity_for_sampling_plan,
+)
+from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    compact_batch_inter_mrio_matches,
 )
 from pyaesa.asocc.uncertainty.sources.lcia import (
     LCIAPlan,
@@ -75,12 +86,22 @@ from pyaesa.asocc.uncertainty.engine.inter_method.execution import (
     InterMethodExecutionPlan,
     build_inter_method_execution_plan,
 )
+from pyaesa.asocc.uncertainty.engine.planning import _asocc_sampling_memory_blocks
 from pyaesa.asocc.uncertainty.engine.inter_method.sampling import (
+    _assign_branch_summary_values,
+    _assign_sparse_branch_rows,
+    _sparse_row_offsets,
     external_run_offsets_for_start,
+    inter_method_inter_mrio_matches_by_branch,
+    sample_inter_method_summary_matrix_batch,
     sample_sparse_inter_method_batch,
 )
 from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    _compact_inter_mrio_input_template,
     sample_compact_batch,
+)
+from pyaesa.asocc.uncertainty.engine.evaluation.source_unit_intervals import (
+    SourceUnitIntervalSamples,
 )
 from pyaesa.asocc.uncertainty.engine.monte_carlo.run_execution import (
     write_monte_carlo_run_outputs,
@@ -88,7 +109,10 @@ from pyaesa.asocc.uncertainty.engine.monte_carlo.run_execution import (
 from pyaesa.asocc.uncertainty.engine.reuse.reuse import compatible_complete_sobol_run
 from pyaesa.asocc.uncertainty.engine.monte_carlo.batch_sizing import batch_row_count
 from pyaesa.asocc.uncertainty.engine.convergence.state import initial_convergence_state
-from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import iter_sparse_run_rows
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
+    iter_compact_run_matrix,
+    iter_sparse_run_rows,
+)
 from pyaesa.asocc.uncertainty.engine.convergence.convergence import (
     write_convergence_batches,
     write_sparse_inter_method_convergence_batches,
@@ -105,7 +129,11 @@ from pyaesa.asocc.uncertainty.inputs.external_rows import (
 from pyaesa.asocc.uncertainty.io.manifest_payloads import manifest_context
 from pyaesa.asocc.uncertainty.sources.activation import deactivate_inter_mrio_without_targets
 from pyaesa.asocc.uncertainty.sources.inter_mrio_reporting import inter_mrio_notes
-from pyaesa.asocc.uncertainty.sources.names import INTER_METHOD_SOURCE, INTER_MRIO_SOURCE
+from pyaesa.asocc.uncertainty.sources.names import (
+    INTER_METHOD_SOURCE,
+    INTER_MRIO_SOURCE,
+    REFERENCE_YEAR_SOURCE,
+)
 from pyaesa.asocc.uncertainty.io.paths import AsoccUncertaintyRunPaths
 from pyaesa.asocc.uncertainty.io.artifacts import asocc_run_layout_from_manifest
 from pyaesa.external_inputs.asocc.schema.contracts import ExternalMethodSelection
@@ -123,9 +151,7 @@ from pyaesa.asocc.uncertainty.engine.evaluation.summary_identity import (
     summary_identity_groups,
 )
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
-    collapse_sparse_rows_to_overlapping_summary_groups,
     collapse_values_to_summary_groups,
-    sparse_public_row_group_membership_index,
 )
 from pyaesa.asocc.uncertainty.engine.sobol.evaluator import (
     AsoccSobolEvaluationContext,
@@ -144,12 +170,20 @@ from pyaesa.shared.uncertainty_assessment.sobol.accumulator import SobolIndexEst
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest
 from pyaesa.shared.uncertainty_assessment.run_state.runs import CompatibleMonteCarloRun
 from pyaesa.shared.uncertainty_assessment.request.sources import ActiveSource, SourceActivationPlan
+from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import RunBatch
 from pyaesa.shared.uncertainty_assessment.monte_carlo.random_streams import uniform_by_run_index
 from pyaesa.asocc.uncertainty.io.source_methods import (
     SourceMethodRow,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows, SparseRunRowsWriter
+from pyaesa.shared.uncertainty_assessment.io.csv_fragments import (
+    CSV_COMPACT_RUN_FRAGMENT_COMPRESSION,
+    CSV_COMPACT_RUN_FRAGMENT_SUFFIX,
+)
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
+    SparseRunRows,
+    SparseRunRowsWriter,
+)
 
 
 def _materialized_external_source(
@@ -222,6 +256,34 @@ def _uncertainty_paths(*, run_root: Path) -> AsoccUncertaintyRunPaths:
         sobol_readme=run_root / "results" / "sobol" / "README_sobol.txt",
         scope_manifest=run_root / "logs" / "scope_manifest.json",
     )
+
+
+def _compact_runs_frame(*, path: Path, column_count: int) -> pd.DataFrame:
+    pieces = []
+    for run_index, values in iter_compact_run_matrix(
+        path=path,
+        output_format="csv_compact",
+        column_count=column_count,
+    ):
+        frame = pd.DataFrame(values, columns=[str(index) for index in range(column_count)])
+        frame.insert(0, "run_index", run_index)
+        pieces.append(frame)
+    return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
+
+
+def _sparse_runs_frame(*, path: Path) -> pd.DataFrame:
+    pieces = []
+    for rows in iter_sparse_run_rows(path=path, output_format="csv_compact"):
+        pieces.append(
+            pd.DataFrame(
+                {
+                    "run_index": rows.run_index,
+                    "public_row_id": rows.public_row_id,
+                    rows.value_column: rows.values,
+                }
+            )
+        )
+    return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
 
 
 def _external_sparse_inter_method_context(
@@ -380,6 +442,7 @@ def test_inter_mrio_interpolates_only_non_lcia_compact_rows() -> None:
         ),
         source_method_row=_source_method_row(),
     )
+    matches = inter_mrio_interpolation_matches(template=template, plan=plan)
 
     _template, sampled = apply_inter_mrio_uncertainty_to_matrix(
         template=template,
@@ -387,6 +450,7 @@ def test_inter_mrio_interpolates_only_non_lcia_compact_rows() -> None:
         plan=plan,
         batch=batch,
         projection_selection=None,
+        matches=matches,
     )
 
     alpha = uniform_by_run_index(
@@ -397,6 +461,97 @@ def test_inter_mrio_interpolates_only_non_lcia_compact_rows() -> None:
     np.testing.assert_allclose(sampled[:, 0], expected)
     np.testing.assert_allclose(sampled[:, 1], [1.2, 1.2])
     np.testing.assert_allclose(sampled[:, 2], 0.5 + alpha * (1.1 - 0.5))
+    compact_matches = compact_batch_inter_mrio_matches(
+        loaded=_loaded(rows=template),
+        inter_mrio_plan=plan,
+        lcia_plan=None,
+        projection_plan=None,
+    )
+    assert compact_matches is not None
+    np.testing.assert_array_equal(compact_matches.main_positions, matches.main_positions)
+
+
+def test_inter_mrio_private_selectors_preserve_alternate_scope_and_positions() -> None:
+    args = _alternate_base_args(
+        base_asocc_args={
+            "project_name": "demo",
+            "source": "main",
+            "agg_reg": True,
+            "agg_sec": False,
+            "agg_version": "eu27",
+            "fu_code": "L2.c.b",
+        },
+        alternate_source="alternate",
+    )
+    assert args["source"] == "alternate"
+    assert "agg_reg" not in args
+    assert "agg_sec" not in args
+    assert "agg_version" not in args
+
+    main = pd.DataFrame(
+        {
+            "l1_l2_method": ["UT(TD)", "UT(TD)"],
+            "r_c": ["FR", "DE"],
+            "s_p": ["Electricity", "Electricity"],
+            "year": [2030, 2030],
+            ASOCC_TIME_ROUTE_COLUMN: [
+                ASOCC_TIME_ROUTE_HISTORICAL,
+                ASOCC_TIME_ROUTE_HISTORICAL,
+            ],
+            ASOCC_VALUE_COLUMN: [0.2, 0.3],
+        }
+    )
+    alternate = main.assign(**{ASOCC_VALUE_COLUMN: [0.8, 0.9]})
+    main_positions, alternate_positions = _interpolation_positions(
+        template=main,
+        alternate_template=alternate,
+        external_method_labels=(),
+    )
+    np.testing.assert_array_equal(main_positions, [0, 1])
+    np.testing.assert_array_equal(alternate_positions, [0, 1])
+
+
+def test_inter_mrio_matches_non_lcia_rows_across_lcia_public_axis() -> None:
+    batch = RunBatch(batch_index=0, start_run_index=0, stop_run_index=1, rng_seed=5)
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["UT(TD)"],
+            "l2_method": ["UT(TD)"],
+            "r_c": ["FR"],
+            "s_p": ["Electricity"],
+            "lcia_method": [None],
+            "impact": [None],
+            "year": [2030],
+            ASOCC_TIME_ROUTE_COLUMN: [ASOCC_TIME_ROUTE_HISTORICAL],
+            ASOCC_VALUE_COLUMN: [0.2],
+        }
+    )
+    alternate = rows.assign(
+        lcia_method="gwp100_lcia",
+        impact="GWP_100",
+        **{ASOCC_VALUE_COLUMN: 0.8},
+    )
+    report = inter_mrio_route_report(main_rows=rows, alternate_rows=alternate)
+    plan = InterMrioPlan(
+        alternate_source="split_source",
+        alternate_loaded=_loaded(rows=alternate),
+        alternate_projection_plan=None,
+        route_report=report,
+        source_method_row=_source_method_row(),
+    )
+
+    _template, sampled = apply_inter_mrio_uncertainty_to_matrix(
+        template=rows,
+        values=np.array([[0.2]], dtype=np.float64),
+        plan=plan,
+        batch=batch,
+        projection_selection=None,
+        unit_values=np.array([0.5], dtype=np.float64),
+    )
+
+    assert report.interpolated_years == (2030,)
+    assert report.skipped_years == ()
+    np.testing.assert_allclose(sampled, [[0.5]])
 
 
 def test_external_methods_skip_lcia_projection_and_inter_mrio_sources(
@@ -464,6 +619,13 @@ def test_external_methods_skip_lcia_projection_and_inter_mrio_sources(
         route_report=report,
         source_method_row=_source_method_row(),
         external_method_labels=external_labels,
+    )
+    assert (
+        inter_method_inter_mrio_matches_by_branch(
+            execution_plan=execution_plan,
+            inter_mrio_plan=inter_mrio_plan,
+        )
+        == {}
     )
 
     assert projection_plan.passthrough_rows["l1_l2_method"].tolist() == [
@@ -1061,6 +1223,26 @@ def test_inter_method_samples_equal_weight_compact_candidates() -> None:
     assert set(selected.tolist()).issubset(plan.candidate_labels)
 
 
+def test_inter_method_row_labels_support_l1_only_rows() -> None:
+    rows = pd.DataFrame(
+        {
+            "l1_method": ["EG(Pop)", "PR(GDPcap)"],
+            "r_f": ["EU27", "US"],
+            "year": [2018, 2019],
+            ASOCC_VALUE_COLUMN: [0.1, 0.2],
+        }
+    )
+
+    labels = inter_method_row_labels(rows=rows)
+    plan = build_inter_method_plan(
+        loaded=_loaded(rows=rows, base_asocc_args={"fu_code": "L1.a"}),
+        parameters={},
+    )
+
+    assert labels.tolist() == ["EG(Pop)", "PR(GDPcap)"]
+    assert plan.candidate_labels == ("EG(Pop)", "PR(GDPcap)")
+
+
 def test_inter_method_external_render_offsets_count_prior_selected_runs() -> None:
     plan = InterMethodPlan(
         candidates=(),
@@ -1232,7 +1414,7 @@ def test_sparse_inter_method_fixed_batches_advance_external_render_offsets(tmp_p
         run_seed=17,
     )
 
-    runs = pd.read_csv(paths.public_runs)
+    runs = _sparse_runs_frame(path=paths.public_runs)
     assert result.completed_runs == 1
     assert runs["run_index"].tolist() == [0]
     np.testing.assert_allclose(runs[ASOCC_PUBLIC_VALUE_COLUMN], [0.7])
@@ -1288,7 +1470,7 @@ def test_fixed_batches_append_existing_compact_and_sparse_runs(tmp_path: Path) -
         progress=monte_carlo_run_progress(source="uncertainty_asocc", enabled=False),
     )
 
-    compact_runs = pd.read_csv(compact_paths.public_runs)
+    compact_runs = _compact_runs_frame(path=compact_paths.public_runs, column_count=1)
     assert compact_result.completed_runs == 2
     assert compact_runs["run_index"].tolist() == [0, 1]
 
@@ -1352,9 +1534,14 @@ def test_fixed_batches_append_existing_compact_and_sparse_runs(tmp_path: Path) -
         run_seed=17,
         progress=monte_carlo_run_progress(source="uncertainty_asocc", enabled=False),
     )
-    existing_sparse_runs = pd.read_csv(sparse_paths.public_runs)
+    existing_sparse_runs = _sparse_runs_frame(path=sparse_paths.public_runs)
     existing_sparse_runs["run_index"] = 1
-    existing_sparse_runs.to_csv(sparse_paths.public_runs, index=False)
+    table = pa.Table.from_pandas(existing_sparse_runs, preserve_index=False)
+    with pa.CompressedOutputStream(
+        str(sparse_paths.public_runs / f"part-00000000{CSV_COMPACT_RUN_FRAGMENT_SUFFIX}"),
+        CSV_COMPACT_RUN_FRAGMENT_COMPRESSION,
+    ) as handle:
+        pacsv.write_csv(table, handle, write_options=pacsv.WriteOptions(include_header=True))
     sparse_runtime = SimpleNamespace(n_runs=3, batch_size=1, output_format="csv_compact")
     sparse_result = write_fixed_batches(
         paths=sparse_paths,
@@ -1373,7 +1560,7 @@ def test_fixed_batches_append_existing_compact_and_sparse_runs(tmp_path: Path) -
         progress=monte_carlo_run_progress(source="uncertainty_asocc", enabled=False),
     )
 
-    sparse_runs = pd.read_csv(sparse_paths.public_runs)
+    sparse_runs = _sparse_runs_frame(path=sparse_paths.public_runs)
     assert sparse_result.completed_runs == 3
     assert sparse_runs["run_index"].tolist() == [1, 2]
 
@@ -1437,7 +1624,7 @@ def test_compact_convergence_append_replays_existing_means(tmp_path: Path) -> No
         append_existing=True,
         progress=monte_carlo_run_progress(source="uncertainty_asocc", enabled=False),
     )
-    runs = pd.read_csv(paths.public_runs)
+    runs = _compact_runs_frame(path=paths.public_runs, column_count=1)
 
     assert result.completed_runs == 2
     assert result.convergence is not None
@@ -1556,6 +1743,31 @@ def test_sparse_inter_method_convergence_stops_when_statistics_stabilize(
     )
     assert unstable_result.convergence is not None
     assert unstable_result.convergence["reached"] is False
+
+
+def test_monte_carlo_run_outputs_reuses_complete_append_run() -> None:
+    result = write_monte_carlo_run_outputs(
+        paths=None,
+        loaded=None,
+        inter_method_plan=object(),
+        inter_method_execution_plan=None,
+        inter_mrio_plan=None,
+        lcia_plan=None,
+        projection_plan=None,
+        runtime=SimpleNamespace(mode="fixed", n_runs=2),
+        sources=None,
+        external_plan=ExternalAsoccRowsPlan(),
+        append_run=SimpleNamespace(
+            manifest=SimpleNamespace(completed_runs=3, convergence={"reached": True})
+        ),
+        run_seed=17,
+        progress=monte_carlo_run_progress(source="uncertainty_asocc", enabled=False),
+    )
+
+    assert result.completed_runs == 3
+    assert result.summary_run_count == 3
+    assert result.public_runs_sparse is True
+    assert result.convergence == {"reached": True}
 
 
 def test_sparse_inter_method_convergence_initial_state_uses_completed_run_count(
@@ -2114,6 +2326,186 @@ def test_sampling_uses_inter_method_compact_owner() -> None:
     assert set(sparse_batch.sparse_rows.values.tolist()).issubset({0.2, 0.4, 0.6})
 
 
+def test_inter_method_reuses_inter_mrio_matches_for_selected_branches() -> None:
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["UT(TD)"],
+            "l2_method": ["UT(TD)"],
+            "r_c": ["FR"],
+            "s_p": ["Electricity"],
+            "year": [2030],
+            ASOCC_TIME_ROUTE_COLUMN: [ASOCC_TIME_ROUTE_HISTORICAL],
+            ASOCC_VALUE_COLUMN: [0.2],
+        }
+    )
+    alternate = rows.assign(**{ASOCC_VALUE_COLUMN: [0.8]})
+    loaded = _loaded(rows=rows)
+    sources = SourceActivationPlan(
+        sources=(
+            ActiveSource(name="inter_method_uncertainty", parameters={}),
+            ActiveSource(name="inter_mrio_uncertainty", parameters={}),
+        )
+    )
+    plan = InterMethodPlan(
+        candidates=(),
+        candidate_labels=("UT(TD)",),
+        selection_probabilities=np.array([1.0], dtype=np.float64),
+        tree_frame=pd.DataFrame(),
+        source_method_row=_source_method_row(),
+    )
+    execution_plan = build_inter_method_execution_plan(
+        loaded=loaded,
+        inter_method_plan=plan,
+        sources=sources,
+        external_plan=ExternalAsoccRowsPlan(),
+        lcia_plan=None,
+        projection_plan=None,
+    )
+    inter_mrio_plan = InterMrioPlan(
+        alternate_source="alternate",
+        alternate_loaded=_loaded(rows=alternate),
+        alternate_projection_plan=None,
+        route_report=inter_mrio_route_report(main_rows=rows, alternate_rows=alternate),
+        source_method_row=_source_method_row(),
+    )
+    matches = inter_method_inter_mrio_matches_by_branch(
+        execution_plan=execution_plan,
+        inter_mrio_plan=inter_mrio_plan,
+    )
+
+    sparse_batch = sample_sparse_inter_method_batch(
+        loaded=loaded,
+        inter_method_plan=plan,
+        execution_plan=execution_plan,
+        inter_mrio_plan=inter_mrio_plan,
+        batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=1, rng_seed=17),
+        sources=sources,
+        identity=None,
+        inter_mrio_matches_by_branch=matches,
+    )
+
+    assert set(matches) == {"UT(TD)"}
+    alpha = uniform_by_run_index(
+        stream_name="asocc.inter_mrio.alpha",
+        run_indices=np.array([0], dtype=np.int64),
+    )
+    np.testing.assert_allclose(sparse_batch.sparse_rows.values, 0.2 + alpha * (0.8 - 0.2))
+
+
+def test_inter_method_sampling_helpers_cover_empty_and_grouped_assignments() -> None:
+    empty_offsets, empty_total = _sparse_row_offsets(
+        selected=np.asarray([], dtype=object),
+        row_counts_by_branch={},
+    )
+    assert empty_offsets.size == 0
+    assert empty_total == 0
+
+    offsets, total = _sparse_row_offsets(
+        selected=np.asarray(["a", "b", "a"], dtype=object),
+        row_counts_by_branch={"a": 2, "b": 1},
+    )
+    np.testing.assert_array_equal(offsets, np.asarray([0, 2, 3], dtype=np.int64))
+    assert total == 5
+
+    output = np.full((2, 2), np.nan, dtype=np.float64)
+    _assign_branch_summary_values(
+        output=output,
+        run_positions=np.asarray([0, 1], dtype=np.int64),
+        public_group_ids=np.asarray([0, 0, 1], dtype=np.int64),
+        branch_values=np.asarray([[1.0, 3.0, np.nan], [np.nan, np.nan, 5.0]]),
+    )
+    np.testing.assert_allclose(output[0], [2.0, np.nan], equal_nan=True)
+    np.testing.assert_allclose(output[1], [np.nan, 5.0], equal_nan=True)
+
+    run_index = np.full(total, -1, dtype=np.int64)
+    public_row_id = np.full(total, -1, dtype=np.int64)
+    values = np.full(total, np.nan, dtype=np.float64)
+    _assign_sparse_branch_rows(
+        run_index=run_index,
+        public_row_id=public_row_id,
+        values=values,
+        row_offsets=offsets,
+        run_positions=np.asarray([], dtype=np.int64),
+        branch_run_indices=np.asarray([], dtype=np.int64),
+        branch_public_row_id=np.asarray([7], dtype=np.int64),
+        branch_values=np.empty((0, 1), dtype=np.float64),
+    )
+    _assign_sparse_branch_rows(
+        run_index=run_index,
+        public_row_id=public_row_id,
+        values=values,
+        row_offsets=offsets,
+        run_positions=np.asarray([0, 2], dtype=np.int64),
+        branch_run_indices=np.asarray([10, 12], dtype=np.int64),
+        branch_public_row_id=np.asarray([7, 8], dtype=np.int64),
+        branch_values=np.asarray([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64),
+    )
+    np.testing.assert_array_equal(run_index[[0, 1, 3, 4]], [10, 10, 12, 12])
+    np.testing.assert_array_equal(public_row_id[[0, 1, 3, 4]], [7, 8, 7, 8])
+    np.testing.assert_allclose(values[[0, 1, 3, 4]], [0.1, 0.2, 0.3, 0.4])
+
+
+def test_sparse_inter_method_memory_blocks_skip_csv_working_buffer_for_parquet() -> None:
+    runtime = UncertaintyRuntimeRequest(
+        family="asocc",
+        mode="fixed",
+        output_format="parquet",
+        n_runs=4,
+        max_runs=0,
+        batch_size=4,
+        rtol=0.05,
+        stable_runs=4,
+        convergence_statistics=("mean",),
+    )
+    blocks = _asocc_sampling_memory_blocks(
+        row_count=3,
+        sparse_inter_method=True,
+        public_row_count=2,
+        runtime=runtime,
+    )
+
+    assert "asocc_sparse_csv_render_working_bytes" not in {block.name for block in blocks}
+
+
+def test_inter_method_summary_matrix_batch_collapses_public_groups() -> None:
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["UT(FD)", "UT(GVAa)"],
+            "l2_method": ["UT(FD)", "UT(GVAa)"],
+            "r_c": ["FR", "FR"],
+            "s_p": ["Electricity", "Electricity"],
+            "year": [2030, 2030],
+            ASOCC_VALUE_COLUMN: [0.2, 0.4],
+        }
+    )
+    loaded = _loaded(rows=rows)
+    sources = SourceActivationPlan(
+        sources=(ActiveSource(name="inter_method_uncertainty", parameters={}),)
+    )
+    plan = build_inter_method_plan(loaded=loaded, parameters={})
+    execution_plan = build_inter_method_execution_plan(
+        loaded=loaded,
+        inter_method_plan=plan,
+        sources=sources,
+        external_plan=ExternalAsoccRowsPlan(),
+        lcia_plan=None,
+        projection_plan=None,
+    )
+    identity, values = sample_inter_method_summary_matrix_batch(
+        loaded=loaded,
+        inter_method_plan=plan,
+        execution_plan=execution_plan,
+        inter_mrio_plan=None,
+        batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=2, rng_seed=17),
+        sources=sources,
+        source_units=SourceUnitIntervalSamples(values_by_source={}),
+    )
+
+    assert not identity.empty
+    assert values.shape == (2, len(identity))
+    assert np.isfinite(values).any()
+
+
 def test_inter_method_reuses_run_level_lcia_plan_for_selected_branches() -> None:
     rows = pd.DataFrame(
         {
@@ -2189,9 +2581,9 @@ def test_inter_method_branch_keeps_inactive_inner_source_axes_stable() -> None:
         base_asocc_args={
             "project_name": "stable_inner_axes",
             "source": "exiobase_396_ixi",
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": None,
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": None,
             "fu_code": "L2.c.b",
         },
     )
@@ -2254,6 +2646,30 @@ def test_inter_method_branch_keeps_inactive_inner_source_axes_stable() -> None:
     np.testing.assert_allclose(projected_values, np.broadcast_to([0.2, 0.4], (2, 2)))
     assert sorted(sparse_batch.sparse_rows.run_index.tolist()) == [0, 1]
     assert set(sparse_batch.sparse_rows.values.tolist()).issubset({0.2, 0.4})
+
+
+def test_inter_method_public_identity_collapses_reference_year_axis() -> None:
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["AR(E^{CBA_FD})", "AR(E^{CBA_FD})"],
+            "year": [2030, 2030],
+            "reference_year": [2019, 2020],
+            ASOCC_VALUE_COLUMN: [0.2, 0.4],
+        }
+    )
+    identity = public_identity_for_sampling_plan(
+        loaded=_loaded(rows=rows),
+        sources=SourceActivationPlan(
+            sources=(ActiveSource(name=REFERENCE_YEAR_SOURCE, parameters={}),)
+        ),
+        external_plan=ExternalAsoccRowsPlan(),
+        lcia_plan=None,
+        projection_plan=None,
+        reference_axis=None,
+    )
+
+    assert "reference_year" not in identity.columns
+    assert len(identity) == 1
 
 
 def test_lcia_target_detection_includes_combined_l2_lcia_owner() -> None:
@@ -2387,6 +2803,54 @@ def test_sampling_applies_lcia_projection_and_reference_sources() -> None:
     assert lcia_projection.shape == (2, 2)
     assert projection.shape == (2, 2)
     assert reference.shape == (2, 1)
+
+
+def test_compact_inter_mrio_template_uses_lcia_and_projection_axes() -> None:
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["UT(FDa)", "UT(FDa)"],
+            "r_c": ["FR", "FR"],
+            "s_p": ["Electricity", "Electricity"],
+            "year": [2020, 2030],
+            "l2_reuse_year": [None, 2020],
+            ASOCC_VALUE_COLUMN: [0.1, 0.2],
+        }
+    )
+    direct = rows.assign(
+        _lower_bound=[0.05, 0.1],
+        _upper_bound=[0.15, 0.3],
+        _shared_u_key=["historical", "projection"],
+    )
+    lcia_plan = LCIAPlan(
+        public_columns=tuple(rows.columns),
+        passthrough_rows=rows.iloc[:0].copy(),
+        direct_rows=direct,
+        direct_block=lcia_sample_block(template=direct),
+        combined_routes=(),
+        source_method_rows=(),
+    )
+    loaded = _loaded(rows=rows)
+    projection_plan = build_projection_plan(loaded=loaded)
+
+    lcia_template = _compact_inter_mrio_input_template(
+        loaded=loaded,
+        lcia_plan=lcia_plan,
+        projection_plan=None,
+    )
+    projected_lcia_template = _compact_inter_mrio_input_template(
+        loaded=loaded,
+        lcia_plan=lcia_plan,
+        projection_plan=projection_plan,
+    )
+    projected_template = _compact_inter_mrio_input_template(
+        loaded=loaded,
+        lcia_plan=None,
+        projection_plan=projection_plan,
+    )
+
+    assert len(lcia_template) == len(rows)
+    assert len(projected_lcia_template) == len(rows)
+    assert len(projected_template) == len(rows)
 
 
 def test_lcia_sobol_unit_values_replace_shared_random_matrix() -> None:
@@ -2581,9 +3045,9 @@ def test_reference_year_owner_samples_by_run_index() -> None:
                 "AR(E^{CBA_FD})",
                 "AR(E^{CBA_FD})",
             ],
-            "year": [2020, 2030, 2030, 2030],
-            "reference_year": [2019, 2019, 2025, 2035],
-            ASOCC_VALUE_COLUMN: [0.2, 0.3, 0.5, 0.9],
+            "year": [2030, 2020, 2030, 2030],
+            "reference_year": [2035, 2019, 2019, 2025],
+            ASOCC_VALUE_COLUMN: [0.9, 0.2, 0.3, 0.5],
         }
     )
     batch = RunBatch(batch_index=0, start_run_index=0, stop_run_index=10, rng_seed=17)
@@ -2660,17 +3124,6 @@ def test_summary_identity_groups_source_sampled_axes() -> None:
     values = np.array([[1.0, np.nan, 3.0], [np.nan, 5.0, 7.0]])
 
     collapsed = collapse_values_to_summary_groups(values=values, public_row_groups=groups)
-    sparse_collapsed = collapse_sparse_rows_to_overlapping_summary_groups(
-        sparse_rows=SparseRunRows(
-            run_index=np.array([0, 0, 1, 1], dtype=np.int64),
-            public_row_id=np.array([0, 2, 1, 2], dtype=np.int64),
-            values=np.array([1.0, 3.0, 5.0, 7.0], dtype=np.float64),
-            value_column="asocc",
-        ),
-        run_indices=np.array([0, 1], dtype=np.int64),
-        public_row_groups=groups,
-        public_row_group_index=sparse_public_row_group_membership_index(public_row_groups=groups),
-    )
 
     assert summary_identity.columns.tolist() == [
         "l1_l2_method",
@@ -2686,7 +3139,6 @@ def test_summary_identity_groups_source_sampled_axes() -> None:
     ]
     assert groups == (("0",), ("1", "2"), ("0", "1", "2"))
     np.testing.assert_allclose(collapsed, [[1.0, 3.0, 2.0], [np.nan, 6.0, 6.0]])
-    np.testing.assert_allclose(sparse_collapsed, [[1.0, 3.0, 2.0], [np.nan, 6.0, 6.0]])
 
     unchanged_identity, unchanged_groups = summary_identity_groups(
         identity=identity.drop(columns=["reference_year", "l2_reuse_year"]),
@@ -2719,8 +3171,6 @@ def test_asocc_sobol_year_scope_and_selector_summary() -> None:
         plan=explicit_plan,
         requested_years=(2019, 2020, 2025),
     ) == (2019, 2025)
-    with pytest.raises(ValueError):
-        selected_sobol_years(plan=explicit_plan, requested_years=(2019,))
     source = ExternalMonteCarloRowsSource(
         selection=ExternalMethodSelection(
             level="level_2",

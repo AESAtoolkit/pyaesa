@@ -25,9 +25,9 @@ def generate_io_lca_figures(
     *,
     project_name: str,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str,
     years: list[int],
     lcia_method: list[str],
     fu_code: str,
@@ -35,7 +35,7 @@ def generate_io_lca_figures(
     r_c,
     r_p,
     s_p,
-    aggreg_indices,
+    group_indices,
     dpi: int,
     output_format: str,
     resolved_io_scope: tuple[str, dict[str, Any]],
@@ -45,9 +45,9 @@ def generate_io_lca_figures(
     figure_report = render_io_lca_figures(
         project_name=project_name,
         source=source,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
         years=years,
         lcia_method=lcia_method,
         fu_code=fu_code,
@@ -55,7 +55,7 @@ def generate_io_lca_figures(
         r_c=r_c,
         r_p=r_p,
         s_p=s_p,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         dpi=dpi,
         output_format=output_format,
         refresh=False,
@@ -76,7 +76,7 @@ def build_io_lca_summary(
     covered_origin_years: set[int],
     covered_stage_years: set[int],
     skipped_method_years: dict[str, dict[int, str]],
-    aggreg_indices: bool,
+    group_indices: bool,
     upstream_analysis: bool,
     stage_outputs_enabled: bool,
     reuse_status: str,
@@ -87,9 +87,9 @@ def build_io_lca_summary(
     project_name: str | None = None,
     lcia_methods: list[str] | None = None,
     fu_code: str | None = None,
-    group_reg: bool | None = None,
-    group_sec: bool | None = None,
-    group_version: str | None = None,
+    agg_reg: bool | None = None,
+    agg_sec: bool | None = None,
+    agg_version: str | None = None,
     main_result_paths: list[Path] | None = None,
     origin_paths: list[Path] | None = None,
     stage_paths: list[Path] | None = None,
@@ -99,10 +99,10 @@ def build_io_lca_summary(
         f"Source: {source}",
         "MRIO scope: "
         + _format_mrio_scope(
-            group_reg=group_reg,
-            group_sec=group_sec,
-            group_version=group_version,
-            aggreg_indices=aggreg_indices,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
+            agg_version=agg_version,
+            group_indices=group_indices,
         ),
         f"Processed (main): {format_year_ranges_with_count(sorted(covered_main_years))}",
     ]
@@ -127,7 +127,7 @@ def build_io_lca_summary(
             skipped_by_year = skipped_method_years.get(lcia_method_mode, {})
             lcia_method, mode_name = lcia_method_mode.rsplit("__", 1)
             lcia_method_text = (
-                f"{lcia_method} [{mode_name}]" if (aggreg_indices and mode_name) else lcia_method
+                f"{lcia_method} [{mode_name}]" if (group_indices and mode_name) else lcia_method
             )
             for year in sorted(skipped_by_year):
                 extend_user_text_lines(
@@ -209,16 +209,16 @@ def build_io_lca_summary(
 
 def _format_mrio_scope(
     *,
-    group_reg: bool | None,
-    group_sec: bool | None,
-    group_version: str | None,
-    aggreg_indices: bool,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
+    agg_version: str | None,
+    group_indices: bool,
 ) -> str:
     parts = [
-        f"group_reg={bool(group_reg)}",
-        f"group_sec={bool(group_sec)}",
-        f"group_version={group_version or 'none'}",
-        f"aggreg_indices={bool(aggreg_indices)}",
+        f"agg_reg={bool(agg_reg)}",
+        f"agg_sec={bool(agg_sec)}",
+        f"agg_version={agg_version or 'none'}",
+        f"group_indices={bool(group_indices)}",
     ]
     return ", ".join(parts)
 

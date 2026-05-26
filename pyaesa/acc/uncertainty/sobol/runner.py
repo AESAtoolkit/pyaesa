@@ -8,8 +8,9 @@ import numpy as np
 from pyaesa.acc.uncertainty.runtime.models import ACCUncertaintyRunPaths
 from pyaesa.acc.uncertainty.evaluation.source_unit_evaluator import (
     ACCSobolEvaluationContext,
+    acc_sobol_base_chunk_rows,
     build_acc_sobol_evaluation_context,
-    evaluate_acc_sobol_units,
+    evaluate_acc_sobol_target_units,
 )
 from pyaesa.ar6_cc.uncertainty.request.normalization import AR6_DYNAMIC_CC_SOURCE
 from pyaesa.acc.uncertainty.sobol.summary import acc_sobol_source_summary
@@ -83,6 +84,7 @@ def run_acc_sobol(
         plan=sobol_plan,
         dimension_names=context.source_names,
         evaluate=lambda chunk: _evaluate_chunk(context=context, chunk=chunk),
+        max_base_chunk_rows=acc_sobol_base_chunk_rows(context=context),
         source_summary_builder=lambda identity, dimensions, estimates: acc_sobol_source_summary(
             identity=identity,
             dimension_names=dimensions,
@@ -109,9 +111,8 @@ def run_acc_sobol(
         family_label="aCC",
         source_names=context.source_names,
         selected_scope_line=(
-            "Sobol outputs are evaluated only for the selected aCC output years: "
-            + ", ".join(str(year) for year in context.asocc_context.selected_years)
-            + "."
+            "Static aCC Sobol outputs are evaluated for the selected output years. "
+            "Dynamic AR6 aCC Sobol outputs are evaluated as cumulative period targets."
         ),
         plan=sobol_plan,
         source_summary_notes=(
@@ -126,7 +127,8 @@ def run_acc_sobol(
             "category, SSP, model, scenario, and year.",
         ),
         method_notes=(
-            "aCC Sobol evaluates aCC = aSoCC * CC directly for each Saltelli design row.",
+            "aCC Sobol evaluates aCC = aSoCC * CC directly for each Saltelli design row. "
+            "Dynamic AR6 targets are cumulative aCC period sums.",
         ),
     )
     sobol_status = dict(result.status)
@@ -147,7 +149,7 @@ def _evaluate_chunk(
     chunk: SobolEvaluationChunk,
 ) -> EvaluatedSobolChunk:
     units = np.vstack((chunk.a, chunk.b, *chunk.ab))
-    _, values = evaluate_acc_sobol_units(context=context, units=units)
+    identity, values = evaluate_acc_sobol_target_units(context=context, units=units)
     a_stop = chunk.a.shape[0]
     b_stop = a_stop + chunk.b.shape[0]
     ab_values = []
@@ -157,7 +159,7 @@ def _evaluate_chunk(
         ab_values.append(values[start:stop])
         start = stop
     return EvaluatedSobolChunk(
-        identity=context.identity,
+        identity=identity,
         a_values=values[:a_stop],
         b_values=values[a_stop:b_stop],
         ab_values=tuple(ab_values),

@@ -5,11 +5,11 @@ from pyaesa.asocc.orchestration.setup.validation.history_checks import (
     _validate_history_since_baseline,
 )
 from pyaesa.asocc.orchestration.setup.validation.lcia_checks import (
-    _validate_grouped_lcia_ready,
+    _validate_aggregated_lcia_ready,
     _validate_original_lcia_ready,
 )
 from pyaesa.asocc.orchestration.setup.request.types import (
-    _GroupingBundle,
+    _AggregationBundle,
     _SelectionBundle,
     _YearBundle,
 )
@@ -28,16 +28,16 @@ def _build_context(
     metadata_prior_outputs: list[str] | None = None,
 ) -> RunContext:
     """Build a RunContext object from resolved setup inputs."""
-    grouping: _GroupingBundle = common["grouping"]
+    aggregation: _AggregationBundle = common["aggregation"]
     selection: _SelectionBundle = common["selection"]
     return RunContext(
         project_name=common["project_name"],
         source=common["source"],
         fu_code=common["fu_code"],
-        group_version=common["group_version"],
-        group_version_reg=grouping.group_version_reg,
-        group_reg=grouping.apply_group_reg,
-        group_sec=grouping.apply_group_sec,
+        agg_version=common["agg_version"],
+        agg_version_reg=aggregation.agg_version_reg,
+        agg_reg=aggregation.apply_agg_reg,
+        agg_sec=aggregation.apply_agg_sec,
         lcia_method=common["lcia_method"],
         years_input=common["years"],
         reference_years_input=common["reference_years"],
@@ -73,7 +73,7 @@ def _build_context(
         l1_reg_aggreg=common["l1_reg_aggreg"],
         use_original_l1_post_domain=common["use_original_l1_post_domain"],
         variant_tag=common["variant_tag"],
-        aggreg_indices=common["aggreg_indices"],
+        group_indices=common["group_indices"],
         output_format=common["output_format"],
         intermediate_outputs=common["intermediate_outputs"],
         output_source_label=common["output_source_label"],
@@ -89,8 +89,8 @@ def _build_context_common(
     project_name: str,
     source: str,
     fu_code: str,
-    group_version: str | None,
-    grouping: _GroupingBundle,
+    agg_version: str | None,
+    aggregation: _AggregationBundle,
     lcia_method: str | list[str] | None,
     years: int | list[int] | range | None,
     reference_years: int | list[int] | range | None,
@@ -112,7 +112,7 @@ def _build_context_common(
     l1_reg_aggreg: str,
     use_original_l1_post_domain: bool,
     variant_tag: str | None,
-    aggreg_indices: bool,
+    group_indices: bool,
     output_format: str,
     intermediate_outputs: bool,
     output_source_label: str | None = None,
@@ -124,8 +124,8 @@ def _build_context_common(
         "project_name": project_name,
         "source": source,
         "fu_code": fu_code,
-        "group_version": group_version,
-        "grouping": grouping,
+        "agg_version": agg_version,
+        "aggregation": aggregation,
         "lcia_method": lcia_method,
         "years": years,
         "reference_years": reference_years,
@@ -147,7 +147,7 @@ def _build_context_common(
         "l1_reg_aggreg": l1_reg_aggreg,
         "use_original_l1_post_domain": use_original_l1_post_domain,
         "variant_tag": variant_tag,
-        "aggreg_indices": aggreg_indices,
+        "group_indices": group_indices,
         "output_format": output_format,
         "intermediate_outputs": intermediate_outputs,
         "output_source_label": output_source_label,
@@ -182,9 +182,9 @@ def _build_initial_state(*, ssp_scenario_options: list[str | None]) -> RunState:
 def _validate_bundle_for_selection(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     selection: _SelectionBundle,
     lcia_methods: list[str] | None,
     historical_years: list[int],
@@ -193,19 +193,19 @@ def _validate_bundle_for_selection(
 ) -> None:
     """Run historical/LCIA validations for one resolved year bundle."""
     if selection.needs_lcia_flag:
-        _validate_grouped_lcia_ready(
+        _validate_aggregated_lcia_ready(
             source=source,
             years=historical_years,
             lcia_methods=lcia_methods,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
         )
     _validate_history_since_baseline(
         source=source,
-        group_version=group_version,
-        group_reg=group_reg,
-        group_sec=group_sec,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
         historical_years=historical_years,
         selection=selection,
         fu_code=fu_code,

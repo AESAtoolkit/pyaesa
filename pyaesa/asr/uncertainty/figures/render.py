@@ -1,6 +1,7 @@
 """ASR uncertainty figure orchestration."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,12 @@ from pyaesa.asr.figures.common import (
     static_asocc_ssp_slices,
     visible_values,
 )
-from pyaesa.asr.figures.axis import ASR_NORMAL_SCALE, ASRScaleMode
+from pyaesa.asr.figures.axis import (
+    ASR_NORMAL_SCALE,
+    ASRScaleMode,
+    asr_zero_log_scale_warning_message,
+    asr_zero_log_scale_warning_needed,
+)
 from pyaesa.asr.figures.frequency import CUMULATIVE_FNT_FRACTION_COLUMN, FNT_FRACTION_COLUMN
 from pyaesa.asr.figures.dynamic_global_ar6 import (
     UncertaintyGlobalAR6Source,
@@ -45,8 +51,8 @@ from pyaesa.asr.uncertainty.figures.row_reader import (
     prepared_identity_rows,
     prepared_summary_rows,
     read_figure_tables,
-    SUMMARY_STAT_COLUMNS,
     value_rows_from_runs,
+    SUMMARY_STAT_COLUMNS,
 )
 from pyaesa.asr.uncertainty.evaluation.summary import (
     ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN,
@@ -70,6 +76,7 @@ from pyaesa.shared.figures.request_validation import (
 )
 from pyaesa.shared.figures.selector_slices import selector_slices
 from pyaesa.shared.figures.dynamic_ar6 import DYNAMIC_AR6_CC_TYPE
+from pyaesa.shared.figures.trajectory_bands import SUMMARY_COLUMNS as TRAJECTORY_SUMMARY_COLUMNS
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
@@ -77,7 +84,17 @@ from pyaesa.shared.runtime.scenario.columns import (
 )
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
+CUMULATIVE_VALUE_ARRAY_COLUMN = "__cumulative_values"
+
 Plotter = Callable[..., list[Path]]
+
+
+@dataclass(frozen=True)
+class ASRUncertaintyFigureResult:
+    """Rendered ASR uncertainty figure paths and summary warnings."""
+
+    paths: list[Path]
+    warning_messages: tuple[str, ...]
 
 
 def render_asr_uncertainty_figures(
@@ -87,7 +104,7 @@ def render_asr_uncertainty_figures(
     figure_options: dict | None,
     figure_format: dict | None,
     status: StatusSink | None = None,
-) -> list[Path]:
+) -> ASRUncertaintyFigureResult:
     """Render requested ASR uncertainty figures from public run artifacts."""
     context = build_figure_context(
         manifest=manifest,
@@ -101,20 +118,29 @@ def render_asr_uncertainty_figures(
     )
     if not (context.per_method or context.multi_method or _inter_method_active(context)):
         clear_uncertainty_figure_scope(paths=paths)
-        return []
+        return ASRUncertaintyFigureResult(paths=[], warning_messages=())
     tables = read_figure_tables(
         context=context,
         include_cumulative=single_requested_year(context) is None,
     )
     clear_uncertainty_figure_scope(paths=paths)
-    jobs = _uncertainty_jobs(
-        context=context,
-        identity=tables.identity,
-        summary=tables.summary,
-        cumulative_identity=tables.cumulative_identity,
-        cumulative_summary=tables.cumulative_summary,
+    planned_jobs = tuple(
+        _uncertainty_jobs(
+            context=context,
+            identity=tables.identity,
+            summary=tables.summary,
+            cumulative_identity=tables.cumulative_identity,
+            cumulative_summary=tables.cumulative_summary,
+        )
     )
-    return render_figure_jobs(source="uncertainty_asr", jobs=jobs, status=status)
+    return ASRUncertaintyFigureResult(
+        paths=render_figure_jobs(
+            source="uncertainty_asr",
+            jobs=lambda: iter(planned_jobs),
+            status=status,
+        ),
+        warning_messages=_summary_warning_messages(planned_jobs),
+    )
 
 
 def _uncertainty_jobs(
@@ -124,7 +150,7 @@ def _uncertainty_jobs(
     summary: pd.DataFrame,
     cumulative_identity: pd.DataFrame,
     cumulative_summary: pd.DataFrame,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if single_requested_year(context) is None:
         return _multi_year_jobs(
             context=context,
@@ -138,7 +164,7 @@ def _uncertainty_jobs(
 
 def _single_year_jobs(
     *, context: FigureContext, identity: pd.DataFrame, summary: pd.DataFrame
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     identity_rows = prepared_identity_rows(context=context, identity=identity)
     value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
     summary_rows = prepared_summary_rows(context=context, summary=summary)
@@ -155,32 +181,6 @@ def _single_year_jobs(
         summary_rows=method_summary_rows,
         frequency_rows=method_frequency_rows,
     )
-    scale_modes = _scale_modes_by_lcia(value_rows)
-    jobs = [
-        *(
-            _plan_multi_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-                scale_modes=scale_modes,
-            )
-            if context.multi_method
-            else []
-        ),
-        *(
-            _plan_per_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-                polar_for_multi_impact=bool(context.polar_years),
-                scale_modes=scale_modes,
-            )
-            if context.per_method
-            else []
-        ),
-    ]
     if _inter_method_active(context):
         inter_summary_rows = _summary_scope_rows(summary_rows, ASR_SUMMARY_SCOPE_INTER_METHOD)
         inter_frequency_rows = _summary_scope_rows(
@@ -193,18 +193,28 @@ def _single_year_jobs(
             summary_rows=inter_summary_rows,
             frequency_rows=inter_frequency_rows,
         )
-        jobs = [
-            *_plan_inter_method_jobs(
-                rows=inter_rows,
-                context=context,
-                plotter=plot_violin_scope,
-                kind="single_year",
-                polar_for_multi_impact=bool(context.polar_years),
-                scale_modes=scale_modes,
-            ),
-            *jobs,
-        ]
-    return jobs
+        yield from _plan_inter_method_jobs(
+            rows=inter_rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+            polar_for_multi_impact=bool(context.polar_years),
+        )
+    if context.multi_method:
+        yield from _plan_multi_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+        )
+    if context.per_method:
+        yield from _plan_per_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_violin_scope,
+            kind="single_year",
+            polar_for_multi_impact=bool(context.polar_years),
+        )
 
 
 def _multi_year_jobs(
@@ -214,7 +224,7 @@ def _multi_year_jobs(
     summary: pd.DataFrame,
     cumulative_identity: pd.DataFrame,
     cumulative_summary: pd.DataFrame,
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     dynamic_rows = _raw_identity_is_dynamic(identity)
     component_rows = load_component_diagnostic_rows(context=context) if dynamic_rows else None
     global_ar6_source = (
@@ -271,7 +281,7 @@ def _multi_year_jobs(
         method_polar_rows = method_rows.iloc[0:0].copy()
         inter_polar_rows = inter_rows.iloc[0:0].copy()
         if context.polar_years:
-            value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
+            value_rows = _polar_value_rows(context=context, identity_rows=identity_rows)
             method_polar_rows = collapsed_value_rows(
                 rows=value_rows,
                 context=context,
@@ -291,6 +301,7 @@ def _multi_year_jobs(
                 summary_rows=inter_summary_rows,
                 frequency_rows=inter_frequency_rows,
             )
+            del value_rows
     else:
         method_rows = method_summary_rows
         identity_rows = (
@@ -314,10 +325,7 @@ def _multi_year_jobs(
             )
         inter_rows = method_rows.iloc[0:0].copy()
         value_rows = (
-            value_rows_from_runs(
-                context=context,
-                identity_rows=identity_rows,
-            )
+            _polar_value_rows(context=context, identity_rows=identity_rows)
             if context.polar_years
             else identity.iloc[0:0].copy()
         )
@@ -332,83 +340,57 @@ def _multi_year_jobs(
             frequency_rows=method_frequency_rows,
         )
         inter_polar_rows = value_rows.iloc[0:0].copy()
-    scale_modes = _scale_modes_by_lcia(
-        method_rows,
-        inter_rows,
-        cumulative_method_rows,
-        cumulative_inter_rows,
-        method_polar_rows,
-        inter_polar_rows,
-    )
-    jobs = [
-        *(
-            _plan_polar_checkpoint_jobs(
-                rows=inter_polar_rows,
-                context=context,
-                role="inter_method",
-                label="inter_method",
-                title_label="inter-method",
-                family_label="ASR uncertainty",
-                scale_modes=scale_modes,
-            )
-            if context.inter_method
-            else []
-        ),
-        *(
-            _plan_inter_method_jobs(
-                rows=inter_rows,
-                context=context,
-                plotter=plot_band_scope,
-                kind="multi_year",
-                components=component_rows,
-                global_ar6_source=global_ar6_source,
-                scale_modes=scale_modes,
-            )
-            if context.inter_method
-            else []
-        ),
-        *(
-            _plan_multi_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_mean_line_scope,
-                kind="multi_year",
-                mean_line=True,
-                components=component_rows,
-                global_ar6_source=global_ar6_source,
-                scale_modes=scale_modes,
-            )
-            if context.multi_method
-            else []
-        ),
-        *(
-            _plan_per_method_jobs(
-                rows=method_rows,
-                context=context,
-                plotter=plot_band_scope,
-                kind="multi_year",
-                components=component_rows,
-                global_ar6_source=global_ar6_source,
-                scale_modes=scale_modes,
-            )
-            if context.per_method
-            else []
-        ),
-        *(
-            _plan_polar_checkpoint_jobs(
-                rows=method_polar_rows,
-                context=context,
-                role="per_method",
-                label=None,
-                title_label=None,
-                family_label="ASR uncertainty",
-                scale_modes=scale_modes,
-            )
-            if context.per_method
-            else []
-        ),
-    ]
-    return jobs
+    if context.inter_method:
+        yield from _plan_polar_checkpoint_jobs(
+            rows=inter_polar_rows,
+            context=context,
+            role="inter_method",
+            label="inter_method",
+            title_label="inter-method",
+            family_label="ASR uncertainty",
+        )
+        yield from _plan_inter_method_jobs(
+            rows=inter_rows,
+            context=context,
+            plotter=plot_band_scope,
+            kind="multi_year",
+            components=component_rows,
+            global_ar6_source=global_ar6_source,
+        )
+    if context.multi_method:
+        yield from _plan_multi_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_mean_line_scope,
+            kind="multi_year",
+            mean_line=True,
+            components=component_rows,
+            global_ar6_source=global_ar6_source,
+        )
+    if context.per_method:
+        yield from _plan_per_method_jobs(
+            rows=method_rows,
+            context=context,
+            plotter=plot_band_scope,
+            kind="multi_year",
+            components=component_rows,
+            global_ar6_source=global_ar6_source,
+        )
+        yield from _plan_polar_checkpoint_jobs(
+            rows=method_polar_rows,
+            context=context,
+            role="per_method",
+            label=None,
+            title_label=None,
+            family_label="ASR uncertainty",
+        )
+
+
+def _polar_value_rows(*, context: FigureContext, identity_rows: pd.DataFrame) -> pd.DataFrame:
+    """Read ASR run distributions only for years requested by polar figures."""
+    years = pd.Series(pd.to_numeric(identity_rows["year"], errors="raise"), copy=False).astype(int)
+    polar_identity = identity_rows.loc[years.isin(list(context.polar_years))].copy()
+    return value_rows_from_runs(context=context, identity_rows=polar_identity)
 
 
 def _plan_per_method_jobs(
@@ -422,31 +404,25 @@ def _plan_per_method_jobs(
     polar_for_multi_impact: bool = False,
     components: ComponentDiagnosticRows | None = None,
     global_ar6_source: UncertaintyGlobalAR6Source | None = None,
-    scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
-    jobs: list[PlannedFigureJob] = []
+) -> Iterator[PlannedFigureJob]:
     for method in visible_values(rows, "__method"):
         method_rows = rows.loc[rows["__method"].astype(str).eq(str(method))].copy()
-        jobs.extend(
-            _plan_scope_jobs(
-                rows=method_rows,
-                context=context,
-                role="per_method",
-                label=str(method),
-                title_label=str(method),
-                plotter=plotter,
-                kind=kind,
-                product=product,
-                family_label=family_label,
-                group_legend=False,
-                include_method_in_label=False,
-                polar_for_multi_impact=polar_for_multi_impact,
-                components=components,
-                global_ar6_source=global_ar6_source,
-                scale_modes=scale_modes,
-            )
+        yield from _plan_scope_jobs(
+            rows=method_rows,
+            context=context,
+            role="per_method",
+            label=str(method),
+            title_label=str(method),
+            plotter=plotter,
+            kind=kind,
+            product=product,
+            family_label=family_label,
+            group_legend=False,
+            include_method_in_label=False,
+            polar_for_multi_impact=polar_for_multi_impact,
+            components=components,
+            global_ar6_source=global_ar6_source,
         )
-    return jobs
 
 
 def _collapsed_inter_method_value_rows(
@@ -529,11 +505,10 @@ def _plan_multi_method_jobs(
     family_label: str = "ASR uncertainty",
     components: ComponentDiagnosticRows | None = None,
     global_ar6_source: UncertaintyGlobalAR6Source | None = None,
-    scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if len(visible_values(rows, "__method")) <= 1:
-        return []
-    return _plan_scope_jobs(
+        return
+    yield from _plan_scope_jobs(
         rows=rows,
         context=context,
         role="multi_method",
@@ -549,7 +524,6 @@ def _plan_multi_method_jobs(
         mean_line=mean_line,
         components=components,
         global_ar6_source=global_ar6_source,
-        scale_modes=scale_modes,
     )
 
 
@@ -564,11 +538,10 @@ def _plan_inter_method_jobs(
     polar_for_multi_impact: bool = False,
     components: ComponentDiagnosticRows | None = None,
     global_ar6_source: UncertaintyGlobalAR6Source | None = None,
-    scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if rows.empty:
-        return []
-    return _plan_scope_jobs(
+        return
+    yield from _plan_scope_jobs(
         rows=rows,
         context=context,
         role="inter_method",
@@ -583,7 +556,6 @@ def _plan_inter_method_jobs(
         polar_for_multi_impact=polar_for_multi_impact,
         components=components,
         global_ar6_source=global_ar6_source,
-        scale_modes=scale_modes,
     )
 
 
@@ -595,11 +567,9 @@ def _plan_polar_checkpoint_jobs(
     label: str | None,
     title_label: str | None,
     family_label: str,
-    scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
+) -> Iterator[PlannedFigureJob]:
     if rows.empty or not context.polar_years:
-        return []
-    jobs: list[PlannedFigureJob] = []
+        return
     method_values = visible_values(rows, "__method") if label is None else [label]
     for method in method_values:
         method_rows = (
@@ -620,8 +590,7 @@ def _plan_polar_checkpoint_jobs(
                         .astype(int)
                         .eq(int(year))
                     ].copy()
-                    _append_polar_scope_job(
-                        jobs=jobs,
+                    yield from _polar_scope_jobs(
                         scope=year_scope,
                         context=context,
                         role=role,
@@ -631,9 +600,7 @@ def _plan_polar_checkpoint_jobs(
                         studied_year=int(year),
                         selector_token=selector_token,
                         selector_title=selector_title,
-                        scale_modes=scale_modes,
                     )
-    return jobs
 
 
 def _plan_scope_jobs(
@@ -654,9 +621,7 @@ def _plan_scope_jobs(
     polar_for_multi_impact: bool = False,
     components: ComponentDiagnosticRows | None = None,
     global_ar6_source: UncertaintyGlobalAR6Source | None = None,
-    scale_modes: dict[str, ASRScaleMode],
-) -> list[PlannedFigureJob]:
-    jobs: list[PlannedFigureJob] = []
+) -> Iterator[PlannedFigureJob]:
     studied_year = single_requested_year(context)
     for scope in _figure_scopes(rows=rows, context=context):
         for selector_token, selector_title, selector_scope in selector_slices(scope):
@@ -669,8 +634,7 @@ def _plan_scope_jobs(
                 lcia_impact_slices(selector_scope) if split_impacts else [selector_scope]
             )
             for product_scope in product_scopes:
-                _append_scope_job(
-                    jobs=jobs,
+                yield from _scope_jobs(
                     scope=product_scope,
                     context=context,
                     role=role,
@@ -688,16 +652,13 @@ def _plan_scope_jobs(
                     polar_for_multi_impact=polar_for_multi_impact,
                     components=components,
                     global_ar6_source=global_ar6_source,
-                    scale_modes=scale_modes,
                     selector_token=selector_token,
                     selector_title=selector_title,
                 )
-    return jobs
 
 
-def _append_scope_job(
+def _scope_jobs(
     *,
-    jobs: list[PlannedFigureJob],
     scope: pd.DataFrame,
     context: FigureContext,
     role: str,
@@ -715,18 +676,17 @@ def _append_scope_job(
     polar_for_multi_impact: bool,
     components: ComponentDiagnosticRows | None,
     global_ar6_source: UncertaintyGlobalAR6Source | None,
-    scale_modes: dict[str, ASRScaleMode],
     selector_token: str,
     selector_title: str,
-) -> None:
+) -> Iterator[PlannedFigureJob]:
+    """Yield one or more ASR uncertainty jobs for a final figure scope."""
     if (
         polar_for_multi_impact
         and product is None
         and studied_year is not None
         and len(ordered_impacts(scope)) > 1
     ):
-        _append_polar_scope_job(
-            jobs=jobs,
+        yield from _polar_scope_jobs(
             scope=scope,
             context=context,
             role=role,
@@ -736,10 +696,9 @@ def _append_scope_job(
             studied_year=studied_year,
             selector_token=selector_token,
             selector_title=selector_title,
-            scale_modes=scale_modes,
         )
         return
-    scale_mode = _scale_mode_for_frame(scope, scale_modes=scale_modes)
+    scale_mode = _scale_mode_for_scope(scope, mean_line=mean_line)
     output_base = (
         context.figures_root
         / role
@@ -760,30 +719,36 @@ def _append_scope_job(
         studied_year=studied_year,
         selector_title=selector_title,
     )
-    jobs.append(
-        PlannedFigureJob(
-            kind=kind,
+    yield PlannedFigureJob(
+        kind=kind,
+        label=output_base.name,
+        planned_outputs=_planned_scope_output_count(
+            scope=scope,
+            plotter=plotter,
+        ),
+        warning_contexts=_scale_warning_contexts(
+            scope=scope,
             label=output_base.name,
-            render=_planned_plot(
-                plotter=plotter,
-                frame=scope,
-                output_stem=output_base,
-                title=title,
-                context=context,
-                group_legend=group_legend,
-                include_method_in_label=include_method_in_label,
-                mean_line=mean_line,
-                components=components,
-                global_ar6_source=global_ar6_source,
-                scale_mode=scale_mode,
-            ),
-        )
+            mean_line=mean_line,
+        ),
+        render=_planned_plot(
+            plotter=plotter,
+            frame=scope,
+            output_stem=output_base,
+            title=title,
+            context=context,
+            group_legend=group_legend,
+            include_method_in_label=include_method_in_label,
+            mean_line=mean_line,
+            components=components,
+            global_ar6_source=global_ar6_source,
+            scale_mode=scale_mode,
+        ),
     )
 
 
-def _append_polar_scope_job(
+def _polar_scope_jobs(
     *,
-    jobs: list[PlannedFigureJob],
     scope: pd.DataFrame,
     context: FigureContext,
     role: str,
@@ -793,9 +758,9 @@ def _append_polar_scope_job(
     studied_year: int,
     selector_token: str,
     selector_title: str,
-    scale_modes: dict[str, ASRScaleMode],
-) -> None:
-    scale_mode = _scale_mode_for_frame(scope, scale_modes=scale_modes)
+) -> Iterator[PlannedFigureJob]:
+    """Yield ASR uncertainty polar jobs for one selector and year scope."""
+    scale_mode = _scale_mode_for_scope(scope, mean_line=False)
     title = asr_scope_title(
         family_label,
         title_label,
@@ -815,20 +780,23 @@ def _append_polar_scope_job(
                 selector_token=selector_token,
             )
         )
-        jobs.append(
-            PlannedFigureJob(
-                kind=f"polar_{style}",
+        yield PlannedFigureJob(
+            kind=f"polar_{style}",
+            label=output_base.name,
+            warning_contexts=_scale_warning_contexts(
+                scope=scope,
                 label=output_base.name,
-                render=lambda style_value=style, base=output_base: plot_polar_scope(
-                    frame=scope,
-                    output_stem=base,
-                    title=title,
-                    polar_style=style_value,
-                    scale_mode=scale_mode,
-                    dpi=context.figure_dpi,
-                    output_format=context.figure_output_format,
-                ),
-            )
+                mean_line=False,
+            ),
+            render=lambda style_value=style, base=output_base: plot_polar_scope(
+                frame=scope,
+                output_stem=base,
+                title=title,
+                polar_style=style_value,
+                scale_mode=scale_mode,
+                dpi=context.figure_dpi,
+                output_format=context.figure_output_format,
+            ),
         )
 
 
@@ -883,33 +851,29 @@ def _planned_plot(
     return _render
 
 
-def _scale_modes_by_lcia(*frames: pd.DataFrame) -> dict[str, ASRScaleMode]:
-    modes: dict[str, ASRScaleMode] = {}
-    values_by_lcia: dict[str, list[np.ndarray]] = {}
-    for frame in frames:
-        if frame.empty or "lcia_method" not in frame.columns:
-            continue
-        for lcia_method, group in frame.groupby("lcia_method", dropna=False, sort=True):
-            values_by_lcia.setdefault(str(lcia_method), []).append(_scale_values_from_frame(group))
-    for lcia_method, value_arrays in values_by_lcia.items():
-        modes[lcia_method] = asr_scale_mode_for_values(*value_arrays)
-    return modes
+def _planned_scope_output_count(*, scope: pd.DataFrame, plotter: Plotter) -> int:
+    """Return the number of figure files rendered by one ASR uncertainty job."""
+    has_cumulative = CUMULATIVE_VALUE_ARRAY_COLUMN in scope.columns
+    if plotter is plot_band_scope:
+        return 2 if len(ordered_impacts(scope)) > 1 or has_cumulative else 1
+    if plotter is plot_mean_line_scope:
+        dynamic_multiplier = 2 if has_cumulative else 1
+        return max(1, len(ordered_impacts(scope))) * dynamic_multiplier
+    return 1
 
 
-def _scale_mode_for_frame(
-    frame: pd.DataFrame,
-    *,
-    scale_modes: dict[str, ASRScaleMode],
-) -> ASRScaleMode:
-    lcia_methods = visible_values(frame, "lcia_method")
-    return scale_modes.get(lcia_methods[0], ASR_NORMAL_SCALE) if lcia_methods else ASR_NORMAL_SCALE
+def _scale_mode_for_scope(frame: pd.DataFrame, *, mean_line: bool) -> ASRScaleMode:
+    values = _scale_values_from_frame(frame, mean_line=mean_line)
+    return asr_scale_mode_for_values(values) if values.size else ASR_NORMAL_SCALE
 
 
-def _scale_values_from_frame(frame: pd.DataFrame) -> np.ndarray:
+def _scale_values_from_frame(frame: pd.DataFrame, *, mean_line: bool) -> np.ndarray:
     arrays: list[np.ndarray] = []
-    if VALUE_ARRAY_COLUMN in frame.columns:
-        arrays.extend(np.asarray(values, dtype=np.float64) for values in frame[VALUE_ARRAY_COLUMN])
-    summary_columns = [column for column in SUMMARY_STAT_COLUMNS if column in frame.columns]
+    for value_column in (VALUE_ARRAY_COLUMN, CUMULATIVE_VALUE_ARRAY_COLUMN):
+        if value_column in frame.columns:
+            arrays.extend(np.asarray(values, dtype=np.float64) for values in frame[value_column])
+    summary_source = ("mean",) if mean_line else TRAJECTORY_SUMMARY_COLUMNS
+    summary_columns = [column for column in summary_source if column in frame.columns]
     if summary_columns:
         arrays.append(
             frame.loc[:, summary_columns]
@@ -919,7 +883,28 @@ def _scale_values_from_frame(frame: pd.DataFrame) -> np.ndarray:
                 copy=False,
             )
         )
+    if not arrays:
+        return np.empty(0, dtype=np.float64)
     return np.concatenate([np.asarray(array, dtype=np.float64).ravel() for array in arrays])
+
+
+def _scale_warning_contexts(
+    *,
+    scope: pd.DataFrame,
+    label: str,
+    mean_line: bool,
+) -> tuple[str, ...]:
+    values = _scale_values_from_frame(scope, mean_line=mean_line)
+    return (label,) if asr_zero_log_scale_warning_needed(values) else ()
+
+
+def _summary_warning_messages(jobs: tuple[PlannedFigureJob, ...]) -> tuple[str, ...]:
+    labels = tuple(
+        dict.fromkeys(label for job in jobs for label in job.warning_contexts if str(label).strip())
+    )
+    if not labels:
+        return ()
+    return (asr_zero_log_scale_warning_message(labels=labels),)
 
 
 def _with_polar_summary_rows(
@@ -1045,24 +1030,22 @@ def _frequency_value_column(rows: pd.DataFrame) -> str:
     return ASR_FREQUENCY_VALUE_COLUMN
 
 
-def _figure_scopes(*, rows: pd.DataFrame, context: FigureContext) -> list[pd.DataFrame]:
-    scopes: list[pd.DataFrame] = []
+def _figure_scopes(*, rows: pd.DataFrame, context: FigureContext) -> Iterator[pd.DataFrame]:
+    """Yield one ASR uncertainty figure scope at a time."""
     for cc_type, cc_rows in rows.groupby("cc_type", dropna=False, sort=True):
         if str(cc_type) == "static":
-            ssp_slices = static_asocc_ssp_slices(
+            for ssp_rows in static_asocc_ssp_slices(
                 cc_rows,
                 requested_ssps=context.requested_asocc_ssps,
-            )
-            for ssp_rows in ssp_slices:
-                scopes.extend(scope_slices(ssp_rows, ("lcia_method", "cc_bound")))
+            ):
+                yield from scope_slices(ssp_rows, ("lcia_method", "cc_bound"))
             continue
         dynamic_columns = [
             column
             for column in ("lcia_method", *DYNAMIC_SCOPE_COLUMNS)
             if column in cc_rows.columns
         ]
-        scopes.extend(scope_slices(cc_rows, tuple(dynamic_columns)))
-    return scopes
+        yield from scope_slices(cc_rows, tuple(dynamic_columns))
 
 
 def _inter_method_active(context: FigureContext) -> bool:

@@ -36,11 +36,11 @@ def _normalized_unit_series(unit_obj: Any) -> pd.Series | None:
 
 
 def _sum_columns_by_region(frame: pd.DataFrame, *, context: str) -> pd.DataFrame:
-    """Group product or final demand columns by canonical region labels."""
+    """Aggregate product or final demand columns by canonical region labels."""
     del context
     frame_t = cast(pd.DataFrame, frame.T)
-    grouped = cast(pd.DataFrame, frame_t.groupby(level="region", sort=False).sum())
-    return cast(pd.DataFrame, grouped.T)
+    aggregated = cast(pd.DataFrame, frame_t.groupby(level="region", sort=False).sum())
+    return cast(pd.DataFrame, aggregated.T)
 
 
 def _replace_na_in_zero_output_columns(

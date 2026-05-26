@@ -10,7 +10,7 @@ from pyaesa.io_lca.uncertainty.runtime.models import (
 )
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent, write_via_atomic_temp
 from pyaesa.shared.runtime.text import join_user_text_lines
-from pyaesa.shared.uncertainty_assessment.io.tables import public_run_artifact_readme_lines
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_readme_lines
 
 
 def write_io_lca_source_methods(*, path: Path, rows: pd.DataFrame) -> None:
@@ -66,7 +66,7 @@ def _readme_text(*, request: IOLCAUncertaintyRequest) -> str:
         "upper = value * (1 + cov_value)",
         "sampled_value = lower + u_shared * (upper - lower)",
         "",
-        "The shared random variable key is defined by project, source, grouping",
+        "The shared random variable key is defined by project, source, aggregation",
         "scope, driver kind, and driver key. It does not include LCIA method,",
         "impact category, studied year, or public row id, so the same LCIA",
         "uncertainty driver is linked across those outputs within a run.",
@@ -74,25 +74,24 @@ def _readme_text(*, request: IOLCAUncertaintyRequest) -> str:
         "LCIA CoV Mapping",
         "L1 country owner rows use packaged country coefficient of variation",
         "values from reg_cbca_covs.csv, or from",
-        "reg_cbca_covs_group_<group_version>.csv when group_reg=True.",
-        "Aggregated region axes use reg_cbca_covs_aggreg_indices.csv, or",
-        "reg_cbca_covs_group_<group_version>_aggreg_indices.csv when group_reg=True.",
+        "reg_cbca_covs_agg_<agg_version>.csv when agg_reg=True.",
+        "Grouped region axes use reg_cbca_covs_group_indices.csv, or",
+        "reg_cbca_covs_agg_<agg_version>_group_indices.csv when agg_reg=True.",
         "Sector owner rows use lcia_uncertainty.sector_cov_mapping to map the",
         "output s_p sector labels to packaged sector coefficient of",
         "variation codes. Example:",
         '{"lcia_uncertainty": {"sector_cov_mapping": {"Electricity": "Electricity"}}}',
         "The available country and sector codes are in the project local files:",
         "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/reg_cbca_covs.csv",
-        "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/"
-        "reg_cbca_covs_group_<group_version>.csv",
+        "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/reg_cbca_covs_agg_<agg_version>.csv",
         "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/",
-        "  reg_cbca_covs_aggreg_indices.csv",
+        "  reg_cbca_covs_group_indices.csv",
         "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/",
-        "  reg_cbca_covs_group_<group_version>_aggreg_indices.csv",
+        "  reg_cbca_covs_agg_<agg_version>_group_indices.csv",
         "data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/sec_cbca_covs.csv",
         "",
         "Aggregation",
-        "When aggreg_indices=True is used,",
+        "When group_indices=True is used,",
         "the run samples deterministic component rows and sums sampled component",
         "values into the public IO-LCA row identity. The public identity therefore",
         "matches deterministic_io_lca(...) output rows, while the source_methods",
@@ -103,7 +102,7 @@ def _readme_text(*, request: IOLCAUncertaintyRequest) -> str:
         f"- years: {min(request.years)} to {max(request.years)}",
         f"- lcia_method: {', '.join(request.lcia_methods)}",
         f"- selectors: {selector_text or 'all deterministic selectors for the FU'}",
-        f"- aggreg_indices: {request.aggreg_indices}",
+        f"- group_indices: {request.group_indices}",
         "",
     ]
     return join_user_text_lines(lines)

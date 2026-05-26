@@ -121,7 +121,7 @@ def build_metadata_payload(
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     run_meta["artifacts"]["regression_stats_path"] = (
         str(stats_paths[0]) if len(stats_paths) == 1 else None

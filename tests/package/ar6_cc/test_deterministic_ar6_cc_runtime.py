@@ -34,6 +34,7 @@ from pyaesa.ar6_cc.deterministic.io.tables import (
     read_cc_output,
     write_cc_output,
 )
+from pyaesa.ar6_cc.deterministic.runner import _materialize_requested_output_format
 from pyaesa.ar6_cc.deterministic.io.paths import (
     get_cc_metadata_path,
     get_cc_output_path,
@@ -244,9 +245,8 @@ def test_dynamic_cc_titles_and_deterministic_figures_cover_edge_cases() -> None:
     assert ar6_category_color(category="C2") == "#2654D2"
     assert ar6_category_color(category="C3") == "#F39B1F"
     assert ar6_category_color(category="C4") == "#5A0418"
-    assert ar6_category_color(category="C3") != ar6_category_color(
-        category="C4",
-    )
+    colors = [ar6_category_color(category=f"C{index}") for index in range(1, 9)]
+    assert len(set(colors)) == 8
 
 
 def test_dynamic_cc_io_paths_cover_filters_and_formats(tmp_path: Path) -> None:
@@ -338,6 +338,72 @@ def test_dynamic_cc_io_paths_cover_filters_and_formats(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Unsupported output_format 'xlsx'"):
         write_cc_output(cc_table, tmp_path / "bad.xlsx", "xlsx")
+
+
+def test_materialize_requested_output_format_rejects_incomplete_metadata(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "cc.csv"
+    post_output = tmp_path / "cc_post.csv"
+    stored = tmp_path / "stored.parquet"
+    filtered = filter_pathways(
+        _pathway_frame(),
+        variable=NET_KYOTO_WO_AFOLU,
+        category=["C1"],
+        ssp_scenario=None,
+        subset_version=None,
+        processed_dir=tmp_path,
+    )
+    stored_table = build_cc_table(
+        filtered,
+        [2019, 2020],
+        cc_flow=CC_FLOW_NET,
+        cc_variable=NET_KYOTO_WO_AFOLU,
+    )
+    write_cc_output(stored_table, stored, "parquet")
+
+    assert not _materialize_requested_output_format(
+        payload={},
+        output_file=output,
+        post_study_output_file=None,
+        output_format="csv",
+    )
+    assert not _materialize_requested_output_format(
+        payload={"artifacts": {}},
+        output_file=output,
+        post_study_output_file=None,
+        output_format="csv",
+    )
+    assert not _materialize_requested_output_format(
+        payload={"artifacts": {"output_file": str(tmp_path / "missing.parquet")}},
+        output_file=output,
+        post_study_output_file=None,
+        output_format="csv",
+    )
+    assert _materialize_requested_output_format(
+        payload={"artifacts": {"output_file": str(stored)}},
+        output_file=output,
+        post_study_output_file=None,
+        output_format="csv",
+    )
+    assert output.exists()
+    assert not _materialize_requested_output_format(
+        payload={"artifacts": {"output_file": str(stored)}},
+        output_file=output,
+        post_study_output_file=post_output,
+        output_format="csv",
+    )
+    assert not _materialize_requested_output_format(
+        payload={
+            "artifacts": {
+                "output_file": str(stored),
+                "post_study_output_file": str(tmp_path / "missing_post.parquet"),
+            }
+        },
+        output_file=output,
+        post_study_output_file=post_output,
+        output_format="csv",
+    )
 
 
 def test_dynamic_cc_figures_cover_year_resolution_and_empty_scopes(

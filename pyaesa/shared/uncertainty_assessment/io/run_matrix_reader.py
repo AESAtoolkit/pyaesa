@@ -2,7 +2,6 @@
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -10,15 +9,16 @@ import pyarrow.parquet as pq
 
 from pyaesa.shared.uncertainty_assessment.io.formats import is_csv_compact_output
 from pyaesa.shared.uncertainty_assessment.io.summary_kernels import (
-    SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK,
+    summary_scan_max_numeric_cells,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     SparseRunRows,
-    read_run_interval_index,
-    uncertainty_table_columns,
+    sparse_run_row_numeric_bytes_per_row,
 )
-
-SPARSE_READ_BATCH_ROWS = 1_000_000
+from pyaesa.shared.uncertainty_assessment.io.csv_fragments import csv_run_fragment_input
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import read_run_interval_index
+from pyaesa.shared.uncertainty_assessment.io.tables import uncertainty_table_columns
+from pyaesa.shared.runtime.memory import memory_bounded_rows
 
 
 def iter_compact_run_matrix(
@@ -28,6 +28,7 @@ def iter_compact_run_matrix(
     column_count: int,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    max_rows_per_chunk: int | None = None,
 ):
     """Yield compact run matrix chunks as run indices and numeric values."""
     column_names = [str(index) for index in range(int(column_count))]
@@ -37,6 +38,7 @@ def iter_compact_run_matrix(
         column_names=column_names,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=max_rows_per_chunk,
     )
 
 
@@ -47,9 +49,15 @@ def iter_compact_run_matrix_columns(
     column_names: list[str],
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    max_rows_per_chunk: int | None = None,
 ):
     """Yield selected compact run matrix columns as run indices and values."""
-    batch_rows = max(1, SUMMARY_MAX_NUMERIC_CELLS_PER_BLOCK // max(1, len(column_names)))
+    batch_rows = max(
+        1,
+        summary_scan_max_numeric_cells(output_format=output_format) // max(1, len(column_names)),
+    )
+    if max_rows_per_chunk is not None:
+        batch_rows = min(batch_rows, max(1, int(max_rows_per_chunk)))
     intervals = _run_intervals_in_range(
         path=path,
         output_format=output_format,
@@ -103,13 +111,10 @@ def iter_sparse_run_rows(
     output_format: str,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    max_rows_per_chunk: int | None = None,
 ):
     """Yield sparse run row chunks without splitting one run across chunks."""
-    value_column = _sparse_value_column_from_names(
-        columns=uncertainty_table_columns(path=path, output_format=output_format),
-        path=path,
-        output_format=output_format,
-    )
+    value_column = str(uncertainty_table_columns(path=path, output_format=output_format)[2])
     intervals = _run_intervals_in_range(
         path=path,
         output_format=output_format,
@@ -128,6 +133,7 @@ def iter_sparse_run_rows(
             path=path,
             intervals=intervals,
             value_column=value_column,
+            max_rows_per_chunk=max_rows_per_chunk,
         )
     else:
         chunks = _iter_parquet_sparse_interval_chunks(
@@ -135,6 +141,7 @@ def iter_sparse_run_rows(
             output_format=output_format,
             intervals=intervals,
             value_column=value_column,
+            max_rows_per_chunk=max_rows_per_chunk,
         )
     for chunk in chunks:
         work = (
@@ -182,11 +189,13 @@ def _iter_csv_sparse_interval_chunks(
     path: Path,
     intervals: pd.DataFrame,
     value_column: str,
+    max_rows_per_chunk: int | None,
 ):
+    batch_rows = _bounded_sparse_read_batch_rows(max_rows_per_chunk=max_rows_per_chunk)
     for frame in _iter_csv_interval_frames(
         path=path,
         intervals=intervals,
-        chunksize=SPARSE_READ_BATCH_ROWS,
+        chunksize=batch_rows,
     ):
         yield _sparse_rows_from_frame(
             frame=frame,
@@ -200,11 +209,13 @@ def _iter_parquet_sparse_interval_chunks(
     output_format: str,
     intervals: pd.DataFrame,
     value_column: str,
+    max_rows_per_chunk: int | None,
 ):
+    batch_rows = _bounded_sparse_read_batch_rows(max_rows_per_chunk=max_rows_per_chunk)
     for batch in _iter_parquet_interval_batches(
         path=path,
         intervals=intervals,
-        batch_size=SPARSE_READ_BATCH_ROWS,
+        batch_size=batch_rows,
     ):
         yield SparseRunRows(
             run_index=batch.column("run_index")
@@ -220,6 +231,53 @@ def _iter_parquet_sparse_interval_chunks(
         )
 
 
+def sparse_run_row_read_batch_rows() -> int:
+    """Return the dynamic row budget for sparse run row scans."""
+    numeric_row_bytes = sparse_run_row_numeric_bytes_per_row()
+    row_bytes = numeric_row_bytes * len(
+        ("reader_columns", "sparse_rows", "pending_rows")
+    ) + np.dtype(np.bool_).itemsize * len(("ready_mask", "pending_mask", "range_mask"))
+    return memory_bounded_rows(
+        bytes_per_row=row_bytes,
+    )
+
+
+def sparse_run_rows_per_run_window(
+    *,
+    path: Path,
+    output_format: str,
+    batch_size: int,
+) -> int:
+    """Return the row cap for reading one sparse run window plus its boundary run."""
+    return max(
+        1,
+        sparse_run_rows_per_run(path=path, output_format=output_format) * (int(batch_size) + 1),
+    )
+
+
+def sparse_run_rows_per_run(
+    *,
+    path: Path,
+    output_format: str,
+) -> int:
+    """Return the largest emitted sparse row count for one completed run."""
+    intervals = read_run_interval_index(path=path, output_format=output_format)
+    if intervals.empty:
+        return 1
+    run_counts = intervals["run_stop"].to_numpy(dtype=np.int64) - intervals["run_start"].to_numpy(
+        dtype=np.int64
+    )
+    row_counts = intervals["row_count"].to_numpy(dtype=np.int64)
+    return max(1, int(np.ceil(np.max(row_counts / np.maximum(run_counts, 1)))))
+
+
+def _bounded_sparse_read_batch_rows(*, max_rows_per_chunk: int | None) -> int:
+    rows = sparse_run_row_read_batch_rows()
+    if max_rows_per_chunk is None:
+        return rows
+    return min(rows, max(1, int(max_rows_per_chunk)))
+
+
 def _iter_csv_interval_frames(
     *,
     path: Path,
@@ -227,25 +285,18 @@ def _iter_csv_interval_frames(
     chunksize: int,
     usecols: list[str] | None = None,
 ):
-    row_start, row_count = _csv_interval_row_window(intervals=intervals)
-    if row_count == 0:
-        return
-    yield from pd.read_csv(
-        path,
-        usecols=usecols,
-        skiprows=cast(Any, range(1, row_start + 1)),
-        nrows=row_count,
-        chunksize=int(chunksize),
-    )
-
-
-def _csv_interval_row_window(*, intervals: pd.DataFrame) -> tuple[int, int]:
-    if intervals.empty:
-        return 0, 0
-    starts = intervals["row_start"].to_numpy(dtype=np.int64)
-    stops = starts + intervals["row_count"].to_numpy(dtype=np.int64)
-    row_start = int(starts.min())
-    return row_start, int(stops.max()) - row_start
+    for fragment_path in _interval_fragment_paths(
+        path=path,
+        intervals=intervals,
+        output_format="csv_compact",
+    ):
+        with csv_run_fragment_input(path=fragment_path) as source:
+            yield from pd.read_csv(
+                source,
+                usecols=usecols,
+                chunksize=int(chunksize),
+                float_precision="round_trip",
+            )
 
 
 def _iter_parquet_interval_batches(
@@ -255,9 +306,24 @@ def _iter_parquet_interval_batches(
     batch_size: int,
     columns: list[str] | None = None,
 ):
-    for fragment in intervals["fragment"].astype(str):
-        parquet = pq.ParquetFile(path / str(fragment))
+    for fragment_path in _interval_fragment_paths(
+        path=path,
+        intervals=intervals,
+        output_format="parquet",
+    ):
+        parquet = pq.ParquetFile(fragment_path)
         yield from parquet.iter_batches(batch_size=int(batch_size), columns=columns)
+
+
+def _interval_fragment_paths(
+    *,
+    path: Path,
+    intervals: pd.DataFrame,
+    output_format: str,
+):
+    del output_format
+    for fragment in intervals["fragment"].astype(str):
+        yield Path(path) / fragment
 
 
 def iter_sparse_run_row_windows(
@@ -330,23 +396,6 @@ def _sparse_rows_from_frame(
         values=frame[value_column].to_numpy(dtype=np.float64),
         value_column=value_column,
     )
-
-
-def _sparse_value_column_from_names(
-    *,
-    columns: list[str],
-    path: Path,
-    output_format: str,
-) -> str:
-    """Return the run value column name after identity columns."""
-    value_columns = [column for column in columns if column not in {"run_index", "public_row_id"}]
-    if len(value_columns) != 1:
-        raise ValueError(
-            "Sparse uncertainty run rows require exactly one value column after "
-            f"'run_index' and 'public_row_id'. File={path}. "
-            f"output_format={output_format}. Observed value columns={value_columns}."
-        )
-    return str(value_columns[0])
 
 
 def _collect_sparse_rows_for_window(

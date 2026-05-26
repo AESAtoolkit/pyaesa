@@ -31,7 +31,7 @@ def _run_deterministic_io_lca(*, io_lca_dummy_repo, refresh: bool):
         r_f=["FR", "DE"],
         upstream_analysis=True,
         upstream_stages=1,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=False,
         refresh=refresh,
@@ -50,7 +50,7 @@ def test_io_lca_progress_helpers_use_count_only_live_lines(capsys) -> None:
     assert "indices=s_p=Electricity, r_c=FR" in io_lca_mode_line(
         source="source", fu_code="L2.c.b", filters=filters, mode_tag=None
     )
-    assert "aggreg_indices=post" in io_lca_mode_line(
+    assert "group_indices=post" in io_lca_mode_line(
         source="source", fu_code="L2.c.b", filters=filters, mode_tag="post"
     )
 
@@ -106,8 +106,8 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
     assert metadata_payload["execution"]["complete"] is True
 
     main_path = report.main_result_paths[0]
-    ungrouped_main = pd.read_csv(main_path)
-    assert ungrouped_main.columns.tolist() == [
+    unaggregated_main = pd.read_csv(main_path)
+    assert unaggregated_main.columns.tolist() == [
         "lcia_method",
         "year",
         "impact",
@@ -115,9 +115,9 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
         "lca_value",
         "impact_unit",
     ]
-    ungrouped_values = ungrouped_main.sort_values(["impact", "r_f"])["lca_value"].tolist()
-    assert ungrouped_values == [43.0, 11.0, 32.0, 9.0]
-    assert set(ungrouped_main["impact"]) == {"AAL", "BI FD"}
+    unaggregated_values = unaggregated_main.sort_values(["impact", "r_f"])["lca_value"].tolist()
+    assert unaggregated_values == [43.0, 11.0, 32.0, 9.0]
+    assert set(unaggregated_main["impact"]) == {"AAL", "BI FD"}
 
     origin_ratio_path = next(path for path in report.origin_paths if "ratio" in path.name)
     origin_ratio = pd.read_csv(origin_ratio_path)
@@ -127,10 +127,10 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
     )
     assert ratio_totals.tolist() == pytest.approx([1.0] * len(ratio_totals))
 
-    ungrouped_stage_path = report.stage_paths[0]
-    ungrouped_stage = pd.read_csv(ungrouped_stage_path)
-    assert "r_f" in ungrouped_stage.columns
-    assert "direct_final_demand_FY" in set(ungrouped_stage["stage"])
+    unaggregated_stage_path = report.stage_paths[0]
+    unaggregated_stage = pd.read_csv(unaggregated_stage_path)
+    assert "r_f" in unaggregated_stage.columns
+    assert "direct_final_demand_FY" in set(unaggregated_stage["stage"])
 
     reused_report = _run_deterministic_io_lca(
         io_lca_dummy_repo=io_lca_dummy_repo,
@@ -161,7 +161,7 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
             r_f=["FR", "DE"],
             upstream_analysis=True,
             upstream_stages=1,
-            aggreg_indices=True,
+            group_indices=True,
             output_format="csv",
             figures=False,
             refresh=False,
@@ -176,7 +176,7 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
             r_f=["FR", "DE"],
             upstream_analysis=True,
             upstream_stages=1,
-            aggreg_indices=True,
+            group_indices=True,
             output_format="csv",
             figures=False,
             refresh=True,
@@ -200,7 +200,7 @@ def test_deterministic_io_lca_covers_pba_aggregated_upstream_and_missing_output_
         r_p=["FR", "DE"],
         upstream_analysis=True,
         upstream_stages=1,
-        aggreg_indices=True,
+        group_indices=True,
         output_format="csv",
         figures=False,
         refresh=True,
@@ -258,7 +258,7 @@ def test_deterministic_io_lca_generates_figures_when_requested(io_lca_dummy_repo
         "fu_code": "L1.a",
         "r_f": ["FR", "DE"],
         "upstream_analysis": False,
-        "aggreg_indices": False,
+        "group_indices": False,
         "output_format": "csv",
     }
     report = deterministic_io_lca(
@@ -326,7 +326,7 @@ def test_deterministic_io_lca_generates_single_year_figures_when_requested(
         fu_code="L1.a",
         r_f=["FR"],
         upstream_analysis=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
@@ -360,7 +360,7 @@ def test_deterministic_io_lca_public_figures_cover_odd_multi_impact_multi_year(
         fu_code="L1.a",
         r_f=["FR"],
         upstream_analysis=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
@@ -379,7 +379,7 @@ def test_deterministic_io_lca_public_figures_cover_odd_multi_impact_multi_year(
         fu_code="L1.a",
         r_f=["FR"],
         upstream_analysis=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
@@ -410,7 +410,7 @@ def test_deterministic_io_lca_public_figures_cover_single_impact_layout(
         fu_code="L1.a",
         r_f=["FR"],
         upstream_analysis=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
@@ -432,7 +432,7 @@ def test_deterministic_io_lca_public_figures_return_no_paths_without_renderable_
         fu_code="L1.a",
         r_f=["FR"],
         upstream_analysis=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
@@ -452,7 +452,7 @@ def test_build_io_lca_summary_covers_multi_folder_branches(tmp_path: Path) -> No
         covered_origin_years={2019},
         covered_stage_years={2020},
         skipped_method_years={},
-        aggreg_indices=False,
+        group_indices=False,
         upstream_analysis=True,
         stage_outputs_enabled=True,
         reuse_status="computed",
@@ -474,7 +474,7 @@ def test_deterministic_io_lca_validation_errors_are_public_and_fail_fast() -> No
             years=[2019],
             lcia_method="pb_lcia",
             fu_code="L1.a",
-            aggreg_indices=cast(Any, "both"),
+            group_indices=cast(Any, "both"),
             figures=False,
         )
 

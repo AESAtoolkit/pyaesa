@@ -56,14 +56,14 @@ def existing_scoped_stats_paths(
     proj_base: Path,
     output_format: str,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> list[Path]:
     """Return the deterministic regression stats path when it exists."""
     suffix = suffix_for_output_format(output_format=output_format)
     logs_dir = _get_allocate_logs_dir(
         proj_base,
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     if not logs_dir.exists():
         return []
@@ -78,54 +78,6 @@ def _reorder_fit_inputs_columns(frame: pd.DataFrame) -> pd.DataFrame:
         if column not in out.columns:
             out[column] = pd.NA
     return out.loc[:, _FIT_INPUT_OUTPUT_COLUMNS]
-
-
-def _fit_windows_in_frame(*, frame: pd.DataFrame, label: str) -> set[tuple[int, int]]:
-    """Return fit window tuples present in one frame."""
-    if frame.empty:
-        return set()
-    missing = [column for column in ("fit_start_year", "fit_end_year") if column not in frame]
-    if missing:
-        raise ValueError(f"{label} is missing required regression key columns: {missing}.")
-    return {
-        (int(fit_start_year), int(fit_end_year))
-        for fit_start_year, fit_end_year in frame.loc[
-            :, ["fit_start_year", "fit_end_year"]
-        ].itertuples(index=False, name=None)
-    }
-
-
-def _resolve_single_fit_window(*, windows: set[tuple[int, int]]) -> tuple[int, int] | None:
-    """Return unique fit window or fail fast on mixed windows."""
-    if not windows:
-        return None
-    if len(windows) == 1:
-        return next(iter(windows))
-    sample = sorted(windows)[:5]
-    raise ValueError(
-        "Regression diagnostics rows span multiple fit windows in one write call: "
-        f"{sample}. Split writes per fit window."
-    )
-
-
-def _resolve_fit_window_for_write(
-    *,
-    stats_frame: pd.DataFrame,
-    uncertainty_frame: pd.DataFrame,
-    fit_inputs_frame: pd.DataFrame,
-) -> tuple[int, int] | None:
-    """Resolve strict single fit window for one write call."""
-    windows: set[tuple[int, int]] = set()
-    windows |= _fit_windows_in_frame(frame=stats_frame, label="regression_stats_rows")
-    windows |= _fit_windows_in_frame(
-        frame=uncertainty_frame,
-        label="regression_uncertainty_rows",
-    )
-    windows |= _fit_windows_in_frame(
-        frame=fit_inputs_frame,
-        label="regression_fit_inputs_rows",
-    )
-    return _resolve_single_fit_window(windows=windows)
 
 
 def _write_regression_columns_defs(*, stats_path: Path) -> None:

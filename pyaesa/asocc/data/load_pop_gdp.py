@@ -1,4 +1,4 @@
-"""Helpers for loading and grouping processed pop/gdp tables."""
+"""Helpers for loading and applying aggregation to processed pop/gdp tables."""
 
 from pathlib import Path
 from typing import Optional
@@ -6,10 +6,10 @@ from collections.abc import Sequence
 
 import pandas as pd
 
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path
 
 from .source_schema import region_code_column_for_source
-from .region_group_mapping import load_region_group_mapping
+from .region_agg_mapping import load_region_agg_mapping
 
 
 def _load_processed_table(path: Path) -> pd.DataFrame:
@@ -83,47 +83,47 @@ def _select_variable(df: pd.DataFrame, variable: str) -> pd.DataFrame:
     return pd.DataFrame(df.loc[df["variable"] == variable].copy(), copy=False)
 
 
-def _apply_grouping_to_series(
+def _apply_aggregation_to_series(
     series: pd.Series,
     *,
     source_key: str,
-    group_version: Optional[str],
+    agg_version: Optional[str],
 ) -> pd.Series:
-    """Apply MRIO region grouping to a series.
+    """Apply MRIO region aggregation to a series.
 
     Args:
         series: Series indexed by MRIO region codes.
         source_key: MRIO source key.
-        group_version: Grouping version tag.
+        agg_version: Aggregation and disaggregation version tag.
 
     Returns:
-        Grouped Series.
+        Aggregated Series.
     """
-    if not group_version:
+    if not agg_version:
         return series
-    # Grouping is label based: values are summed only when multiple original
-    # regions map to the same grouped region.
-    mapping = load_region_group_mapping(
+    # Aggregation is label based: values are summed only when multiple original
+    # regions map to the same aggregated region.
+    mapping = load_region_agg_mapping(
         source_key=source_key,
-        group_version=group_version,
+        agg_version=agg_version,
     )
-    grouped = series.copy()
-    missing = sorted({str(idx) for idx in grouped.index if idx not in mapping})
+    aggregated = series.copy()
+    missing = sorted({str(idx) for idx in aggregated.index if idx not in mapping})
     if missing:
         sample = missing[:10]
-        map_path = _get_group_map_path(
+        map_path = _get_agg_map_path(
             source_key,
             kind="reg",
-            group_version=group_version,
+            agg_version=agg_version,
         )
         raise ValueError(
-            "Grouping map is missing MRIO labels required by pop/gdp data. "
+            "Aggregation map is missing MRIO labels required by pop/gdp data. "
             f"Missing labels (sample): {sample}. CSV: {map_path}"
         )
-    grouped.index = grouped.index.map(mapping.__getitem__)
-    if not grouped.index.is_unique:
-        grouped = pd.Series(grouped.groupby(level=0).sum(min_count=1), copy=False)
-    return pd.Series(grouped, copy=False)
+    aggregated.index = aggregated.index.map(mapping.__getitem__)
+    if not aggregated.index.is_unique:
+        aggregated = pd.Series(aggregated.groupby(level=0).sum(min_count=1), copy=False)
+    return pd.Series(aggregated, copy=False)
 
 
 def _get_series_for_year(
@@ -132,7 +132,7 @@ def _get_series_for_year(
     variable: str,
     year: int,
     source_key: str,
-    group_version: Optional[str],
+    agg_version: Optional[str],
     ssp_scenario: Optional[str] = None,
     region_col_override: Optional[str] = None,
 ) -> pd.Series:
@@ -143,7 +143,7 @@ def _get_series_for_year(
         variable: Variable name.
         year: Year of interest.
         source_key: MRIO source key.
-        group_version: Grouping version tag.
+        agg_version: Aggregation and disaggregation version tag.
         ssp_scenario: Optional SSP scenario.
 
     Returns:
@@ -183,10 +183,10 @@ def _get_series_for_year(
                     "Processed pop/gdp SSP scenario rows are not unique for region labels. "
                     f"Duplicate labels: {sample}.{_source_csv_hint(df_var)}"
                 )
-            return _apply_grouping_to_series(
+            return _apply_aggregation_to_series(
                 series,
                 source_key=source_key,
-                group_version=group_version,
+                agg_version=agg_version,
             )
         # Preserve SSP scenario + region index so caller can route WB/SSP data by year.
         series = _numeric_indexed_series(
@@ -201,12 +201,12 @@ def _get_series_for_year(
             "Processed pop/gdp rows are not unique for the selected index labels. "
             f"Duplicate labels: {sample}.{_source_csv_hint(df_var)}"
         )
-    grouped = _apply_grouping_to_series(
+    aggregated = _apply_aggregation_to_series(
         series,
         source_key=source_key,
-        group_version=group_version,
+        agg_version=agg_version,
     )
-    return grouped
+    return aggregated
 
 
 def _get_pr_iso3_inputs(

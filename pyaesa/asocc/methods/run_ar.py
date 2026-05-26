@@ -204,7 +204,7 @@ def _compute_ar_l1_result(
             available_years=context.historical_years,
             reference_year=ref_year,
             source_key=context.source,
-            group_version_reg=context.group_version_reg,
+            agg_version_reg=context.agg_version_reg,
             l1_reg_aggreg=context.l1_reg_aggreg,
             region_label_override=region_label_override,
             index_cache=state.output_index_level_cache,
@@ -237,7 +237,7 @@ def _compute_ar_l1_result(
             available_years=context.historical_years,
             reference_year=ref_year,
             source_key=context.source,
-            group_version_reg=context.group_version_reg,
+            agg_version_reg=context.agg_version_reg,
             l1_reg_aggreg=context.l1_reg_aggreg,
             region_label_override=region_label_override,
         )

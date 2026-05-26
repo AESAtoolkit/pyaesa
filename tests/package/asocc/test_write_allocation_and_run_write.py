@@ -160,9 +160,9 @@ def _context(
         source="oecd_v2025",
         output_source_label=output_source_label,
         output_source=published_source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         fu_code="L1.a",
         lcia_method=["pb_lcia"],
         years_input=[2020],
@@ -179,7 +179,7 @@ def _context(
         ssp_scenario=None,
         variant_tag=None,
         run_signature={"source": "oecd_v2025", "years": [2020], "methods": ["UT(FD)"]},
-        aggreg_indices=False,
+        group_indices=False,
         l1_reg_aggreg="post",
         output_format="csv",
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
@@ -310,7 +310,7 @@ def test_write_l2_outputs_expand_l2_in_l1_years_for_historical_reuse(tmp_path: P
         _get_asocc_l2_dir(
             proj_base=context.proj_base,
             source=context.output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
             bucket="l2_in_l1",
             lcia_sub=None,
         )
@@ -517,7 +517,7 @@ def test_write_stage_covers_intermediate_skip_and_write_metadata_toggle(
     metadata_path = _get_allocate_run_metadata_path(
         tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     assert not metadata_path.exists()
 
@@ -602,7 +602,7 @@ def test_write_allocation_covers_l1_l2_loops_and_metadata_commit(
     metadata_path = _get_allocate_run_metadata_path(
         tmp_path,
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
     assert metadata_path.exists()
     metadata = _load_run_metadata(metadata_path)

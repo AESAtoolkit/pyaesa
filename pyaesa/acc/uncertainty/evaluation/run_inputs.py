@@ -29,6 +29,7 @@ def iter_asocc_compact_values(
     public_row_count: int,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    max_rows_per_chunk: int | None = None,
 ):
     """Yield compact aSoCC run matrix chunks."""
     yield from iter_compact_run_matrix(
@@ -37,6 +38,7 @@ def iter_asocc_compact_values(
         column_count=public_row_count,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=max_rows_per_chunk,
     )
 
 
@@ -47,6 +49,7 @@ def iter_asocc_values(
     public_row_count: int,
     start_run_index: int,
     stop_run_index: int,
+    batch_size: int | None = None,
 ):
     """Yield aSoCC value chunks from fixed deterministic or compact uncertainty rows."""
     if asocc_input.manifest is not None:
@@ -59,6 +62,7 @@ def iter_asocc_values(
             public_row_count=public_row_count,
             start_run_index=start_run_index,
             stop_run_index=stop_run_index,
+            max_rows_per_chunk=batch_size,
         )
         return
     fixed_values = cast(np.ndarray, asocc_input.deterministic_values)

@@ -6,7 +6,10 @@ import pandas as pd
 
 from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioPlan
 from pyaesa.asocc.uncertainty.sources.projection import build_projection_plan
-from pyaesa.shared.uncertainty_assessment.sobol.plan import SobolPlan
+from pyaesa.shared.uncertainty_assessment.sobol.plan import (
+    SobolPlan,
+    selected_sobol_output_years,
+)
 
 
 def selected_sobol_years(
@@ -15,17 +18,10 @@ def selected_sobol_years(
     requested_years: tuple[int, ...],
 ) -> tuple[int, ...]:
     """Return selected aSoCC output years evaluated by Sobol analysis."""
-    studied = tuple(sorted({int(year) for year in requested_years}))
-    if plan.sobol_years is not None:
-        requested = set(plan.sobol_years)
-        missing = sorted(requested - set(studied))
-        if missing:
-            raise ValueError(
-                "sobol_parameters.sobol_years must be selected from the studied aSoCC years. "
-                f"Unsupported year(s): {missing}."
-            )
-        return tuple(year for year in studied if year in requested)
-    return tuple(dict.fromkeys((studied[0], studied[-1])))
+    return selected_sobol_output_years(
+        plan=plan,
+        available_years=requested_years,
+    )
 
 
 def loaded_for_sobol_years(*, loaded, selected_years: tuple[int, ...]):

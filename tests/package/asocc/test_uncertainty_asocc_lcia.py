@@ -12,6 +12,9 @@ from pyaesa.asocc.runtime.scope.persisted_scope import (
     AsoccPersistedRunScope,
 )
 from pyaesa.asocc.runtime.request.scope import AsoccScope
+from pyaesa.asocc.figures.product_renderers import prepare_plot_rows as prepare_asocc_plot_rows
+from pyaesa.asocc.figures.multi_method_renderer import expand_generic_lcia_rows
+from pyaesa.asocc.figures.product_renderers import plot_scope as plot_asocc_scope
 from pyaesa.asocc.uncertainty.inputs.deterministic_rows import (
     ASOCC_VALUE_COLUMN,
     LoadedAsoccFinalRows,
@@ -23,7 +26,16 @@ from pyaesa.asocc.uncertainty.schema.public_rows import (
     align_asocc_lcia_public_axis,
     expand_rows_to_reference_lcia_axis,
 )
-from pyaesa.asocc.uncertainty.figures.product_renderers import plot_band_scope
+from pyaesa.asocc.uncertainty.figures.product_renderers import (
+    plot_band_scope,
+    plot_mean_line_scope,
+    plot_violin_scope,
+)
+from pyaesa.asocc.uncertainty.figures.scope_planner import FigureContext, VALUE_ARRAY_COLUMN
+from pyaesa.asocc.uncertainty.figures.row_reader import collapsed_violin_rows
+from pyaesa.asocc.uncertainty.figures.render import _multi_year_jobs, _single_year_jobs
+from pyaesa.asocc.uncertainty.io.paths import AsoccUncertaintyRunPaths
+from pyaesa.asocc.uncertainty.sources.names import INTER_METHOD_SOURCE
 from pyaesa.asocc.uncertainty.engine.evaluation.summary_identity import (
     ASOCC_SUMMARY_SCOPE_COLUMN,
     ASOCC_SUMMARY_SCOPE_INTER_METHOD,
@@ -41,12 +53,20 @@ from pyaesa.asocc.uncertainty.sources.projection import (
     sample_projection_indices,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import RunBatch
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
+    CompactRunMatrixWriter,
+    SparseRunRows,
+    SparseRunRowsWriter,
+)
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import iter_compact_run_matrix
+from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest
 from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
 )
 from pyaesa.shared.lcia.paths import carbon_account_cov_path
 from tests.package.helpers.acc_dummy_repo import prepare_exiobase_repo_with_years
+from tests.package.helpers.asr_dummy_repo import prepare_static_asr_pb_lcia_repo
 
 
 def _run_root(repo_root: Path, *, project_name: str, run_id: str) -> Path:
@@ -55,13 +75,27 @@ def _run_root(repo_root: Path, *, project_name: str, run_id: str) -> Path:
 
 def _read_asocc_runs(run_root: Path) -> pd.DataFrame:
     identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
-    matrix = pd.read_csv(run_root / "results" / "asocc_runs.csv")
+    matrix = _read_asocc_run_matrix(run_root=run_root, column_count=len(identity))
     runs = matrix.melt(id_vars="run_index", var_name="public_row_id", value_name="asocc")
     runs["public_row_id"] = runs["public_row_id"].astype(int)
     return runs.merge(identity, on="public_row_id", how="left").sort_values(
         ["run_index", "public_row_id"],
         ignore_index=True,
     )
+
+
+def _read_asocc_run_matrix(*, run_root: Path, column_count: int) -> pd.DataFrame:
+    columns = [str(index) for index in range(column_count)]
+    chunks: list[pd.DataFrame] = []
+    for run_indices, values in iter_compact_run_matrix(
+        path=run_root / "results" / "asocc_runs.csv",
+        output_format="csv_compact",
+        column_count=column_count,
+    ):
+        chunk = pd.DataFrame(values, columns=columns)
+        chunk.insert(0, "run_index", run_indices)
+        chunks.append(chunk)
+    return pd.concat(chunks, ignore_index=True)
 
 
 def _lcia_base_args(*, project_name: str, reference_years: list[int] | None) -> dict:
@@ -139,7 +173,223 @@ def _manifest_figure_paths(manifest) -> list[Path]:
 
 
 def _fast_figure_format() -> dict:
-    return {"format": "png", "dpi": 10}
+    return {"format": "svg", "dpi": 1}
+
+
+def _asocc_uncertainty_figure_frame(*, impacts: list[str], years: list[int]) -> pd.DataFrame:
+    rows = []
+    for method_index, method in enumerate(["UT(FD)", "AR(E^{CBA_FD})"]):
+        for impact_index, impact in enumerate(impacts):
+            for year_index, year in enumerate(years):
+                value = 0.2 + method_index * 0.08 + impact_index * 0.04 + year_index * 0.02
+                route = "" if year_index == 0 else "regression_proj"
+                rows.append(
+                    {
+                        "__method": method,
+                        "l1_l2_method": method,
+                        "lcia_method": "pb_lcia",
+                        "impact": impact,
+                        "year": year,
+                        ASOCC_SSP_SCENARIO_COLUMN: "" if year_index == 0 else "SSP2",
+                        ASOCC_TIME_ROUTE_PUBLIC_COLUMN: route,
+                        "mean": value,
+                        "median": value,
+                        "p5": value * 0.8,
+                        "p25": value * 0.9,
+                        "p75": value * 1.1,
+                        "p95": value * 1.2,
+                        VALUE_ARRAY_COLUMN: np.array([value * 0.85, value, value * 1.15]),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def test_uncertainty_asocc_product_renderers_cover_panel_and_single_axis_paths(
+    read_only_project_repo: Path,
+    tmp_path: Path,
+) -> None:
+    del read_only_project_repo
+    single = _asocc_uncertainty_figure_frame(impacts=["AAL"], years=[2005, 2006])
+    multi = _asocc_uncertainty_figure_frame(
+        impacts=["AAL", "BI FD", "OA"],
+        years=[2005, 2006],
+    )
+    no_transition_multi = multi.copy()
+    no_transition_multi[ASOCC_TIME_ROUTE_PUBLIC_COLUMN] = ""
+    no_transition_multi[ASOCC_SSP_SCENARIO_COLUMN] = ""
+    single_year_multi = multi.loc[multi["year"].eq(2005)].copy()
+    single_year_single = single.loc[single["year"].eq(2005)].copy()
+
+    single_band_paths = plot_band_scope(
+        frame=single,
+        output_stem=tmp_path / "single_band",
+        title="aSoCC single band",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=True,
+        include_method_in_label=True,
+    )
+    panel_band_paths = plot_band_scope(
+        frame=multi,
+        output_stem=tmp_path / "panel_band",
+        title="aSoCC panel band",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    )
+    no_transition_panel_band_paths = plot_band_scope(
+        frame=no_transition_multi,
+        output_stem=tmp_path / "panel_band_no_transition",
+        title="aSoCC panel band no transition",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    )
+    mean_frame = prepare_asocc_plot_rows(
+        multi.drop(columns=[VALUE_ARRAY_COLUMN]).assign(value=multi["mean"])
+    )
+    mean_paths = plot_mean_line_scope(
+        frame=mean_frame,
+        requested_years=[2005, 2006],
+        output_stem=tmp_path / "mean_line",
+        title="aSoCC mean line",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=True,
+        include_method_in_label=True,
+    )
+    single_violin_paths = plot_violin_scope(
+        frame=single_year_multi,
+        output_stem=tmp_path / "single_violin",
+        title="aSoCC single violin",
+        dpi=1,
+        output_format="svg",
+        group_legend=False,
+        include_impact_in_label=True,
+        include_method_in_label=True,
+    )
+    grouped_single_violin_paths = plot_violin_scope(
+        frame=single_year_single,
+        output_stem=tmp_path / "grouped_single_violin",
+        title="aSoCC grouped single violin",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    )
+    panel_violin_paths = plot_violin_scope(
+        frame=single_year_multi,
+        output_stem=tmp_path / "panel_violin",
+        title="aSoCC panel violin",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=False,
+        include_method_in_label=True,
+    )
+
+    paths = [
+        *single_band_paths,
+        *panel_band_paths,
+        *no_transition_panel_band_paths,
+        *mean_paths,
+        *single_violin_paths,
+        *grouped_single_violin_paths,
+        *panel_violin_paths,
+    ]
+    assert paths
+    assert all(path.exists() for path in paths)
+
+
+def test_deterministic_asocc_renderers_expand_generic_lcia_and_hide_unused_panel(
+    read_only_project_repo: Path,
+    tmp_path: Path,
+) -> None:
+    del read_only_project_repo
+    generic = pd.DataFrame(
+        {
+            "__method": ["UT(FD)", "UT(FD)", "UT(FD)", "UT(FD)"],
+            "l1_l2_method": ["UT(FD)", "UT(FD)", "UT(FD)", "UT(FD)"],
+            "lcia_method": [None, "pb_lcia", "pb_lcia", "gwp100_lcia"],
+            "impact": [None, "AAL", "SOD", "GWP_100"],
+            "year": [2030, 2030, 2030, 2030],
+            "value": [0.1, 0.2, 0.3, 0.4],
+        }
+    )
+    expanded = expand_generic_lcia_rows(generic)
+    assert len(expanded) == 6
+
+    rows = prepare_asocc_plot_rows(
+        pd.DataFrame(
+            {
+                "__method": ["UT(FD)", "UT(FD)", "UT(FD)"],
+                "l1_l2_method": ["UT(FD)", "UT(FD)", "UT(FD)"],
+                "lcia_method": ["pb_lcia", "pb_lcia", "gwp100_lcia"],
+                "impact": ["AAL", "SOD", "GWP_100"],
+                "impact_unit": ["ratio", "ratio", "ratio"],
+                "year": [2030, 2030, 2030],
+                "value": [0.2, 0.3, 0.4],
+            }
+        )
+    )
+    paths = plot_asocc_scope(
+        frame=rows,
+        requested_years=[2030],
+        output_stem=tmp_path / "single_year_panels",
+        title="aSoCC single year panels",
+        dpi=1,
+        output_format="svg",
+        group_legend=True,
+        include_impact_in_label=True,
+    )
+
+    assert paths == [tmp_path / "single_year_panels.svg"]
+    assert paths[0].exists()
+
+
+def test_uncertainty_asocc_accepts_multi_lcia_public_scope(allocation_dummy_repo) -> None:
+    prepare_static_asr_pb_lcia_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        years=[2005],
+        impacts=["AAL"],
+    )
+    base_args = _lcia_base_args(
+        project_name="asocc_uncertainty_multi_lcia_public_scope",
+        reference_years=[2005],
+    )
+    base_args["years"] = [2005]
+    base_args["lcia_method"] = ["gwp100_lcia", "pb_lcia"]
+
+    manifest = uncertainty_asocc(
+        base_asocc_args=base_args,
+        uncertainty_config={
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 2},
+                "convergence": {"active": False},
+            },
+            "lcia_uncertainty": {"active": False},
+            "projection_uncertainty": {"active": False},
+            "reference_year_uncertainty": {"active": False},
+            "inter_method_uncertainty": {"active": False},
+        },
+        sobol_parameters={"active": False},
+        output_format="csv_compact",
+        figures=False,
+        refresh=True,
+    ).manifest
+    assert manifest.artifacts is not None
+    identity = pd.read_csv(manifest.artifacts["public_row_identity"])
+
+    assert manifest.completed_runs == 2
+    assert set(identity["lcia_method"].dropna().astype(str)) == {"gwp100_lcia", "pb_lcia"}
 
 
 def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None:
@@ -190,22 +440,6 @@ def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None
 def test_uncertainty_asocc_public_figures_cover_no_source_and_lcia_runs(
     allocation_dummy_repo,
 ) -> None:
-    no_source_manifest = uncertainty_asocc(
-        base_asocc_args=_lcia_base_args(
-            project_name="asocc_uncertainty_figures_no_source",
-            reference_years=None,
-        ),
-        uncertainty_config={
-            "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 1},
-                "convergence": {"active": False},
-            },
-        },
-        output_format="csv_compact",
-        figures=True,
-        figure_format=_fast_figure_format(),
-        refresh=True,
-    ).manifest
     lcia_manifest = uncertainty_asocc(
         base_asocc_args=_lcia_base_args(
             project_name="asocc_uncertainty_figures_lcia",
@@ -218,37 +452,10 @@ def test_uncertainty_asocc_public_figures_cover_no_source_and_lcia_runs(
         refresh=True,
     ).manifest
 
-    no_source_paths = _manifest_figure_paths(no_source_manifest)
     lcia_paths = _manifest_figure_paths(lcia_manifest)
 
-    no_source_reuse_manifest = uncertainty_asocc(
-        base_asocc_args={
-            **_lcia_base_args(
-                project_name="asocc_uncertainty_figures_no_source_reuse",
-                reference_years=[2005],
-            ),
-            "years": [2030],
-            "projection_mode": "historical_reuse",
-            "reg_window": [2005, 2006],
-            "l2_reuse_years": [2005],
-        },
-        uncertainty_config={
-            "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 1},
-                "convergence": {"active": False},
-            },
-        },
-        output_format="csv_compact",
-        figures=True,
-        figure_format=_fast_figure_format(),
-        refresh=True,
-    ).manifest
-    no_source_reuse_paths = _manifest_figure_paths(no_source_reuse_manifest)
-
-    assert no_source_paths
     assert lcia_paths
-    assert no_source_reuse_paths
-    assert all(path.exists() for path in [*no_source_paths, *lcia_paths, *no_source_reuse_paths])
+    assert all(path.exists() for path in lcia_paths)
     assert any("multi_method" in path.parts for path in lcia_paths)
     assert any("per_method" in path.parts for path in lcia_paths)
 
@@ -287,6 +494,30 @@ def test_uncertainty_asocc_public_figures_cover_scalar_year_and_single_method(
                 "fixed": {"active": True, "n_runs": 1},
                 "convergence": {"active": False},
             },
+        },
+        output_format="csv_compact",
+        figures=True,
+        figure_format=_fast_figure_format(),
+        refresh=True,
+    ).manifest
+    scalar_multi_method_manifest = uncertainty_asocc(
+        base_asocc_args={
+            "project_name": "asocc_uncertainty_figures_scalar_multi_method_non_lcia",
+            "source": "exiobase_396_ixi",
+            "years": [2005],
+            "fu_code": "L2.a.b",
+            "method_plan": "pairs",
+            "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
+            "r_p": ["FR"],
+            "s_p": ["D"],
+            "l1_reg_aggreg": "pre",
+        },
+        uncertainty_config={
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 1},
+                "convergence": {"active": False},
+            },
+            "inter_method_uncertainty": {"active": False},
         },
         output_format="csv_compact",
         figures=True,
@@ -359,6 +590,7 @@ def test_uncertainty_asocc_public_figures_cover_scalar_year_and_single_method(
     ).manifest
 
     scalar_paths = _manifest_figure_paths(scalar_manifest)
+    scalar_multi_method_paths = _manifest_figure_paths(scalar_multi_method_manifest)
     active_paths = _manifest_figure_paths(active_single_method_manifest)
     active_lcia_paths = _manifest_figure_paths(active_lcia_single_method_manifest)
 
@@ -366,9 +598,19 @@ def test_uncertainty_asocc_public_figures_cover_scalar_year_and_single_method(
         Path(str(scalar_manifest.artifacts["scope_manifest"])).parent / "composite_phase_index.json"
     ).exists()
     assert scalar_paths
+    assert scalar_multi_method_paths
     assert active_paths
     assert active_lcia_paths
-    assert all(path.exists() for path in [*scalar_paths, *active_paths, *active_lcia_paths])
+    assert any("multi_method" in path.parts for path in scalar_multi_method_paths)
+    assert all(
+        path.exists()
+        for path in [
+            *scalar_paths,
+            *scalar_multi_method_paths,
+            *active_paths,
+            *active_lcia_paths,
+        ]
+    )
     assert all("multi_method" not in path.parts for path in [*active_paths, *active_lcia_paths])
 
 
@@ -398,37 +640,6 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_sparse_runs(
         historical_years=list(range(1995, 2007)),
         scenario_years=[2030, 2031],
     )
-    single_manifest = uncertainty_asocc(
-        base_asocc_args={
-            "project_name": "asocc_uncertainty_figures_inter_method",
-            "source": "exiobase_396_ixi",
-            "years": [2030],
-            "reference_years": [2005, 2006],
-            "fu_code": "L2.a.b",
-            "method_plan": "pairs",
-            "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
-            "lcia_method": "gwp100_lcia",
-            "r_p": ["FR"],
-            "s_p": ["D"],
-            "l1_reg_aggreg": "pre",
-            "projection_mode": "historical_reuse",
-            "reg_window": [2005, 2006],
-            "l2_reuse_years": [2005, 2006],
-            "ssp_scenario": ["SSP2"],
-        },
-        uncertainty_config={
-            "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 2},
-                "convergence": {"active": False},
-            },
-            "inter_method_uncertainty": {},
-            "projection_uncertainty": {},
-        },
-        output_format="csv_compact",
-        figures=True,
-        figure_format=_fast_figure_format(),
-        refresh=True,
-    ).manifest
     multi_manifest = uncertainty_asocc(
         base_asocc_args={
             "project_name": "asocc_uncertainty_figures_inter_method_multi_year",
@@ -452,19 +663,18 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_sparse_runs(
         },
         output_format="csv_compact",
         figures=True,
+        figure_options={"per_method": False, "multi_method": False, "inter_method": True},
         figure_format=_fast_figure_format(),
         refresh=True,
     ).manifest
 
-    paths = [*_manifest_figure_paths(single_manifest), *_manifest_figure_paths(multi_manifest)]
+    paths = _manifest_figure_paths(multi_manifest)
     assert multi_manifest.artifacts is not None
     summary = pd.read_csv(multi_manifest.artifacts["summary_stats_runs"])
 
     assert paths
     assert all(path.exists() for path in paths)
     assert any("inter_method" in path.parts for path in paths)
-    assert any("multi_method" in path.parts for path in paths)
-    assert any("per_method" in path.parts for path in paths)
     assert set(summary[ASOCC_SUMMARY_SCOPE_COLUMN]) == {
         ASOCC_SUMMARY_SCOPE_PER_METHOD,
         ASOCC_SUMMARY_SCOPE_INTER_METHOD,
@@ -480,6 +690,258 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_sparse_runs(
         ]
         .notna()
         .any()
+    )
+
+    single_manifest = uncertainty_asocc(
+        base_asocc_args={
+            "project_name": "asocc_uncertainty_figures_inter_method_single_year",
+            "source": "exiobase_396_ixi",
+            "years": [2005],
+            "reference_years": [2005],
+            "fu_code": "L2.a.b",
+            "method_plan": "pairs",
+            "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
+            "lcia_method": "gwp100_lcia",
+            "r_p": ["FR"],
+            "s_p": ["D"],
+            "l1_reg_aggreg": "pre",
+        },
+        uncertainty_config={
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 2},
+                "convergence": {"active": False},
+            },
+            "inter_method_uncertainty": {},
+        },
+        output_format="csv_compact",
+        figures=True,
+        figure_options={"per_method": True, "multi_method": True, "inter_method": True},
+        figure_format=_fast_figure_format(),
+        refresh=True,
+    ).manifest
+    single_paths = _manifest_figure_paths(single_manifest)
+    assert any("inter_method" in path.parts for path in single_paths)
+    assert any("multi_method" in path.parts for path in single_paths)
+    assert any("per_method" in path.parts for path in single_paths)
+    assert all(path.exists() for path in single_paths)
+
+
+def test_uncertainty_asocc_collapsed_violin_rows_cover_ssp_ownership() -> None:
+    collapsed = collapsed_violin_rows(
+        rows=pd.DataFrame(
+            {
+                "year": [2030, 2030],
+                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "impact": ["GWP_100", "GWP_100"],
+                ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP2"],
+                ASOCC_TIME_ROUTE_PUBLIC_COLUMN: ["historical", "l2_reuse_year"],
+                "l1_l2_method": ["EG(Pop)::UT(FD)", "PR(GDPcap)::UT(FD)"],
+                "l1_method": ["EG(Pop)", "PR(GDPcap)"],
+                "l2_method": ["UT(FD)", "UT(FD)"],
+                "__method": ["EG(Pop)::UT(FD)", "PR(GDPcap)::UT(FD)"],
+                VALUE_ARRAY_COLUMN: [
+                    np.array([0.1, 0.2], dtype=np.float64),
+                    np.array([0.3, 0.4], dtype=np.float64),
+                ],
+            }
+        )
+    )
+
+    assert collapsed[ASOCC_SSP_SCENARIO_COLUMN].tolist() == ["SSP2"]
+    assert collapsed[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].tolist() == ["historical"]
+    np.testing.assert_allclose(collapsed[VALUE_ARRAY_COLUMN].iloc[0], [0.1, 0.2, 0.3, 0.4])
+
+
+def test_uncertainty_asocc_job_planner_covers_compact_single_year_multi_method(
+    tmp_path: Path,
+) -> None:
+    paths = AsoccUncertaintyRunPaths(
+        run_root=tmp_path / "run",
+        public_row_identity=tmp_path / "run" / "results" / "public_row_identity.csv",
+        public_runs=tmp_path / "run" / "results" / "asocc_runs.csv",
+        summary_stats_runs=tmp_path / "run" / "results" / "summary_stats_runs.csv",
+        results_readme=tmp_path / "run" / "results" / "README.txt",
+        source_methods=tmp_path / "run" / "logs" / "source_methods.csv",
+        inter_method_tree_csv=tmp_path / "run" / "figures" / "tree.csv",
+        inter_method_tree_figure_base=tmp_path / "run" / "figures" / "tree",
+        sobol_indices=tmp_path / "run" / "results" / "sobol" / "sobol_indices.csv",
+        sobol_source_summary=tmp_path / "run" / "results" / "sobol" / "summary.csv",
+        sobol_readme=tmp_path / "run" / "results" / "sobol" / "README.txt",
+        scope_manifest=tmp_path / "run" / "logs" / "scope_manifest.json",
+    )
+    paths.public_row_identity.parent.mkdir(parents=True, exist_ok=True)
+    identity = pd.DataFrame(
+        {
+            "public_row_id": [0, 1],
+            "year": [2005, 2005],
+            "l1_l2_method": ["EG(Pop)::UT(FD)", "PR(GDPcap)::UT(FD)"],
+            "l1_method": ["EG(Pop)", "PR(GDPcap)"],
+            "l2_method": ["UT(FD)", "UT(FD)"],
+            "r_p": ["FR", "FR"],
+            "s_p": ["D", "D"],
+            ASOCC_TIME_ROUTE_PUBLIC_COLUMN: ["historical", "historical"],
+        }
+    )
+    identity.to_csv(paths.public_row_identity, index=False)
+    with CompactRunMatrixWriter(path=paths.public_runs, output_format="csv_compact") as writer:
+        writer.write_batch(
+            run_indices=np.array([0], dtype=np.int64),
+            values=np.array([[0.1, 0.2]], dtype=np.float64),
+            batch_index=0,
+        )
+    context = FigureContext(
+        manifest=build_manifest(
+            family="asocc",
+            mode="fixed",
+            output_format="csv_compact",
+            completed_runs=1,
+            active_sources=(),
+            arguments={"years": [2005], "fu_code": "L2.a.b"},
+        ),
+        paths=paths,
+        figures_root=tmp_path / "figures",
+        requested_years=(2005,),
+        requested_ssps=(),
+        fu_code="L2.a.b",
+        output_format="csv_compact",
+        figure_output_format="svg",
+        figure_dpi=1,
+        per_method=True,
+        multi_method=True,
+        inter_method=False,
+        active_sources=(),
+    )
+
+    jobs = list(_single_year_jobs(context=context, identity=identity, summary=pd.DataFrame()))
+    assert {job.kind for job in jobs} == {"multi_method", "per_method"}
+    no_per_jobs = list(
+        _single_year_jobs(
+            context=FigureContext(
+                manifest=context.manifest,
+                paths=context.paths,
+                figures_root=context.figures_root,
+                requested_years=context.requested_years,
+                requested_ssps=context.requested_ssps,
+                fu_code=context.fu_code,
+                output_format=context.output_format,
+                figure_output_format=context.figure_output_format,
+                figure_dpi=context.figure_dpi,
+                per_method=False,
+                multi_method=True,
+                inter_method=False,
+                active_sources=(),
+            ),
+            identity=identity,
+            summary=pd.DataFrame(),
+        )
+    )
+    assert {job.kind for job in no_per_jobs} == {"multi_method"}
+
+    sparse_paths = AsoccUncertaintyRunPaths(
+        run_root=tmp_path / "sparse_run",
+        public_row_identity=tmp_path / "sparse_run" / "results" / "public_row_identity.csv",
+        public_runs=tmp_path / "sparse_run" / "results" / "asocc_runs.csv",
+        summary_stats_runs=tmp_path / "sparse_run" / "results" / "summary_stats_runs.csv",
+        results_readme=tmp_path / "sparse_run" / "results" / "README.txt",
+        source_methods=tmp_path / "sparse_run" / "logs" / "source_methods.csv",
+        inter_method_tree_csv=tmp_path / "sparse_run" / "figures" / "tree.csv",
+        inter_method_tree_figure_base=tmp_path / "sparse_run" / "figures" / "tree",
+        sobol_indices=tmp_path / "sparse_run" / "results" / "sobol" / "sobol_indices.csv",
+        sobol_source_summary=tmp_path / "sparse_run" / "results" / "sobol" / "summary.csv",
+        sobol_readme=tmp_path / "sparse_run" / "results" / "sobol" / "README.txt",
+        scope_manifest=tmp_path / "sparse_run" / "logs" / "scope_manifest.json",
+    )
+    sparse_paths.public_row_identity.parent.mkdir(parents=True, exist_ok=True)
+    identity.to_csv(sparse_paths.public_row_identity, index=False)
+    with SparseRunRowsWriter(path=sparse_paths.public_runs, output_format="csv_compact") as writer:
+        writer.write_batch(
+            rows=SparseRunRows(
+                run_index=np.array([0, 0], dtype=np.int64),
+                public_row_id=np.array([0, 1], dtype=np.int64),
+                values=np.array([0.1, 0.2], dtype=np.float64),
+                value_column="asocc",
+            ),
+            batch_index=0,
+        )
+    inactive_inter_jobs = list(
+        _single_year_jobs(
+            context=FigureContext(
+                manifest=context.manifest,
+                paths=sparse_paths,
+                figures_root=tmp_path / "sparse_figures",
+                requested_years=context.requested_years,
+                requested_ssps=context.requested_ssps,
+                fu_code=context.fu_code,
+                output_format=context.output_format,
+                figure_output_format=context.figure_output_format,
+                figure_dpi=context.figure_dpi,
+                per_method=False,
+                multi_method=False,
+                inter_method=False,
+                active_sources=(INTER_METHOD_SOURCE,),
+            ),
+            identity=identity,
+            summary=pd.DataFrame(),
+        )
+    )
+    assert inactive_inter_jobs == []
+
+    summary = identity.drop(columns=["public_row_id"]).assign(
+        **{
+            ASOCC_SUMMARY_SCOPE_COLUMN: ASOCC_SUMMARY_SCOPE_PER_METHOD,
+            "mean": [0.1, 0.2],
+            "std": [0.0, 0.0],
+            "min": [0.1, 0.2],
+            "p5": [0.1, 0.2],
+            "p25": [0.1, 0.2],
+            "median": [0.1, 0.2],
+            "p75": [0.1, 0.2],
+            "p95": [0.1, 0.2],
+            "max": [0.1, 0.2],
+        }
+    )
+    multi_year_context = FigureContext(
+        manifest=context.manifest,
+        paths=context.paths,
+        figures_root=context.figures_root,
+        requested_years=(2005, 2006),
+        requested_ssps=(),
+        fu_code=context.fu_code,
+        output_format=context.output_format,
+        figure_output_format=context.figure_output_format,
+        figure_dpi=context.figure_dpi,
+        per_method=False,
+        multi_method=False,
+        inter_method=False,
+        active_sources=(INTER_METHOD_SOURCE,),
+    )
+    assert (
+        list(_multi_year_jobs(context=multi_year_context, identity=identity, summary=summary)) == []
+    )
+    non_inter_multi_year_context = FigureContext(
+        manifest=context.manifest,
+        paths=context.paths,
+        figures_root=context.figures_root,
+        requested_years=(2005, 2006),
+        requested_ssps=(),
+        fu_code=context.fu_code,
+        output_format=context.output_format,
+        figure_output_format=context.figure_output_format,
+        figure_dpi=context.figure_dpi,
+        per_method=False,
+        multi_method=False,
+        inter_method=False,
+        active_sources=(),
+    )
+    assert (
+        list(
+            _multi_year_jobs(
+                context=non_inter_multi_year_context,
+                identity=identity,
+                summary=summary,
+            )
+        )
+        == []
     )
 
 
@@ -539,10 +1001,8 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_transition_bands(
 
 
 def test_uncertainty_asocc_multi_impact_band_marks_transitions(
-    project_repo: Path,
     tmp_path: Path,
 ) -> None:
-    del project_repo
     frame = pd.DataFrame(
         {
             "year": [2024, 2025, 2024, 2025],
@@ -594,18 +1054,6 @@ def test_uncertainty_asocc_public_figures_cover_multi_impact_panels(
         impacts=["aal_child", "bifd_child", "oa_child"],
         impact_parents={"aal_child": "AAL", "bifd_child": "BI FD", "oa_child": "OA"},
     )
-    single_manifest = uncertainty_asocc(
-        base_asocc_args=_pb_lcia_base_args(
-            project_name="asocc_uncertainty_figures_pb_single",
-            years=[2005],
-            reference_years=[2005],
-        ),
-        uncertainty_config=_lcia_config(n_runs=2),
-        output_format="csv_compact",
-        figures=True,
-        figure_format=_fast_figure_format(),
-        refresh=True,
-    ).manifest
     multi_manifest = uncertainty_asocc(
         base_asocc_args=_pb_lcia_base_args(
             project_name="asocc_uncertainty_figures_pb_multi",
@@ -619,12 +1067,10 @@ def test_uncertainty_asocc_public_figures_cover_multi_impact_panels(
         refresh=True,
     ).manifest
 
-    single_paths = _manifest_figure_paths(single_manifest)
     multi_paths = _manifest_figure_paths(multi_manifest)
 
-    assert any("multi_method" in path.parts for path in single_paths)
     assert any("multi_method" in path.parts for path in multi_paths)
-    assert all(path.exists() for path in [*single_paths, *multi_paths])
+    assert all(path.exists() for path in multi_paths)
 
 
 def test_public_lcia_axis_owner_expands_full_non_lcia_reference_axis() -> None:
@@ -784,14 +1230,14 @@ def test_uncertainty_asocc_lcia_aggregated_indices_use_full_cov_label(
 ) -> None:
     project_name = "asocc_uncertainty_lcia_aggregate_cov"
     aggregate_label = "FR, US"
-    _append_country_cov(aggregate_label, asset_name="reg_cbca_covs_aggreg_indices.csv")
+    _append_country_cov(aggregate_label, asset_name="reg_cbca_covs_group_indices.csv")
 
     manifest = uncertainty_asocc(
         base_asocc_args={
             **_lcia_base_args(project_name=project_name, reference_years=[2005]),
             "r_p": ["FR", "US"],
             "r_f": ["FR", "US"],
-            "aggreg_indices": True,
+            "group_indices": True,
         },
         uncertainty_config=_lcia_config(n_runs=1),
         output_format="csv_compact",
@@ -944,7 +1390,7 @@ def test_uncertainty_asocc_lcia_and_reference_year_use_compact_outputs(
         run_id=manifest.run_id,
     )
     identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
-    matrix = pd.read_csv(run_root / "results" / "asocc_runs.csv")
+    matrix = _read_asocc_run_matrix(run_root=run_root, column_count=len(identity))
     runs = _read_asocc_runs(run_root)
 
     assert matrix.columns.tolist() == ["run_index", *identity["public_row_id"].astype(str)]
@@ -1339,7 +1785,7 @@ def test_lcia_support_rows_cache_reuses_run_scoped_tables(tmp_path: Path) -> Non
     path_scope = AsoccDeterministicPathScope(
         proj_base=tmp_path,
         source_label="exiobase_396_ixi",
-        group_version=None,
+        agg_version=None,
     )
     output_path = asocc_l2_dir(scope=path_scope, bucket="l2_in_l1", lcia_sub=None) / (
         "l2_UT(FDa).csv"

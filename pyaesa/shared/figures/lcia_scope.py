@@ -1,6 +1,7 @@
 """Shared LCIA-method and impact scope helpers for figure planning."""
 
 from pathlib import Path
+from collections.abc import Iterator
 from typing import cast
 
 import numpy as np
@@ -51,17 +52,18 @@ def lcia_method_slices(
     *,
     column: str = "lcia_method",
     fill_generic_method: bool = True,
-) -> list[tuple[str, str, pd.DataFrame, str | None]]:
-    """Return figure slices scoped to one LCIA method."""
+) -> Iterator[tuple[str, str, pd.DataFrame, str | None]]:
+    """Yield figure slices scoped to one LCIA method."""
     if frame.empty or column not in frame.columns:
-        return [("all", "", frame.copy(), None)]
+        yield "all", "", frame.copy(), None
+        return
     method_series = pd.Series(frame.loc[:, column], copy=False)
     methods = sorted(
         {str(value).strip() for value in method_series.tolist() if not _is_missing(value)}
     )
     if not methods:
-        return [("all", "", frame.copy(), None)]
-    slices: list[tuple[str, str, pd.DataFrame, str | None]] = []
+        yield "all", "", frame.copy(), None
+        return
     generic_mask = method_series.map(_is_missing)
     for lcia_method_label in methods:
         method_mask = method_series.astype(str).eq(str(lcia_method_label))
@@ -69,15 +71,12 @@ def lcia_method_slices(
         if fill_generic_method:
             scoped[column] = str(lcia_method_label)
         token = sanitize_token(lcia_method_label)
-        slices.append(
-            (
-                token,
-                str(lcia_method_label),
-                scoped.reset_index(drop=True),
-                str(lcia_method_label),
-            )
+        yield (
+            token,
+            str(lcia_method_label),
+            scoped.reset_index(drop=True),
+            str(lcia_method_label),
         )
-    return slices
 
 
 def resolve_unique_lcia_method(
@@ -102,19 +101,21 @@ def impact_slices(
     *,
     impact_column: str | None,
     repeat_generic: bool,
-) -> list[tuple[str, pd.DataFrame]]:
-    """Return impact specific slices, optionally repeating generic rows."""
+) -> Iterator[tuple[str, pd.DataFrame]]:
+    """Yield impact specific slices, optionally repeating generic rows."""
     if frame.empty or impact_column is None or impact_column not in frame.columns:
-        return [("value", frame.copy())]
+        yield "value", frame.copy()
+        return
     _reject_lcia_method_without_impact(frame, impact_column=impact_column)
     impact_series = pd.Series(frame.loc[:, impact_column], copy=False)
     impacts = sorted(
         {str(value).strip() for value in impact_series.tolist() if not _is_missing(value)}
     )
     if not impacts:
-        return [("value", frame.copy())]
+        yield "value", frame.copy()
+        return
     generic_mask = impact_series.map(_is_missing)
-    slices: list[tuple[str, pd.DataFrame]] = []
+    yielded = False
     for impact in impacts:
         impact_mask = impact_series.astype(str).eq(str(impact))
         if repeat_generic:
@@ -127,8 +128,10 @@ def impact_slices(
             scoped[impact_column].notna() & scoped[impact_column].astype(str).eq(str(impact)),
             impact_column,
         ] = str(impact)
-        slices.append((str(impact), scoped.reset_index(drop=True)))
-    return slices or [("value", frame.copy())]
+        yielded = True
+        yield str(impact), scoped.reset_index(drop=True)
+    if not yielded:
+        yield "value", frame.copy()
 
 
 def combined_impact_slices(
@@ -136,10 +139,11 @@ def combined_impact_slices(
     *,
     impact_column: str = "impact",
     lcia_method_column: str = "lcia_method",
-) -> list[tuple[str, str, pd.DataFrame]]:
-    """Return combined comparison slices scoped to one studied impact."""
+) -> Iterator[tuple[str, str, pd.DataFrame]]:
+    """Yield combined comparison slices scoped to one studied impact."""
     if frame.empty or impact_column not in frame.columns:
-        return [("all", "", frame.copy())]
+        yield "all", "", frame.copy()
+        return
     _reject_lcia_method_without_impact(
         frame,
         impact_column=impact_column,
@@ -150,7 +154,8 @@ def combined_impact_slices(
         {str(value).strip() for value in impact_series.tolist() if not _is_missing(value)}
     )
     if not nonmissing_impacts:
-        return [("all", "", frame.copy())]
+        yield "all", "", frame.copy()
+        return
     if lcia_method_column not in frame.columns:
         raise ValueError(
             "Combined deterministic figure rendering requires 'lcia_method' when impact rows "
@@ -166,7 +171,7 @@ def combined_impact_slices(
             f"'{lcia_method_column}'."
         )
     generic_mask = impact_series.map(_is_missing)
-    slices: list[tuple[str, str, pd.DataFrame]] = []
+    yielded = False
     for impact in nonmissing_impacts:
         impact_mask = impact_series.astype(str).eq(str(impact))
         scoped = frame.loc[impact_mask | generic_mask].copy()
@@ -174,8 +179,10 @@ def combined_impact_slices(
             continue
         scoped.loc[:, impact_column] = str(impact)
         title = cast(str, resolve_frame_impact_title(frame.loc[impact_mask].copy()))
-        slices.append((sanitize_token(impact), title, scoped.reset_index(drop=True)))
-    return slices or [("all", "", frame.copy())]
+        yielded = True
+        yield sanitize_token(impact), title, scoped.reset_index(drop=True)
+    if not yielded:
+        yield "all", "", frame.copy()
 
 
 def combined_lcia_impact_slices(
@@ -183,10 +190,11 @@ def combined_lcia_impact_slices(
     *,
     impact_column: str = "impact",
     lcia_method_column: str = "lcia_method",
-) -> list[tuple[str, str, pd.DataFrame, str | None]]:
-    """Return combined comparison slices without expanding generic rows globally."""
+) -> Iterator[tuple[str, str, pd.DataFrame, str | None]]:
+    """Yield combined comparison slices without expanding generic rows globally."""
     if frame.empty or impact_column not in frame.columns:
-        return [("all", "", frame.copy(), None)]
+        yield "all", "", frame.copy(), None
+        return
     _reject_lcia_method_without_impact(
         frame,
         impact_column=impact_column,
@@ -210,9 +218,10 @@ def combined_lcia_impact_slices(
         {str(value).strip() for value in method_series.tolist() if not _is_missing(value)}
     )
     if not methods:
-        return [("all", "", frame.copy(), None)]
+        yield "all", "", frame.copy(), None
+        return
     generic = frame.loc[method_missing & ~impact_present].copy()
-    slices: list[tuple[str, str, pd.DataFrame, str | None]] = []
+    yielded = False
     for method in methods:
         method_rows = frame.loc[method_series.astype(str).eq(str(method))].copy()
         method_impacts = sorted(
@@ -224,6 +233,8 @@ def combined_lcia_impact_slices(
         )
         for impact in method_impacts:
             impact_rows = method_rows.loc[method_rows[impact_column].astype(str).eq(str(impact))]
+            if impact_rows.empty:
+                continue
             scoped = (
                 pd.concat([impact_rows.copy(), generic.copy()], ignore_index=True)
                 if not generic.empty
@@ -231,8 +242,10 @@ def combined_lcia_impact_slices(
             )
             scoped.loc[:, impact_column] = str(impact)
             title = cast(str, resolve_frame_impact_title(impact_rows.copy()))
-            slices.append((sanitize_token(impact), title, scoped.reset_index(drop=True), method))
-    return slices or [("all", "", frame.copy(), None)]
+            yielded = True
+            yield sanitize_token(impact), title, scoped.reset_index(drop=True), method
+    if not yielded:
+        yield "all", "", frame.copy(), None
 
 
 def suffix_path(base: Path, token: str) -> Path:

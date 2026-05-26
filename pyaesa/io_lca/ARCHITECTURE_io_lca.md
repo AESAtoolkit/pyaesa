@@ -57,21 +57,22 @@ deterministic IO-LCA LCIA values with:
 sampled_value = lower + u_shared * (upper - lower)`
 
 Public rows are sampled in their persisted deterministic selector domain.
-Grouped rows use grouped selector labels. Rows produced with
-`aggreg_indices=True` keep selector columns and use the full aggregate selector
-label as the LCIA uncertainty key.
+Rows in a custom MRIO aggregation and disaggregation use that
+classification's selector labels. Rows produced with `group_indices=True` keep
+selector columns and use the full combined output selector label as the LCIA
+uncertainty key.
 
 | Deterministic output scope | Uncertainty driver rule |
 | --- | --- |
 | Direct L1 country rows | Use the selected `r_f` or `r_p` country CoV. |
-| Grouped region L1 rows | Use the grouped region CoV from `reg_cbca_covs_group_<group_version>.csv`. |
-| `aggreg_indices=True` L1 rows | Use the full aggregate selector label from `reg_cbca_covs_aggreg_indices.csv` or `reg_cbca_covs_group_<group_version>_aggreg_indices.csv`. |
+| Custom classification region L1 rows | Use the region CoV from `reg_cbca_covs_agg_<agg_version>.csv`. |
+| `group_indices=True` L1 rows | Use the full combined output selector label from `reg_cbca_covs_group_indices.csv` or `reg_cbca_covs_agg_<agg_version>_group_indices.csv`. |
 | Direct L2 sector rows | Map public `s_p` labels to bundled sector CoV codes. |
-| Grouped sector L2 rows | Map the grouped public `s_p` label through `sector_cov_mapping`. |
-| `aggreg_indices=True` L2 rows | Map the full aggregate `s_p` label through `sector_cov_mapping`. |
+| Custom classification sector L2 rows | Map the public `s_p` label through `sector_cov_mapping`. |
+| `group_indices=True` L2 rows | Map the full combined output `s_p` label through `sector_cov_mapping`. |
 
 The LCIA `u_shared` key is built by `pyaesa/shared/lcia/uncertainty_keys.py`.
-It is scoped by project, source, grouping scope, driver kind, and driver key.
+It is scoped by project, source, aggregation scope, driver kind, and driver key.
 It excludes studied year, LCIA method, impact category, and public row id so
 the same uncertainty driver is linked across those outputs within a run.
 

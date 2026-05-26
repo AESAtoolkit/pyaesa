@@ -100,25 +100,25 @@ def normalize_shared_lcia_methods(lcia_method: str | list[str]) -> list[str]:
 def normalize_mrio_scope(
     *,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
-    aggreg_indices: bool = False,
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
+    group_indices: bool = False,
 ) -> dict[str, Any]:
     """Normalize shared composite MRIO scope arguments."""
     source_norm = _normalize_required_text(source, name="source")
-    group_reg_norm = _require_bool(group_reg, name="group_reg")
-    group_sec_norm = _require_bool(group_sec, name="group_sec")
-    aggreg_indices_norm = _require_bool(aggreg_indices, name="aggreg_indices")
+    agg_reg_norm = _require_bool(agg_reg, name="agg_reg")
+    agg_sec_norm = _require_bool(agg_sec, name="agg_sec")
+    group_indices_norm = _require_bool(group_indices, name="group_indices")
     return {
         "source": source_norm,
-        "group_reg": group_reg_norm,
-        "group_sec": group_sec_norm,
-        "group_version": _normalize_optional_text(
-            group_version,
-            name="group_version",
+        "agg_reg": agg_reg_norm,
+        "agg_sec": agg_sec_norm,
+        "agg_version": _normalize_optional_text(
+            agg_version,
+            name="agg_version",
         ),
-        "aggreg_indices": aggreg_indices_norm,
+        "group_indices": group_indices_norm,
     }
 
 
@@ -197,38 +197,51 @@ def effective_asocc_lcia_methods(
     return list(shared_lcia_methods)
 
 
+def asocc_lcia_methods_from_allocate_args(
+    *,
+    base_allocate_args: dict[str, Any],
+) -> list[str] | None:
+    """Return the aSoCC LCIA scope stored in one composite request."""
+    methods = base_allocate_args["lcia_method"]
+    if methods is None:
+        return None
+    return [str(method) for method in methods]
+
+
 def build_composite_base_allocate_args(
     *,
     project_name: str,
     years: int | list[int] | range,
     lcia_method: list[str],
+    asocc_lcia_methods: list[str] | None = None,
     fu_code: str,
     r_p: str | list[str] | None,
     s_p: str | list[str] | None,
     r_c: str | list[str] | None,
     r_f: str | list[str] | None,
     source: str,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: str | None,
-    aggreg_indices: bool,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: str | None,
+    group_indices: bool,
     base_asocc_args: dict[str, Any],
 ) -> dict[str, Any]:
     """Build the composite aCC/ASR deterministic request payload."""
     asocc_args = base_asocc_args
+    effective_lcia_methods = list(lcia_method if asocc_lcia_methods is None else asocc_lcia_methods)
     return {
         "project_name": str(project_name).strip(),
         "source": source,
-        "group_reg": group_reg,
-        "group_sec": group_sec,
-        "group_version": group_version,
+        "agg_reg": agg_reg,
+        "agg_sec": agg_sec,
+        "agg_version": agg_version,
         "years": years,
         "fu_code": fu_code,
         "r_p": r_p,
         "s_p": s_p,
         "r_c": r_c,
         "r_f": r_f,
-        "aggreg_indices": aggreg_indices,
+        "group_indices": group_indices,
         "method_plan": asocc_args["method_plan"],
         "l1_methods": asocc_args["l1_methods"],
         "one_step_methods": asocc_args["one_step_methods"],
@@ -239,7 +252,7 @@ def build_composite_base_allocate_args(
             asocc_args["include_lcia_based_allocation_methods"]
         ),
         "lcia_method": effective_asocc_lcia_methods(
-            shared_lcia_methods=lcia_method,
+            shared_lcia_methods=effective_lcia_methods,
             include_lcia_based_allocation_methods=bool(
                 asocc_args["include_lcia_based_allocation_methods"]
             ),
@@ -257,16 +270,16 @@ def base_asocc_kwargs_from_allocate_args(*, base_allocate_args: dict[str, Any]) 
     keys = (
         "project_name",
         "source",
-        "group_reg",
-        "group_sec",
-        "group_version",
+        "agg_reg",
+        "agg_sec",
+        "agg_version",
         "years",
         "fu_code",
         "r_p",
         "s_p",
         "r_c",
         "r_f",
-        "aggreg_indices",
+        "group_indices",
         "method_plan",
         "l1_methods",
         "one_step_methods",

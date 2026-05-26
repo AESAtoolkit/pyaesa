@@ -9,7 +9,7 @@ def aggregate_selector_label(values: Iterable[object]) -> str:
 
 
 def aggregate_selector_label_or_none(values: object) -> str | None:
-    """Return the aggregate selector label when more than one value is selected."""
+    """Return the combined selector label when more than one value is selected."""
     if values is None:
         return None
     if isinstance(values, str):

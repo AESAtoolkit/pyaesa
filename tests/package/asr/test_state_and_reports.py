@@ -153,10 +153,10 @@ def test_asr_io_lca_prerequisite_summary_reports_upstream_figures(tmp_path: Path
     lines = _io_lca_phase_summary_lines(
         io_report=io_report,
         base_allocate_args={
-            "group_reg": False,
-            "group_sec": True,
-            "group_version": "oecd",
-            "aggreg_indices": False,
+            "agg_reg": False,
+            "agg_sec": True,
+            "agg_version": "oecd",
+            "group_indices": False,
         },
     )
 

@@ -49,9 +49,9 @@ from pyaesa.io_lca.orchestration.figure_support import (
     validate_lcia_method_coverage,
 )
 from pyaesa.io_lca.orchestration.pipeline.mode_runner import (
-    _ensure_no_conflicting_aggreg_indices_project,
+    _ensure_no_conflicting_group_indices_project,
     _ensure_no_conflicting_flat_output_scope,
-    _read_signature_aggreg_indices,
+    _read_signature_group_indices,
     execute_io_lca_mode,
 )
 from pyaesa.io_lca.orchestration.io.method_support import (
@@ -106,26 +106,26 @@ def test_validation_and_year_resolution_contracts_cover_success_and_errors(
     assert validation.normalize_lcia_method_list(lcia_method="pb_lcia") == ["pb_lcia"]
     with pytest.raises(ValueError):
         validation.normalize_lcia_method_list(lcia_method=[])
-    assert validation.normalize_aggreg_indices_modes(False) == [False]
-    assert validation.normalize_grouping(
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+    assert validation.normalize_group_indices_modes(False) == [False]
+    assert validation.normalize_aggregation(
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     ) == (False, False, None)
-    assert validation.normalize_grouping(
-        group_reg=True,
-        group_sec=False,
-        group_version="  v1  ",
+    assert validation.normalize_aggregation(
+        agg_reg=True,
+        agg_sec=False,
+        agg_version="  v1  ",
     ) == (True, False, "v1")
     assert validation.normalize_io_output_format("csv") == "csv"
     assert validation.normalize_figure_output_format("png") == "png"
 
     with pytest.raises(ValueError):
-        validation.normalize_grouping(group_reg=True, group_sec=False, group_version=None)
+        validation.normalize_aggregation(agg_reg=True, agg_sec=False, agg_version=None)
     with pytest.raises(ValueError):
-        validation.normalize_grouping(group_reg=False, group_sec=False, group_version="v1")
+        validation.normalize_aggregation(agg_reg=False, agg_sec=False, agg_version="v1")
     with pytest.raises(ValueError):
-        validation.normalize_aggreg_indices_modes(cast(Any, "both"))
+        validation.normalize_group_indices_modes(cast(Any, "both"))
     with pytest.raises(ValueError):
         validation.normalize_figure_output_format("gif")
     with pytest.raises(ValueError):
@@ -142,9 +142,9 @@ def test_validation_and_year_resolution_contracts_cover_success_and_errors(
     resolved_all = year_resolution.resolve_years_strict(
         years=None,
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     )
     assert resolved_all == [2019, 2020]
     assert year_resolution.resolve_subset_years(
@@ -173,35 +173,35 @@ def test_validation_and_year_resolution_contracts_cover_success_and_errors(
     assert year_resolution.resolve_years_strict(
         years=[2019],
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         upstream_analysis=True,
     ) == [2019]
     with pytest.raises(ValueError):
         year_resolution.resolve_years_strict(
             years=[2021],
             source=io_lca_dummy_repo.source,
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
     with pytest.raises(ValueError):
         year_resolution.resolve_years_strict(
             years=[2500],
             source=io_lca_dummy_repo.source,
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
 
     with pytest.raises(ValueError):
         year_resolution.resolve_years_strict(
             years=[1800],
             source=io_lca_dummy_repo.source,
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
     with pytest.raises(ValueError):
         year_resolution.resolve_subset_years(years=[2021], universe=[2019, 2020], label="years")
@@ -229,24 +229,24 @@ def test_resolve_years_strict_allows_selected_io_lca_years_with_non_consecutive_
     assert year_resolution.resolve_years_strict(
         years=[2021],
         source="exiobase_3102_ixi",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     ) == [2021]
     assert year_resolution.resolve_years_strict(
         years=None,
         source="exiobase_3102_ixi",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     ) == [2019, 2021]
     with pytest.raises(ValueError):
         year_resolution.resolve_years_strict(
             years=[2020],
             source="exiobase_3102_ixi",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
 
 
@@ -269,51 +269,51 @@ def test_resolve_years_strict_rejects_empty_metadata(
         year_resolution.resolve_years_strict(
             years=None,
             source="exiobase_3102_ixi",
-            group_version="empty",
-            group_reg=False,
-            group_sec=False,
+            agg_version="empty",
+            agg_reg=False,
+            agg_sec=False,
         )
 
 
-def test_domain_checks_cover_grouped_branch_and_fu_constraints(tmp_path: Path) -> None:
-    metadata_path = tmp_path / "grouped" / "metadata.json"
+def test_domain_checks_cover_aggregated_branch_and_fu_constraints(tmp_path: Path) -> None:
+    metadata_path = tmp_path / "aggregated" / "metadata.json"
 
-    domain_checks.require_grouped_branch(
+    domain_checks.require_aggregated_branch(
         source="exiobase_396_ixi",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata_path=metadata_path,
         methods=["pb_lcia"],
         years=[2019],
     )
 
     with pytest.raises(ValueError):
-        domain_checks.require_grouped_branch(
+        domain_checks.require_aggregated_branch(
             source="exiobase_396_ixi",
-            group_version="v1",
-            group_reg=True,
-            group_sec=False,
+            agg_version="v1",
+            agg_reg=True,
+            agg_sec=False,
             metadata_path=metadata_path,
             methods=["pb_lcia"],
             years=[2019],
         )
     with pytest.raises(ValueError):
-        domain_checks.require_grouped_branch(
+        domain_checks.require_aggregated_branch(
             source="exiobase_396_ixi",
-            group_version="v1",
-            group_reg=True,
-            group_sec=False,
+            agg_version="v1",
+            agg_reg=True,
+            agg_sec=False,
             metadata_path=metadata_path,
             methods=["pb_lcia"],
             years=2019,
         )
     with pytest.raises(ValueError):
-        domain_checks.require_grouped_branch(
+        domain_checks.require_aggregated_branch(
             source="exiobase_396_ixi",
-            group_version="v1",
-            group_reg=True,
-            group_sec=False,
+            agg_version="v1",
+            agg_reg=True,
+            agg_sec=False,
             metadata_path=metadata_path,
             methods=["pb_lcia"],
             years=None,
@@ -321,11 +321,11 @@ def test_domain_checks_cover_grouped_branch_and_fu_constraints(tmp_path: Path) -
 
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text("{}", encoding="utf-8")
-    domain_checks.require_grouped_branch(
+    domain_checks.require_aggregated_branch(
         source="exiobase_396_ixi",
-        group_version="v1",
-        group_reg=True,
-        group_sec=False,
+        agg_version="v1",
+        agg_reg=True,
+        agg_sec=False,
         metadata_path=metadata_path,
         methods=["pb_lcia"],
         years=[2019],
@@ -337,17 +337,17 @@ def test_domain_checks_cover_grouped_branch_and_fu_constraints(tmp_path: Path) -
         domain_checks.validate_upstream_supported(spec=spec_l2_pba, upstream_analysis=True)
 
     spec_l2_td = resolve_fu_spec(fu_code="L2.a.b")
-    domain_checks.validate_aggreg_indices_supported(spec=spec_l2_td, aggreg_indices=False)
+    domain_checks.validate_group_indices_supported(spec=spec_l2_td, group_indices=False)
     with pytest.raises(ValueError):
-        domain_checks.validate_aggreg_indices_supported(spec=spec_l2_td, aggreg_indices=True)
+        domain_checks.validate_group_indices_supported(spec=spec_l2_td, group_indices=True)
 
-    domain_checks.validate_aggreg_indices_requires_multi_selection(
-        aggreg_indices=False,
+    domain_checks.validate_group_indices_requires_multi_selection(
+        group_indices=False,
         has_multi_indices=False,
     )
     with pytest.raises(ValueError):
-        domain_checks.validate_aggreg_indices_requires_multi_selection(
-            aggreg_indices=True,
+        domain_checks.validate_group_indices_requires_multi_selection(
+            group_indices=True,
             has_multi_indices=False,
         )
     assert spec_l2_td.family == "td"
@@ -474,22 +474,22 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
         "lca_value",
     ]
 
-    grouped_paths = data_paths.resolve_io_lca_paths(
+    aggregated_paths = data_paths.resolve_io_lca_paths(
         project_name="io_lca_path_helpers",
-        group_reg=True,
-        group_sec=False,
-        group_version=" Demo / Version ",
+        agg_reg=True,
+        agg_sec=False,
+        agg_version=" Demo / Version ",
     )
-    assert grouped_paths.source_version_token == "Demo_Version"
-    assert grouped_paths.lca_root == grouped_paths.project_base / "A_lca" / "io_lca"
+    assert aggregated_paths.source_version_token == "Demo_Version"
+    assert aggregated_paths.lca_root == aggregated_paths.project_base / "A_lca" / "io_lca"
     assert (
         data_paths.source_scope_root_for_source(
-            paths=grouped_paths,
+            paths=aggregated_paths,
             source="exiobase 396 ixi",
         ).name
         == "exiobase_396_ixi__Demo_Version"
     )
-    assert data_paths.deterministic_scope_metadata_paths(paths=grouped_paths) == []
+    assert data_paths.deterministic_scope_metadata_paths(paths=aggregated_paths) == []
 
     assert (
         selectors.has_multi_selected_indices({"r_f": ["FR"], "r_c": None, "r_p": None, "s_p": None})
@@ -507,7 +507,7 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
 
     metadata, _metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     labels = metadata["labels"]
     assert isinstance(labels, dict)
@@ -515,16 +515,16 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
     assert isinstance(sectors_used, list)
     selectors.validate_selector_labels(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         filters={"r_f": ["FR"], "r_c": None, "r_p": None, "s_p": None},
     )
     selectors.validate_selector_labels(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         filters={"r_f": ["FR"], "r_c": None, "r_p": None, "s_p": [str(sectors_used[0])]},
     )
 
@@ -536,29 +536,29 @@ def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
     signature = build_io_lca_signature(
         project_name="proj",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         years=[2019, 2020],
         methods=["pb_lcia"],
         fu_code="L1.a",
         filters=filters,
         upstream_analysis=False,
         upstream_stages=1,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
     )
     figure_signature = build_io_lca_figure_signature(
         project_name="proj",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         years=[2019],
         methods=["pb_lcia"],
         fu_code="L1.a",
         filters=filters,
-        aggreg_indices=False,
+        group_indices=False,
         dpi=300,
         output_format="png",
         io_output_format="csv",
@@ -582,14 +582,14 @@ def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
         io_log_payload=payload,
         project_name="proj",
         source="exiobase_396_ixi",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         years=[2019, 2020],
         lcia_methods=["pb_lcia"],
         fu_code="L1.a",
         filters=filters,
-        aggreg_indices=False,
+        group_indices=False,
     )
     assert io_output_format == "csv"
     assert scope is payload
@@ -605,14 +605,14 @@ def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
             io_log_payload=incomplete_payload,
             project_name="proj",
             source="exiobase_396_ixi",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
             years=[2019, 2020],
             lcia_methods=["pb_lcia"],
             fu_code="L1.a",
             filters=filters,
-            aggreg_indices=False,
+            group_indices=False,
         )
 
     with pytest.raises(ValueError):
@@ -623,14 +623,14 @@ def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
             ),
             project_name="proj",
             source="exiobase_396_ixi",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
             years=[2019, 2020],
             lcia_methods=["pb_lcia"],
             fu_code="L1.a",
             filters=filters,
-            aggreg_indices=False,
+            group_indices=False,
         )
 
     done, skipped = done_and_skipped_lcia_years(
@@ -708,13 +708,13 @@ def test_io_lca_method_support_contracts_and_pending_stage_years(
     spec = resolve_fu_spec(fu_code="L1.a")
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     payload, _ = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata,
         metadata_path=metadata_path,
         year=2019,
@@ -912,9 +912,9 @@ def test_io_lca_method_support_contracts_and_pending_stage_years(
 
     paths = resolve_io_lca_paths(
         project_name="pending_stage_years",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
     stage_path = stage_results_path(
         paths=paths,
@@ -1050,14 +1050,14 @@ def test_upstream_stage_contracts_cover_combo_selection_and_stage_variants(
 
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     pba_spec = resolve_fu_spec(fu_code="L1.b")
     pba_main, _ = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata,
         metadata_path=metadata_path,
         year=2019,
@@ -1183,9 +1183,9 @@ def test_io_lca_method_write_contracts_cover_canonicalization_and_errors(
 ) -> None:
     paths = resolve_io_lca_paths(
         project_name="io_lca_writes",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
     )
 
     main_rows = pd.DataFrame()
@@ -1450,13 +1450,13 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
     io_lca_dummy_repo,
     tmp_path: Path,
 ) -> None:
-    assert _read_signature_aggreg_indices({"aggreg_indices": True}) is True  # noqa: SLF001
+    assert _read_signature_group_indices({"group_indices": True}) is True  # noqa: SLF001
 
     paths = resolve_io_lca_paths(
         project_name="io_lca_mode_runner_helpers",
-        group_reg=False,
-        group_sec=False,
-        group_version="",
+        agg_reg=False,
+        agg_sec=False,
+        agg_version="",
     )
     current_metadata_path = io_metadata_path_for_source(
         paths=paths,
@@ -1464,7 +1464,7 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
     )
 
     other_metadata_path = io_metadata_path_for_source(paths=paths, source="exiobase_396_pxp")
-    other_signature = {"aggreg_indices": True}
+    other_signature = {"group_indices": True}
     save_scope_manifest(
         path=other_metadata_path,
         payload={
@@ -1477,27 +1477,27 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
         },
     )
     with pytest.raises(ValueError):
-        _ensure_no_conflicting_aggreg_indices_project(  # noqa: SLF001
+        _ensure_no_conflicting_group_indices_project(  # noqa: SLF001
             paths=paths,
             current_metadata_path=current_metadata_path,
             log_payload=metadata_mod.load_scope_manifest(
                 path=tmp_path / "missing_scope_manifest.json",
                 function_name="deterministic_io_lca",
             ),
-            aggreg_indices=False,
+            group_indices=False,
         )
     other_metadata_path.unlink()
 
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     mode_result = execute_io_lca_mode(
         project_name="io_lca_mode_runner_helpers",
         source=io_lca_dummy_repo.source,
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
         methods=[io_lca_dummy_repo.lcia_method],
         spec=resolve_fu_spec(fu_code="L1.a"),
         filters=_filters(),
@@ -1507,7 +1507,7 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
         upstream_analysis=False,
         stages=1,
         stage_outputs_enabled=False,
-        aggreg_indices=False,
+        group_indices=False,
         output_format="csv",
         refresh=True,
         has_multi_indices=True,
@@ -1524,8 +1524,8 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
         covered_main_years={2019},
         covered_origin_years={2019},
         covered_stage_years={2019},
-        skipped_method_years={"pb_lcia__aggreg_indices": {2020: "extension missing"}},
-        aggreg_indices=True,
+        skipped_method_years={"pb_lcia__group_indices": {2020: "extension missing"}},
+        group_indices=True,
         upstream_analysis=True,
         stage_outputs_enabled=True,
         reuse_status="computed",
@@ -1544,7 +1544,7 @@ def test_mode_runner_and_reporting_contracts_cover_refresh_and_summary_variants(
         covered_origin_years=set(),
         covered_stage_years=set(),
         skipped_method_years={},
-        aggreg_indices=False,
+        group_indices=False,
         upstream_analysis=False,
         stage_outputs_enabled=False,
         reuse_status="computed",

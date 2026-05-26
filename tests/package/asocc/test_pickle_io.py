@@ -25,7 +25,7 @@ def test_pickle_env_cover_metadata_inference(project_repo: Path) -> None:
 
     payload = {
         "version_tag": "custom_classification_demo",
-        "grouping": {},
+        "aggregation": {},
         "labels": {},
         "years": {},
     }
@@ -64,7 +64,7 @@ def test_pickle_env_cover_metadata_inference(project_repo: Path) -> None:
 
     invalid_runtime_payload = {
         "version_tag": "original_classification",
-        "grouping": {},
+        "aggregation": {},
         "labels": {},
         "years": {},
     }
@@ -110,7 +110,12 @@ def test_pickle_reader_and_compat_unpickler_cover_success_and_error_paths(
     ok_path.write_bytes(pickle.dumps({"answer": 42}))
     assert mod.read_pickle(ok_path) == {"answer": 42}
 
-    payload = {"version_tag": "original_classification", "grouping": {}, "labels": {}, "years": {}}
+    payload = {
+        "version_tag": "original_classification",
+        "aggregation": {},
+        "labels": {},
+        "years": {},
+    }
     _set_year_entry(
         payload,
         2019,

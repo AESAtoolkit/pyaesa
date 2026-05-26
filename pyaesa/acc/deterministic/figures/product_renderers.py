@@ -1,6 +1,7 @@
 """Rendering policy for deterministic aCC figures."""
 
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any, cast
 
 import matplotlib.pyplot as plt
@@ -117,17 +118,20 @@ def render_products(
     status: StatusSink | None = None,
 ) -> list[Path]:
     """Render deterministic aCC per method and multi-method products."""
-    jobs = _plan_jobs(
-        rows=rows,
-        figures_root=figures_root,
-        requested_years=requested_years,
-        cc_type=cc_type,
-        dpi=dpi,
-        output_format=output_format,
-        per_method=per_method,
-        multi_method=multi_method,
+    paths = render_figure_jobs(
+        source="deterministic_acc",
+        jobs=lambda: _plan_jobs(
+            rows=rows,
+            figures_root=figures_root,
+            requested_years=requested_years,
+            cc_type=cc_type,
+            dpi=dpi,
+            output_format=output_format,
+            per_method=per_method,
+            multi_method=multi_method,
+        ),
+        status=status,
     )
-    paths = render_figure_jobs(source="deterministic_acc", jobs=jobs, status=status)
     write_variant_compression_method_note(figures_root=figures_root, rows=rows)
     return paths
 
@@ -142,8 +146,7 @@ def _plan_jobs(
     output_format: str,
     per_method: bool,
     multi_method: bool,
-) -> list[PlannedFigureJob]:
-    jobs: list[PlannedFigureJob] = []
+) -> Iterator[PlannedFigureJob]:
     studied_year = requested_single_year(requested_years)
     if multi_method:
         for scope in _multi_method_branch_slices(rows=rows, cc_type=cc_type):
@@ -157,22 +160,20 @@ def _plan_jobs(
                         lcia_impact_slices(prepared_scope) if split_impacts else [prepared_scope]
                     )
                     for product_scope in product_scopes:
-                        jobs.append(
-                            _job(
-                                kind="multi_method",
-                                label="multi_method",
-                                frame=product_scope,
-                                figures_root=figures_root / "multi_method",
-                                requested_years=requested_years,
-                                studied_year=studied_year,
-                                dpi=dpi,
-                                output_format=output_format,
-                                group_legend=True,
-                                include_method_in_label=True,
-                                include_impact=split_impacts,
-                                selector_token=selector_token,
-                                selector_title=selector_title,
-                            )
+                        yield _job(
+                            kind="multi_method",
+                            label="multi_method",
+                            frame=product_scope,
+                            figures_root=figures_root / "multi_method",
+                            requested_years=requested_years,
+                            studied_year=studied_year,
+                            dpi=dpi,
+                            output_format=output_format,
+                            group_legend=True,
+                            include_method_in_label=True,
+                            include_impact=split_impacts,
+                            selector_token=selector_token,
+                            selector_title=selector_title,
                         )
     if per_method:
         for scope in _per_method_branch_slices(rows=rows, cc_type=cc_type):
@@ -182,51 +183,44 @@ def _plan_jobs(
                     method_rows = prepared_scope.loc[
                         prepared_scope["__method"].astype(str).eq(method)
                     ]
-                    jobs.append(
-                        _job(
-                            kind="per_method",
-                            label=method,
-                            frame=method_rows.copy(),
-                            figures_root=figures_root / "per_method",
-                            requested_years=requested_years,
-                            studied_year=studied_year,
-                            dpi=dpi,
-                            output_format=output_format,
-                            group_legend=False,
-                            include_method_in_label=False,
-                            selector_token=selector_token,
-                            selector_title=selector_title,
-                        )
+                    yield _job(
+                        kind="per_method",
+                        label=method,
+                        frame=method_rows.copy(),
+                        figures_root=figures_root / "per_method",
+                        requested_years=requested_years,
+                        studied_year=studied_year,
+                        dpi=dpi,
+                        output_format=output_format,
+                        group_legend=False,
+                        include_method_in_label=False,
+                        selector_token=selector_token,
+                        selector_title=selector_title,
                     )
-    return jobs
 
 
-def _multi_method_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> list[pd.DataFrame]:
+def _multi_method_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> Iterator[pd.DataFrame]:
     common = ("lcia_method",)
     if str(cc_type) == "static":
-        scoped = []
         for branch_scope in scope_slices(rows, common):
-            scoped.extend(static_asocc_ssp_slices(branch_scope))
-        return scoped
-    return scope_slices(rows, (*common, *DYNAMIC_SCOPE_COLUMNS))
+            yield from static_asocc_ssp_slices(branch_scope)
+        return
+    yield from scope_slices(rows, (*common, *DYNAMIC_SCOPE_COLUMNS))
 
 
-def _per_method_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> list[pd.DataFrame]:
+def _per_method_branch_slices(*, rows: pd.DataFrame, cc_type: str) -> Iterator[pd.DataFrame]:
     common = ("lcia_method",)
     if str(cc_type) == "static":
-        scoped = []
         for branch_scope in scope_slices(rows, common):
             for method in visible_values(branch_scope, "__method"):
                 method_scope = branch_scope.loc[
                     branch_scope["__method"].astype(str).eq(method)
                 ].copy()
-                scoped.extend(static_asocc_ssp_slices(method_scope))
-        return scoped
-    scoped = []
+                yield from static_asocc_ssp_slices(method_scope)
+        return
     for branch_scope in scope_slices(rows, (*common, *DYNAMIC_SCOPE_COLUMNS)):
         for method in visible_values(branch_scope, "__method"):
-            scoped.append(branch_scope.loc[branch_scope["__method"].astype(str).eq(method)].copy())
-    return scoped
+            yield branch_scope.loc[branch_scope["__method"].astype(str).eq(method)].copy()
 
 
 def _prepare_rows(rows: pd.DataFrame) -> pd.DataFrame:

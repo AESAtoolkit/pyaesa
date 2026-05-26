@@ -168,10 +168,10 @@ def _as_list(value: object) -> list[str]:
 
 def _format_mrio_scope(*, arguments: dict[str, Any]) -> str:
     parts = [
-        f"group_reg={bool(arguments.get('group_reg'))}",
-        f"group_sec={bool(arguments.get('group_sec'))}",
-        f"group_version={arguments.get('group_version') or 'none'}",
-        f"aggreg_indices={bool(arguments.get('aggreg_indices'))}",
+        f"agg_reg={bool(arguments.get('agg_reg'))}",
+        f"agg_sec={bool(arguments.get('agg_sec'))}",
+        f"agg_version={arguments.get('agg_version') or 'none'}",
+        f"group_indices={bool(arguments.get('group_indices'))}",
     ]
     return ", ".join(parts)
 

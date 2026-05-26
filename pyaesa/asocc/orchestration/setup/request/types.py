@@ -18,12 +18,12 @@ class _SelectionBundle:
 
 
 @dataclass(frozen=True)
-class _GroupingBundle:
-    """Resolved grouping controls."""
+class _AggregationBundle:
+    """Resolved aggregation controls."""
 
-    apply_group_reg: bool
-    apply_group_sec: bool
-    group_version_reg: str | None
+    apply_agg_reg: bool
+    apply_agg_sec: bool
+    agg_version_reg: str | None
 
 
 @dataclass(frozen=True)
@@ -42,9 +42,9 @@ class PrepareContextRequest:
 
     project_name: str
     source: str
-    group_version: str | None
-    group_reg: bool | None
-    group_sec: bool | None
+    agg_version: str | None
+    agg_reg: bool | None
+    agg_sec: bool | None
     years: int | list[int] | range | None
     historical_year_cap: int | None
     refresh: bool
@@ -64,7 +64,7 @@ class PrepareContextRequest:
     l2_reuse_years: int | list[int] | range | None
     l1_reg_aggreg: str
     variant_tag: str | None
-    aggreg_indices: bool
+    group_indices: bool
     output_format: str
     intermediate_outputs: bool
     output_source_label: str | None = None

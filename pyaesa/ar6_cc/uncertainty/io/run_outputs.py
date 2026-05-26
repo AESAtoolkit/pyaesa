@@ -23,7 +23,7 @@ from pyaesa.shared.runtime.reporting.run_progress import (
     monte_carlo_run_progress_label,
 )
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
-    collapse_sparse_rows_to_summary_groups,
+    run_positions_in_window,
 )
 from pyaesa.shared.uncertainty_assessment.io.public_summary import (
     exact_summary_from_public_runs,
@@ -32,16 +32,17 @@ from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_compact_run_matrix,
     iter_sparse_run_rows,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
-    write_uncertainty_table,
 )
+from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.uncertainty_assessment.monte_carlo.convergence import (
     ConvergenceCheckpointCursor,
     MeanConvergenceAccumulator,
-    ordered_mean_convergence_reached,
+    mean_convergence_payload,
+    mean_convergence_payload_for_targets,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import (
     run_seed_from_run_id,
@@ -218,7 +219,6 @@ def _write_dispatched_runs(
                     state=states["study"],
                     rows=study_rows,
                     run_indices=run_indices,
-                    public_row_groups=study["public_row_groups"],
                     public_row_group_index=study["summary_group_index"],
                 )
                 if post is not None and post_writer is not None:
@@ -231,7 +231,6 @@ def _write_dispatched_runs(
                         state=states["post"],
                         rows=post_rows,
                         run_indices=run_indices,
-                        public_row_groups=post["public_row_groups"],
                         public_row_group_index=post["summary_group_index"],
                     )
                 budget_values = budget_matrix_from_full_sparse_rows(
@@ -290,16 +289,20 @@ def _append_segment_summary(
     state: dict[str, Any],
     rows: SparseRunRows,
     run_indices: np.ndarray,
-    public_row_groups: tuple[tuple[str, ...], ...],
     public_row_group_index: np.ndarray,
 ) -> int:
-    summary_values = collapse_sparse_rows_to_summary_groups(
-        sparse_rows=rows,
+    """Accumulate sparse trajectory means for convergence without a dense matrix."""
+    accumulator: MeanConvergenceAccumulator = state["accumulator"]
+    row_runs = run_positions_in_window(
         run_indices=run_indices,
-        public_row_groups=public_row_groups,
-        public_row_group_index=public_row_group_index,
+        row_run_index=rows.run_index,
     )
-    _append_compact_summary(state=state, values=summary_values)
+    row_groups = public_row_group_index[rows.public_row_id]
+    accumulator.accumulate_sparse_group_means(
+        row_runs=row_runs,
+        row_groups=row_groups,
+        values=rows.values,
+    )
     return int(run_indices[-1]) + 1
 
 
@@ -320,13 +323,12 @@ def _checkpoint_convergence(
     if "post" in states:
         targets.append(states["post"]["accumulator"])
     targets.append(states["budget"]["accumulator"])
-    if not ordered_mean_convergence_reached(
+    return mean_convergence_payload_for_targets(
         targets=tuple(targets),
         completed_runs=completed_runs,
-        rtol=runtime.rtol,
-    ):
-        return None
-    return _convergence_payload(reached=True, completed_runs=completed_runs, runtime=runtime)
+        runtime=runtime,
+        check_convergence=True,
+    )
 
 
 def _record_state_baselines(
@@ -354,7 +356,6 @@ def _prime_existing_ar6_cc_states(
         output_format=runtime.output_format,
         completed=completed,
         state=states["study"],
-        public_row_groups=study["public_row_groups"],
         public_row_group_index=study["summary_group_index"],
     )
     if post is not None:
@@ -363,7 +364,6 @@ def _prime_existing_ar6_cc_states(
             output_format=runtime.output_format,
             completed=completed,
             state=states["post"],
-            public_row_groups=post["public_row_groups"],
             public_row_group_index=post["summary_group_index"],
         )
     for run_indices, values in iter_compact_run_matrix(
@@ -381,7 +381,6 @@ def _prime_sparse_segment_cache(
     output_format: str,
     completed: int,
     state: dict[str, Any],
-    public_row_groups: tuple[tuple[str, ...], ...],
     public_row_group_index: np.ndarray,
 ) -> None:
     for rows in iter_sparse_run_rows(
@@ -395,7 +394,6 @@ def _prime_sparse_segment_cache(
             state=state,
             rows=rows,
             run_indices=np.arange(first_run, last_run + 1, dtype=np.int64),
-            public_row_groups=public_row_groups,
             public_row_group_index=public_row_group_index,
         )
 
@@ -490,20 +488,8 @@ def _final_convergence_payload(
 ) -> dict[str, Any] | None:
     if runtime.mode != "convergence" or convergence is not None:
         return convergence
-    return _convergence_payload(reached=False, completed_runs=completed_runs, runtime=runtime)
-
-
-def _convergence_payload(
-    *,
-    reached: bool,
-    completed_runs: int,
-    runtime: UncertaintyRuntimeRequest,
-) -> dict[str, Any]:
-    return {
-        "reached": bool(reached),
-        "completed_runs": int(completed_runs),
-        "max_runs": int(runtime.max_runs),
-        "rtol": float(runtime.rtol),
-        "stable_runs": int(runtime.stable_runs),
-        "statistics": list(runtime.convergence_statistics),
-    }
+    return mean_convergence_payload(
+        reached=False,
+        completed_runs=completed_runs,
+        runtime=runtime,
+    )

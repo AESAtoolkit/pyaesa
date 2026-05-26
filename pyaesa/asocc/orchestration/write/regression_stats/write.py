@@ -17,7 +17,6 @@ from pyaesa.asocc.orchestration.write.regression_stats.paths_io import (
     _FIT_INPUT_KEY_COLUMNS,
     _UNCERTAINTY_REQUIRED_COLUMNS,
     _reorder_fit_inputs_columns,
-    _resolve_fit_window_for_write,
     _write_regression_columns_defs,
     _write_table,
 )
@@ -48,7 +47,7 @@ def write_regression_stats(
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
 
     if not has_stats:
@@ -68,20 +67,13 @@ def write_regression_stats(
         tick_write_progress(context=context, state=state)
         return None
 
-    fit_window = cast(
-        tuple[int, int],
-        _resolve_fit_window_for_write(
-            stats_frame=stats_frame,
-            uncertainty_frame=uncertainty_frame,
-            fit_inputs_frame=fit_inputs_frame,
-        ),
-    )
+    fit_window = cast(tuple[int, int], context.projection_context.reg_window)
     fit_start_year, fit_end_year = fit_window
     path = stats_path_for_format(
         proj_base=context.proj_base,
         output_format=context.output_format,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     path = ensure_file_parent(path)
 
@@ -90,7 +82,7 @@ def write_regression_stats(
         fit_start_year=int(fit_start_year),
         fit_end_year=int(fit_end_year),
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     merged = _merge_regression_models_frame(
         stats_frame=stats_frame,

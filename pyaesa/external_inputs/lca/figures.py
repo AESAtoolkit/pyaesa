@@ -1,6 +1,7 @@
 """Figure rendering for external LCA subfigures triggered by ASR."""
 
 from pathlib import Path
+from collections.abc import Iterator
 from typing import cast
 
 import numpy as np
@@ -8,8 +9,9 @@ import pandas as pd
 
 from pyaesa.external_inputs.lca.monte_carlo import (
     ExternalLCAMonteCarloSource,
-    external_lca_values_for_runs,
+    external_lca_values_for_run_rows,
 )
+from pyaesa.io_lca.figures.common import lca_prospective_scope_slices, selector_groups
 from pyaesa.io_lca.plot.figure_writers import (
     write_lcia_method_checkpoint_figures,
     write_lcia_method_figures,
@@ -23,6 +25,11 @@ from pyaesa.shared.figures.trajectory_bands import SUMMARY_COLUMNS
 from pyaesa.shared.runtime.scenario.columns import EXT_LCA_SSP_SCENARIO_COLUMN
 from pyaesa.shared.figures.contracts import SELECTOR_COLUMNS
 from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.labels import plural_label
+from pyaesa.shared.uncertainty_assessment.io.summary_kernels import (
+    assign_summary_columns,
+    column_block_width,
+)
 
 from pyaesa.external_inputs.lca.naming import normalize_external_lca_version_name
 from pyaesa.external_inputs.lca.paths import (
@@ -97,7 +104,7 @@ def render_external_lca_deterministic_figures_from_rows(
 ) -> list[Path]:
     """Render deterministic external LCA figures from already loaded LCA rows."""
     if status is not None:
-        status.show("[external_lca] Generating figures: external LCA")
+        status.show("[external_lca] Generating figure: external LCA")
     figure_frame = _normalize_for_figures(
         frame=rows,
         lcia_method=lcia_method,
@@ -134,7 +141,9 @@ def render_external_lca_deterministic_figures_from_rows(
             selector_columns=SELECTOR_COLUMNS,
             file_stem_prefix=file_stem_prefix,
         )
-    return sorted({Path(path) for path in paths})
+    out = sorted({Path(path) for path in paths})
+    _log_external_lca_figure_completion(status=status, paths=out)
+    return out
 
 
 def render_external_lca_uncertainty_figures_from_source(
@@ -146,72 +155,183 @@ def render_external_lca_uncertainty_figures_from_source(
     completed_runs: int | None = None,
     status: StatusSink | None = None,
 ) -> list[Path]:
-    """Render external LCA Monte Carlo figures from a materialized source matrix."""
+    """Render external LCA Monte Carlo figures from scoped source row values."""
     if status is not None:
-        status.show("[external_lca] Generating figures: external LCA")
-    values = _source_values(source=source, completed_runs=completed_runs)
+        status.show("[external_lca] Generating figure: external LCA")
     years = sorted({int(year) for year in source.identity["year"].tolist()})
     figures_dir = external_lca_monte_carlo_figures_dir(project_base=proj_base)
     file_stem_prefix = normalize_external_lca_version_name(
         source.version_name,
         argument_name="external LCA version_name",
     )
+    run_count = _run_count(source=source, completed_runs=completed_runs)
+    identity_frame = _normalize_identity_for_figures(
+        frame=source.identity,
+        lcia_method=source.lcia_method,
+    )
     if len(years) == 1:
-        return write_lca_uncertainty_violin_figures(
-            lcia_method_frame=_uncertainty_violin_frame(source=source, values=values),
-            reference_frame=source.identity,
+        paths = _render_uncertainty_violin_figures(
+            source=source,
+            identity_frame=identity_frame,
+            run_count=run_count,
+            years=years,
             figures_dir=figures_dir,
-            lcia_method=source.lcia_method,
-            checkpoint_years=years,
-            dpi=dpi,
             output_format=output_format,
-            family_label="LCA uncertainty",
-            selector_columns=SELECTOR_COLUMNS,
+            dpi=dpi,
             file_stem_prefix=file_stem_prefix,
         )
-    return write_lca_uncertainty_band_figures(
-        lcia_method_frame=_uncertainty_summary_frame(source=source, values=values),
-        reference_frame=source.identity,
-        figures_dir=figures_dir,
-        lcia_method=source.lcia_method,
-        dpi=dpi,
-        output_format=output_format,
-        family_label="LCA uncertainty",
-        selector_columns=SELECTOR_COLUMNS,
-        file_stem_prefix=file_stem_prefix,
+    else:
+        paths = _render_uncertainty_band_figures(
+            source=source,
+            identity_frame=identity_frame,
+            run_count=run_count,
+            figures_dir=figures_dir,
+            output_format=output_format,
+            dpi=dpi,
+            file_stem_prefix=file_stem_prefix,
+        )
+    _log_external_lca_figure_completion(status=status, paths=paths)
+    return paths
+
+
+def _log_external_lca_figure_completion(*, status: StatusSink | None, paths: list[Path]) -> None:
+    if status is None:
+        return
+    count = len(paths)
+    status.log_message(
+        f"[external_lca] Generated {plural_label(count, 'figure')}: external LCA.",
+        persistent=True,
     )
 
 
-def _source_values(
+def _run_count(
     *,
     source: ExternalLCAMonteCarloSource,
     completed_runs: int | None,
-) -> np.ndarray:
-    run_count = len(source.run_indices) if completed_runs is None else int(completed_runs)
-    run_indices = np.arange(run_count, dtype=np.int64)
-    return external_lca_values_for_runs(source=source, run_indices=run_indices)
+) -> int:
+    return len(source.run_indices) if completed_runs is None else int(completed_runs)
+
+
+def _render_uncertainty_band_figures(
+    *,
+    source: ExternalLCAMonteCarloSource,
+    identity_frame: pd.DataFrame,
+    run_count: int,
+    figures_dir: Path,
+    output_format: str,
+    dpi: int,
+    file_stem_prefix: str,
+) -> list[Path]:
+    paths: list[Path] = []
+    for scope in _lca_figure_scopes(identity_frame):
+        paths.extend(
+            write_lca_uncertainty_band_figures(
+                lcia_method_frame=_uncertainty_summary_frame(
+                    source=source,
+                    identity_frame=scope,
+                    row_positions=_row_positions(scope),
+                    run_count=run_count,
+                ),
+                reference_frame=identity_frame,
+                figures_dir=figures_dir,
+                lcia_method=source.lcia_method,
+                dpi=dpi,
+                output_format=output_format,
+                family_label="LCA uncertainty",
+                selector_columns=SELECTOR_COLUMNS,
+                file_stem_prefix=file_stem_prefix,
+            )
+        )
+    return paths
+
+
+def _render_uncertainty_violin_figures(
+    *,
+    source: ExternalLCAMonteCarloSource,
+    identity_frame: pd.DataFrame,
+    run_count: int,
+    years: list[int],
+    figures_dir: Path,
+    output_format: str,
+    dpi: int,
+    file_stem_prefix: str,
+) -> list[Path]:
+    paths: list[Path] = []
+    for scope in _lca_figure_scopes(identity_frame):
+        paths.extend(
+            write_lca_uncertainty_violin_figures(
+                lcia_method_frame=_uncertainty_violin_frame(
+                    source=source,
+                    identity_frame=scope,
+                    row_positions=_row_positions(scope),
+                    run_count=run_count,
+                ),
+                reference_frame=identity_frame,
+                figures_dir=figures_dir,
+                lcia_method=source.lcia_method,
+                checkpoint_years=years,
+                dpi=dpi,
+                output_format=output_format,
+                family_label="LCA uncertainty",
+                selector_columns=SELECTOR_COLUMNS,
+                file_stem_prefix=file_stem_prefix,
+            )
+        )
+    return paths
+
+
+def _lca_figure_scopes(
+    identity_frame: pd.DataFrame,
+) -> Iterator[pd.DataFrame]:
+    """Yield one external LCA selector and prospective figure scope."""
+    _selector_cols, groups = selector_groups(
+        frame=identity_frame,
+        selector_columns=SELECTOR_COLUMNS,
+    )
+    for _group_key, group in groups:
+        for _scenario_token, _scenario_title, scoped in lca_prospective_scope_slices(group):
+            yield scoped
+
+
+def _row_positions(frame: pd.DataFrame) -> np.ndarray:
+    return frame["public_row_id"].to_numpy(dtype=np.int64, copy=False)
 
 
 def _uncertainty_summary_frame(
     *,
     source: ExternalLCAMonteCarloSource,
-    values: np.ndarray,
+    identity_frame: pd.DataFrame,
+    row_positions: np.ndarray,
+    run_count: int,
 ) -> pd.DataFrame:
-    out = _normalize_identity_for_figures(frame=source.identity, lcia_method=source.lcia_method)
-    out["mean"] = np.mean(values, axis=0)
-    out["median"] = np.median(values, axis=0)
-    out["p25"] = np.percentile(values, 25.0, axis=0)
-    out["p75"] = np.percentile(values, 75.0, axis=0)
-    out["p5"] = np.percentile(values, 5.0, axis=0)
-    out["p95"] = np.percentile(values, 95.0, axis=0)
-    return _figure_columns(out)
+    run_indices = np.arange(int(run_count), dtype=np.int64)
+    block_width = column_block_width(run_count=int(run_count), row_count=len(row_positions))
+    pieces: list[pd.DataFrame] = []
+    for start in range(0, len(row_positions), block_width):
+        stop = min(start + block_width, len(row_positions))
+        values = external_lca_values_for_run_rows(
+            source=source,
+            run_indices=run_indices,
+            row_positions=row_positions[start:stop],
+        )
+        block = identity_frame.iloc[start:stop].reset_index(drop=True).copy()
+        assign_summary_columns(summary=block, values=values)
+        pieces.append(_figure_columns(block))
+    return pd.concat(pieces, ignore_index=True)
 
 
 def _uncertainty_violin_frame(
     *,
     source: ExternalLCAMonteCarloSource,
-    values: np.ndarray,
+    identity_frame: pd.DataFrame,
+    row_positions: np.ndarray,
+    run_count: int,
 ) -> pd.DataFrame:
-    out = _normalize_identity_for_figures(frame=source.identity, lcia_method=source.lcia_method)
+    values = external_lca_values_for_run_rows(
+        source=source,
+        run_indices=np.arange(int(run_count), dtype=np.int64),
+        row_positions=row_positions,
+    )
+    out = identity_frame.reset_index(drop=True).copy()
     out[VALUE_ARRAY_COLUMN] = list(values.T)
     return _figure_columns(out)

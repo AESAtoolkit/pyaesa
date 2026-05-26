@@ -18,6 +18,7 @@ def iter_acc_run_batches(
     output_format: str,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    batch_size: int | None = None,
 ):
     """Yield ACC compact run matrix batches."""
     for run_indices, asocc_values in iter_asocc_values(
@@ -26,6 +27,7 @@ def iter_acc_run_batches(
         public_row_count=asocc_public_row_count(plan=plan),
         start_run_index=start_run_index,
         stop_run_index=cast(int, stop_run_index),
+        batch_size=batch_size,
     ):
         yield (
             run_indices,

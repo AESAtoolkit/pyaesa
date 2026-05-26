@@ -305,36 +305,36 @@ def _bridge_time_route_rows(*, target: pd.DataFrame, reference: pd.DataFrame) ->
 
 
 def _disaggregate_values(frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-    """Return disaggregated output values and split ratios for one merged frame."""
+    """Return disaggregated output values and disaggregate ratios for one merged frame."""
     target_values = pd.Series(
         pd.to_numeric(frame["target_value"], errors="raise"),
         copy=False,
     ).to_numpy(dtype="float64")
-    grouped_values = pd.Series(
-        pd.to_numeric(frame["ref_grouped_value"], errors="raise"),
+    aggregated_values = pd.Series(
+        pd.to_numeric(frame["ref_aggregated_value"], errors="raise"),
         copy=False,
     ).to_numpy(dtype="float64")
-    split_values = pd.Series(
-        pd.to_numeric(frame["ref_split_value"], errors="raise"),
+    disaggregate_values = pd.Series(
+        pd.to_numeric(frame["ref_disaggregate_value"], errors="raise"),
         copy=False,
     ).to_numpy(dtype="float64")
-    missing_grouped = pd.Series(frame["ref_grouped_value"], copy=False).isna().to_numpy()
-    missing_split = pd.Series(frame["ref_split_value"], copy=False).isna().to_numpy()
-    if bool((missing_grouped | missing_split).any()):
+    missing_aggregated = pd.Series(frame["ref_aggregated_value"], copy=False).isna().to_numpy()
+    missing_disaggregate = pd.Series(frame["ref_disaggregate_value"], copy=False).isna().to_numpy()
+    if bool((missing_aggregated | missing_disaggregate).any()):
         sample_columns: list[str] = []
         for column in ["year", *frame.columns[:5]]:
             if column not in sample_columns:
                 sample_columns.append(column)
-        sample = frame.loc[missing_grouped | missing_split, sample_columns].head(5)
+        sample = frame.loc[missing_aggregated | missing_disaggregate, sample_columns].head(5)
         sample_values = list(sample.itertuples(index=False, name=None))
         raise ValueError(
             "Missing reference values for required disaggregation key/year. "
             f"Sample row columns: {list(sample.columns)}. Sample row values: {sample_values}"
         )
-    grouped_zero_split_positive = (grouped_values == 0.0) & (split_values > 0.0)
-    if bool(grouped_zero_split_positive.any()):
+    aggregated_zero_disaggregate_positive = (aggregated_values == 0.0) & (disaggregate_values > 0.0)
+    if bool(aggregated_zero_disaggregate_positive.any()):
         sample = frame.loc[
-            grouped_zero_split_positive,
+            aggregated_zero_disaggregate_positive,
             [
                 column
                 for column in [
@@ -343,27 +343,28 @@ def _disaggregate_values(frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
                     "file_stem",
                     ASOCC_SSP_SCENARIO_COLUMN,
                     "l2_reuse_year",
-                    "grouped_sector_label",
+                    "aggregated_sector_label",
                     "s_p",
                     "target_value",
-                    "ref_grouped_value",
-                    "ref_split_value",
+                    "ref_aggregated_value",
+                    "ref_disaggregate_value",
                 ]
                 if column in frame.columns
             ],
         ].head(5)
         raise ValueError(
-            "Disaggregation cannot compute split ratios where the grouped reference value is "
-            "zero and the split reference value is positive. "
+            "Disaggregation cannot compute disaggregate ratios where the "
+            "aggregated reference value is zero and the disaggregate reference "
+            "value is positive. "
             f"Sample row columns: {list(sample.columns)}. "
             f"Sample row values: {list(sample.itertuples(index=False, name=None))}"
         )
-    grouped_split_zero_target_positive = (
-        (grouped_values == 0.0) & (split_values == 0.0) & (target_values > 0.0)
+    aggregated_disaggregate_zero_target_positive = (
+        (aggregated_values == 0.0) & (disaggregate_values == 0.0) & (target_values > 0.0)
     )
-    if bool(grouped_split_zero_target_positive.any()):
+    if bool(aggregated_disaggregate_zero_target_positive.any()):
         sample = frame.loc[
-            grouped_split_zero_target_positive,
+            aggregated_disaggregate_zero_target_positive,
             [
                 column
                 for column in [
@@ -372,29 +373,29 @@ def _disaggregate_values(frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
                     "file_stem",
                     ASOCC_SSP_SCENARIO_COLUMN,
                     "l2_reuse_year",
-                    "grouped_sector_label",
+                    "aggregated_sector_label",
                     "s_p",
                     "target_value",
-                    "ref_grouped_value",
-                    "ref_split_value",
+                    "ref_aggregated_value",
+                    "ref_disaggregate_value",
                 ]
                 if column in frame.columns
             ],
         ].head(5)
         raise ValueError(
-            "Disaggregation cannot allocate a positive grouped target value when both grouped "
-            "and split reference values are zero. "
+            "Disaggregation cannot allocate a positive aggregated target value "
+            "when both aggregated and disaggregate reference values are zero. "
             f"Sample row columns: {list(sample.columns)}. "
             f"Sample row values: {list(sample.itertuples(index=False, name=None))}"
         )
     ratio = np.divide(
-        split_values,
-        grouped_values,
-        out=np.zeros_like(split_values, dtype=float),
-        where=(grouped_values != 0.0),
+        disaggregate_values,
+        aggregated_values,
+        out=np.zeros_like(disaggregate_values, dtype=float),
+        where=(aggregated_values != 0.0),
     )
     output = target_values * ratio
-    triple_zero = (target_values == 0.0) & (grouped_values == 0.0) & (split_values == 0.0)
+    triple_zero = (target_values == 0.0) & (aggregated_values == 0.0) & (disaggregate_values == 0.0)
     output = np.where(triple_zero, 0.0, output)
     return output, ratio
 
@@ -402,53 +403,58 @@ def _disaggregate_values(frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
 def disaggregate_rows(
     *,
     target_rows: pd.DataFrame,
-    ref_grouped_rows: pd.DataFrame,
-    ref_split_rows: pd.DataFrame,
-    grouped_sector_by_split: dict[str, str],
+    ref_aggregated_rows: pd.DataFrame,
+    ref_disaggregate_rows: pd.DataFrame,
+    aggregated_sector_by_disaggregate: dict[str, str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Apply the disaggregation equation to one published output family."""
     if target_rows.empty:
         return pd.DataFrame(), pd.DataFrame()
     target = target_rows.copy()
-    ref_grouped = ref_grouped_rows.copy()
-    ref_split = ref_split_rows.copy()
-    target["grouped_sector_label"] = target["s_p"]
-    ref_grouped["grouped_sector_label"] = ref_grouped["s_p"]
-    ref_split["grouped_sector_label"] = ref_split["s_p"].map(
-        lambda value: grouped_sector_by_split.get(str(value))
+    ref_aggregated = ref_aggregated_rows.copy()
+    ref_disaggregate = ref_disaggregate_rows.copy()
+    target["aggregated_sector_label"] = target["s_p"]
+    ref_aggregated["aggregated_sector_label"] = ref_aggregated["s_p"]
+    ref_disaggregate["aggregated_sector_label"] = ref_disaggregate["s_p"].map(
+        lambda value: aggregated_sector_by_disaggregate.get(str(value))
     )
-    if bool(pd.Series(ref_split["grouped_sector_label"], copy=False).isna().any()):
+    if bool(pd.Series(ref_disaggregate["aggregated_sector_label"], copy=False).isna().any()):
         missing = sorted(
-            set(ref_split.loc[ref_split["grouped_sector_label"].isna(), "s_p"].astype(str))
+            set(
+                ref_disaggregate.loc[
+                    ref_disaggregate["aggregated_sector_label"].isna(), "s_p"
+                ].astype(str)
+            )
         )
         raise ValueError(
-            "Reference split rows contain sector labels not declared in disaggregation_specs: "
+            "Reference disaggregate rows contain sector labels not declared "
+            "in disaggregation_specs: "
             f"{missing}"
         )
-    ref_grouped = _bridge_time_route_rows(target=target, reference=ref_grouped)
-    ref_split = _bridge_time_route_rows(target=target, reference=ref_split)
-    shared_with_grouped = _shared_exact_keys(left=target, right=ref_grouped)
+    ref_aggregated = _bridge_time_route_rows(target=target, reference=ref_aggregated)
+    ref_disaggregate = _bridge_time_route_rows(target=target, reference=ref_disaggregate)
+    shared_with_aggregated = _shared_exact_keys(left=target, right=ref_aggregated)
     merged = _merge_reference(
         target=target.rename(columns={"value": "target_value"}),
-        reference=ref_grouped.rename(columns={"value": "value"}),
-        exact_keys=shared_with_grouped,
-        label="ref_grouped",
+        reference=ref_aggregated.rename(columns={"value": "value"}),
+        exact_keys=shared_with_aggregated,
+        label="ref_aggregated",
     )
-    shared_with_split = _shared_exact_keys(left=merged, right=ref_split)
+    shared_with_disaggregate = _shared_exact_keys(left=merged, right=ref_disaggregate)
     merged = _merge_reference(
         target=merged.rename(columns={"target_value": "target_value"}),
-        reference=ref_split.rename(columns={"value": "value"}),
-        exact_keys=shared_with_split,
-        label="ref_split",
+        reference=ref_disaggregate.rename(columns={"value": "value"}),
+        exact_keys=shared_with_disaggregate,
+        label="ref_disaggregate",
         allowed_variant_keys=["s_p"],
     )
     output_values, ratios = _disaggregate_values(frame=merged)
     result = merged.copy()
     result["value"] = output_values
     result["ratio"] = ratios
-    result["s_p"] = result["ref_split_s_p"]
+    result["s_p"] = result["ref_disaggregate_s_p"]
     keep_columns = [
-        column for column in target.columns if column not in {"grouped_sector_label", "value"}
+        column for column in target.columns if column not in {"aggregated_sector_label", "value"}
     ]
     result_rows = result.loc[:, [*keep_columns, "value"]].copy()
     audit = result.loc[
@@ -461,14 +467,14 @@ def disaggregate_rows(
                 ASOCC_SSP_SCENARIO_COLUMN,
                 "l2_reuse_year",
                 "year",
-                "grouped_sector_label",
+                "aggregated_sector_label",
                 "s_p",
                 ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
                 "target_value",
-                "ref_grouped_value",
-                "ref_split_value",
-                "ref_grouped_time_route_bridge",
-                "ref_split_time_route_bridge",
+                "ref_aggregated_value",
+                "ref_disaggregate_value",
+                "ref_aggregated_time_route_bridge",
+                "ref_disaggregate_time_route_bridge",
                 "ratio",
                 "value",
             ]

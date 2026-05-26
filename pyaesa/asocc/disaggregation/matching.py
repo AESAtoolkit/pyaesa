@@ -43,15 +43,15 @@ def _build_user_rerun_message(
     lines = [f"Missing prerequisite deterministic_asocc outputs for selector '{selector_name}'."]
     scope_parts = [
         f"source='{request.source}'",
-        f"group_reg={bool(request.group_reg)}",
-        f"group_sec={bool(request.group_sec)}",
+        f"agg_reg={bool(request.agg_reg)}",
+        f"agg_sec={bool(request.agg_sec)}",
     ]
-    if request.group_version:
-        scope_parts.append(f"group_version='{request.group_version}'")
+    if request.agg_version:
+        scope_parts.append(f"agg_version='{request.agg_version}'")
     lines.append("Selector scope: " + ", ".join(scope_parts))
     lines.append(f"Sectors (s_p): {request.s_p}")
-    mode = "grouped" if bool(request.aggreg_indices) else "ungrouped"
-    lines.append(f"Branch mode: l1_reg_aggreg='{request.l1_reg_aggreg}', aggreg_indices='{mode}'")
+    mode = "grouped" if bool(request.group_indices) else "ungrouped"
+    lines.append(f"Branch mode: l1_reg_aggreg='{request.l1_reg_aggreg}', group_indices='{mode}'")
     lines.append(f"Missing years to run: {_format_years_with_count(missing_years)}.")
     lines.append("Reason: missing required published output coverage.")
     lines.append(

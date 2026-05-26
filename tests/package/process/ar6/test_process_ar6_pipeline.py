@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from tests.package.helpers.ar6_imports import (
     processing_loaders,
     processing_metadata,
     processing_paths,
+    processing_plot_helpers,
     processing_preprocessing,
     processing_processing_modes,
     processing_raw_inputs,
@@ -31,6 +33,8 @@ DEFAULT_CATEGORIES = collection_config.DEFAULT_CATEGORIES
 DEFAULT_DATABASE = collection_config.DEFAULT_DATABASE
 DEFAULT_SSPS = collection_config.DEFAULT_SSPS
 DEFAULT_VARIABLES_OUTPUT = collection_config.DEFAULT_VARIABLES_OUTPUT
+VALID_AR6_CATEGORIES = collection_config.VALID_AR6_CATEGORIES
+CATEGORY_COLORS = processing_plot_helpers.CATEGORY_COLORS
 GROSS_CO2_WITH_AFOLU = collection_config.GROSS_CO2_WITH_AFOLU
 GROSS_ALT_CO2_WO_AFOLU = collection_config.GROSS_ALT_CO2_WO_AFOLU
 GROSS_ALT_KYOTO_WO_AFOLU = collection_config.GROSS_ALT_KYOTO_WO_AFOLU
@@ -53,6 +57,7 @@ RAW_SEQUESTRATION_COMPONENTS = collection_config.RAW_SEQUESTRATION_COMPONENTS
 SEQUESTRATION_TOTAL = collection_config.SEQUESTRATION_TOTAL
 read_explorer_csv = collection_explorer.read_explorer_csv
 process_ar6 = processing_entry.process_ar6
+normalize_ar6_categories = collection_config.normalize_ar6_categories
 budget_stats_sheet_name = processing_contracts.budget_stats_sheet_name
 final_pathways_sheet_name = processing_contracts.final_pathways_sheet_name
 harmonization_log_workbook_name = processing_contracts.harmonization_log_workbook_name
@@ -66,6 +71,7 @@ get_logs_dir = processing_paths.get_logs_dir
 get_processed_dir = processing_paths.get_processed_dir
 get_processed_scope_dir = processing_paths.get_processed_scope_dir
 get_scope_dirs = processing_paths.get_scope_dirs
+category_scope_folder = processing_paths.category_scope_folder
 study_period_folder = processing_paths.study_period_folder
 ProcessReportAR6 = processing_reports.ProcessReportAR6
 build_process_report = processing_reports.build_process_report
@@ -190,14 +196,19 @@ def test_process_ar6_path_contracts_and_metadata(project_repo: Path) -> None:
     assert not logs_dir.exists()
     assert not figures_dir.exists()
     assert processed_scope_dir.name.endswith("harmonization_constant_offset")
-    assert processed_dir.name == "process_ar6"
-    assert processed_dir.parent == processed_scope_dir
+    assert category_scope_folder(["C1", "C2"]) == "C1-C2"
+    assert category_scope_folder(["C2", "C4"]) == "C2-C4"
+    assert processed_dir.name == "C1-C4"
+    assert processed_dir.parent.name == "process_ar6"
+    assert processed_dir.parent.parent == processed_scope_dir
     assert logs_dir.name == "logs"
-    assert logs_dir.parent.name == "process_ar6"
-    assert logs_dir.parent.parent.name.endswith("no_harmonization")
+    assert logs_dir.parent.name == "C1-C4"
+    assert logs_dir.parent.parent.name == "process_ar6"
+    assert logs_dir.parent.parent.parent.name.endswith("no_harmonization")
     assert figures_dir.name == "figures"
-    assert figures_dir.parent.name == "process_ar6"
-    assert figures_dir.parent.parent.name.endswith("harmonization_reduced_offset")
+    assert figures_dir.parent.name == "C1-C4"
+    assert figures_dir.parent.parent.name == "process_ar6"
+    assert figures_dir.parent.parent.parent.name.endswith("harmonization_reduced_offset")
     assert len(get_scope_dirs([2019, 2060], harmonization=False)) == 3
 
     meta_path = processed_dir / "meta.json"
@@ -251,8 +262,25 @@ def test_process_ar6_runtime_study_period_and_raw_input_guards(
 
     signature = process_signature([2019, 2060], True, "reduced_offset")
     assert signature["harmonization_method"] == "reduced_offset"
+    assert signature["categories"] == ["C1", "C2", "C3", "C4"]
+    assert process_signature([2019, 2060], True, "offset", "c7")["categories"] == ["C7"]
+    assert process_signature([2019, 2060], True, "offset", ["C8", "C1"])["categories"] == [
+        "C1",
+        "C8",
+    ]
     assert "timeperiod" not in signature
     assert "harmonization_method" not in process_signature([2019, 2060], False, "constant_offset")
+    assert normalize_ar6_categories(None) == ["C1", "C2", "C3", "C4"]
+    assert normalize_ar6_categories(["c8", "C1", "C8"]) == ["C1", "C8"]
+    assert VALID_AR6_CATEGORIES == ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"]
+    assert set(CATEGORY_COLORS) == set(VALID_AR6_CATEGORIES)
+    assert len(set(CATEGORY_COLORS.values())) == len(VALID_AR6_CATEGORIES)
+    with pytest.raises(ValueError, match="C1, C2, C3, C4, C5, C6, C7, C8"):
+        normalize_ar6_categories(["C9"])
+    with pytest.raises(ValueError, match="non empty AR6 category string or list"):
+        normalize_ar6_categories(cast(Any, 1))
+    with pytest.raises(ValueError, match="non empty AR6 category string or list"):
+        normalize_ar6_categories(cast(Any, ["C1", 1]))
 
     citation_text = ar6_dummy_repo.citation_txt_path.read_text(encoding="utf-8")
     assert "Raw citation block" in citation_text
@@ -827,6 +855,36 @@ def test_process_ar6_text_outputs_writers_and_reports(
     )
     assert isinstance(report, ProcessReportAR6)
     assert "Warning: requested study period starts in 2025." in str(report)
+    c2_c4_report = ProcessReportAR6(
+        study_period=[2019, 2060],
+        categories=["C2", "C3", "C4"],
+        ssps=[1],
+        harmonization=True,
+        harmonization_method="offset",
+        processed_dir=tmp_path / "processed",
+        logs_dir=tmp_path / "logs",
+    )
+    c1_c2_report = ProcessReportAR6(
+        study_period=[2019, 2060],
+        categories=["C1", "C2"],
+        ssps=[1],
+        harmonization=True,
+        harmonization_method="offset",
+        processed_dir=tmp_path / "processed",
+        logs_dir=tmp_path / "logs",
+    )
+    non_consecutive_report = ProcessReportAR6(
+        study_period=[2019, 2060],
+        categories=["C1", "C3"],
+        ssps=[1],
+        harmonization=True,
+        harmonization_method="offset",
+        processed_dir=tmp_path / "processed",
+        logs_dir=tmp_path / "logs",
+    )
+    assert "AR6 categories: C2-C4" in str(c2_c4_report)
+    assert "AR6 categories: C1-C2" in str(c1_c2_report)
+    assert "AR6 categories: C1, C3" in str(non_consecutive_report)
     report_with_template = build_process_report(
         study_period=[2019, 2060],
         categories=["C1"],
@@ -859,6 +917,7 @@ def test_process_ar6_text_outputs_writers_and_reports(
 def test_process_ar6_entrypoint_without_figures(ar6_dummy_repo: AR6DummyRepo) -> None:
     report = process_ar6(years=list(range(2019, 2061)), figures=False, refresh=True)
     assert report is not None
+    assert report.categories == ["C1", "C2", "C3", "C4"]
     assert report.output_file is not None
     assert report.output_file.exists()
     assert report.harmonization_log_file is not None
@@ -870,6 +929,7 @@ def test_process_ar6_entrypoint_without_figures(ar6_dummy_repo: AR6DummyRepo) ->
             [2019, 2060],
             harmonization=True,
             harmonization_method="offset",
+            category=["C1", "C2", "C3", "C4"],
         )
         / "summary.log"
     )
@@ -881,6 +941,27 @@ def test_process_ar6_entrypoint_without_figures(ar6_dummy_repo: AR6DummyRepo) ->
     assert reused_report.variable_coverage_summaries
     assert summary_log.read_text(encoding="utf-8").strip()
     assert report.harmonization_year_message is None
+
+    c4_report = process_ar6(
+        years=list(range(2019, 2061)),
+        figures=False,
+        category="c4",
+        refresh=True,
+    )
+    assert c4_report.categories == ["C4"]
+    c4_meta = read_json(
+        get_logs_dir(
+            [2019, 2060],
+            harmonization=True,
+            harmonization_method="offset",
+            category=["C4"],
+        )
+        / "scope_manifest.json"
+    )
+    assert c4_meta["arguments"]["categories"] == ["C4"]
+
+    with pytest.raises(ValueError, match="C1, C2, C3, C4, C5, C6, C7, C8"):
+        process_ar6(years=range(2019, 2061), figures=False, category=["C9"])
 
     fallback_report = process_ar6(years=list(range(2025, 2061)), figures=False, refresh=True)
     assert fallback_report.latest_historical_year == 2023

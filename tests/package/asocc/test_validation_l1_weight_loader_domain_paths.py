@@ -32,7 +32,7 @@ def _write_l1_csv(
     path_scope = build_asocc_deterministic_path_scope(
         proj_base=outputs_project_root(project_name=project_name),
         source_label=request.source,
-        group_version=request.group_version,
+        agg_version=request.agg_version,
     )
     out_dir = asocc_l1_dir(scope=path_scope, lcia_sub=None)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,9 +51,9 @@ def test_load_l1_region_weights_reads_original_classification_domain(project_rep
     request = L1RegionWeightRequest(
         validation_project_name_root="validation_demo",
         source="exiobase_396_ixi",
-        group_version=None,
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version=None,
+        agg_reg=False,
+        group_indices=False,
         l1_mode="pre",
         output_format="csv",
         l1_method="EG(Pop)",
@@ -73,14 +73,14 @@ def test_load_l1_region_weights_reads_original_classification_domain(project_rep
     assert list(weights.index) == ["A", "B"]
 
 
-def test_load_l1_region_weights_reads_grouped_domain(project_repo: Path) -> None:
+def test_load_l1_region_weights_reads_aggregated_domain(project_repo: Path) -> None:
     del project_repo
     request = L1RegionWeightRequest(
         validation_project_name_root="validation_demo",
         source="exiobase_396_ixi",
-        group_version="elec",
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version="elec",
+        agg_reg=False,
+        group_indices=False,
         l1_mode="pre",
         output_format="csv",
         l1_method="EG(Pop)",
@@ -106,9 +106,9 @@ def test_load_l1_region_weights_ignores_domainless_layout_for_mrio(
     request = L1RegionWeightRequest(
         validation_project_name_root="validation_demo",
         source="exiobase_396_ixi",
-        group_version=None,
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version=None,
+        agg_reg=False,
+        group_indices=False,
         l1_mode="pre",
         output_format="csv",
         l1_method="EG(Pop)",
@@ -126,9 +126,9 @@ def test_load_l1_region_weights_iso3_uses_no_domain_layout(project_repo: Path) -
     request = L1RegionWeightRequest(
         validation_project_name_root="validation_demo",
         source="iso3",
-        group_version=None,
-        group_reg=False,
-        aggreg_indices=False,
+        agg_version=None,
+        agg_reg=False,
+        group_indices=False,
         l1_mode="pre",
         output_format="csv",
         l1_method="EG(Pop)",

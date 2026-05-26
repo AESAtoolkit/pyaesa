@@ -22,7 +22,7 @@ def _read_metadata(source_key: str, *, matrix_version: Optional[str]) -> Dict[st
         return {
             "source": source_key,
             "version_tag": None,
-            "grouping": {},
+            "aggregation": {},
             "labels": {},
             "years": {},
         }
@@ -41,7 +41,7 @@ def read_processed_mrio_regions(
 
     Args:
         source_key: MRIO source identifier.
-        matrix_version: Optional grouped-matrix version token for grouped scopes.
+        matrix_version: Optional aggregated-matrix version token for aggregated scopes.
 
     Returns:
         list[str]: Ordered processed-region labels from the metadata payload.

@@ -78,9 +78,9 @@ class AsoccPersistedComputeSignature:
         return text or None
 
     @property
-    def aggreg_indices(self) -> bool:
-        """Return whether this persisted scope represents grouped outputs."""
-        return bool(self.payload["aggreg_indices"])
+    def group_indices(self) -> bool:
+        """Return whether this persisted scope uses a custom classification."""
+        return bool(self.payload["group_indices"])
 
     @property
     def output_format(self) -> str:
@@ -132,9 +132,9 @@ class AsoccPersistedRunScope:
         return self.compute_signature.variant_tag
 
     @property
-    def aggreg_indices(self) -> bool:
-        """Return whether this persisted scope represents grouped outputs."""
-        return self.compute_signature.aggreg_indices
+    def group_indices(self) -> bool:
+        """Return whether this persisted scope uses a custom classification."""
+        return self.compute_signature.group_indices
 
     @property
     def output_format(self) -> str:

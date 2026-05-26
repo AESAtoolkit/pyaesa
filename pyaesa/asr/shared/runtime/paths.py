@@ -31,7 +31,7 @@ class ASRDeterministicPathContext:
 
     proj_base: Path
     source_label: str
-    group_version: str | None
+    agg_version: str | None
     fu_code: str
     lca_type: str
     cc_source: str
@@ -43,7 +43,7 @@ def build_asr_path_context(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
     fu_code: str,
     lca_type: str,
     cc_source: str,
@@ -54,7 +54,7 @@ def build_asr_path_context(
     return ASRDeterministicPathContext(
         proj_base=Path(proj_base),
         source_label=str(source_label).strip(),
-        group_version=group_version,
+        agg_version=agg_version,
         fu_code=str(fu_code).strip(),
         lca_type=str(lca_type).strip().lower(),
         cc_source=str(cc_source).strip(),
@@ -66,14 +66,14 @@ def build_asr_path_context(
 def build_asr_scope_label(
     *,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
     lca_type: str,
     cc_source: str,
     cc_type: str,
     lca_version_name: str | None = None,
 ) -> str:
     """Return the deterministic ASR metadata scope label."""
-    source_token = asocc_source_version_token(source=source_label, group_version=group_version)
+    source_token = asocc_source_version_token(source=source_label, agg_version=agg_version)
     lca_token = _lca_route_token(lca_type=lca_type, lca_version_name=lca_version_name)
     return f"{source_token}__{lca_token}__{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
 
@@ -87,7 +87,7 @@ def get_asr_route_root(
     *,
     proj_base: Path,
     source_label: str,
-    group_version: str | None,
+    agg_version: str | None,
     lca_type: str,
     lca_version_name: str | None = None,
 ) -> Path:
@@ -97,7 +97,7 @@ def get_asr_route_root(
         get_asr_root(proj_base=proj_base)
         / asocc_source_version_token(
             source=source_label,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         / lca_token
     )
@@ -109,7 +109,7 @@ def get_asr_branch_root(*, context: ASRDeterministicPathContext) -> Path:
         get_asr_route_root(
             proj_base=context.proj_base,
             source_label=context.source_label,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
             lca_type=context.lca_type,
             lca_version_name=context.lca_version_name,
         )

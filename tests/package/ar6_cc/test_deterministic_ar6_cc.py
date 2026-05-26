@@ -52,6 +52,7 @@ from pyaesa.ar6_cc.deterministic.runtime.reports import AR6CCPathwayCount, Compu
 from pyaesa.process.ar6.utils.io.metadata import build_process_metadata_payload, write_json
 from pyaesa.process.ar6.utils.io.paths import get_processed_scope_dir
 from pyaesa.process.ar6.utils.io.paths import get_logs_dir, get_processed_dir
+from pyaesa.process.ar6.utils.pipeline.runtime_helpers import process_signature
 
 
 def _read_cc_table(path: Path, output_format: str) -> pd.DataFrame:
@@ -65,6 +66,7 @@ def _run_ar6_cc(
     category: list[str] | None = None,
     ssp_scenario: list[str] | None = None,
     emissions_mode: str = "gross_alt",
+    output_format: str = "csv",
     figure_format: dict[str, Any] | None = None,
 ):
     resolved_figure_format: dict[str, object] = (
@@ -75,6 +77,7 @@ def _run_ar6_cc(
         category=(["C1"] if category is None else category),
         ssp_scenario=(["SSP1"] if ssp_scenario is None else ssp_scenario),
         emissions_mode=emissions_mode,
+        output_format=output_format,
         figures=figures,
         figure_format=resolved_figure_format,
         refresh=refresh,
@@ -136,6 +139,7 @@ def test_deterministic_ar6_cc_end_to_end_reuse_and_refresh(ar6_dummy_repo) -> No
         first_report.study_period,
         harmonization=first_report.harmonization,
         harmonization_method=first_report.harmonization_method,
+        category=first_report.categories,
     )
     processed_pathways = read_harmonized_pathways(
         processed_dir=processed_dir,
@@ -151,6 +155,14 @@ def test_deterministic_ar6_cc_end_to_end_reuse_and_refresh(ar6_dummy_repo) -> No
     reused_report = _run_ar6_cc(figures=False, refresh=False)
     assert reused_report is not None
     assert reused_report.reuse_status == "reused_exact"
+    pickle_report = _run_ar6_cc(figures=False, refresh=False, output_format="pickle")
+    assert pickle_report is not None
+    assert pickle_report.reuse_status == "partially_reused"
+    assert pickle_report.output_file.name == "ar6_cc.pickle"
+    assert pickle_report.output_file.exists()
+    assert pickle_report.post_study_output_file is not None
+    assert pickle_report.post_study_output_file.name == "ar6_cc_post_study_period.pickle"
+    assert pickle_report.post_study_output_file.exists()
 
     processed_sentinel = processed_dir / "refresh_sentinel.txt"
     raw_sentinel = ar6_dummy_repo.raw_dir / "raw_refresh_sentinel.txt"
@@ -399,17 +411,34 @@ def test_deterministic_ar6_cc_fresh_figure_render_and_signature_change_rerender(
     assert reused_svg_report is not None
     assert reused_svg_report.reuse_status == "reused_exact"
 
+    refreshed_png_report = _run_ar6_cc(
+        figures=True,
+        refresh=True,
+        figure_format={"format": "png", "dpi": 10},
+    )
+    assert refreshed_png_report is not None
+    assert len(refreshed_png_report.figure_paths) == 1
+    assert refreshed_png_report.figure_paths[0].suffix == ".png"
+    recomputed_net_report = _run_ar6_cc(
+        figures=True,
+        refresh=False,
+        emissions_mode="net",
+        figure_format={"format": "svg", "dpi": 1},
+    )
+    assert recomputed_net_report is not None
+    assert recomputed_net_report.figure_paths
+
 
 def test_deterministic_ar6_cc_rejects_empty_category_and_ssp_lists(ar6_dummy_repo) -> None:
     del ar6_dummy_repo
 
-    with pytest.raises(ValueError, match="non empty category string or list"):
+    with pytest.raises(ValueError, match="non empty AR6 category string or list"):
         _run_ar6_cc(
             figures=False,
             refresh=True,
             category=[],
         )
-    with pytest.raises(ValueError, match="non empty category string or list"):
+    with pytest.raises(ValueError, match="non empty AR6 category string or list"):
         _run_ar6_cc(
             figures=False,
             refresh=True,
@@ -425,6 +454,50 @@ def test_deterministic_ar6_cc_rejects_empty_category_and_ssp_lists(ar6_dummy_rep
             refresh=True,
             ssp_scenario=[],
         )
+
+
+def test_deterministic_ar6_cc_accepts_extended_category_domain(ar6_dummy_repo) -> None:
+    del ar6_dummy_repo
+    _write_minimal_harmonized_ar6_workbook_for_cc(
+        study_period=[2099, 2100],
+        category="C8",
+        ssp_family=5,
+    )
+
+    report = deterministic_ar6_cc(
+        years=range(2099, 2101),
+        category="c8",
+        ssp_scenario="ssp5",
+        emissions_mode="net",
+        figures=False,
+        refresh=False,
+    )
+
+    assert report.categories == ["C8"]
+    assert report.ssp_scenarios == ["SSP5"]
+    assert report.total_model_scenario_pairs == 1
+
+    with pytest.raises(ValueError, match="C1, C2, C3, C4, C5, C6, C7, C8"):
+        deterministic_ar6_cc(
+            years=range(2099, 2101),
+            category=["C9"],
+            ssp_scenario=["SSP5"],
+            emissions_mode="net",
+            figures=False,
+            refresh=False,
+        )
+
+
+def test_deterministic_ar6_cc_rejects_metadata_identity_mismatch(ar6_dummy_repo) -> None:
+    del ar6_dummy_repo
+    report = _run_ar6_cc(figures=False, refresh=True)
+    assert report.meta_file is not None
+    payload = json.loads(report.meta_file.read_text(encoding="utf-8"))
+    payload["reuse"]["identity_key"] = "stale_identity"
+    report.meta_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="selector identity changed"):
+        _run_ar6_cc(figures=False, refresh=False)
 
 
 def test_deterministic_ar6_cc_single_pair_budget_legend_policy() -> None:
@@ -563,9 +636,11 @@ def test_deterministic_ar6_cc_modules_cover_io_render_and_report_edges(
         report.study_period,
         harmonization=report.harmonization,
         harmonization_method=report.harmonization_method,
+        category=report.categories,
     )
-    assert processed_dir.parent == processed_scope_dir
-    assert processed_dir.name == "process_ar6"
+    assert processed_dir.parent.name == "process_ar6"
+    assert processed_dir.parent.parent == processed_scope_dir
+    assert processed_dir.name == "C1"
 
     pathways = read_harmonized_pathways(processed_dir=processed_dir, harmonization=True)
     filtered = filter_pathways(
@@ -626,6 +701,17 @@ def test_deterministic_ar6_cc_modules_cover_io_render_and_report_edges(
         merge_cc_tables(
             existing=cc_table.iloc[0:0], incoming=pd.concat([cc_table, cc_table.iloc[[0]]])
         )
+    first_year = report.study_period[0]
+    incoming_cc_table = cc_table.copy()
+    incoming_cc_table[first_year] = incoming_cc_table[first_year] + 1.0
+    merged = merge_cc_tables(existing=cc_table, incoming=incoming_cc_table)
+    assert (
+        merged[first_year].tolist()
+        == incoming_cc_table.sort_values(
+            ["cc_category", "ssp_scenario", "cc_flow", "cc_model", "cc_scenario"],
+            kind="stable",
+        )[first_year].tolist()
+    )
     parquet_path = tmp_path / "ar6_cc.parquet"
     pickle_path = tmp_path / "ar6_cc.pickle"
     empty_path = tmp_path / "empty_scope" / "ar6_cc_empty.csv"
@@ -798,11 +884,17 @@ def test_deterministic_ar6_cc_modules_cover_io_render_and_report_edges(
     assert ar6_dummy_repo.repo_root.exists()
 
 
-def _write_minimal_harmonized_ar6_workbook_for_cc(*, study_period: list[int]) -> None:
+def _write_minimal_harmonized_ar6_workbook_for_cc(
+    *,
+    study_period: list[int],
+    category: str = "C1",
+    ssp_family: int = 1,
+) -> None:
     processed_dir = get_processed_dir(
         study_period,
         harmonization=True,
         harmonization_method="offset",
+        category=[category],
     )
     processed_dir.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(
@@ -810,8 +902,8 @@ def _write_minimal_harmonized_ar6_workbook_for_cc(*, study_period: list[int]) ->
             "model": ["M2100"],
             "scenario": ["S2100"],
             "variable": [NET_KYOTO_WO_AFOLU],
-            "Category": ["C1"],
-            "Ssp_family": [1],
+            "Category": [category],
+            "Ssp_family": [ssp_family],
             "unit": ["MtCO2eq/yr"],
             2099: [4.0],
             2100: [3.0],
@@ -824,18 +916,15 @@ def _write_minimal_harmonized_ar6_workbook_for_cc(*, study_period: list[int]) ->
         study_period,
         harmonization=True,
         harmonization_method="offset",
+        category=[category],
     )
     logs_dir.mkdir(parents=True, exist_ok=True)
     write_json(
         logs_dir / "scope_manifest.json",
         build_process_metadata_payload(
-            signature={
-                "study_period": study_period,
-                "harmonization": True,
-                "harmonization_method": "offset",
-            },
-            categories=["C1"],
-            ssps=[1],
+            signature=process_signature(study_period, True, "offset", [category]),
+            categories=[category],
+            ssps=[ssp_family],
             harmonization=True,
             harmonization_method="offset",
             latest_historical_year=None,

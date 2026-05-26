@@ -44,10 +44,10 @@ def _years_line(
 
 def _format_mrio_scope(*, context) -> str:
     parts = [
-        f"group_reg={bool(context.group_reg)}",
-        f"group_sec={bool(context.group_sec)}",
-        f"group_version={context.group_version or 'none'}",
-        f"aggreg_indices={bool(context.aggreg_indices)}",
+        f"agg_reg={bool(context.agg_reg)}",
+        f"agg_sec={bool(context.agg_sec)}",
+        f"agg_version={context.agg_version or 'none'}",
+        f"group_indices={bool(context.group_indices)}",
     ]
     return ", ".join(parts)
 
@@ -121,12 +121,12 @@ def has_multi_selected_indices(filters: dict[str, list[str] | None]) -> bool:
 
 
 def format_branch_label(*, context, mode: str, grouped_mode: bool) -> str:
-    """Build concise branch label based on active grouping dimensions."""
+    """Build concise branch label based on active aggregation dimensions."""
     parts: list[str] = []
-    if bool(context.group_reg):
+    if bool(context.agg_reg):
         parts.append(f"l1_reg_aggreg={mode}")
     if has_multi_selected_indices(context.filters):
-        parts.append(f"aggreg_indices={mode_label(aggreg_indices=grouped_mode)}")
+        parts.append(f"group_indices={mode_label(group_indices=grouped_mode)}")
     return ", ".join(parts)
 
 
@@ -160,7 +160,7 @@ def _persisted_figure_paths(*, context, source: str) -> list[Path]:
     metadata_path = _get_allocate_run_metadata_path(
         context.proj_base,
         source=source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     payload = _load_run_metadata(metadata_path)
     if not load_asocc_persisted_run_catalog(payload=payload).scopes:
@@ -179,7 +179,7 @@ def deterministic_output_root(*, context, source: str) -> Path:
     scope_manifest = _get_allocate_run_metadata_path(
         context.proj_base,
         source=source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     return scope_manifest.parent.parent
 
@@ -189,7 +189,7 @@ def _persisted_summary_records(*, context, source: str) -> list[dict[str, str]]:
     metadata_path = _get_allocate_run_metadata_path(
         context.proj_base,
         source=source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     if not metadata_path.exists():
         return []
@@ -327,7 +327,7 @@ def build_run_summary_lines(
     scope_manifest = _get_allocate_run_metadata_path(
         context.proj_base,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     output_root = deterministic_output_root(context=context, source=output_source)
     function_lines.append(f"Output folder: {output_root}")
@@ -339,7 +339,7 @@ def build_run_summary_lines(
     log_path = _get_allocate_summary_log_path(
         context.proj_base,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     closure_audit_exists = False
     if state.ut_gvaa_identity_closure_rows:
@@ -347,7 +347,7 @@ def build_run_summary_lines(
         closure_path = _get_allocate_ut_gvaa_identity_closure_path(
             proj_base=context.proj_base,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         extend_user_text_lines(
             function_lines,
@@ -480,7 +480,7 @@ def _asocc_inventory_items(
             proj_base=context.proj_base,
             output_format=context.output_format,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         if stats_path.exists():
             inventory.append(
@@ -498,7 +498,7 @@ def _asocc_inventory_items(
             proj_base=context.proj_base,
             output_format=context.output_format,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         if fit_inputs_path.exists():
             inventory.append(
@@ -536,7 +536,7 @@ def _asocc_public_output_file_count(
             proj_base=context.proj_base,
             output_format=context.output_format,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         if stats_path.exists():
             paths.add(str(stats_path))
@@ -547,7 +547,7 @@ def _asocc_public_output_file_count(
             proj_base=context.proj_base,
             output_format=context.output_format,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         if fit_inputs_path.exists():
             paths.add(str(fit_inputs_path))
@@ -555,7 +555,7 @@ def _asocc_public_output_file_count(
         closure_path = _get_allocate_ut_gvaa_identity_closure_path(
             proj_base=context.proj_base,
             source=output_source,
-            group_version=context.group_version,
+            agg_version=context.agg_version,
         )
         paths.add(str(closure_path))
     return len(paths)

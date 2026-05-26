@@ -5,6 +5,10 @@ AR6_CATEGORY_COLORS = {
     "C2": "#2654D2",
     "C3": "#F39B1F",
     "C4": "#5A0418",
+    "C5": "#00A6A6",
+    "C6": "#B247A3",
+    "C7": "#6C8E23",
+    "C8": "#8C6D31",
 }
 
 AR6_CC_POSITIVE_FLOW_COLOR = "#54A24B"

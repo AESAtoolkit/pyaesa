@@ -63,6 +63,34 @@
   color: inherit;
 }
 
+/* Read the Docs tables need explicit wrapping for long Markdown cells. */
+.rst-content .wy-table-responsive table.docutils,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.rst-content .wy-table-responsive table.docutils td,
+.rst-content .wy-table-responsive table.docutils th,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) td,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) th {
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: normal;
+}
+
+.rst-content .wy-table-responsive table.docutils code,
+.rst-content .wy-table-responsive table.docutils tt,
+.rst-content .wy-table-responsive table.docutils .docutils.literal,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) code,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) tt,
+.rst-content
+  table.docutils:not(.field-list):not(.footnote):not(.citation)
+  .docutils.literal {
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+}
+
 .pyaesa-argument-legend {
   display: grid;
   gap: 0.2rem;

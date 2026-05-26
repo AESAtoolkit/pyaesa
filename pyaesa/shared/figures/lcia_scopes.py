@@ -1,14 +1,17 @@
 """Shared LCIA figure scope slicing."""
 
+from collections.abc import Iterator
+
 import pandas as pd
 
 
-def lcia_impact_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
-    """Return LCIA method and impact scoped figure frames."""
+def lcia_impact_slices(frame: pd.DataFrame) -> Iterator[pd.DataFrame]:
+    """Yield LCIA method and impact scoped figure frames."""
     has_lcia_method = _has_visible_values(frame, "lcia_method")
     has_impact = _has_visible_values(frame, "impact")
     if not has_lcia_method or not has_impact:
-        return [frame.copy()]
+        yield frame.copy()
+        return
     values = sorted(
         {
             (str(lcia_method).strip(), str(impact).strip())
@@ -22,13 +25,11 @@ def lcia_impact_slices(frame: pd.DataFrame) -> list[pd.DataFrame]:
             and str(impact).strip()
         }
     )
-    return [
-        frame.loc[
+    for lcia_method, impact in values:
+        yield frame.loc[
             frame["lcia_method"].astype(str).eq(lcia_method)
             & frame["impact"].astype(str).eq(impact)
         ].copy()
-        for lcia_method, impact in values
-    ]
 
 
 def _has_visible_values(frame: pd.DataFrame, column: str) -> bool:

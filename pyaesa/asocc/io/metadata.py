@@ -90,10 +90,10 @@ class RunContext:
     project_name: str
     source: str
     fu_code: str
-    group_version: str | None
-    group_version_reg: str | None
-    group_reg: bool | None
-    group_sec: bool | None
+    agg_version: str | None
+    agg_version_reg: str | None
+    agg_reg: bool | None
+    agg_sec: bool | None
     lcia_method: str | list[str] | None
     years_input: int | list[int] | range | None
     reference_years_input: int | list[int] | range | None
@@ -128,7 +128,7 @@ class RunContext:
     l1_reg_aggreg: str
     use_original_l1_post_domain: bool
     variant_tag: str | None
-    aggreg_indices: bool
+    group_indices: bool
     output_format: str
     intermediate_outputs: bool
     output_source_label: str | None = None
@@ -153,7 +153,7 @@ class RunState:
     metric buffers.
     """
 
-    # State is branch local: each (l1_reg_aggreg x aggreg_indices) branch gets
+    # State is branch local: each (l1_reg_aggreg x group_indices) branch gets
     # its own buffers/caches to keep writes deterministic.
 
     processed_years: list[int] = field(default_factory=list)
@@ -225,7 +225,7 @@ class RunState:
     )
     lcia_sliced_payload_cache: dict[tuple, dict] = field(default_factory=dict)
     l1_year_invariant_cache: dict[int, dict[str, pd.DataFrame]] = field(default_factory=dict)
-    reg_group_map_cache: dict[tuple[str, str | None], dict[str, str]] = field(default_factory=dict)
+    reg_agg_map_cache: dict[tuple[str, str | None], dict[str, str]] = field(default_factory=dict)
     projection_payload_cache: dict[tuple[int, str | None], Any] = field(default_factory=dict)
     projection_history_cache: dict[tuple, Any] = field(default_factory=dict)
     ut_reuse_preweight_cache: dict[tuple, pd.DataFrame] = field(default_factory=dict)

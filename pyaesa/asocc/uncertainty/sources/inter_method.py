@@ -179,17 +179,10 @@ def _candidate_inventory(
 
 
 def _row_labels(*, rows: pd.DataFrame) -> np.ndarray:
-    labels = (
-        pd.Series(rows.loc[:, "l2_method"], copy=False)
-        .astype(str)
-        .to_numpy(
-            dtype=object,
-            copy=True,
-        )
-    )
-    for column in reversed(_METHOD_COLUMNS[:-1]):
-        if column in rows.columns:
-            values = pd.Series(rows.loc[:, column], copy=False)
-            mask = values.notna().to_numpy(dtype=bool)
-            labels[mask] = values.loc[mask].astype(str).to_numpy(dtype=object)
+    present = [column for column in _METHOD_COLUMNS if column in rows.columns]
+    labels = np.full(len(rows), None, dtype=object)
+    for column in reversed(present):
+        values = pd.Series(rows.loc[:, column], copy=False)
+        mask = values.notna().to_numpy(dtype=bool)
+        labels[mask] = values.loc[mask].astype(str).to_numpy(dtype=object)
     return labels

@@ -1,7 +1,7 @@
 """Shared functions for L2 compute orchestration."""
 
-from ....data.source_schema import default_historical_cutoff_for_source
 from ....methods.registry.registry import REGISTRY
+from ..shared.reference_years import ar_reference_year_candidates
 from .l2_slicing import _slice_lcia_payload_for_compute
 from .l2_types import _L2RunContext, _is_ar_l1, _is_ar_l2
 
@@ -64,18 +64,14 @@ def _reference_years_for(
     )
     if not is_ar:
         return [None]
-    refs: list[int | None] = []
-    if run.context.reference_years:
-        for ref in run.context.reference_years:
-            refs.append(int(ref))
-    elif run.context.historical_years:
-        default_cutoff = default_historical_cutoff_for_source(run.context.source)
-        for ref in run.context.historical_years:
-            if default_cutoff is None or int(ref) <= default_cutoff:
-                refs.append(int(ref))
-    else:
-        refs = [None]
-    return refs
+    refs = ar_reference_year_candidates(
+        source=run.context.source,
+        historical_years=run.context.historical_years,
+        reference_years=run.context.reference_years,
+        year=run.year,
+    )
+    out: list[int | None] = [int(ref) for ref in refs]
+    return out or [None]
 
 
 def _l1_weights_key_for_pair(

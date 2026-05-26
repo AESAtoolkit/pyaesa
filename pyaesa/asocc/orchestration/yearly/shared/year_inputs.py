@@ -14,8 +14,8 @@ from pyaesa.download.pop_gdp.contracts import (
     GDP_WB_INDICATOR,
     POP_WB_INDICATOR,
 )
-from pyaesa.process.mrios.utils.grouping.grouping import read_group_map
-from pyaesa.process.mrios.utils.io.paths import _get_group_map_path
+from pyaesa.process.mrios.utils.aggregation.aggregation import read_agg_map
+from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path
 
 from ...method_scope import _unique_l2_methods_in_scope
 from ....data.load_mrio import (
@@ -63,10 +63,10 @@ class _PopGdpSource:
     pop_var: str
     gdp_var: str
     region_override: str | None
-    group_version_reg: str | None
+    agg_version_reg: str | None
     scenario_arg: str | None
     use_ssp: bool
-    needs_pr_post_ungrouped: bool
+    needs_pr_post_unaggregated: bool
 
 
 def build_l2_compute_inputs(
@@ -89,22 +89,22 @@ def build_l2_compute_inputs(
     )
 
 
-def _load_reg_group_map(*, context: RunContext, state: RunState) -> dict[str, str]:
-    """Load optional regional group map."""
-    if not context.group_version_reg:
+def _load_reg_agg_map(*, context: RunContext, state: RunState) -> dict[str, str]:
+    """Load optional regional aggregate map."""
+    if not context.agg_version_reg:
         return {}
-    cache_key = (str(context.source), context.group_version_reg)
-    cached = state.reg_group_map_cache.get(cache_key)
+    cache_key = (str(context.source), context.agg_version_reg)
+    cached = state.reg_agg_map_cache.get(cache_key)
     if cached is not None:
         return cached
-    map_path = _get_group_map_path(
+    map_path = _get_agg_map_path(
         context.source,
         kind="reg",
-        group_version=context.group_version_reg,
+        agg_version=context.agg_version_reg,
     )
-    map_df = read_group_map(map_path)
-    mapping = dict(zip(map_df["original_classification"], map_df["grouped_mrio"]))
-    state.reg_group_map_cache[cache_key] = mapping
+    map_df = read_agg_map(map_path)
+    mapping = dict(zip(map_df["original_classification"], map_df["aggregated_mrio"]))
+    state.reg_agg_map_cache[cache_key] = mapping
     return mapping
 
 
@@ -219,8 +219,8 @@ def _resolve_pop_gdp_source(run_ctx: _ScenarioRunContext) -> _PopGdpSource:
     selected_df = raw_df if context.l1_only_no_mrio else base_df
     region_override = "iso3_code" if context.l1_only_no_mrio else None
     pr_mode = context.l1_reg_aggreg
-    needs_pr_post_ungrouped = (
-        context.group_version_reg is not None
+    needs_pr_post_unaggregated = (
+        context.agg_version_reg is not None
         and pr_mode == "post"
         and context.use_original_l1_post_domain
     )
@@ -231,10 +231,10 @@ def _resolve_pop_gdp_source(run_ctx: _ScenarioRunContext) -> _PopGdpSource:
         pop_var=POP_SSP_INDICATOR if use_ssp else POP_WB_INDICATOR,
         gdp_var=GDP_SSP_INDICATOR if use_ssp else GDP_WB_INDICATOR,
         region_override=region_override,
-        group_version_reg=(None if context.l1_only_no_mrio else context.group_version_reg),
+        agg_version_reg=(None if context.l1_only_no_mrio else context.agg_version_reg),
         scenario_arg=run_ctx.ssp_scenario if use_ssp else None,
         use_ssp=use_ssp,
-        needs_pr_post_ungrouped=needs_pr_post_ungrouped,
+        needs_pr_post_unaggregated=needs_pr_post_unaggregated,
     )
 
 
@@ -253,7 +253,7 @@ def _load_scenario_population_gdp(
         variable=source.pop_var,
         year=year,
         source_key=context.source,
-        group_version=source.group_version_reg,
+        agg_version=source.agg_version_reg,
         ssp_scenario=source.scenario_arg,
         region_col_override=source.region_override,
     )
@@ -262,27 +262,27 @@ def _load_scenario_population_gdp(
         variable=source.gdp_var,
         year=year,
         source_key=context.source,
-        group_version=source.group_version_reg,
+        agg_version=source.agg_version_reg,
         ssp_scenario=source.scenario_arg,
         region_col_override=source.region_override,
     )
     state.pop_series_by_ssp_scenario.setdefault(run_ctx.ssp_scenario, {})[year] = pop_series
     state.gdp_series_by_ssp_scenario.setdefault(run_ctx.ssp_scenario, {})[year] = gdp_series
     pop_series_original: pd.Series | None = None
-    if source.needs_pr_post_ungrouped:
-        pop_series_ungrouped = _get_series_for_year(
+    if source.needs_pr_post_unaggregated:
+        pop_series_unaggregated = _get_series_for_year(
             df=source.pop_df,
             variable=source.pop_var,
             year=year,
             source_key=context.source,
-            group_version=None,
+            agg_version=None,
             ssp_scenario=source.scenario_arg,
             region_col_override=source.region_override,
         )
         state.pr_post_pop_series_by_ssp_scenario.setdefault(run_ctx.ssp_scenario, {})[year] = (
-            pop_series_ungrouped
+            pop_series_unaggregated
         )
-        pop_series_original = pop_series_ungrouped
+        pop_series_original = pop_series_unaggregated
 
     pop_iso, gdp_iso, iso_to_mrio = _get_pr_iso3_inputs(
         df=source.pr_df,

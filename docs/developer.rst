@@ -12,5 +12,6 @@ calculation ownership, public output contracts, and tests.
 .. toctree::
    :maxdepth: 2
 
+   contributing
    architecture
    ADDING_METHODS_checklist

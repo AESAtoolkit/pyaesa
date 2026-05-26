@@ -13,6 +13,7 @@ from pyaesa.shared.figures import checkpoints as checkpoints_mod
 from pyaesa.shared.figures import colors as colors_mod
 from pyaesa.shared.figures import contracts as contracts_mod
 from pyaesa.shared.figures import generation_policy as policy_mod
+from pyaesa.shared.figures import jobs as jobs_mod
 from pyaesa.shared.figures import layout as layout_mod
 from pyaesa.shared.figures import nonnegative_axis as axis_mod
 from pyaesa.shared.figures import paths as paths_mod
@@ -43,7 +44,7 @@ from pyaesa.shared.figures.uncertainty_run_values import (
 )
 from pyaesa.shared.runtime.reporting import figure_progress as figure_progress_mod
 from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
@@ -444,6 +445,7 @@ def test_shared_scope_support_and_progress_helpers_cover_optional_paths(
         items=["a"],
         describe=lambda item: item,
         render=lambda item: [tmp_path / f"{item}.png"],
+        total=1,
     )
     assert paths == [tmp_path / "a.png"]
 
@@ -454,6 +456,9 @@ def test_shared_scope_support_and_progress_helpers_cover_optional_paths(
             self.finished = False
 
         def show(self, message: str) -> None:
+            self.messages.append(message)
+
+        def log_message(self, message: str, *, persistent: bool = True) -> None:
             self.messages.append(message)
 
         def clear_transient(self) -> None:
@@ -469,12 +474,13 @@ def test_shared_scope_support_and_progress_helpers_cover_optional_paths(
         items=[long_description],
         describe=lambda item: item,
         render=lambda item: [tmp_path / "custom.png"],
+        total=1,
         status=cast(TransientStatusPrinter, status),
     )
     assert custom_status_paths == [tmp_path / "custom.png"]
     assert status.cleared is True
     assert status.finished is False
-    assert len(status.messages) == 1
+    assert status.messages[-1].startswith("[figures] Generated figure")
 
     assert (
         figure_progress_mod.render_with_progress(
@@ -482,35 +488,140 @@ def test_shared_scope_support_and_progress_helpers_cover_optional_paths(
             items=[],
             describe=lambda item: str(item),
             render=lambda item: [tmp_path / f"{item}.png"],
+            total=0,
         )
         == []
     )
+    streamed_status = _Status()
+    streamed_paths = figure_progress_mod.render_with_progress(
+        source="figures",
+        items=(item for item in ["streamed"]),
+        describe=lambda item: str(item),
+        render=lambda item: [tmp_path / f"{item}.png"],
+        total=1,
+        status=cast(TransientStatusPrinter, streamed_status),
+    )
+    assert streamed_paths == [tmp_path / "streamed.png"]
+    assert len(streamed_status.messages) == 2
+    assert streamed_status.messages[0].startswith("[figures] Generating figure")
+    assert "Generating figures" not in streamed_status.messages[0]
+    assert streamed_status.messages[1].startswith("[figures] Generated figure")
+    split_status = _Status()
+    split_paths = figure_progress_mod.render_with_progress(
+        source="figures",
+        items=["split"],
+        describe=lambda item: str(item),
+        render=lambda item: [tmp_path / f"{item}_a.png", tmp_path / f"{item}_b.png"],
+        total=2,
+        item_count=lambda _item: 2,
+        status=cast(TransientStatusPrinter, split_status),
+    )
+    assert split_paths == [tmp_path / "split_a.png", tmp_path / "split_b.png"]
+    assert "2/2" in split_status.messages[0]
+    assert "2/2" in split_status.messages[-1]
+    assert "figure jobs" not in split_status.messages[-1]
+    planned_paths = jobs_mod.render_figure_jobs(
+        source="figures",
+        jobs=lambda: (
+            jobs_mod.PlannedFigureJob(
+                kind="demo",
+                label=item,
+                render=lambda item=item: [tmp_path / f"{item}.png"],
+            )
+            for item in ["planned"]
+        ),
+    )
+    assert planned_paths == [tmp_path / "planned.png"]
+    planned_split_status = _Status()
+    planned_split_paths = jobs_mod.render_figure_jobs(
+        source="figures",
+        jobs=lambda: (
+            jobs_mod.PlannedFigureJob(
+                kind="demo",
+                label="planned_split",
+                planned_outputs=2,
+                render=lambda: [tmp_path / "planned_a.png", tmp_path / "planned_b.png"],
+            )
+            for _item in [None]
+        ),
+        status=cast(TransientStatusPrinter, planned_split_status),
+    )
+    assert planned_split_paths == [tmp_path / "planned_a.png", tmp_path / "planned_b.png"]
+    assert "2/2" in planned_split_status.messages[0]
+    assert "2/2" in planned_split_status.messages[-1]
 
 
 def test_scenario_scope_helpers_cover_requested_and_preplanned_scope_contracts() -> None:
+    missing_column = list(
+        scenario_scopes_mod.repeat_invariant_rows_into_scenarios(
+            pd.DataFrame({"value": [1.0]}),
+            scenario_column="scenario",
+            scope_column="scope",
+        )
+    )
+    assert missing_column[0]["value"].tolist() == [1.0]
+    assert missing_column[0]["scope"].isna().tolist() == [True]
+    invariant_only = list(
+        scenario_scopes_mod.repeat_invariant_rows_into_scenarios(
+            pd.DataFrame({"scenario": [pd.NA], "value": [1.0]}),
+            scenario_column="scenario",
+            scope_column="scope",
+        )
+    )
+    assert invariant_only[0]["scope"].isna().tolist() == [True]
     frame = pd.DataFrame({"scenario": [pd.NA, "SSP1"], "value": [1.0, 2.0]})
-    scopes = scenario_scopes_mod.repeat_invariant_rows_into_scenarios(
-        frame,
-        scenario_column="scenario",
-        scope_column="scope",
-        requested_scenarios=("SSP1", "SSP2"),
+    scopes = list(
+        scenario_scopes_mod.repeat_invariant_rows_into_scenarios(
+            frame,
+            scenario_column="scenario",
+            scope_column="scope",
+            requested_scenarios=("SSP1", "SSP2"),
+        )
     )
     assert len(scopes) == 1
     assert scopes[0]["scope"].tolist() == ["SSP1", "SSP1"]
 
     preplanned_frame = pd.DataFrame({"scenario": [pd.NA, "SSP1"], "value": [0.0, 1.0]})
-    assert scenario_scopes_mod.preplanned_scenario_scope_slices(
-        preplanned_frame.iloc[[1]],
-        scenario_column="scenario",
-        scope_column="scope",
+    assert list(
+        scenario_scopes_mod.preplanned_scenario_scope_slices(
+            preplanned_frame,
+            scenario_column="scenario",
+            scope_column="scope",
+        )
+    )[0].equals(preplanned_frame)
+    preplanned_invariant = list(
+        scenario_scopes_mod.preplanned_scenario_scope_slices(
+            preplanned_frame.iloc[[0]].assign(scope=[pd.NA]),
+            scenario_column="scenario",
+            scope_column="scope",
+        )
+    )
+    assert preplanned_invariant[0]["scope"].isna().tolist() == [True]
+    assert list(
+        scenario_scopes_mod.preplanned_scenario_scope_slices(
+            preplanned_frame.iloc[[1]],
+            scenario_column="scenario",
+            scope_column="scope",
+        )
     )[0].to_dict("records") == [{"scenario": "SSP1", "value": 1.0}]
-    preplanned = scenario_scopes_mod.preplanned_scenario_scope_slices(
-        preplanned_frame.assign(scope=[pd.NA, "SSP1"]),
-        scenario_column="scenario",
-        scope_column="scope",
+    preplanned = list(
+        scenario_scopes_mod.preplanned_scenario_scope_slices(
+            preplanned_frame.assign(scope=[pd.NA, "SSP1"]),
+            scenario_column="scenario",
+            scope_column="scope",
+        )
     )
     assert preplanned[0].to_dict("records") == [{"scenario": "SSP1", "scope": "SSP1", "value": 1.0}]
     assert preplanned[1]["scenario"].map(pd.isna).tolist() == [True]
+    assert (
+        scenario_scopes_mod.visible_scenario_values(
+            pd.DataFrame({"value": [1.0]}), scenario_column="scenario"
+        )
+        == []
+    )
+    assert scenario_scopes_mod.requested_visible_scenarios(
+        visible_scenarios=["SSP1"], requested_scenarios=()
+    ) == ["SSP1"]
 
 
 def test_violin_summary_renderer_handles_empty_payload() -> None:

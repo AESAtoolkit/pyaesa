@@ -191,11 +191,11 @@ def _load_lcia_l2_metric(saved_dir: Path, lcia_method: str, metric: str) -> pd.D
 
 def _years_from_metadata(
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> list[int]:
     """Load available years from MRIO metadata."""
     # Setup uses this list as the single source of truth for available MRIO years.
-    metadata = _read_metadata(source, matrix_version=group_version)
+    metadata = _read_metadata(source, matrix_version=agg_version)
     years = metadata.get("years", {})
     return sorted(int(y) for y in years.keys())
 

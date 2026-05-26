@@ -57,12 +57,12 @@ def render_asocc_figures(
         proj_base=proj_base,
         level="level_1" if str(fu_code).startswith("L1.") else "level_2",
         source=source,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
     )
     metadata_path = _get_asocc_figure_metadata_path(
         proj_base=proj_base,
         source=source,
-        group_version=scope.group_version,
+        agg_version=scope.agg_version,
     )
     signature = figure_signature(
         requested_years=requested_years,

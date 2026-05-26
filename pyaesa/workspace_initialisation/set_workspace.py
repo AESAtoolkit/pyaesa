@@ -26,7 +26,7 @@ def _path_lines(*, repo_root: Path) -> set[str]:
         str(_summary_log_path(repo_root=repo_root)),
         str(data_raw / "carrying_capacities"),
         str(data_raw / "methodological_notes"),
-        str(data_raw / "mrio" / "<source>" / "grouping"),
+        str(data_raw / "mrio" / "<source>" / "aggregation"),
         str(exiobase_root),
         str(exiobase_root / "lcia" / "characterization_factors_matrices"),
         str(exiobase_root / "lcia" / "responsibility_periods"),
@@ -95,24 +95,24 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "Files:",
         "  -> sector_classification.xlsx",
         "",
-        "Region and sector grouping:",
-        str(data_raw / "mrio" / "<source>" / "grouping"),
+        "Region and sector MRIO aggregation and disaggregation:",
+        str(data_raw / "mrio" / "<source>" / "aggregation"),
         "",
         "Files:",
-        "Region and sector grouping guide:",
-        "  -> README_grouping.txt",
-        "Region grouping template:",
-        "  -> group_reg_template.csv",
-        "Sector grouping template under each MRIO source folder:",
-        "  -> group_sec_template.csv",
-        "Region grouping tables available by default:",
-        "  -> group_reg_eu27.csv",
-        "  -> group_reg_world.csv",
-        "EXIOBASE ixi sector grouping, electricity sectors grouped together:",
-        "  -> group_sec_elec.csv",
-        "EXIOBASE ixi sector grouping, electricity, gas, and water grouped to match OECD "
-        "ICIO sector D resolution:",
-        "  -> group_sec_oecd_d.csv",
+        "Region and sector aggregation guide:",
+        "  -> README_aggregation.txt",
+        "Region aggregation template:",
+        "  -> agg_reg_template.csv",
+        "Sector aggregation template under each MRIO source folder:",
+        "  -> agg_sec_template.csv",
+        "Region aggregation tables available by default:",
+        "  -> agg_reg_eu27.csv",
+        "  -> agg_reg_world.csv",
+        "EXIOBASE ixi sector aggregation example, electricity sectors aggregated together:",
+        "  -> agg_sec_elec.csv",
+        "EXIOBASE ixi sector aggregation example, electricity, gas, "
+        "and water aggregated to match OECD ICIO sector D resolution:",
+        "  -> agg_sec_oecd_d.csv",
         "",
         "EXIOBASE LCIA characterization matrices:",
         str(exiobase_root / "lcia" / "characterization_factors_matrices"),
@@ -145,11 +145,11 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "Files:",
         "CoV CSVs for LCIA based allocation methods and IO-LCA LCIA result uncertainty:",
         "  -> reg_cbca_covs.csv",
-        "  -> reg_cbca_covs_group_eu27.csv",
-        "  -> reg_cbca_covs_group_world.csv",
+        "  -> reg_cbca_covs_agg_eu27.csv",
+        "  -> reg_cbca_covs_agg_world.csv",
         "  -> sec_cbca_covs.csv",
-        "Use only if you want LCIA uncertainty with grouped or aggregate CoV labels:",
-        "  -> README_grouped_and_aggregate_lcia_covs.txt",
+        "Use only if you want LCIA uncertainty with MRIO agg_reg or group_indices CoV labels:",
+        "  -> README_agg_reg_and_group_indices_lcia_covs.txt",
         "",
         "Jupyter notebook tutorials are available on the pyaesa GitHub repository.",
     )
@@ -228,7 +228,7 @@ def set_workspace(
 
     Packaged prerequisites are copied under the workspace ``data_raw/`` tree
     when missing or when ``refresh=True``. They include MRIO
-    grouping templates, region matching tables for population and GDP
+    aggregation templates, region matching tables for population and GDP
     processing, the EXIOBASE sector definition guide, EXIOBASE LCIA
     characterization matrices, LCIA responsibility period tables, carbon
     consumption based accounts coefficients of variation (CoV) tables, static
@@ -246,7 +246,7 @@ def set_workspace(
             ``set_workspace(...)`` under the resolved workspace ``data_raw``
             tree and rewrite the setup summary log. The scope is limited to
             prerequisite files such as default carrying capacities,
-            methodological notes, citation guidance, grouping templates,
+            methodological notes, citation guidance, aggregation templates,
             matching tables, LCIA templates, and README guides. Raw downloads,
             processed outputs, and project outputs are not refreshed. Defaults
             to ``False``.

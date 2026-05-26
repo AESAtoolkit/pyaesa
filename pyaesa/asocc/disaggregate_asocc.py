@@ -16,11 +16,11 @@ from .runtime.scope.branch_resolution import outputs_project_root
 def disaggregate_asocc(
     *,
     disaggregation_config: dict = {
-        "target_grouped_run": None,
-        "ref_grouped_run": None,
-        "ref_split_run": None,
+        "target_agg_run": None,
+        "ref_agg_run": None,
+        "ref_disagg_run": None,
         "disaggregation_specs": None,
-        "new_disaggregated_version_name": None,
+        "new_disagg_version_name": None,
     },
     base_asocc_args: dict = {
         "project_name": None,
@@ -29,7 +29,7 @@ def disaggregate_asocc(
         "r_p": None,
         "r_c": None,
         "r_f": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "method_plan": "default",
         "l1_methods": None,
         "one_step_methods": None,
@@ -49,10 +49,13 @@ def disaggregate_asocc(
 ) -> DisaggregationReport:
     """Disaggregate non LCIA deterministic allocated shares of carrying capacities (aSoCC).
 
-    The function creates a published disaggregated aSoCC source by transferring
-    a sector split observed in a reference ixi MRIO to a grouped target ixi
-    MRIO. For every requested year ``y`` the allocates shares are equal to
-    ``target_grouped(y) * ref_split(y) / ref_grouped(y)``.
+    The function creates a published disaggregated aSoCC source when a target
+    source is available at an aggregated sector resolution. It uses a reference
+    ixi MRIO available at both that same aggregated sector resolution and the
+    requested detailed sector resolution to distribute each target aggregated
+    sector across the detailed sectors. For every requested year ``y`` the
+    allocated shares are equal to
+    ``target_aggregated(y) * ref_disaggregated(y) / ref_aggregated(y)``.
 
     Only non LCIA aSoCC methods are supported. Do not pass ``lcia_method`` in
     ``base_asocc_args``. Supported sources are ``"oecd_v2025"``,
@@ -62,27 +65,27 @@ def disaggregate_asocc(
 
     Args:
         disaggregation_config: Required disaggregation envelope. Required keys
-            are ``target_grouped_run``, ``ref_grouped_run``,
-            ``ref_split_run``, ``disaggregation_specs``, and
-            ``new_disaggregated_version_name``.
+            are ``target_agg_run``, ``ref_agg_run``,
+            ``ref_disagg_run``, ``disaggregation_specs``, and
+            ``new_disagg_version_name``.
 
             Disaggregation configuration fields:
 
-            - ``target_grouped_run``: grouped deterministic aSoCC source to
-              disaggregate. Its published rows supply ``target_grouped`` in
+            - ``target_agg_run``: aggregated deterministic aSoCC source to
+              disaggregate. Its published rows supply ``target_aggregated`` in
               the formula above. Example: OECD ICIO sector ``D``.
-            - ``ref_grouped_run``: reference ixi source grouped to the same
-              sector labels as ``target_grouped_run``. Its published rows
-              supply ``ref_grouped``. Example: EXIOBASE ixi grouped to OECD
+            - ``ref_agg_run``: reference ixi source aggregated to the same
+              sector labels as ``target_agg_run``. Its published rows
+              supply ``ref_aggregated``. Example: EXIOBASE ixi aggregated to OECD
               ICIO sector ``D``.
-            - ``ref_split_run``: the same reference source as
-              ``ref_grouped_run``, but at the detailed split sector labels
+            - ``ref_disagg_run``: the same reference source as
+              ``ref_agg_run``, but at the detailed disaggregated sector labels
               that should be written in the new source. Its published rows
-              supply ``ref_split``. Example: EXIOBASE ixi electricity sectors.
-            - ``disaggregation_specs``: mapping from each grouped sector label
-              to the detailed split sector label(s) that replace it in the new
+              supply ``ref_disaggregated``. Example: EXIOBASE ixi electricity sectors.
+            - ``disaggregation_specs``: mapping from each aggregated sector label
+              to the detailed disaggregated sector label(s) that replace it in the new
               source.
-            - ``new_disaggregated_version_name``: output source label used for
+            - ``new_disagg_version_name``: output source label used for
               the published disaggregated aSoCC source created by this
               function.
 
@@ -92,42 +95,27 @@ def disaggregate_asocc(
               Accepted values are ``"oecd_v2025"``, ``"exiobase_3102_ixi"``,
               and ``"exiobase_396_ixi"``. Only ixi MRIO layouts are supported.
             - ``s_p``: non empty list of sector labels.
-            - ``group_reg``: If ``True``, aggregate regions using a grouping
-              file. Default ``False`` keeps native source regions.
-            - ``group_sec``: If ``True``, aggregate sectors using a grouping
-              file. Default ``False`` keeps native source sectors.
-            - ``group_version``: Grouping version tag used to resolve the
-              region/sector mapping CSVs. Required when ``group_reg`` or
-              ``group_sec`` is True. Defaults to an empty string for ungrouped
-              processing. Follow ``README_grouping.txt`` in the active
-              ``data_raw/mrio/<source>/grouping`` folder to name grouping
-              versions and place the matching mapping CSVs.
-
-            ``disaggregation_specs`` is a non empty list of
-            ``{"grouped_sector_label": ..., "split_sector_label": ...}``
-            mappings. ``target_grouped_run.s_p`` and
-            ``ref_grouped_run.s_p`` must exactly match the grouped labels,
-            ``ref_split_run.s_p`` must exactly match the split labels,
-            ``ref_grouped_run.source`` must equal ``ref_split_run.source``,
-            and one split sector can map to exactly one grouped sector.
-            The studied region labels requested through ``r_p``, ``r_c``, or
-            ``r_f`` must be present with the same names in all three selected
-            prerequisite scopes. If source native region names differ, use
-            ``group_reg=True`` and a grouping version to rename or aggregate
-            regions before disaggregation.
-
-        base_asocc_args: Deterministic aSoCC scope used to match prerequisite
-            published outputs and define the written disaggregated branch.
-            Write nested arguments as ``base_asocc_args={"project_name": "...",
-            "fu_code": "L2.c.b"}``. Source, grouping, and sector identity are
-            owned by ``disaggregation_config``. LCIA selectors are not
-            accepted, and the scope must resolve non LCIA deterministic aSoCC
-            outputs.
-
-            Nested keys:
-
-            - ``project_name``: Required project name used to build
-              ``<repo>/<project_name>``.
+            - ``agg_reg``: If ``True``, reclassify MRIO regions with the
+              ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native regions
+              into one target label, or disaggregate one native region across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source regions.
+            - ``agg_sec``: If ``True``, reclassify MRIO sectors with the
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+              The mapping can keep native labels, aggregate several native sectors
+              into one target label, or disaggregate one native sector across
+              several target labels when a ``weight`` column is provided.
+              Default ``False`` keeps native source sectors.
+            - ``agg_version``: Name token used to resolve the matching
+              ``agg_reg_<agg_version>.csv`` and/or
+              ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+              mapping files in ``data_raw/mrio/<source>/aggregation``.
+              Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+              an empty string for native source classification. Use the same
+              token in downstream calls that should reuse the processed
+              classification. When a mapping file has a ``weight``
+              column, weights must sum to ``1`` for each original label.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
               ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
@@ -136,35 +124,36 @@ def disaggregate_asocc(
               L2 published outputs.
             - ``years``: Studied years. Accepts a single year, list, or
               range. If omitted, all available MRIO years for the selected
-              source/group version are used.
+              source and ``agg_version`` are used.
             - ``r_p``: Producing region filter(s), single string or list. If
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid producing regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_c``: Consuming region filter(s), single string or list. If
               this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid consuming regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
             - ``r_f``: Final demand region filter(s), single string or list.
               If this is a required axis for ``fu_code`` and the argument is
               omitted, the run expands to all valid final demand regions. To
               identify valid region names, see the first column of the
-              relevant ``data_raw/mrio/.../grouping/group_reg_template.csv``
+              relevant ``data_raw/mrio/.../aggregation/agg_reg_template.csv``
               file.
-            - ``aggreg_indices``: Whether multiple selected region/sector
-              indices are reported as separate rows or summed into one row
-              after the selected MRIO scope is computed.
+            - ``group_indices``: Whether multiple selected region or sector
+              filter values are kept as separate result rows or summed into one
+              result row after the function calculation has been performed.
               - ``False`` (default): keep selected values as independent rows.
-              - ``True``: sum selected values into one row.
-              Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-              aggregating CBA total demand system boundaries can double count.
-              For these functional units, define the aggregation from
-              ``process_mrio(...)`` onward with
-              ``group_reg``/``group_sec``/``group_version``.
+              - ``True``: sum selected values into one result row.
+              The function refuses to run when ``group_indices=True`` is used
+              with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+              rows for CBA total demand boundaries can double count. For these
+              functional units, change the upstream MRIO aggregation and disaggregation
+              scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+              running the study.
             - ``method_plan``: ``method_plan`` defaults to ``"default"`` and
               accepts ``"default"``, ``"one_step"``, ``"two_steps"``,
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
@@ -236,13 +225,13 @@ def disaggregate_asocc(
         refresh: If ``True``, remove and rebuild only the published
             disaggregated aSoCC source created by this call. The cleared scope
             is the ``deterministic`` folder under
-            ``<project>/B1_asocc/<new_disaggregated_version_name>``. For
+            ``<project>/B1_asocc/<new_disagg_version_name>``. For
             example, for ``project_name="demo"`` and
-            ``new_disaggregated_version_name="oecd_electricity"``, the
+            ``new_disagg_version_name="oecd_electricity"``, the
             refreshed path is
             ``<repo>/demo/B1_asocc/oecd_electricity/deterministic``. The
-            deterministic prerequisite scopes named in ``target_grouped_run``,
-            ``ref_grouped_run``, and ``ref_split_run`` are not refreshed.
+            deterministic prerequisite scopes named in ``target_agg_run``,
+            ``ref_agg_run``, and ``ref_disagg_run`` are not refreshed.
             Processed MRIO inputs, processed population and GDP, raw
             downloads, and downstream aCC or ASR outputs are not refreshed.
             Defaults to ``False``.
@@ -264,7 +253,7 @@ def disaggregate_asocc(
 
         - Region labels are matched strictly between the MRIO sources.
           Studied regions requested through ``r_p``/``r_c``/``r_f`` must use
-          the same labels in all selected sources. Use region grouping to
+          the same labels in all selected sources. Use region aggregation to
           update region names syntax when they do not already match.
         - Disaggregation may run for any requested year whose prerequisite
           published outputs exist for all three selectors.
@@ -275,29 +264,29 @@ def disaggregate_asocc(
 
             disaggregate_asocc(
                 disaggregation_config={
-                    "target_grouped_run": {
+                    "target_agg_run": {
                         "source": "oecd_v2025",
                         "s_p": ["D"],
                     },
-                    "ref_grouped_run": {
+                    "ref_agg_run": {
                         "source": "exiobase_3102_ixi",
-                        "group_sec": True,
-                        "group_version": "oecd_d",
+                        "agg_sec": True,
+                        "agg_version": "oecd_d",
                         "s_p": ["D"],
                     },
-                    "ref_split_run": {
+                    "ref_disagg_run": {
                         "source": "exiobase_3102_ixi",
-                        "group_sec": True,
-                        "group_version": "elec",
+                        "agg_sec": True,
+                        "agg_version": "elec",
                         "s_p": ["Electricity"],
                     },
                     "disaggregation_specs": [
                         {
-                            "grouped_sector_label": "D",
-                            "split_sector_label": "Electricity",
+                            "agg_sector_label": "D",
+                            "disagg_sector_label": "Electricity",
                         }
                     ],
-                    "new_disaggregated_version_name": "disagg_oecd_elec",
+                    "new_disagg_version_name": "disagg_oecd_elec",
                 },
                 base_asocc_args={
                     "project_name": "demo",

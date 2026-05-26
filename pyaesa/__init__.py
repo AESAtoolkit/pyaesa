@@ -27,9 +27,9 @@ Public functions exported at package level:
   MRIO tables.
 - `prepare_external_inputs`: Import external allocated shares of carrying
   capacities (aSoCC) and LCA inputs.
-- `write_asocc_weight_template`: Write equal weight inter method templates for
+- `write_asocc_weight_template`: Write equal weight inter-method templates for
   one method scope.
-- `preview_asocc_weight_tree`: Validate an edited custom inter method tree and
+- `preview_asocc_weight_tree`: Validate an edited custom inter-method tree and
   render its preview.
 - `uncertainty_asocc`: Run allocated shares of carrying capacities (aSoCC)
   Monte Carlo uncertainty.
@@ -46,7 +46,7 @@ Public functions exported at package level:
 from importlib import import_module
 from typing import TYPE_CHECKING
 
-__version__ = "1.1.4"
+__version__ = "1.2.1"
 
 _PUBLIC_EXPORT_OWNERS = {
     "set_workspace": "pyaesa.workspace_initialisation.set_workspace",

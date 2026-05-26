@@ -20,16 +20,16 @@ from pyaesa.shared.runtime.metadata.json import read_json_dict, write_json_dict
 
 def _disaggregation_config() -> dict:
     return {
-        "target_grouped_run": {"source": "oecd_v2025", "s_p": ["Energy"]},
-        "ref_grouped_run": {
+        "target_agg_run": {"source": "oecd_v2025", "s_p": ["Energy"]},
+        "ref_agg_run": {
             "source": "exiobase_396_ixi",
-            "group_sec": True,
-            "group_version": "energy_group",
+            "agg_sec": True,
+            "agg_version": "energy_aggregate",
             "s_p": ["Energy"],
         },
-        "ref_split_run": {"source": "exiobase_396_ixi", "s_p": ["Coal"]},
-        "disaggregation_specs": [{"grouped_sector_label": "Energy", "split_sector_label": "Coal"}],
-        "new_disaggregated_version_name": "disagg_oecd_energy",
+        "ref_disagg_run": {"source": "exiobase_396_ixi", "s_p": ["Coal"]},
+        "disaggregation_specs": [{"agg_sector_label": "Energy", "disagg_sector_label": "Coal"}],
+        "new_disagg_version_name": "disagg_oecd_energy",
     }
 
 
@@ -55,9 +55,9 @@ def _parsed(*, refresh: bool = False) -> ParsedArgs:
 def _run_signature() -> dict:
     return {
         "source": "disagg_oecd_energy",
-        "group_version": None,
-        "group_reg": False,
-        "group_sec": False,
+        "agg_version": None,
+        "agg_reg": False,
+        "agg_sec": False,
         "fu_code": "L2.a.a",
         "studied_indices_tag": "all",
         "lcia_methods": [],
@@ -66,7 +66,7 @@ def _run_signature() -> dict:
         "selected_methods": {"l2_vs_global": ["UT(FD)"]},
         "l1_reg_aggreg": "post",
         "variant_tag": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "output_format": "csv",
         "intermediate_outputs": False,
         "projection_mode": None,
@@ -88,7 +88,7 @@ def _matched_runs(tmp_path: Path) -> dict[str, MatchedRun]:
             completed_years=[2005],
             output_source_label=name,
         )
-        for name in ("target_grouped_run", "ref_grouped_run", "ref_split_run")
+        for name in ("target_agg_run", "ref_agg_run", "ref_disagg_run")
     }
 
 
@@ -101,7 +101,7 @@ def _write_complete_branch(tmp_path: Path) -> tuple[ParsedArgs, dict, dict, Path
     final_output.write_text("s_p,2005\nCoal,0.5\n", encoding="utf-8")
     scope = path_scope_from_signature(
         proj_base=tmp_path,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
         run_signature=run_signature,
         context_label="test disaggregation scope",
     )
@@ -116,9 +116,9 @@ def _write_complete_branch(tmp_path: Path) -> tuple[ParsedArgs, dict, dict, Path
     )
     metadata_path = disaggregation_metadata_path(
         proj_base=tmp_path,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
         mode="post",
-        aggreg_indices=False,
+        group_indices=False,
     )
     write_branch_metadata(
         parsed=parsed,
@@ -144,7 +144,7 @@ def _branch_complete(
     return is_disaggregation_branch_complete(
         parsed=parsed,
         proj_base=tmp_path,
-        source_label=parsed.disaggregation.new_disaggregated_version_name,
+        source_label=parsed.disaggregation.new_disagg_version_name,
         run_signature=run_signature,
         requested_years=[2005],
         matched_runs=matched_runs,
@@ -215,15 +215,15 @@ def test_disaggregation_completion_recomputes_stale_file_states(
         write_json_dict(metadata_path, payload)
     elif case == "missing_scope_entry":
         payload = read_json_dict(metadata_path)
-        del payload["exact_prior_allocate_cc_scopes"]["ref_split_run"]
+        del payload["exact_prior_allocate_cc_scopes"]["ref_disagg_run"]
         write_json_dict(metadata_path, payload)
     elif case == "invalid_scope_entry":
         payload = read_json_dict(metadata_path)
-        payload["exact_prior_allocate_cc_scopes"]["ref_split_run"] = []
+        payload["exact_prior_allocate_cc_scopes"]["ref_disagg_run"] = []
         write_json_dict(metadata_path, payload)
     elif case == "changed_scope_key":
         payload = read_json_dict(metadata_path)
-        payload["exact_prior_allocate_cc_scopes"]["target_grouped_run"]["scope_key"] = "other_scope"
+        payload["exact_prior_allocate_cc_scopes"]["target_agg_run"]["scope_key"] = "other_scope"
         write_json_dict(metadata_path, payload)
     elif case == "invalid_final_outputs":
         payload = read_json_dict(metadata_path)

@@ -62,6 +62,19 @@ def project_repo(project_repo_template: Path, tmp_path: Path) -> Generator[Path,
 
 
 @pytest.fixture
+def read_only_project_repo(project_repo_template: Path) -> Generator[Path, None, None]:
+    """Set the active workspace to the session template for read only metadata tests."""
+    from pyaesa.workspace_initialisation.workspace import (
+        clear_default_repo_root,
+        set_default_repo_root,
+    )
+
+    set_default_repo_root(project_repo_template)
+    yield project_repo_template
+    clear_default_repo_root()
+
+
+@pytest.fixture
 def io_lca_dummy_repo_factory(
     tmp_path: Path,
 ) -> Callable[..., "IOLCADummyRepo"]:

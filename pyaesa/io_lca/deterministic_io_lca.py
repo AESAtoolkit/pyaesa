@@ -30,7 +30,7 @@ from .data.paths import (
 from .orchestration.pipeline.mode_runner import execute_io_lca_mode
 from .orchestration.reporting.summary import build_io_lca_summary, generate_io_lca_figures
 from .orchestration.request.domain_checks import (
-    require_grouped_branch,
+    require_aggregated_branch,
     validate_upstream_supported,
 )
 from .orchestration.request.selectors import (
@@ -39,8 +39,8 @@ from .orchestration.request.selectors import (
     validate_selector_labels,
 )
 from .orchestration.request.validation import (
-    normalize_aggreg_indices_modes,
-    normalize_grouping,
+    normalize_group_indices_modes,
+    normalize_aggregation,
     normalize_io_output_format,
     normalize_lcia_method_list,
     normalize_supported_source,
@@ -53,9 +53,9 @@ def deterministic_io_lca(
     *,
     project_name: str,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     years: int | list[int] | range | None = None,
     lcia_method: str | list[str],
     fu_code: str,
@@ -65,7 +65,7 @@ def deterministic_io_lca(
     r_f: str | list[str] | None = None,
     upstream_analysis: bool = False,
     upstream_stages: int = 3,
-    aggreg_indices: bool = False,
+    group_indices: bool = False,
     output_format: str = "csv",
     figures: bool = True,
     figure_format: dict = {"format": "png", "dpi": 500},
@@ -88,19 +88,30 @@ def deterministic_io_lca(
             ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
             ``"exiobase_3102_pxp"``). pyaesa currently only supports
             EXIOBASE for LCIA characterization.
-        group_reg: If ``True``, aggregate regions using a grouping file.
+        agg_reg: If ``True``, reclassify MRIO regions with the
+            ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native regions
+            into one target label, or disaggregate one native region across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source regions.
-        group_sec: If ``True``, aggregate sectors using a grouping file.
+        agg_sec: If ``True``, reclassify MRIO sectors with the
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native sectors
+            into one target label, or disaggregate one native sector across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source sectors.
-        group_version: Grouping version tag used to resolve the region/sector
-            mapping CSVs. Required when ``group_reg`` or ``group_sec`` is True.
-            Defaults to an empty string for ungrouped processing. Follow
-            ``README_grouping.txt`` in the active
-            ``data_raw/mrio/<source>/grouping`` folder to name grouping
-            versions and place the matching mapping CSVs.
+        agg_version: Name token used to resolve the matching
+            ``agg_reg_<agg_version>.csv`` and/or
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+            mapping files in ``data_raw/mrio/<source>/aggregation``.
+            Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+            an empty string for native source classification. Use the same
+            token in downstream calls that should reuse the processed
+            classification. When a mapping file has a ``weight``
+            column, weights must sum to ``1`` for each original label.
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
-            years for the selected source/group version are used.
+            years for the selected source and ``agg_version`` are used.
         lcia_method: Required LCIA method(s) selected for IO-LCA results
             (for example ``"pb_lcia"`` or ``["pb_lcia", "gwp100_lcia"]``).
             The method(s) must have been processed for the same MRIO source
@@ -119,7 +130,7 @@ def deterministic_io_lca(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing sectors. To identify valid sector
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/.../group_sec_template.csv`` file. For
+            ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv`` file. For
             EXIOBASE sector definitions, see
             ``data_raw/mrio/exiobase_3/sector_classification.xlsx``; EXIOBASE
             ixi and pxp use different sector lists.
@@ -127,39 +138,40 @@ def deterministic_io_lca(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_c: Consuming region filter(s), single string or list. If this is a
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid consuming regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_f: Final demand region filter(s), single string or list. If this is
             a required axis for ``fu_code`` and the argument is omitted, the
             run expands to all valid final demand regions. To identify valid
             region names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         upstream_analysis: Whether upstream diagnostic outputs are written.
             These outputs are for user audit only and are not used by any
             downstream package function. Default is ``False``.
 
             - ``False``: write only main IO-LCA result tables.
             - ``True``: also write origin tables attributing the footprint to
-              producer sector region pairs where impacts occur, and when
+              producer sector-region pairs where impacts occur, and when
               supported by the FU, stage tables showing each upstream supply
               chain step with direct, embedded, and total impacts.
         upstream_stages: Number of upstream supply chain steps written when
             ``upstream_analysis=True``. Default ``3`` writes ``n`` to
             ``n-3``.
-        aggreg_indices: Whether multiple selected region/sector indices are
-            reported as separate rows or summed into one row after the
-            selected MRIO scope is computed.
+        group_indices: Whether multiple selected region or sector filter values
+            are kept as separate result rows or summed into one result row after
+            the function calculation has been performed.
             - ``False`` (default): keep selected values as independent rows.
-            - ``True``: sum selected values into one row.
-            Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-            aggregating CBA total demand system boundaries can double count.
-            For these functional units, define the aggregation from
-            ``process_mrio(...)`` onward with
-            ``group_reg``/``group_sec``/``group_version``.
+            - ``True``: sum selected values into one result row.
+            The function refuses to run when ``group_indices=True`` is used
+            with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+            rows for CBA total demand boundaries can double count. For these
+            functional units, change the upstream MRIO aggregation and disaggregation
+            scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+            running the study.
         output_format: Persisted output file format: ``"csv"`` (default),
             ``"pickle"``, or ``"parquet"``.
         figures: Whether to render figures.
@@ -177,7 +189,7 @@ def deterministic_io_lca(
             IO-LCA source and version output scope under
             ``<project>/A_lca/io_lca``. For example, for
             ``project_name="demo"``, ``source="exiobase_3102_ixi"``, and
-            ``group_version="elec"``, the refreshed path is
+            ``agg_version="elec"``, the refreshed path is
             ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi__elec/deterministic``.
             It is not limited to one LCIA method inside that output scope.
             Processed MRIO inputs, processed population and GDP, raw downloads,
@@ -189,9 +201,9 @@ def deterministic_io_lca(
         outputs when figures are requested.
 
     Raises:
-        ValueError: If the source, grouping scope, years, FU code, selectors,
+        ValueError: If the source, aggregation scope, years, FU code, selectors,
             LCIA methods, aggregation mode, output format, or upstream settings
-            are invalid; if grouped prerequisites are missing; if processed MRIO
+            are invalid; if aggregated prerequisites are missing; if processed MRIO
             assets required by the request are unavailable; or if upstream
             analysis is requested outside the FU routes with upstream outputs.
 
@@ -217,22 +229,22 @@ def deterministic_io_lca(
             )
     """
     source_norm = normalize_supported_source(source=source, caller="deterministic_io_lca")
-    group_reg_norm, group_sec_norm, group_version_norm = normalize_grouping(
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+    agg_reg_norm, agg_sec_norm, agg_version_norm = normalize_aggregation(
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
     )
     output_format_norm = normalize_io_output_format(output_format)
     figure_format_norm = normalize_figure_format(figure_format)
-    aggreg_indices = normalize_aggreg_indices_modes(aggreg_indices)[0]
+    group_indices = normalize_group_indices_modes(group_indices)[0]
     methods = normalize_lcia_method_list(lcia_method=lcia_method)
     spec = resolve_fu_spec(fu_code=fu_code)
     stages = validate_upstream_stages(upstream_stages)
     scope_paths = resolve_io_lca_paths(
         project_name=project_name,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
-        group_version=group_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
+        agg_version=agg_version_norm,
     )
     validate_upstream_supported(spec=spec, upstream_analysis=upstream_analysis)
     stage_outputs_enabled = upstream_analysis and spec.fu_code != "L1.b"
@@ -246,20 +258,20 @@ def deterministic_io_lca(
     has_multi_indices = has_multi_selected_indices(filters)
     validate_selector_labels(
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         filters=filters,
     )
     metadata, domain_metadata_path = load_domain_metadata(
         source=source_norm,
-        group_version=group_version_norm,
+        agg_version=agg_version_norm,
     )
-    require_grouped_branch(
+    require_aggregated_branch(
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         metadata_path=domain_metadata_path,
         methods=methods,
         years=years,
@@ -267,9 +279,9 @@ def deterministic_io_lca(
     resolved_years = resolve_years_strict(
         years=years,
         source=source_norm,
-        group_version=group_version_norm,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
+        agg_version=agg_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
         upstream_analysis=upstream_analysis,
     )
 
@@ -311,9 +323,9 @@ def deterministic_io_lca(
         mode_result = execute_io_lca_mode(
             project_name=project_name,
             source=source_norm,
-            group_reg=group_reg_norm,
-            group_sec=group_sec_norm,
-            group_version=group_version_norm,
+            agg_reg=agg_reg_norm,
+            agg_sec=agg_sec_norm,
+            agg_version=agg_version_norm,
             methods=methods,
             spec=spec,
             filters=filters,
@@ -323,7 +335,7 @@ def deterministic_io_lca(
             upstream_analysis=upstream_analysis,
             stages=stages,
             stage_outputs_enabled=stage_outputs_enabled,
-            aggreg_indices=aggreg_indices,
+            group_indices=group_indices,
             output_format=output_format_norm,
             refresh=refresh,
             has_multi_indices=has_multi_indices,
@@ -346,9 +358,9 @@ def deterministic_io_lca(
             figure_paths = generate_io_lca_figures(
                 project_name=project_name,
                 source=source_norm,
-                group_reg=group_reg_norm,
-                group_sec=group_sec_norm,
-                group_version=group_version_norm or "",
+                agg_reg=agg_reg_norm,
+                agg_sec=agg_sec_norm,
+                agg_version=agg_version_norm or "",
                 years=resolved_years,
                 lcia_method=methods,
                 fu_code=spec.fu_code,
@@ -356,7 +368,7 @@ def deterministic_io_lca(
                 r_c=r_c,
                 r_p=r_p,
                 s_p=s_p,
-                aggreg_indices=aggreg_indices,
+                group_indices=group_indices,
                 dpi=int(figure_format_norm["dpi"]),
                 output_format=str(figure_format_norm["format"]),
                 resolved_io_scope=resolved_io_scope,
@@ -386,7 +398,7 @@ def deterministic_io_lca(
         covered_origin_years=covered_origin_years,
         covered_stage_years=covered_stage_years,
         skipped_method_years=skipped_method_years,
-        aggreg_indices=aggreg_indices,
+        group_indices=group_indices,
         upstream_analysis=upstream_analysis,
         stage_outputs_enabled=stage_outputs_enabled,
         reuse_status=mode_result.reuse_status,
@@ -397,9 +409,9 @@ def deterministic_io_lca(
         project_name=project_name,
         lcia_methods=methods,
         fu_code=spec.fu_code,
-        group_reg=group_reg_norm,
-        group_sec=group_sec_norm,
-        group_version=group_version_norm,
+        agg_reg=agg_reg_norm,
+        agg_sec=agg_sec_norm,
+        agg_version=agg_version_norm,
         main_result_paths=all_main_paths,
         origin_paths=all_origin_paths,
         stage_paths=all_stage_paths,

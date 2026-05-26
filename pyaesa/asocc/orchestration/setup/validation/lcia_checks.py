@@ -36,8 +36,8 @@ def _validate_lcia_ready_for_domain(
     lcia_methods: list[str] | None,
     matrix_version: str | None,
     domain_label: str,
-    group_reg: bool | None = None,
-    group_sec: bool | None = None,
+    agg_reg: bool | None = None,
+    agg_sec: bool | None = None,
 ) -> None:
     """Validate LCIA availability for one MRIO domain."""
 
@@ -52,7 +52,7 @@ def _validate_lcia_ready_for_domain(
         year_dir = _get_mrio_year_dir(
             source=source,
             year=year,
-            group_version=matrix_version,
+            agg_version=matrix_version,
         )
         if not year_dir.exists():
             missing_year_dirs.append(year)
@@ -95,8 +95,8 @@ def _validate_lcia_ready_for_domain(
         else:
             process_hint = (
                 f"process_mrio(source='{source}', years={years_arg}, "
-                f"lcia_method={methods_arg}, group_version='{matrix_version}', "
-                f"group_reg={bool(group_reg)}, group_sec={bool(group_sec)})"
+                f"lcia_method={methods_arg}, agg_version='{matrix_version}', "
+                f"agg_reg={bool(agg_reg)}, agg_sec={bool(agg_sec)})"
             )
         missing_parts: list[str] = []
         if missing_year_dirs:
@@ -110,24 +110,24 @@ def _validate_lcia_ready_for_domain(
         )
 
 
-def _validate_grouped_lcia_ready(
+def _validate_aggregated_lcia_ready(
     *,
     source: str,
     years: list[int],
     lcia_methods: list[str] | None,
-    group_version: str | None,
-    group_reg: bool | None = None,
-    group_sec: bool | None = None,
+    agg_version: str | None,
+    agg_reg: bool | None = None,
+    agg_sec: bool | None = None,
 ) -> None:
-    """Validate active grouped domain LCIA inputs used in the run."""
+    """Validate active aggregated domain LCIA inputs used in the run."""
     _validate_lcia_ready_for_domain(
         source=source,
         years=years,
         lcia_methods=lcia_methods,
-        matrix_version=group_version,
-        domain_label=("grouped" if group_version else "original"),
-        group_reg=group_reg,
-        group_sec=group_sec,
+        matrix_version=agg_version,
+        domain_label=("aggregated" if agg_version else "original"),
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
     )
 
 

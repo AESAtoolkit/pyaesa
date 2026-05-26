@@ -61,7 +61,7 @@ def _owner_scope_lines(*, manifest: UncertaintyManifest) -> list[str]:
     if manifest.family == "asocc":
         alternate_source = _alternate_inter_mrio_source(manifest=manifest)
         if alternate_source is not None:
-            lines.append(f"Alternate inter MRIO source: {alternate_source}")
+            lines.append(f"Alternate inter-MRIO source: {alternate_source}")
     return lines
 
 
@@ -124,10 +124,10 @@ def _present_labels(*, artifacts: dict[str, Any], labels: dict[str, str]) -> tup
 
 def _format_mrio_scope(*, arguments: dict[str, Any]) -> str:
     parts = [
-        f"group_reg={bool(arguments.get('group_reg', False))}",
-        f"group_sec={bool(arguments.get('group_sec', False))}",
-        f"group_version={arguments.get('group_version') or 'none'}",
-        f"aggreg_indices={bool(arguments.get('aggreg_indices', False))}",
+        f"agg_reg={bool(arguments.get('agg_reg', False))}",
+        f"agg_sec={bool(arguments.get('agg_sec', False))}",
+        f"agg_version={arguments.get('agg_version') or 'none'}",
+        f"group_indices={bool(arguments.get('group_indices', False))}",
     ]
     return ", ".join(parts)
 

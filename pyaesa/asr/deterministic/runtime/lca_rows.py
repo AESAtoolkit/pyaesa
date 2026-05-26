@@ -36,9 +36,9 @@ def _discover_io_lca_result_files(
     """Return persisted deterministic IO-LCA result files for one source scope."""
     paths = resolve_io_lca_paths(
         project_name=str(base_allocate_args["project_name"]),
-        group_reg=bool(base_allocate_args["group_reg"]),
-        group_sec=bool(base_allocate_args["group_sec"]),
-        group_version=base_allocate_args["group_version"],
+        agg_reg=bool(base_allocate_args["agg_reg"]),
+        agg_sec=bool(base_allocate_args["agg_sec"]),
+        agg_version=base_allocate_args["agg_version"],
     )
     results_dir = lca_results_dir_for_source(
         paths=paths,
@@ -70,16 +70,16 @@ def _load_io_lca_rows(
     if not frames:
         paths = resolve_io_lca_paths(
             project_name=str(base_allocate_args["project_name"]),
-            group_reg=bool(base_allocate_args["group_reg"]),
-            group_sec=bool(base_allocate_args["group_sec"]),
-            group_version=base_allocate_args["group_version"],
+            agg_reg=bool(base_allocate_args["agg_reg"]),
+            agg_sec=bool(base_allocate_args["agg_sec"]),
+            agg_version=base_allocate_args["agg_version"],
         )
         results_dir = lca_results_dir_for_source(paths=paths, source=source_label)
         raise FileNotFoundError(
             "deterministic_asr could not find deterministic IO-LCA numerator rows for "
             f"lcia_method='{lcia_method}' in '{results_dir}'. The IO-LCA prerequisite "
             "is resolved by deterministic_asr for the same project, MRIO source, "
-            "grouping scope, functional unit, years, and LCIA method; check the "
+            "aggregation scope, functional unit, years, and LCIA method; check the "
             "deterministic IO-LCA result scope and skipped method years."
         )
     return _finalize_lca_rows(pd.concat(frames, ignore_index=True))
@@ -155,9 +155,9 @@ def lca_public_output_root(
         return external_lca_root(project_base=proj_base)
     paths = resolve_io_lca_paths(
         project_name=str(base_allocate_args["project_name"]),
-        group_reg=bool(base_allocate_args["group_reg"]),
-        group_sec=bool(base_allocate_args["group_sec"]),
-        group_version=base_allocate_args["group_version"],
+        agg_reg=bool(base_allocate_args["agg_reg"]),
+        agg_sec=bool(base_allocate_args["agg_sec"]),
+        agg_version=base_allocate_args["agg_version"],
     )
     return public_output_root_from_path(
         io_metadata_path_for_source(paths=paths, source=source_label)

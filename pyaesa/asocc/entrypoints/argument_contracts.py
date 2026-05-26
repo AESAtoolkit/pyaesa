@@ -50,7 +50,7 @@ def validate_grouped_request(
     if fu_norm.startswith("L1."):
         if not multi_region:
             raise ValueError(
-                "For L1 functional units, aggreg_indices=True requires a "
+                "For L1 functional units, group_indices=True requires a "
                 "multi-region filter (at least two values in r_p/r_c/r_f)."
             )
         return
@@ -58,6 +58,6 @@ def validate_grouped_request(
         return
     if not (multi_region or multi_sector):
         raise ValueError(
-            "For L2 functional units, aggreg_indices=True requires either "
+            "For L2 functional units, group_indices=True requires either "
             "a multi-region filter (r_p/r_c/r_f) or multi-sector filter (s_p)."
         )

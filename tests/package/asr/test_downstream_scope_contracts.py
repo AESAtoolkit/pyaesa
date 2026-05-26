@@ -38,7 +38,7 @@ def _path_scope(tmp_path: Path) -> AsoccDeterministicPathScope:
     return build_asocc_deterministic_path_scope(
         proj_base=tmp_path,
         source_label="oecd_v2025",
-        group_version=None,
+        agg_version=None,
     )
 
 
@@ -62,10 +62,10 @@ def _loaded_asocc_share(
 def _composite_base_allocate_args() -> dict[str, object]:
     mrio_scope = composite_mod.normalize_mrio_scope(
         source="oecd_v2025",
-        group_reg=False,
-        group_sec=False,
-        group_version="",
-        aggreg_indices=False,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version="",
+        group_indices=False,
     )
     return composite_mod.build_composite_base_allocate_args(
         project_name="downstream_scope_contracts",
@@ -77,10 +77,10 @@ def _composite_base_allocate_args() -> dict[str, object]:
         r_c=None,
         r_f=None,
         source=mrio_scope["source"],
-        group_reg=mrio_scope["group_reg"],
-        group_sec=mrio_scope["group_sec"],
-        group_version=mrio_scope["group_version"],
-        aggreg_indices=mrio_scope["aggreg_indices"],
+        agg_reg=mrio_scope["agg_reg"],
+        agg_sec=mrio_scope["agg_sec"],
+        agg_version=mrio_scope["agg_version"],
+        group_indices=mrio_scope["group_indices"],
         base_asocc_args=composite_mod.normalize_base_asocc_args(
             {
                 "method_plan": "one_step",
@@ -529,55 +529,55 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
         composite_mod.normalize_shared_lcia_methods([])
     normalized_mrio = composite_mod.normalize_mrio_scope(
         source="oecd_v2025",
-        group_reg=False,
-        group_sec=False,
-        group_version="v1",
-        aggreg_indices=False,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version="v1",
+        group_indices=False,
     )
-    assert normalized_mrio["group_version"] == "v1"
+    assert normalized_mrio["agg_version"] == "v1"
     assert (
         composite_mod.normalize_mrio_scope(
             source="oecd_v2025",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,  # type: ignore[arg-type]
-            aggreg_indices=False,
-        )["group_version"]
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,  # type: ignore[arg-type]
+            group_indices=False,
+        )["agg_version"]
         is None
     )
     with pytest.raises(ValueError):
         composite_mod.normalize_mrio_scope(
             source="oecd_v2025",
-            group_reg=1,  # type: ignore[arg-type]
-            group_sec=False,
-            group_version="",
-            aggreg_indices=False,
+            agg_reg=1,  # type: ignore[arg-type]
+            agg_sec=False,
+            agg_version="",
+            group_indices=False,
         )
     with pytest.raises(ValueError):
         composite_mod.normalize_base_asocc_args([], fu_code="L2.a.a")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         composite_mod.normalize_mrio_scope(
             source="oecd_v2025",
-            group_reg=False,
-            group_sec=False,
-            group_version="",
-            aggreg_indices="no",  # type: ignore[arg-type]
+            agg_reg=False,
+            agg_sec=False,
+            agg_version="",
+            group_indices="no",  # type: ignore[arg-type]
         )
     with pytest.raises(ValueError):
         composite_mod.normalize_mrio_scope(
             source=None,  # type: ignore[arg-type]
-            group_reg=False,
-            group_sec=False,
-            group_version="",
-            aggreg_indices=False,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version="",
+            group_indices=False,
         )
     with pytest.raises(ValueError):
         composite_mod.normalize_mrio_scope(
             source="oecd_v2025",
-            group_reg=False,
-            group_sec=False,
-            group_version=1,  # type: ignore[arg-type]
-            aggreg_indices=False,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=1,  # type: ignore[arg-type]
+            group_indices=False,
         )
 
     normalized_base = composite_mod.normalize_base_asocc_args(
@@ -659,10 +659,10 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
         r_c=None,
         r_f=None,
         source="oecd_v2025",
-        group_reg=False,
-        group_sec=False,
-        group_version=None,
-        aggreg_indices=False,
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
+        group_indices=False,
         base_asocc_args=composite_mod.normalize_base_asocc_args(
             {
                 "method_plan": "one_step",
@@ -677,6 +677,7 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
     assert request["source"] == "oecd_v2025"
     assert request["include_lcia_based_allocation_methods"] is False
     assert request["lcia_method"] is None
+    assert composite_mod.asocc_lcia_methods_from_allocate_args(base_allocate_args=request) is None
     assert (
         resolve_allocate_project_base(
             base_allocate_args=normalize_base_allocate_args(
@@ -685,6 +686,34 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
         ).name
         == "demo"
     )
+    shared_asocc_request = composite_mod.build_composite_base_allocate_args(
+        project_name="demo",
+        years=[2005],
+        lcia_method=["pb_lcia"],
+        asocc_lcia_methods=["gwp100_lcia", "pb_lcia"],
+        fu_code="L2.a.a",
+        r_p=None,
+        s_p=None,
+        r_c=None,
+        r_f=None,
+        source="oecd_v2025",
+        agg_reg=False,
+        agg_sec=False,
+        agg_version=None,
+        group_indices=False,
+        base_asocc_args=composite_mod.normalize_base_asocc_args(
+            {
+                "method_plan": "one_step",
+                "one_step_methods": ["UT(FD)"],
+                "l1_reg_aggreg": "post",
+            },
+            fu_code="L2.a.a",
+        ),
+    )
+    assert shared_asocc_request["lcia_method"] == ["gwp100_lcia", "pb_lcia"]
+    assert composite_mod.asocc_lcia_methods_from_allocate_args(
+        base_allocate_args=shared_asocc_request
+    ) == ["gwp100_lcia", "pb_lcia"]
 
 
 def test_downstream_year_selector_and_groups_cover_edge_contracts(tmp_path: Path) -> None:

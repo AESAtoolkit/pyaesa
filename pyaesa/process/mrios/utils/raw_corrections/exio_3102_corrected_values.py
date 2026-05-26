@@ -52,7 +52,7 @@ class _WorkspaceData:
             / f"full_{self.system}"
         )
         prereq = self._repo_root / "pyaesa" / "workspace_initialisation" / "prerequisites" / "mrio"
-        self._group_reg_eu27_path = prereq / "exiobase_3" / "grouping" / "group_reg_eu27.csv"
+        self._agg_reg_eu27_path = prereq / "exiobase_3" / "aggregation" / "agg_reg_eu27.csv"
         self._pb_lcia_path = (
             prereq / "exiobase_3" / "lcia" / "characterization_factors_matrices" / "pb_lcia.csv"
         )
@@ -60,19 +60,19 @@ class _WorkspaceData:
         self._basis_cache: dict[int, pd.Series] = {}
         self._basis_history_cache: dict[tuple[str, tuple[int, ...]], pd.DataFrame] = {}
         self._eu27_regions = self._load_eu27_regions()
-        self._fwc_stressors = self._load_fwc_stressors()
+        self._fwu_stressors = self._load_fwu_stressors()
 
     @property
     def eu27_regions(self) -> tuple[str, ...]:
         return self._eu27_regions
 
     @property
-    def fwc_stressors(self) -> tuple[str, ...]:
-        return self._fwc_stressors
+    def fwu_stressors(self) -> tuple[str, ...]:
+        return self._fwu_stressors
 
     def _load_eu27_regions(self) -> tuple[str, ...]:
-        frame = pd.read_csv(self._group_reg_eu27_path, encoding="latin1")
-        eu27_rows = frame["grouped_mrio"].astype(str).str.strip().eq("EU27")
+        frame = pd.read_csv(self._agg_reg_eu27_path, encoding="latin1")
+        eu27_rows = frame["aggregated_mrio"].astype(str).str.strip().eq("EU27")
         regions = sorted(
             {
                 str(value).strip()
@@ -82,11 +82,11 @@ class _WorkspaceData:
         )
         return tuple(regions)
 
-    def _load_fwc_stressors(self) -> tuple[str, ...]:
+    def _load_fwu_stressors(self) -> tuple[str, ...]:
         frame = pd.read_csv(self._pb_lcia_path, encoding="latin1")
         mask = frame["extension"].astype(str).str.strip().eq("water") & frame[
             "impact_parent"
-        ].astype(str).str.strip().eq("FWC")
+        ].astype(str).str.strip().eq("FWU")
         stressors = sorted({str(value).strip() for value in frame.loc[mask, "stressor"]})
         return tuple(value for value in stressors if value)
 
@@ -167,7 +167,7 @@ def _predict_ols(
     intercept, slope, _r_squared, _p_value = fit_simple_ols(x=x_fit, y=y_fit)
     raw = float(intercept + slope * float(x_target))
     clipped = raw < 0.0
-    detail = f"n_obs={n_obs}, intercept={intercept:.12g}, slope={slope:.12g}"
+    detail = f"n_obs={n_obs}, intercept={intercept:.17g}, slope={slope:.17g}"
     return (0.0 if clipped else raw), detail, clipped
 
 
@@ -496,9 +496,9 @@ def build_corrected_values_outputs_for_source(
         diagnostics.extend(ch_diag)
 
     _report(progress, f"{source}: building LU water regressions")
-    for idx, stressor in enumerate(cache.fwc_stressors, start=1):
-        if idx == 1 or idx % 10 == 0 or idx == len(cache.fwc_stressors):
-            _report(progress, f"{source}: LU regression stressor {idx}/{len(cache.fwc_stressors)}")
+    for idx, stressor in enumerate(cache.fwu_stressors, start=1):
+        if idx == 1 or idx % 10 == 0 or idx == len(cache.fwu_stressors):
+            _report(progress, f"{source}: LU regression stressor {idx}/{len(cache.fwu_stressors)}")
         lu_rows, lu_diag = _build_regression_rows(
             cache,
             source=source,

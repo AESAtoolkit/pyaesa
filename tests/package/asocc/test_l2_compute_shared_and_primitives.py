@@ -170,7 +170,7 @@ def _run(
 ) -> types_mod._L2RunContext:
     context: Any = SimpleNamespace(
         source="oecd_v2025",
-        group_version=None,
+        agg_version=None,
         needs_lcia=True,
         lcia_methods=["gwp100_lcia"],
         logger=SimpleNamespace(warning=lambda _message: None),
@@ -262,6 +262,25 @@ def test_l2_compute_shared_cover_real_registry_and_slice_paths() -> None:
         l2_method="UT(FD)",
         l1_name="AR(E^{CBA_FD})",
     ) == [2005, 2006]
+    assert shared_mod._reference_years_for(
+        run=_run(
+            fu_code="L2.a.a",
+            year=2005,
+            reference_years=[2005, 2006],
+        ),
+        l2_method="UT(FD)",
+        l1_name="AR(E^{CBA_FD})",
+    ) == [2005]
+    assert shared_mod._reference_years_for(
+        run=_run(
+            fu_code="L2.a.a",
+            year=2005,
+            reference_years=None,
+            historical_years=[2005, 2006],
+        ),
+        l2_method="AR(E^{CBA_FD})",
+        l1_name=None,
+    ) == [2005]
 
     cutoff_filtered_run = _run(
         fu_code="L2.a.a",

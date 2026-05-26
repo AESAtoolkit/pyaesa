@@ -9,7 +9,10 @@ from pyaesa.download.mrios.utils.logging import suppress_pymrio_logging
 from pyaesa.process.mrios.utils.raw_corrections.runtime import (
     apply_raw_corrected_values,
 )
-from pyaesa.process.mrios.utils.grouping.grouping import build_agg_vector
+from pyaesa.process.mrios.utils.aggregation.aggregation import (
+    AggregationSpec,
+    build_aggregation_spec,
+)
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
     _calc_characterized_extensions_minimal,
@@ -23,7 +26,7 @@ from pyaesa.process.mrios.utils.parsers.oecd_parser import _parse_oecd_year
 from pyaesa.process.mrios.utils.pipeline.contracts import SourceConfig
 from .matrix_ops import (
     _aggregate_iosys_fast,
-    _calc_grouped_full_system_after_fast_aggregation,
+    _calc_aggregated_full_system_after_fast_aggregation,
     _calc_core_system_minimal,
     _labels_from_product_index,
 )
@@ -38,14 +41,14 @@ def parse_and_calc_year(
     full_dir: Path,
     year: int,
     char_jobs: Optional[dict[str, ExioCharacterizationOptions]],
-    group_reg: bool,
-    group_sec: bool,
-    group_reg_df,
-    group_sec_df,
-    group_reg_path: Optional[Path],
-    group_sec_path: Optional[Path],
-    reg_vec_cache: Optional[dict[tuple[str, ...], list[str]]] = None,
-    sec_vec_cache: Optional[dict[tuple[str, ...], list[str]]] = None,
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_reg_df,
+    agg_sec_df,
+    agg_reg_path: Optional[Path],
+    agg_sec_path: Optional[Path],
+    reg_vec_cache: Optional[dict[tuple[str, ...], AggregationSpec]] = None,
+    sec_vec_cache: Optional[dict[tuple[str, ...], AggregationSpec]] = None,
     pymrio_calc_all: bool = False,
     keep_postclip_ghosh: bool = True,
     parse_exio_func=_parse_exio_year,
@@ -88,50 +91,43 @@ def parse_and_calc_year(
     regions_original = _ensure_label_list(iosys.get_regions(), label_kind="regions")
     sectors_original = _ensure_label_list(iosys.get_sectors(), label_kind="sectors")
 
-    reg_vec = None
-    sec_vec = None
-    if group_reg:
+    reg_spec = None
+    sec_spec = None
+    if agg_reg:
         reg_key = tuple(regions_original)
         if reg_vec_cache is not None and reg_key in reg_vec_cache:
-            reg_vec = reg_vec_cache[reg_key]
+            reg_spec = reg_vec_cache[reg_key]
         else:
-            reg_vec = build_agg_vector(
+            reg_spec = build_aggregation_spec(
                 regions_original,
-                group_reg_df,
+                agg_reg_df,
                 label_kind="region",
-                csv_path=group_reg_path or "group_reg",
+                csv_path=agg_reg_path or "agg_reg",
             )
             if reg_vec_cache is not None:
-                reg_vec_cache[reg_key] = reg_vec
+                reg_vec_cache[reg_key] = reg_spec
 
-    if group_sec:
+    if agg_sec:
         sec_key = tuple(sectors_original)
         if sec_vec_cache is not None and sec_key in sec_vec_cache:
-            sec_vec = sec_vec_cache[sec_key]
+            sec_spec = sec_vec_cache[sec_key]
         else:
-            sec_vec = build_agg_vector(
+            sec_spec = build_aggregation_spec(
                 sectors_original,
-                group_sec_df,
+                agg_sec_df,
                 label_kind="sector",
-                csv_path=group_sec_path or "group_sec",
+                csv_path=agg_sec_path or "agg_sec",
             )
             if sec_vec_cache is not None:
-                sec_vec_cache[sec_key] = sec_vec
+                sec_vec_cache[sec_key] = sec_spec
 
-    if reg_vec or sec_vec:
-        region_map = {
-            str(region): (str(grouped) if group_reg and reg_vec is not None else str(region))
-            for region, grouped in zip(regions_original, reg_vec or regions_original)
-        }
-        sector_map = {
-            str(sector): (str(grouped) if group_sec and sec_vec is not None else str(sector))
-            for sector, grouped in zip(sectors_original, sec_vec or sectors_original)
-        }
+    aggregation_active = reg_spec is not None or sec_spec is not None
+    if aggregation_active:
         _aggregate_iosys_fast(
             iosys=iosys,
-            group_reg=group_reg,
-            region_map=region_map,
-            sector_map=sector_map,
+            agg_reg=agg_reg,
+            region_spec=reg_spec,
+            sector_spec=sec_spec,
         )
 
     regions_used, sectors_used = _labels_from_product_index(iosys.Z.index)
@@ -180,8 +176,8 @@ def parse_and_calc_year(
 
             _retain_extension_instances(iosys, calc_all_methods)
             if calc_all_methods:
-                if reg_vec or sec_vec:
-                    _calc_grouped_full_system_after_fast_aggregation(iosys=iosys)
+                if aggregation_active:
+                    _calc_aggregated_full_system_after_fast_aggregation(iosys=iosys)
                 else:
                     with suppress_pymrio_logging():
                         iosys.calc_all(include_ghosh=True)
@@ -227,8 +223,8 @@ def parse_and_calc_year(
             # Without LCIA requests, exclude environmental extensions and keep
             # only retained non environmental accounts (factor_inputs).
             _retain_extension_instances(iosys, _BASE_RETAINED_EXIO_EXTENSIONS)
-        if reg_vec or sec_vec:
-            _calc_grouped_full_system_after_fast_aggregation(iosys=iosys)
+        if aggregation_active:
+            _calc_aggregated_full_system_after_fast_aggregation(iosys=iosys)
         else:
             with suppress_pymrio_logging():
                 iosys.calc_all(include_ghosh=True)

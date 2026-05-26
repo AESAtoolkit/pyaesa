@@ -14,9 +14,9 @@ def _request(**overrides) -> PrepareContextRequest:
     data = {
         "project_name": "setup_prepare_context",
         "source": "oecd_v2025",
-        "group_version": None,
-        "group_reg": False,
-        "group_sec": False,
+        "agg_version": None,
+        "agg_reg": False,
+        "agg_sec": False,
         "years": [2005],
         "historical_year_cap": None,
         "refresh": False,
@@ -36,7 +36,7 @@ def _request(**overrides) -> PrepareContextRequest:
         "l2_reuse_years": None,
         "l1_reg_aggreg": "post",
         "variant_tag": None,
-        "aggreg_indices": False,
+        "group_indices": False,
         "output_format": "csv",
         "intermediate_outputs": False,
         "output_source_label": None,
@@ -46,18 +46,18 @@ def _request(**overrides) -> PrepareContextRequest:
 
 
 def test_setup_selection_cover_validation_and_pruning() -> None:
-    selection_mod._validate_td_grouped_output(fu_code="L2.a.a", aggreg_indices=False)
+    selection_mod._validate_td_grouped_output(fu_code="L2.a.a", group_indices=False)
     with pytest.raises(ValueError):
-        selection_mod._validate_td_grouped_output(fu_code="L2.a.b", aggreg_indices=True)
+        selection_mod._validate_td_grouped_output(fu_code="L2.a.b", group_indices=True)
 
-    grouping = selection_mod._resolve_grouping(
-        group_reg=True,
-        group_sec=None,
-        group_version="demo",
+    aggregation = selection_mod._resolve_aggregation(
+        agg_reg=True,
+        agg_sec=None,
+        agg_version="demo",
     )
-    assert grouping.apply_group_reg is True
-    assert grouping.apply_group_sec is False
-    assert grouping.group_version_reg == "demo"
+    assert aggregation.apply_agg_reg is True
+    assert aggregation.apply_agg_sec is False
+    assert aggregation.agg_version_reg == "demo"
 
     selection = selection_mod._resolve_selection_bundle(
         fu_code="L2.a.a",
@@ -140,22 +140,22 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
     )
     assert filters == {"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None}
     assert indices_tag == "r_p-FR"
-    assert selection_mod._resolve_output_domain_tag(source="iso3", group_version=None) is None
+    assert selection_mod._resolve_output_domain_tag(source="iso3", agg_version=None) is None
     assert (
-        selection_mod._resolve_output_domain_tag(source="oecd_v2025", group_version=None)
+        selection_mod._resolve_output_domain_tag(source="oecd_v2025", agg_version=None)
         == "original_classification"
     )
     assert (
-        selection_mod._resolve_output_domain_tag(source="oecd_v2025", group_version="demo")
+        selection_mod._resolve_output_domain_tag(source="oecd_v2025", agg_version="demo")
         == "custom_classification_demo"
     )
     assert selection_mod._l1_methods_in_scope(selection) == {"EG(Pop)"}
     assert not selection_mod._uses_l1_post_original_domain(
         selection=selection,
-        grouping=selection_mod._resolve_grouping(
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
+        aggregation=selection_mod._resolve_aggregation(
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
         ),
         l1_reg_aggreg="pre",
     )
@@ -167,10 +167,10 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
             l_2_one_step=None,
             l1_lcia_kind="CBA_FD",
         ),
-        grouping=selection_mod._resolve_grouping(
-            group_reg=True,
-            group_sec=False,
-            group_version="demo",
+        aggregation=selection_mod._resolve_aggregation(
+            agg_reg=True,
+            agg_sec=False,
+            agg_version="demo",
         ),
         l1_reg_aggreg="post",
     )
@@ -187,8 +187,8 @@ def test_prepare_context_rejects_invalid_source_and_iso3_contracts(allocation_du
             request=_request(
                 source="iso3",
                 fu_code="L1.a",
-                group_reg=True,
-                group_version="demo",
+                agg_reg=True,
+                agg_version="demo",
             )
         )
     with pytest.raises(ValueError):
@@ -384,7 +384,7 @@ def test_prepare_context_refresh_clears_existing_scope_outputs(allocation_dummy_
     refresh_root = _get_allocate_refresh_scope_root(
         proj_base=Path(context.proj_base),
         source=context.output_source_label or context.source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     stale_file = refresh_root / "stale_scope.txt"
     stale_file.parent.mkdir(parents=True, exist_ok=True)
@@ -439,7 +439,7 @@ def test_prepare_context_refresh_clears_stale_outputs_without_scope_metadata(
     refresh_root = _get_allocate_refresh_scope_root(
         proj_base=Path(context.proj_base),
         source=context.output_source_label or context.source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     stale_output = refresh_root / "l1" / "eg_pop.csv"
     stale_output.parent.mkdir(parents=True, exist_ok=True)
@@ -492,8 +492,8 @@ def test_prepare_context_covers_original_domain_lcia_setup_branch(
         request=_request(
             project_name="setup_prepare_context_original_domain",
             source="exiobase_396_ixi",
-            group_version="demo_reg",
-            group_reg=True,
+            agg_version="demo_reg",
+            agg_reg=True,
             years=[2005],
             lcia_method="gwp100_lcia",
             l_1=["AR(Ecap^{CBA_FD})"],

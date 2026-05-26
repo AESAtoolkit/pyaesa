@@ -14,7 +14,7 @@ Functional Units And Allocation Methods
 ---------------------------------------
 
 * :download:`Functional units and allocation methods <../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf>`
-* ``tutorials/study_objectives/1_functional_units_and_allocation_methods.md``:
+* :doc:`tutorials/study_objectives/1_functional_units_and_allocation_methods.md <tutorials/study_objectives/1_functional_units_and_allocation_methods>`:
   quick guide for selecting pyaesa function arguments for functional units and
   aSoCC allocation methods.
 

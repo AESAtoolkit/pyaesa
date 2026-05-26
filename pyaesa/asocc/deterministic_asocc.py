@@ -33,16 +33,16 @@ def deterministic_asocc(
     *,
     project_name: str,
     source: str,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: str = "",
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: str = "",
     years: int | list[int] | range | None = None,
     fu_code: str,
     s_p: str | list[str] | None = None,
     r_p: str | list[str] | None = None,
     r_c: str | list[str] | None = None,
     r_f: str | list[str] | None = None,
-    aggreg_indices: bool = False,
+    group_indices: bool = False,
     method_plan: str = "default",
     l1_methods: list[str] | None = None,
     one_step_methods: list[str] | None = None,
@@ -84,19 +84,30 @@ def deterministic_asocc(
             ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
             ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
             for ISO3 only mode (L1 EG/PR(GDPcap) only).
-        group_reg: If ``True``, aggregate regions using a grouping file.
+        agg_reg: If ``True``, reclassify MRIO regions with the
+            ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native regions
+            into one target label, or disaggregate one native region across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source regions.
-        group_sec: If ``True``, aggregate sectors using a grouping file.
+        agg_sec: If ``True``, reclassify MRIO sectors with the
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
+            The mapping can keep native labels, aggregate several native sectors
+            into one target label, or disaggregate one native sector across several
+            target labels when a ``weight`` column is provided.
             Default ``False`` keeps native source sectors.
-        group_version: Grouping version tag used to resolve the region/sector
-            mapping CSVs. Required when ``group_reg`` or ``group_sec`` is True.
-            Defaults to an empty string for ungrouped processing. Follow
-            ``README_grouping.txt`` in the active
-            ``data_raw/mrio/<source>/grouping`` folder to name grouping
-            versions and place the matching mapping CSVs.
+        agg_version: Name token used to resolve the matching
+            ``agg_reg_<agg_version>.csv`` and/or
+            ``agg_sec_<agg_version>.csv`` MRIO aggregation and disaggregation
+            mapping files in ``data_raw/mrio/<source>/aggregation``.
+            Required when ``agg_reg`` or ``agg_sec`` is True. Defaults to
+            an empty string for native source classification. Use the same
+            token in downstream calls that should reuse the processed
+            classification. When a mapping file has a ``weight``
+            column, weights must sum to ``1`` for each original label.
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
-            years for the selected source/group version are used.
+            years for the selected source and ``agg_version`` are used.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
             ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
@@ -106,7 +117,7 @@ def deterministic_asocc(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing sectors. To identify valid sector
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/.../group_sec_template.csv`` file. For
+            ``data_raw/mrio/.../aggregation/.../agg_sec_template.csv`` file. For
             EXIOBASE sector definitions, see
             ``data_raw/mrio/exiobase_3/sector_classification.xlsx``; EXIOBASE
             ixi and pxp use different sector lists.
@@ -114,27 +125,28 @@ def deterministic_asocc(
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid producing regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_c: Consuming region filter(s), single string or list. If this is a
             required axis for ``fu_code`` and the argument is omitted, the run
             expands to all valid consuming regions. To identify valid region
             names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
         r_f: Final demand region filter(s), single string or list. If this is
             a required axis for ``fu_code`` and the argument is omitted, the
             run expands to all valid final demand regions. To identify valid
             region names, see the first column of the relevant
-            ``data_raw/mrio/.../grouping/group_reg_template.csv`` file.
-        aggreg_indices: Whether multiple selected region/sector indices are
-            reported as separate rows or summed into one row after the
-            selected MRIO scope is computed.
+            ``data_raw/mrio/.../aggregation/agg_reg_template.csv`` file.
+        group_indices: Whether multiple selected region or sector filter values
+            are kept as separate result rows or summed into one result row after
+            the function calculation has been performed.
             - ``False`` (default): keep selected values as independent rows.
-            - ``True``: sum selected values into one row.
-            Not allowed for ``L2.a.b``, ``L2.b.b``, and ``L2.c.b`` because
-            aggregating CBA total demand system boundaries can double count.
-            For these functional units, define the aggregation from
-            ``process_mrio(...)`` onward with
-            ``group_reg``/``group_sec``/``group_version``.
+            - ``True``: sum selected values into one result row.
+            The function refuses to run when ``group_indices=True`` is used
+            with ``L2.a.b``, ``L2.b.b``, or ``L2.c.b`` because summing output
+            rows for CBA total demand boundaries can double count. For these
+            functional units, change the upstream MRIO aggregation and disaggregation
+            scope with ``agg_reg``, ``agg_sec``, and ``agg_version`` before
+            running the study.
         method_plan: ``method_plan`` defaults to ``"default"`` and accepts
             ``"default"``, ``"one_step"``, ``"two_steps"``, ``"pairs"``, or
             ``"one_step_pairs"``. When omitted, all pyaesa allocation methods
@@ -239,11 +251,11 @@ def deterministic_asocc(
 
         refresh: If ``True``, remove and rebuild the resolved deterministic
             aSoCC source and version output scope for this project, source
-            label, and group version. The cleared scope is the source and
+            label, and aggregate version. The cleared scope is the source and
             version ``deterministic`` folder under
-            ``<project>/B1_asocc/<source_or_source__group_version>``. For
+            ``<project>/B1_asocc/<source_or_source__agg_version>``. For
             example, for ``project_name="demo"``,
-            ``source="exiobase_3102_ixi"``, and ``group_version="elec"``, the
+            ``source="exiobase_3102_ixi"``, and ``agg_version="elec"``, the
             refreshed path is
             ``<repo>/demo/B1_asocc/exiobase_3102_ixi__elec/deterministic``.
             Processed MRIO inputs, processed population and GDP, raw
@@ -257,7 +269,7 @@ def deterministic_asocc(
     Raises:
         ValueError: If FU code is invalid, selectors are incompatible with
             ``method_plan``, required indices are missing, disallowed indices
-            are provided, LCIA inputs are required but missing, grouped output
+            are provided, LCIA inputs are required but missing, aggregated output
             is requested in disallowed cases, or required MRIO/population/GDP
             years are unavailable.
 
@@ -322,7 +334,7 @@ def deterministic_asocc(
             l1_l2_pairs=l1_l2_pairs,
         )
         mode = normalize_l1_reg_mode(l1_reg_aggreg)
-        aggreg_indices = normalize_output_mode(aggreg_indices)
+        group_indices = normalize_output_mode(group_indices)
         r_p_list = ensure_list_str(r_p)
         s_p_list = ensure_list_str(s_p)
         r_c_list = ensure_list_str(r_c)
@@ -330,9 +342,9 @@ def deterministic_asocc(
         common = _RunCommonInputs(
             project_name=project_name,
             source=source,
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             years=years,
             historical_year_cap=None,
             refresh=refresh,
@@ -352,7 +364,7 @@ def deterministic_asocc(
         )
         validate_grouped_request(
             fu_norm=fu_norm,
-            grouped_requested=aggreg_indices,
+            grouped_requested=group_indices,
             r_p=r_p_list,
             s_p=s_p_list,
             r_c=r_c_list,
@@ -362,7 +374,7 @@ def deterministic_asocc(
         report = _run_allocate_family(
             common=common,
             mode=mode,
-            aggreg_indices=aggreg_indices,
+            group_indices=group_indices,
             l1_override=base_l1,
             combined_override=base_combined,
             l2_one_step_override=base_one_step,

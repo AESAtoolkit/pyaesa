@@ -13,7 +13,10 @@ from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioPlan
 from pyaesa.asocc.uncertainty.sources.lcia import LCIAPlan
 from pyaesa.asocc.uncertainty.io.paths import AsoccUncertaintyRunPaths
 from pyaesa.asocc.uncertainty.sources.projection import ProjectionPlan
-from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import sample_compact_batch
+from pyaesa.asocc.uncertainty.engine.monte_carlo.sampling import (
+    compact_batch_inter_mrio_matches,
+    sample_compact_batch,
+)
 from pyaesa.asocc.uncertainty.engine.convergence.state import (
     initial_convergence_state,
     remaining_run_plan,
@@ -21,13 +24,14 @@ from pyaesa.asocc.uncertainty.engine.convergence.state import (
 from pyaesa.asocc.uncertainty.engine.inter_method.execution import InterMethodExecutionPlan
 from pyaesa.asocc.uncertainty.engine.inter_method.sampling import (
     external_run_offsets_for_start,
+    inter_method_inter_mrio_matches_by_branch,
     sample_sparse_inter_method_batch,
 )
 from pyaesa.asocc.uncertainty.engine.evaluation.summary_identity import summary_identity_groups
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     collapse_values_to_summary_groups,
-    collapse_sparse_rows_to_overlapping_summary_groups,
     sparse_public_row_group_membership_index,
+    sparse_rows_to_overlapping_group_values,
 )
 from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_compact_run_matrix,
@@ -39,11 +43,12 @@ from pyaesa.shared.uncertainty_assessment.monte_carlo.convergence import (
     ordered_mean_convergence_reached,
 )
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
+    SparseRunRows,
     SparseRunRowsWriter,
-    write_uncertainty_table,
 )
+from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
     monte_carlo_run_drawing_label,
@@ -103,6 +108,12 @@ def write_convergence_batches(
             public_column_count=len(cast(Any, state.identity)),
         )
         accumulator.record_baseline(completed_runs=completed_runs)
+    inter_mrio_matches = compact_batch_inter_mrio_matches(
+        loaded=loaded,
+        inter_mrio_plan=inter_mrio_plan,
+        lcia_plan=lcia_plan,
+        projection_plan=projection_plan,
+    )
     with CompactRunMatrixWriter(
         path=paths.public_runs,
         output_format=runtime.output_format,
@@ -133,6 +144,7 @@ def write_convergence_batches(
                     batch=batch,
                     sources=sources,
                     external_plan=external_plan,
+                    inter_mrio_matches=inter_mrio_matches,
                 )
             except ExternalAsoccRunInventoryExhausted as exc:
                 stop_reason = str(exc)
@@ -235,7 +247,6 @@ def write_sparse_inter_method_convergence_batches(
             accumulator=accumulator,
             paths=paths,
             output_format=runtime.output_format,
-            public_row_groups=public_row_groups,
             public_row_group_index=cast(np.ndarray, public_row_group_index),
         )
         accumulator.record_baseline(completed_runs=completed_runs)
@@ -247,6 +258,10 @@ def write_sparse_inter_method_convergence_batches(
             for branch in inter_method_execution_plan.branches
             for source in branch.external_plan.monte_carlo_sources
         ),
+    )
+    inter_mrio_matches_by_branch = inter_method_inter_mrio_matches_by_branch(
+        execution_plan=inter_method_execution_plan,
+        inter_mrio_plan=inter_mrio_plan,
     )
     with SparseRunRowsWriter(
         path=paths.public_runs,
@@ -279,6 +294,7 @@ def write_sparse_inter_method_convergence_batches(
                     sources=sources,
                     identity=identity,
                     external_render_offsets=external_render_offsets,
+                    inter_mrio_matches_by_branch=inter_mrio_matches_by_branch,
                 )
             except ExternalAsoccRunInventoryExhausted as exc:
                 stop_reason = str(exc)
@@ -302,14 +318,13 @@ def write_sparse_inter_method_convergence_batches(
                 row_count = len(public_row_groups)
                 accumulator = MeanConvergenceAccumulator.empty(row_count=row_count)
                 identity_written = True
-            convergence_values = collapse_sparse_rows_to_overlapping_summary_groups(
+            _accumulate_sparse_convergence_means(
+                accumulator=accumulator,
                 sparse_rows=sparse_batch.sparse_rows,
                 run_indices=sparse_batch.run_indices,
-                public_row_groups=public_row_groups,
                 public_row_group_index=cast(np.ndarray, public_row_group_index),
             )
             row_writer.write_batch(rows=sparse_batch.sparse_rows, batch_index=batch.batch_index)
-            accumulator.update(values=convergence_values)
             completed_runs = int(batch.stop_run_index)
             progress.complete(
                 label=monte_carlo_run_progress_label(
@@ -352,6 +367,7 @@ def _replay_existing_compact_to_accumulator(
     public_row_groups: tuple[tuple[str, ...], ...],
     public_column_count: int,
 ) -> None:
+    """Rebuild compact convergence state from already written run rows."""
     for _run_indices, values in iter_compact_run_matrix(
         path=paths.public_runs,
         output_format=output_format,
@@ -370,17 +386,35 @@ def _replay_existing_sparse_to_accumulator(
     accumulator: MeanConvergenceAccumulator,
     paths: AsoccUncertaintyRunPaths,
     output_format: str,
-    public_row_groups: tuple[tuple[str, ...], ...],
     public_row_group_index: np.ndarray,
 ) -> None:
+    """Rebuild sparse convergence state from already written selected rows."""
     for rows in iter_sparse_run_rows(path=paths.public_runs, output_format=output_format):
         first_run = int(rows.run_index[0])
         last_run = int(rows.run_index[-1])
-        accumulator.update(
-            values=collapse_sparse_rows_to_overlapping_summary_groups(
-                sparse_rows=rows,
-                run_indices=np.arange(first_run, last_run + 1, dtype=np.int64),
-                public_row_groups=public_row_groups,
-                public_row_group_index=public_row_group_index,
-            )
+        _accumulate_sparse_convergence_means(
+            accumulator=accumulator,
+            sparse_rows=rows,
+            run_indices=np.arange(first_run, last_run + 1, dtype=np.int64),
+            public_row_group_index=public_row_group_index,
         )
+
+
+def _accumulate_sparse_convergence_means(
+    *,
+    accumulator: MeanConvergenceAccumulator,
+    sparse_rows: SparseRunRows,
+    run_indices: np.ndarray,
+    public_row_group_index: np.ndarray,
+) -> None:
+    """Accumulate sparse selected row values as per run summary group means."""
+    row_runs, row_groups, values = sparse_rows_to_overlapping_group_values(
+        sparse_rows=sparse_rows,
+        run_indices=run_indices,
+        public_row_group_index=public_row_group_index,
+    )
+    accumulator.accumulate_sparse_group_means(
+        row_runs=row_runs,
+        row_groups=row_groups,
+        values=values,
+    )

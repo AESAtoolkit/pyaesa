@@ -21,7 +21,6 @@ from pyaesa.shared.uncertainty_assessment.monte_carlo.runs import (
     run_seed_from_run_id,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
 from pyaesa.shared.runtime.reporting.run_progress import RunProgressPrinter
 
 
@@ -74,26 +73,14 @@ def _downstream_plan(
         run_layout="compact_run_matrix",
         summary_identity=plan.identity,
         public_row_count=len(plan.identity),
-        compact_batches=lambda _output_format, start, stop: _sample_batches(
+        compact_batches=lambda _output_format, start, stop, _batch_size: _sample_batches(
             plan=plan,
             runtime=runtime,
             seed_run_id=seed_run_id,
             start=start,
             stop=stop,
         ),
-        sparse_batches=lambda _output_format, _start, _stop: iter(()),
         collapse_compact=lambda values: values,
-        collapse_sparse=lambda _rows, _run_indices, _public_row_group_index: np.empty(
-            (0, 0),
-            dtype=np.float64,
-        ),
-        sparse_public_row_group_index=lambda: np.empty(0, dtype=np.int64),
-        empty_sparse_rows=lambda: SparseRunRows(
-            run_index=np.empty(0, dtype=np.int64),
-            public_row_id=np.empty(0, dtype=np.int64),
-            values=np.empty(0, dtype=np.float64),
-            value_column="lca",
-        ),
     )
 
 

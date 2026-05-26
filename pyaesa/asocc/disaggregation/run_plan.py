@@ -98,7 +98,7 @@ def build_disaggregation_run_plan(parsed: ParsedArgs) -> DisaggregationRunPlan:
         )
     _validate_l2_region_filters(
         fu_code=base_args["fu_code"],
-        s_p=parsed.disaggregation.ref_split_run.s_p,
+        s_p=parsed.disaggregation.ref_disagg_run.s_p,
         r_p=r_p,
         r_c=r_c,
         r_f=r_f,
@@ -117,6 +117,6 @@ def build_disaggregation_run_plan(parsed: ParsedArgs) -> DisaggregationRunPlan:
             *(l2_method for l2_method, _ in combined_non_lcia),
         ],
         ssp_scenarios=ensure_list_str(base_args["ssp_scenario"]),
-        aggreg_indices=normalize_output_mode(base_args["aggreg_indices"]),
+        group_indices=normalize_output_mode(base_args["group_indices"]),
         l1_reg_aggreg=normalize_l1_reg_mode(base_args["l1_reg_aggreg"]),
     )

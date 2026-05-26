@@ -1,14 +1,12 @@
 """Saltelli design chunks for Sobol variance decomposition."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 import numpy as np
 from scipy.stats import qmc
 
-SOBOL_EVALUATION_MEMORY_BYTES = 3_000_000_000
-# The chunk planner budgets for family evaluators that allocate temporary
-# alignment arrays beyond the final float64 A, B, and A_Bi output matrices.
-SOBOL_EVALUATION_TEMPORARY_FACTOR = 64
+from pyaesa.shared.runtime.memory import runtime_working_budget_bytes
 
 
 @dataclass(frozen=True)
@@ -55,15 +53,58 @@ def sobol_base_sequence(
     return tuple(values)
 
 
-def sobol_chunk_rows(*, output_count: int, dimension_count: int) -> int:
+def sobol_chunk_rows(
+    *,
+    output_count: int,
+    dimension_count: int,
+    confidence_resamples: int,
+) -> int:
     """Return evaluation rows per chunk under the uncertainty memory target."""
-    saltelli_block_count = dimension_count + 2
-    matrix_bytes_per_row = (
-        max(1, output_count) * 8 * SOBOL_EVALUATION_TEMPORARY_FACTOR * saltelli_block_count
+    bytes_per_row = _sobol_chunk_bytes_per_base_row(
+        output_count=output_count,
+        dimension_count=dimension_count,
     )
-    accumulator_bytes = max(1, dimension_count) * max(1, output_count) * 8 * 4
-    available = max(matrix_bytes_per_row, SOBOL_EVALUATION_MEMORY_BYTES - accumulator_bytes)
-    return max(1, int(available // matrix_bytes_per_row))
+    accumulator_bytes = _sobol_accumulator_bytes(
+        output_count=output_count,
+        dimension_count=dimension_count,
+        confidence_resamples=confidence_resamples,
+    )
+    budget = runtime_working_budget_bytes(
+        memory_budget_bytes=None,
+        minimal_working_block_bytes=bytes_per_row + accumulator_bytes,
+    )
+    return max(1, int((budget - accumulator_bytes) // bytes_per_row))
+
+
+def _sobol_chunk_bytes_per_base_row(*, output_count: int, dimension_count: int) -> int:
+    saltelli_blocks = len(("a", "b")) + int(dimension_count)
+    float_bytes = np.dtype(np.float64).itemsize
+    output_bytes = saltelli_blocks * max(1, int(output_count)) * float_bytes
+    design_bytes = saltelli_blocks * max(1, int(dimension_count)) * float_bytes
+    return max(1, output_bytes + design_bytes)
+
+
+def _sobol_accumulator_bytes(
+    *,
+    output_count: int,
+    dimension_count: int,
+    confidence_resamples: int,
+) -> int:
+    float_bytes = np.dtype(np.float64).itemsize
+    output_cells = max(1, int(output_count))
+    source_output_cells = max(1, int(dimension_count)) * output_cells
+    bootstrap_output_cells = max(1, int(confidence_resamples)) * output_cells
+    bootstrap_source_output_cells = max(1, int(confidence_resamples)) * source_output_cells
+    output_moments = len(
+        ("variance_count", "variance_sum", "variance_sumsq", "center_count", "center_sum")
+    )
+    source_moments = len(("s1_count", "s1_b_delta_sum", "s1_delta_sum", "st_count", "st_sum"))
+    return float_bytes * (
+        output_moments * output_cells
+        + source_moments * source_output_cells
+        + output_moments * bootstrap_output_cells
+        + source_moments * bootstrap_source_output_cells
+    )
 
 
 def iter_saltelli_chunks(
@@ -72,9 +113,8 @@ def iter_saltelli_chunks(
     chunk_rows: int,
     start_row: int = 0,
     stop_row: int | None = None,
-) -> tuple[SobolEvaluationChunk, ...]:
-    """Return memory bounded Saltelli chunks in base sample order."""
-    chunks = []
+) -> Iterator[SobolEvaluationChunk]:
+    """Yield memory bounded Saltelli chunks in base sample order."""
     final_row = design.a.shape[0] if stop_row is None else stop_row
     for start in range(start_row, final_row, chunk_rows):
         stop = min(start + chunk_rows, final_row)
@@ -85,5 +125,4 @@ def iter_saltelli_chunks(
             mixed = a.copy()
             mixed[:, index] = b[:, index]
             ab.append(mixed)
-        chunks.append(SobolEvaluationChunk(row_start=start, a=a, b=b, ab=tuple(ab)))
-    return tuple(chunks)
+        yield SobolEvaluationChunk(row_start=start, a=a, b=b, ab=tuple(ab))

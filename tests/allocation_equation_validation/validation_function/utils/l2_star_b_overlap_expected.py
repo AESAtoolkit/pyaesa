@@ -46,8 +46,8 @@ class L2StarBOverlapRequest(NamedTuple):
     validation_project_name_root: str
     source: str
     matrix_version: str | None
-    group_reg: bool | None
-    aggreg_indices: bool
+    agg_reg: bool | None
+    group_indices: bool
     l1_mode: str
     output_format: str
     year: int
@@ -124,7 +124,7 @@ def _weight_request_for_row(
     *,
     request: L2StarBOverlapRequest,
 ) -> L1RegionWeightRequest | None:
-    """Build L1-weight request for one grouped L2*b output row."""
+    """Build L1-weight request for one aggregated L2*b output row."""
     if request.l1_method is None:
         return None
     impact = str(request.item["impact"]) if "impact" in request.item else None
@@ -133,8 +133,8 @@ def _weight_request_for_row(
         request.validation_project_name_root,
         request.source,
         request.matrix_version,
-        request.group_reg,
-        request.aggreg_indices,
+        request.agg_reg,
+        request.group_indices,
         request.l1_mode,
         request.output_format,
         request.l1_method,

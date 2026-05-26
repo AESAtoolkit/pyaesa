@@ -175,21 +175,21 @@ def test_process_wb_utils_cover_transformations_and_dataset_processing() -> None
     assert apply_parent_aggregation(
         wb_subset,
         year_cols,
-        parent_mapping.assign(group_parent="NO"),
+        parent_mapping.assign(agg_parent="NO"),
         name_column="wb_full_name",
         group_columns=["variable", "unit"],
     ).equals(wb_subset)
     assert apply_parent_aggregation(
         wb_subset,
         year_cols,
-        pd.DataFrame([{"iso3_code": "FRA", "group_parent": "YES", "parent_iso3_code": ""}]),
+        pd.DataFrame([{"iso3_code": "FRA", "agg_parent": "YES", "parent_iso3_code": ""}]),
         name_column="wb_full_name",
         group_columns=["variable", "unit"],
     ).equals(wb_subset)
     assert apply_parent_aggregation(
         wb_subset,
         year_cols,
-        pd.DataFrame([{"iso3_code": "ZZZ", "group_parent": "YES", "parent_iso3_code": "EUR"}]),
+        pd.DataFrame([{"iso3_code": "ZZZ", "agg_parent": "YES", "parent_iso3_code": "EUR"}]),
         name_column="wb_full_name",
         group_columns=["variable", "unit"],
     ).equals(wb_subset)
@@ -215,7 +215,7 @@ def test_process_wb_utils_cover_transformations_and_dataset_processing() -> None
             ]
         ),
         year_cols,
-        pd.DataFrame([{"iso3_code": "FRA", "group_parent": "YES", "parent_iso3_code": "EUR"}]),
+        pd.DataFrame([{"iso3_code": "FRA", "agg_parent": "YES", "parent_iso3_code": "EUR"}]),
         name_column="wb_full_name",
         group_columns=["variable", "unit"],
     )
@@ -365,7 +365,7 @@ def test_process_ssp_utils_cover_transformations_and_dataset_processing() -> Non
     assert apply_parent_aggregation(
         ssp_raw,
         ["2025", "2030"],
-        matching.assign(group_parent="NO"),
+        matching.assign(agg_parent="NO"),
         name_column="ssp_full_name",
         group_columns=["model", "ssp_scenario", "variable", "unit"],
     ).equals(ssp_raw)
@@ -386,14 +386,14 @@ def test_process_ssp_utils_cover_transformations_and_dataset_processing() -> Non
     assert apply_parent_aggregation(
         ssp_with_iso,
         ["2025", "2030"],
-        pd.DataFrame([{"iso3_code": "FRA", "group_parent": "YES", "parent_iso3_code": ""}]),
+        pd.DataFrame([{"iso3_code": "FRA", "agg_parent": "YES", "parent_iso3_code": ""}]),
         name_column="ssp_full_name",
         group_columns=["model", "ssp_scenario", "variable", "unit"],
     ).equals(ssp_with_iso)
     assert apply_parent_aggregation(
         ssp_with_iso,
         ["2025", "2030"],
-        pd.DataFrame([{"iso3_code": "ZZZ", "group_parent": "YES", "parent_iso3_code": "EUR"}]),
+        pd.DataFrame([{"iso3_code": "ZZZ", "agg_parent": "YES", "parent_iso3_code": "EUR"}]),
         name_column="ssp_full_name",
         group_columns=["model", "ssp_scenario", "variable", "unit"],
     ).equals(ssp_with_iso)
@@ -421,7 +421,7 @@ def test_process_ssp_utils_cover_transformations_and_dataset_processing() -> Non
             ]
         ),
         ["2025"],
-        pd.DataFrame([{"iso3_code": "FRA", "group_parent": "YES", "parent_iso3_code": "EUR"}]),
+        pd.DataFrame([{"iso3_code": "FRA", "agg_parent": "YES", "parent_iso3_code": "EUR"}]),
         name_column="ssp_full_name",
         group_columns=["model", "ssp_scenario", "variable", "unit"],
     )

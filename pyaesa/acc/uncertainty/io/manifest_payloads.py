@@ -81,7 +81,6 @@ def build_acc_manifest_context(
         "deterministic_prerequisites": strip_reporting_only_fields(
             list(compatibility_prerequisites)
         ),
-        "sobol": sobol_status,
     }
     return {
         "mc_parameters": mc_parameters_payload(runtime=runtime),

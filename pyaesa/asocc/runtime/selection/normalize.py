@@ -24,7 +24,7 @@ def normalize_output_mode(value: bool) -> bool:
     """Normalize the public aggregation selector to one execution branch."""
     if isinstance(value, bool):
         return value
-    raise ValueError("aggreg_indices must be a boolean.")
+    raise ValueError("group_indices must be a boolean.")
 
 
 def resolve_level(*, fu_norm: str) -> str:

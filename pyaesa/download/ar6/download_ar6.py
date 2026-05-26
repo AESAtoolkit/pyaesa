@@ -179,10 +179,12 @@ def download_ar6(
     """Download the raw datasets required for dynamic AR6 climate change
      carrying capacity processing.
 
-    The function retrieves AR6 public scenario explorer table together with
+    The function retrieves the AR6 public scenario explorer table together with
     the historical PRIMAP and Global Carbon Budget datasets used to construct
-    the historical GHG and CO2 historicalbaselines in ``process_ar6(...)``.
-    AR6 categories included: ``C1-C4``; SSPs included: ``SSP1-SSP5``.
+    the historical GHG and CO2 historical baselines in ``process_ar6(...)``.
+    AR6 categories included: ``C1-C8``; SSPs included: ``SSP1-SSP5``.
+    Downstream ``process_ar6(...)`` defaults to the recommended Paris aligned
+    ``C1`` through ``C4`` scope although additional categories can be included.
 
     Raw source files are written under
     ``data_raw/carrying_capacities/dynamic_climate_change_ar6``. A single metadata JSON

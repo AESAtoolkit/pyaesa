@@ -6,7 +6,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
-from pyaesa.asocc.data.region_group_mapping import load_region_group_mapping
+from pyaesa.asocc.data.region_agg_mapping import load_region_agg_mapping
 from pyaesa.asocc.runtime.methods.fallback_policy import (
     resolve_latest_previous_nonzero_series,
 )
@@ -487,17 +487,17 @@ def _build_parent_share_frame(
     )
 
 
-def _apply_post_grouping(
+def _apply_post_aggregation(
     *,
     frame: pd.DataFrame,
     source_key: str,
-    group_version: str,
+    agg_version: str,
     region_label: str,
 ) -> pd.DataFrame:
-    """Apply post aggregation grouping by MRIO mapping and sum duplicates."""
-    mapping = load_region_group_mapping(
+    """Apply post aggregation by MRIO mapping and sum duplicates."""
+    mapping = load_region_agg_mapping(
         source_key=source_key,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     region_vals = frame.index.get_level_values(region_label)
     regions = region_vals.map(lambda code: mapping.get(code, code))
@@ -523,7 +523,7 @@ def compute_pr_hr(
     impact_parent_map: pd.Series,
     available_years: list[int],
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
     aggregation_mode: str,
     region_label: str = "region",
     parent_cum_cache: dict[int, dict[str, pd.Series]] | None = None,
@@ -565,11 +565,11 @@ def compute_pr_hr(
         region_label=region_label,
     )
     mode = normalize_l1_reg_mode_required(aggregation_mode)
-    if mode == "post" and group_version:
-        out = _apply_post_grouping(
+    if mode == "post" and agg_version:
+        out = _apply_post_aggregation(
             frame=out,
             source_key=source_key,
-            group_version=group_version,
+            agg_version=agg_version,
             region_label=region_label,
         )
     return out

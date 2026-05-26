@@ -89,7 +89,7 @@ The deterministic public call follows one canonical pipeline:
 
 1. `deterministic_asocc(...)` normalizes public arguments and delegates to the
    allocation runner.
-2. `_prepare_context(...)` validates source, grouping, FU, selectors, filters,
+2. `_prepare_context(...)` validates source, aggregation, FU, selectors, filters,
    LCIA requirements, projection routes, and scope metadata before compute.
 3. The completed run policy either returns a complete compatible deterministic
    scope, a missing compute subset, or a clear incompatibility error.
@@ -101,7 +101,7 @@ The deterministic public call follows one canonical pipeline:
    `OutputArtifact`, then persist public wide tables.
 7. Metadata owners write one deterministic `logs/scope_manifest.json` file for
    each public call scope.
-8. Figure owners render figures only when requested and only from exact figure
+8. Figure owners render figures only when `figures=True` and only from exact figure
    scope identity.
 
 No public call repairs incomplete outputs from an interrupted prior run. A user
@@ -126,15 +126,15 @@ Each per scope manifest has one canonical public payload:
 | `provenance` | Selected methods, functional unit, filters, SSP scope, reference years, and projection route. |
 
 Deterministic output path scope is limited to project output root, published
-aSoCC source label, and group version. `AsoccDeterministicPathScope` carries only
+aSoCC source label, and aggregate version. `AsoccDeterministicPathScope` carries only
 those path dimensions. Scientific and request identity dimensions such as
-`group_reg`, `group_sec`, `aggreg_indices`, `l1_reg_aggreg`, filters, method
+`agg_reg`, `agg_sec`, `group_indices`, `l1_reg_aggreg`, filters, method
 selection, projection settings, and selector axes are persisted in `arguments`
 and validated by the completed run policy.
 
 An aSoCC project is functional unit scoped. All deterministic aSoCC outputs
 under one `<project_name>/B1_asocc/` tree must use the same
-`fu_code`, across all native sources, grouped source versions, and output
+`fu_code`, across all native sources, aggregated source versions, and output
 sources. A different `fu_code` requires a different `project_name`, unless the
 existing aSoCC outputs for that project are manually removed before the call.
 Function level `refresh=True` is source scoped; it does not authorize
@@ -161,7 +161,8 @@ keep SSP scenario ownership in the filename stem and must not provide an
 `asocc_ssp_scenario` row column.
 
 Exact identity fields inside one functional unit project are source, studied
-filters, grouping, aggregation mode, output format, public schema, and
+filters, upstream MRIO aggregation and disaggregation scope, allocation aggregation mode,
+output format, public schema, and
 deterministic value semantics. Non append identity fields must match before
 compute or write because they share the same deterministic output folder.
 `reg_window` is exact whenever selected routes compute regression outputs,
@@ -246,7 +247,7 @@ AR method support code separates scientific runtime from output shape helpers:
 
 L2 preweight multiplication uses one vectorized owner,
 `orchestration/yearly/l2/l2_batch_weighting.py`. It owns numeric alignment
-plans, grouped aggregation with pandas `sum(min_count=1)` semantics, historical
+plans, pandas grouped summation with `sum(min_count=1)` semantics, historical
 reuse batching, and AR/UT matrix kernels. It exposes matrix oriented kernels to
 yearly compute owners; caller side conversion wrappers are not part of the
 runtime contract.
@@ -286,7 +287,7 @@ Pairing rules are registry driven:
 | Neutral L1 with L2 support | Allowed when the L2 support route has no conflicting LCIA kind. |
 | LCIA L1 with L2 support | Allowed only when `l1_kind` matches the L2 support requirement. |
 | AR L1 with AR L2 same pair | Use the canonical direct AR L2 route. |
-| Source `iso3` | L1 only, with no grouping, LCIA, or reference year selector. |
+| Source `iso3` | L1 only, with no aggregation, LCIA, or reference year selector. |
 
 Selection code should decide reachability only. It must not reshape scientific
 outputs or correct equation output axes.
@@ -426,10 +427,10 @@ and Sobol source evaluation. Source activation decisions are recorded in the
 manifest and returned summary; they are not emitted as standalone live status
 messages.
 
-For `aggreg_indices=True`, deterministic public rows keep selector columns and
-write full aggregate selector labels. LCIA uncertainty uses those labels as the
-active CoV keys: L1 country keys are read from `reg_cbca_covs_aggreg_indices.csv`
-or `reg_cbca_covs_group_<group_version>_aggreg_indices.csv`, and L2 sector keys
+For `group_indices=True`, deterministic public rows keep selector columns and
+write full combined output selector labels. LCIA uncertainty uses those labels as the
+active CoV keys: L1 country keys are read from `reg_cbca_covs_group_indices.csv`
+or `reg_cbca_covs_agg_<agg_version>_group_indices.csv`, and L2 sector keys
 are resolved through `sector_cov_mapping`.
 
 aSoCC uncertainty engine owners are:

@@ -311,7 +311,7 @@ def run_single_asr(
     path_context = build_asr_path_context(
         proj_base=proj_base,
         source_label=source_label,
-        group_version=base_allocate_args["group_version"],
+        agg_version=base_allocate_args["agg_version"],
         fu_code=fu_code,
         lca_type=lca_type,
         cc_source=cc_source,
@@ -320,7 +320,7 @@ def run_single_asr(
     )
     scope_label = build_asr_scope_label(
         source_label=source_label,
-        group_version=base_allocate_args["group_version"],
+        agg_version=base_allocate_args["agg_version"],
         lca_type=lca_type,
         cc_source=cc_source,
         cc_type=cc_type,
@@ -603,26 +603,6 @@ def run_single_asr(
         complete_phase=not (subfigures and lca_type == "external"),
     )
     external_lca_figure_paths: list[Path] = []
-    if subfigures and lca_type == "external":
-        status.announce(PHASE_A_LCA, "external_lca")
-        external_lca_figure_paths = _render_external_lca_subfigures(
-            lca_rows=lca_rows,
-            proj_base=proj_base,
-            lca_version_name=lca_version_name,
-            lcia_method=cc_source,
-            figure_output_format=figure_output_format,
-            figure_dpi=figure_dpi,
-            status=status,
-        )
-        _complete_lca_phase(
-            status=status,
-            proj_base=proj_base,
-            source_label=source_label,
-            lca_type=lca_type,
-            base_allocate_args=base_allocate_args,
-            owner="external_lca",
-        )
-        status.announce(PHASE_C_ASR, "deterministic_asr")
     if cc_type == "static":
         process_result = process_static_asr(
             proj_base=proj_base,
@@ -696,6 +676,26 @@ def run_single_asr(
         if figures
         else []
     )
+    if subfigures and lca_type == "external":
+        status.announce(PHASE_A_LCA, "external_lca")
+        external_lca_figure_paths = _render_external_lca_subfigures(
+            lca_rows=lca_rows,
+            proj_base=proj_base,
+            lca_version_name=lca_version_name,
+            lcia_method=cc_source,
+            figure_output_format=figure_output_format,
+            figure_dpi=figure_dpi,
+            status=status,
+        )
+        _complete_lca_phase(
+            status=status,
+            proj_base=proj_base,
+            source_label=source_label,
+            lca_type=lca_type,
+            base_allocate_args=base_allocate_args,
+            owner="external_lca",
+        )
+        status.announce(PHASE_C_ASR, "deterministic_asr")
     payload = _build_run_metadata_payload(
         arguments=public_request_payload,
         identity_payload=identity,

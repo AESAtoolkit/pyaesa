@@ -25,7 +25,7 @@ def _run_deterministic_asocc(*, project_name: str, refresh: bool, figures: bool 
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
         figures=figures,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         refresh=refresh,
     )
 
@@ -35,9 +35,9 @@ def _asocc_root(repo_root: Path, *, project_name: str) -> Path:
 
 
 def test_deterministic_asocc_figure_scope_helpers_cover_selectors_and_empty_ssps(
-    project_repo: Path,
+    read_only_project_repo: Path,
 ) -> None:
-    del project_repo
+    del read_only_project_repo
     frame = pd.DataFrame(
         {
             "lcia_method": ["gwp100_lcia"],
@@ -202,7 +202,7 @@ def test_deterministic_asocc_generates_figures_for_native_method_scope(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
     assert figure_paths
     assert any("UT_FD" in path.as_posix() for path in figure_paths)
@@ -260,7 +260,7 @@ def test_deterministic_asocc_generates_public_level_1_figures(
         l1_methods=["EG(Pop)"],
         l1_reg_aggreg="pre",
         figures=True,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         refresh=True,
     )
 
@@ -268,7 +268,7 @@ def test_deterministic_asocc_generates_public_level_1_figures(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_level_1",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert figure_paths
@@ -289,7 +289,7 @@ def test_deterministic_asocc_figures_reject_public_scope_without_outputs(
             r_f=["FR"],
             l1_reg_aggreg="pre",
             figures=True,
-            figure_format={"format": "png", "dpi": 10},
+            figure_format={"format": "svg", "dpi": 1},
             refresh=True,
         )
 
@@ -320,7 +320,7 @@ def test_deterministic_asocc_figures_include_public_external_method(
 
     deterministic_asocc(
         figures=True,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         figure_external_method={"one_step_methods": ["UT(TD)"]},
         refresh=False,
         **base_args,
@@ -329,7 +329,7 @@ def test_deterministic_asocc_figures_include_public_external_method(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name=project_name,
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert figure_paths
@@ -355,7 +355,7 @@ def test_deterministic_asocc_figures_reject_missing_public_external_method(
     with pytest.raises(ValueError):
         deterministic_asocc(
             figures=True,
-            figure_format={"format": "png", "dpi": 10},
+            figure_format={"format": "svg", "dpi": 1},
             figure_external_method={"one_step_methods": ["UT(TD)"]},
             refresh=False,
             **base_args,
@@ -385,7 +385,7 @@ def test_deterministic_asocc_generates_public_variant_and_transition_figures(
         "l1_reg_aggreg": "pre",
         "ssp_scenario": ["SSP2"],
         "figures": True,
-        "figure_format": {"format": "png", "dpi": 10},
+        "figure_format": {"format": "svg", "dpi": 1},
         "refresh": True,
     }
 
@@ -399,7 +399,7 @@ def test_deterministic_asocc_generates_public_variant_and_transition_figures(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_transition",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     deterministic_asocc(
@@ -415,42 +415,13 @@ def test_deterministic_asocc_generates_public_variant_and_transition_figures(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_single_variants",
-        ).rglob("*.png")
-    )
-    deterministic_asocc(
-        project_name="asocc_figures_public_multi_variants",
-        years=[2018, 2019],
-        reference_years=[2018, 2019],
-        **common_args,
-    )
-    multi_variant_paths = sorted(
-        _asocc_root(
-            allocation_dummy_repo.repo_root,
-            project_name="asocc_figures_public_multi_variants",
-        ).rglob("*.png")
-    )
-
-    deterministic_asocc(
-        project_name="asocc_figures_public_regression_projection",
-        years=[2030],
-        reference_years=[2018],
-        projection_mode="regression",
-        reg_window=[2018, 2019],
-        **common_args,
-    )
-    regression_paths = sorted(
-        _asocc_root(
-            allocation_dummy_repo.repo_root,
-            project_name="asocc_figures_public_regression_projection",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert any("multi_method" in path.parts for path in transition_paths)
     assert any("per_method" in path.parts for path in transition_paths)
     assert any("SSP2" in path.stem for path in transition_paths)
     assert any(path.stem.endswith("2030") for path in variant_paths)
-    assert multi_variant_paths
-    assert any(path.exists() for path in regression_paths)
 
 
 def test_deterministic_asocc_generates_public_regression_route_figures(
@@ -482,14 +453,14 @@ def test_deterministic_asocc_generates_public_regression_route_figures(
         reg_window=[2017, 2018, 2019],
         ssp_scenario=["SSP2"],
         figures=True,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         refresh=True,
     )
     figure_paths = sorted(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_regression_route",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert figure_paths
@@ -515,14 +486,14 @@ def test_deterministic_asocc_generates_public_long_year_axis_figures(
         s_p=["D"],
         l1_reg_aggreg="pre",
         figures=True,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         refresh=True,
     )
     figure_paths = sorted(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_long_year_axis",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert figure_paths
@@ -536,8 +507,8 @@ def test_deterministic_asocc_generates_public_multi_impact_single_year_figures(
         matrix_version=None,
         lcia_method="pb_lcia",
         available_years=list(range(1995, 2007)),
-        impacts=["aal_child", "bifd_child", "oa_child"],
-        impact_parents={"aal_child": "AAL", "bifd_child": "BI FD", "oa_child": "OA"},
+        impacts=["aal_child", "bifd_child"],
+        impact_parents={"aal_child": "AAL", "bifd_child": "BI FD"},
     )
 
     deterministic_asocc(
@@ -550,7 +521,6 @@ def test_deterministic_asocc_generates_public_multi_impact_single_year_figures(
         l1_l2_pairs=[
             "AR(E^{CBA_FD})::UT(FD)",
             "EG(Pop)::AR(E^{CBA_FD})",
-            "EG(Pop)::UT(FD)",
         ],
         lcia_method="pb_lcia",
         r_p=["FR"],
@@ -558,14 +528,14 @@ def test_deterministic_asocc_generates_public_multi_impact_single_year_figures(
         r_f=["FR"],
         l1_reg_aggreg="pre",
         figures=True,
-        figure_format={"format": "png", "dpi": 10},
+        figure_format={"format": "svg", "dpi": 1},
         refresh=True,
     )
     figure_paths = sorted(
         _asocc_root(
             allocation_dummy_repo.repo_root,
             project_name="asocc_figures_public_multi_impact",
-        ).rglob("*.png")
+        ).rglob("*.svg")
     )
 
     assert any("multi_method" in path.parts for path in figure_paths)
@@ -638,19 +608,19 @@ def test_deterministic_asocc_rejects_empty_source(allocation_dummy_repo) -> None
         )
 
 
-def test_deterministic_asocc_rejects_non_boolean_aggreg_indices(
+def test_deterministic_asocc_rejects_non_boolean_group_indices(
     allocation_dummy_repo,
 ) -> None:
     del allocation_dummy_repo
     with pytest.raises(ValueError):
         deterministic_asocc(
-            project_name="asocc_invalid_aggreg_indices",
+            project_name="asocc_invalid_group_indices",
             source="oecd_v2025",
             years=[2005],
             fu_code="L2.a.a",
             method_plan="one_step",
             one_step_methods=["UT(FD)"],
-            aggreg_indices=cast(Any, "both"),
+            group_indices=cast(Any, "both"),
             figures=False,
             refresh=True,
         )

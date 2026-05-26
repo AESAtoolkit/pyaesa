@@ -59,7 +59,7 @@ def test_validate_lcia_ready_for_domain_raises_with_missing_years_and_methods(
         )
 
 
-def test_validate_lcia_ready_for_domain_grouped_hint_and_success(allocation_dummy_repo) -> None:
+def test_validate_lcia_ready_for_domain_aggregated_hint_and_success(allocation_dummy_repo) -> None:
     allocation_dummy_repo.write_mrio_metadata(
         source="exiobase_396_ixi",
         matrix_version="oecd_d",
@@ -79,13 +79,13 @@ def test_validate_lcia_ready_for_domain_grouped_hint_and_success(allocation_dumm
         available_years_by_method={"pb_bad": []},
     )
     with pytest.raises(ValueError):
-        mod._validate_grouped_lcia_ready(
+        mod._validate_aggregated_lcia_ready(
             source="exiobase_396_ixi",
             years=[2005, 2006],
             lcia_methods=["pb_bad"],
-            group_version="oecd_d",
-            group_reg=True,
-            group_sec=False,
+            agg_version="oecd_d",
+            agg_reg=True,
+            agg_sec=False,
         )
 
     allocation_dummy_repo.set_lcia_methods(
@@ -94,13 +94,13 @@ def test_validate_lcia_ready_for_domain_grouped_hint_and_success(allocation_dumm
         methods=["pb_ok"],
         available_years_by_method={"pb_ok": [2005, 2006]},
     )
-    mod._validate_grouped_lcia_ready(
+    mod._validate_aggregated_lcia_ready(
         source="exiobase_396_ixi",
         years=[2005, 2006],
         lcia_methods=["pb_ok"],
-        group_version="oecd_d",
-        group_reg=True,
-        group_sec=False,
+        agg_version="oecd_d",
+        agg_reg=True,
+        agg_sec=False,
     )
 
 
@@ -111,7 +111,7 @@ def test_validate_lcia_ready_for_domain_missing_year_only_branch(allocation_dumm
         methods=["pb_lcia"],
         available_years_by_method={"pb_lcia": [2005, 2006]},
     )
-    year_dir = mod._get_mrio_year_dir(source="oecd_v2025", year=2005, group_version=None)
+    year_dir = mod._get_mrio_year_dir(source="oecd_v2025", year=2005, agg_version=None)
     if year_dir.exists():
         shutil.rmtree(year_dir)
 

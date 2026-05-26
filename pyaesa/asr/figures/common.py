@@ -142,7 +142,6 @@ def _apply_log_asr_axis_policy(
     axis.set_ylabel(format_scientific_figure_text("ASR"))
     axis.set_xlabel("")
     axis.grid(alpha=0.25, which="major")
-    axis.grid(alpha=0.12, which="minor", axis="y")
     return zero_count
 
 

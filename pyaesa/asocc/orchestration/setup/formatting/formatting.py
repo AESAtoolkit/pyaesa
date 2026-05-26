@@ -32,9 +32,9 @@ def _process_mrio_hint(
     *,
     source: str,
     years: list[int],
-    group_version: str | None,
-    group_reg: bool | None,
-    group_sec: bool | None,
+    agg_version: str | None,
+    agg_reg: bool | None,
+    agg_sec: bool | None,
     lcia_methods: list[str] | None = None,
     keep_intermediate_uncasext: bool = False,
 ) -> str:
@@ -42,7 +42,7 @@ def _process_mrio_hint(
     years_arg = _format_years_arg(years)
     lcia_arg = _format_lcia_arg(lcia_methods)
     extra_args = ", keep_intermediate_uncasext=True" if keep_intermediate_uncasext else ""
-    if group_version is None:
+    if agg_version is None:
         if lcia_arg == "None":
             return f"process_mrio(source='{source}', years={years_arg}{extra_args})"
         return (
@@ -52,11 +52,11 @@ def _process_mrio_hint(
     if lcia_arg == "None":
         return (
             f"process_mrio(source='{source}', years={years_arg}, "
-            f"group_version='{group_version}', group_reg={bool(group_reg)}, "
-            f"group_sec={bool(group_sec)}{extra_args})"
+            f"agg_version='{agg_version}', agg_reg={bool(agg_reg)}, "
+            f"agg_sec={bool(agg_sec)}{extra_args})"
         )
     return (
         f"process_mrio(source='{source}', years={years_arg}, "
-        f"lcia_method={lcia_arg}, group_version='{group_version}', "
-        f"group_reg={bool(group_reg)}, group_sec={bool(group_sec)}{extra_args})"
+        f"lcia_method={lcia_arg}, agg_version='{agg_version}', "
+        f"agg_reg={bool(agg_reg)}, agg_sec={bool(agg_sec)}{extra_args})"
     )

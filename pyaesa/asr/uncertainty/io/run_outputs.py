@@ -19,30 +19,33 @@ from pyaesa.asr.uncertainty.evaluation.summary import (
     ASR_VALUE_METRIC,
     asr_sparse_public_row_group_membership_index,
     collapse_asr_cumulative_values_to_summary,
-    collapse_asr_sparse_rows_to_summary,
     collapse_asr_values_to_summary,
     write_asr_summary_table,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.convergence import (
     ConvergenceCheckpointCursor,
     MeanConvergenceAccumulator,
-    ordered_mean_convergence_reached,
+    iter_sparse_group_mean_updates,
+    mean_convergence_payload_for_targets,
+)
+from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
+    sparse_rows_to_overlapping_group_values,
 )
 from pyaesa.shared.uncertainty_assessment.io.downstream_run_outputs import (
     DownstreamRunOutputState,
     DownstreamRunOutputPaths,
     close_downstream_run_output_state,
-    downstream_convergence_payload,
     final_downstream_convergence_payload,
     new_downstream_run_output_state,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
 )
 from pyaesa.shared.runtime.reporting.run_progress import (
+    monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
     monte_carlo_run_progress,
     monte_carlo_run_progress_label,
@@ -82,7 +85,7 @@ def write_asr_run_outputs(
     show_progress: bool = True,
     status: StatusSink | None = None,
 ) -> tuple[int, dict[str, Any] | None]:
-    """Write ASR run values, exact summary statistics, and convergence status."""
+    """Write ASR run values, summary statistics, and convergence status."""
     state = new_asr_run_output_state(paths=paths, plan=plan)
     try:
         state, convergence = append_asr_run_outputs(
@@ -140,7 +143,7 @@ def append_asr_run_outputs(
     show_progress: bool = True,
     status: StatusSink | None = None,
 ) -> tuple[ASRRunOutputState, dict[str, Any] | None]:
-    """Append one ASR run interval and update exact summaries."""
+    """Append one ASR run interval and update summaries."""
     if plan.asr_run_layout == "sparse_selected_rows":
         return _append_sparse_asr_run_outputs(
             paths=paths,
@@ -216,6 +219,7 @@ def _append_compact_asr_run_outputs(
                 output_format=runtime.output_format,
                 start_run_index=completed,
                 stop_run_index=int(target_runs),
+                batch_size=runtime.batch_size,
             ):
                 for start in range(0, len(source_run_indices), runtime.batch_size):
                     stop = min(start + runtime.batch_size, len(source_run_indices))
@@ -262,7 +266,11 @@ def _append_compact_asr_run_outputs(
                             target=runtime.n_runs,
                             mode=runtime.mode,
                         ),
-                        persistent=runtime.mode == "fixed",
+                        persistent=monte_carlo_completion_is_persistent(
+                            completed=completed,
+                            max_runs=runtime.n_runs,
+                            mode=runtime.mode,
+                        ),
                     )
                     if convergence is not None:
                         break
@@ -369,7 +377,11 @@ def _append_sparse_asr_run_outputs(
                         target=runtime.n_runs,
                         mode=runtime.mode,
                     ),
-                    persistent=runtime.mode == "fixed",
+                    persistent=monte_carlo_completion_is_persistent(
+                        completed=completed,
+                        max_runs=runtime.n_runs,
+                        mode=runtime.mode,
+                    ),
                 )
                 if convergence is not None:
                     break
@@ -480,23 +492,30 @@ def _append_sparse_summaries_and_check(
     runtime: UncertaintyRuntimeRequest,
     check_convergence: bool,
 ) -> tuple[int, dict[str, Any] | None]:
-    return _append_summaries_and_check(
-        state=state,
-        yearly_summary_values=collapse_asr_sparse_rows_to_summary(
-            sparse_rows=rows,
-            run_indices=run_indices,
-            plan=plan,
-            public_row_group_index=public_row_group_index,
-        ),
-        cumulative_summary_values=(
-            collapse_asr_cumulative_values_to_summary(values=cumulative_values, plan=plan)
-            if cumulative_values is not None
-            else None
-        ),
+    _update_sparse_metric_convergence_state(
+        state=state.yearly_convergence,
+        sparse_rows=rows,
         run_indices=run_indices,
+        public_row_group_index=public_row_group_index,
+    )
+    cumulative_summary_values = (
+        collapse_asr_cumulative_values_to_summary(values=cumulative_values, plan=plan)
+        if cumulative_values is not None
+        else None
+    )
+    if state.cumulative_convergence is not None and cumulative_summary_values is not None:
+        _update_metric_convergence_state(
+            state=state.cumulative_convergence,
+            summary_values=cumulative_summary_values,
+        )
+    completed = int(run_indices[-1]) + 1
+    convergence = mean_convergence_payload_for_targets(
+        targets=_asr_convergence_targets(state=state),
+        completed_runs=completed,
         runtime=runtime,
         check_convergence=check_convergence,
     )
+    return completed, convergence
 
 
 def _append_summaries_and_check(
@@ -518,21 +537,11 @@ def _append_summaries_and_check(
             summary_values=cumulative_summary_values,
         )
     completed = int(run_indices[-1]) + 1
-    if not check_convergence or runtime.mode != "convergence":
-        return completed, None
-    reached = _asr_convergence_reached(
-        state=state,
+    convergence = mean_convergence_payload_for_targets(
+        targets=_asr_convergence_targets(state=state),
         completed_runs=completed,
-        rtol=runtime.rtol,
-    )
-    convergence = (
-        downstream_convergence_payload(
-            reached=True,
-            completed_runs=completed,
-            runtime=runtime,
-        )
-        if reached
-        else None
+        runtime=runtime,
+        check_convergence=check_convergence,
     )
     return completed, convergence
 
@@ -574,22 +583,68 @@ def _update_metric_convergence_state(
     state.frequency.update(values=frequency)
 
 
-def _asr_convergence_reached(
+def _update_sparse_metric_convergence_state(
+    *,
+    state: ASRMetricConvergenceState,
+    sparse_rows: SparseRunRows,
+    run_indices: np.ndarray,
+    public_row_group_index: np.ndarray,
+) -> None:
+    """Accumulate sparse ASR value and frequency means for convergence checks."""
+    row_runs, row_groups, values = sparse_rows_to_overlapping_group_values(
+        sparse_rows=sparse_rows,
+        run_indices=run_indices,
+        public_row_group_index=public_row_group_index,
+    )
+    row_runs, row_groups, values = _select_sparse_summary_positions(
+        row_runs=row_runs,
+        row_groups=row_groups,
+        values=values,
+        positions=state.positions,
+    )
+    for groups, means in iter_sparse_group_mean_updates(
+        row_runs=row_runs,
+        row_groups=row_groups,
+        values=values,
+        group_count=len(state.positions),
+    ):
+        state.value.accumulate_group_observations(groups=groups, values=means)
+        state.frequency.accumulate_group_observations(
+            groups=groups,
+            values=np.where(means <= 1.0, 1.0, 0.0),
+        )
+
+
+def _select_sparse_summary_positions(
+    *,
+    row_runs: np.ndarray,
+    row_groups: np.ndarray,
+    values: np.ndarray,
+    positions: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Filter sparse summary groups to the ASR metric positions tracked by state."""
+    if row_groups.size == 0 or positions.size == 0:
+        empty_int = np.empty(0, dtype=np.int64)
+        return empty_int, empty_int, np.empty(0, dtype=np.float64)
+    lookup = np.full(int(positions[-1]) + 1, -1, dtype=np.int64)
+    lookup[positions] = np.arange(len(positions), dtype=np.int64)
+    in_range = row_groups <= int(positions[-1])
+    selected = np.zeros(row_groups.shape, dtype=bool)
+    selected[in_range] = lookup[row_groups[in_range]] >= 0
+    return row_runs[selected], lookup[row_groups[selected]], values[selected]
+
+
+def _asr_convergence_targets(
     *,
     state: ASRRunOutputState,
-    completed_runs: int,
-    rtol: float,
-) -> bool:
+) -> tuple[MeanConvergenceAccumulator, ...]:
+    """Return ASR value and frequency convergence targets in checkpoint order."""
     targets: list[MeanConvergenceAccumulator] = []
     for item in (state.yearly_convergence, state.cumulative_convergence):
         if item is None:
             continue
         targets.extend((item.value, item.frequency))
-    return ordered_mean_convergence_reached(
-        targets=tuple(targets),
-        completed_runs=completed_runs,
-        rtol=rtol,
-    )
+    return tuple(targets)
 
 
 def _write_summaries(

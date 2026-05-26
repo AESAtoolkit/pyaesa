@@ -1,7 +1,7 @@
 """SSP specific processing ownership for pop/gdp.
 
 Transforms SSP projections into the processed schema by interpolating years,
-matching to MRIO regions, and aggregating parent regions when requested by
+matching to MRIO regions, and parent region aggregation when requested by
 MRIO data.
 """
 
@@ -138,8 +138,7 @@ def _process_ssp_dataset(
     df = df[df["model"] != "OECD ENV-Growth 2023"].copy()
 
     # Map SSP names to ISO3 and drop unmapped rows before reshaping; this
-    # avoids interpolating/aggregating entries that are not countries
-    # (region groups).
+    # avoids interpolating regional aggregate entries that are not countries.
     ssp_full_name = cast(pd.Series, df["ssp_full_name"])
     df["iso3_code"] = ssp_full_name.apply(_name_to_iso3)
     iso3_code = cast(pd.Series, df["iso3_code"])

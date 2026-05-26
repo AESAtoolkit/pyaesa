@@ -50,7 +50,7 @@ def _branch_metadata_path(
         proj_base=proj_base,
         source_label=source_label,
         mode=str(run_signature["l1_reg_aggreg"]),
-        aggreg_indices=bool(run_signature["aggreg_indices"]),
+        group_indices=bool(run_signature["group_indices"]),
     )
 
 

@@ -50,7 +50,7 @@ def _get_saved_dir(source_key: str, *, matrix_version: Optional[str] = None) -> 
 
     Args:
         source_key (str): MRIO source identifier.
-        matrix_version (str | None): Optional grouping version.
+        matrix_version (str | None): Optional aggregation version.
 
     Returns:
         Path: Root folder for saved MRIO calc matrices.
@@ -75,7 +75,7 @@ def _get_year_saved_dir(
     Args:
         source_key (str): MRIO source identifier.
         year (int): Year for which the saved folder is built.
-        matrix_version (str | None): Optional grouping version.
+        matrix_version (str | None): Optional aggregation version.
 
     Returns:
         Path: Absolute path to ``saved_/<year_folder>``.
@@ -141,7 +141,7 @@ def _get_mrio_clipping_log_path(
 
     Args:
         source_key: MRIO source identifier.
-        matrix_version: Optional grouping version. ``None`` or blank maps to
+        matrix_version: Optional aggregation version. ``None`` or blank maps to
             ``"original_classification"``.
 
     Returns:
@@ -202,44 +202,46 @@ def _get_characterization_matrix_path(*, source_key: str, lcia_method: str) -> P
     return characterization_matrix_path(source=source_key, lcia_method=lcia_method)
 
 
-def _get_grouping_dir(source_key: str, *, kind: Literal["reg", "sec"]) -> Path:
-    """Return grouping folder for ``source_key`` and grouping ``kind``.
+def _get_aggregation_dir(source_key: str, *, kind: Literal["reg", "sec"]) -> Path:
+    """Return aggregation folder for ``source_key`` and aggregation ``kind``.
 
     For EXIO variant sources:
-    - region grouping (``kind="reg"``) is shared under ``exiobase_3``;
-    - sector grouping (``kind="sec"``) is under
-      ``exiobase_3/grouping/<system>`` where system is ``ixi`` or ``pxp``.
+    - region aggregation (``kind="reg"``) is shared under ``exiobase_3``;
+    - sector MRIO aggregation and disaggregation (``kind="sec"``) is under
+      ``exiobase_3/aggregation/<system>`` where system is ``ixi`` or ``pxp``.
     """
     entry = get_mrio_entry(source_key)
     if entry.family == "exiobase":
         base = ensure_dir(
-            _get_repo_root().joinpath("data_raw", "mrio", entry.shared_prereq_root, "grouping")
+            _get_repo_root().joinpath("data_raw", "mrio", entry.shared_prereq_root, "aggregation")
         )
         if kind == "reg":
             return base
         return ensure_dir(base.joinpath(str(entry.system)))
-    return ensure_dir(_get_repo_root().joinpath("data_raw", "mrio", entry.source_key, "grouping"))
+    return ensure_dir(
+        _get_repo_root().joinpath("data_raw", "mrio", entry.source_key, "aggregation")
+    )
 
 
-def _get_group_map_path(
+def _get_agg_map_path(
     source_key: str,
     *,
     kind: Literal["reg", "sec"],
-    group_version: str,
+    agg_version: str,
 ) -> Path:
-    """Return path to a grouping map CSV.
+    """Return path to an MRIO aggregation and disaggregation map CSV.
 
     Args:
         source_key (str): MRIO source identifier.
         kind (str): ``"reg"`` or ``"sec"``.
-        group_version (str): User specified grouping version name.
+        agg_version (str): User specified aggregation version name.
     """
     if kind == "reg":
-        filename = f"group_reg_{group_version}.csv"
+        filename = f"agg_reg_{agg_version}.csv"
     else:
-        filename = f"group_sec_{group_version}.csv"
+        filename = f"agg_sec_{agg_version}.csv"
     return ensure_file_parent(
-        _get_grouping_dir(
+        _get_aggregation_dir(
             source_key,
             kind=kind,
         ).joinpath(filename)

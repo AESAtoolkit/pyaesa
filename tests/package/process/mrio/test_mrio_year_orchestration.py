@@ -33,12 +33,12 @@ def test_parse_and_calc_year_validates_region_sector_inputs() -> None:
             full_dir=Path("."),
             year=2019,
             char_jobs=None,
-            group_reg=False,
-            group_sec=False,
-            group_reg_df=None,
-            group_sec_df=None,
-            group_reg_path=None,
-            group_sec_path=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_reg_df=None,
+            agg_sec_df=None,
+            agg_reg_path=None,
+            agg_sec_path=None,
             parse_oecd_func=lambda full_dir, year: MissingRegions(),
         )
 
@@ -56,12 +56,12 @@ def test_parse_and_calc_year_validates_region_sector_inputs() -> None:
             full_dir=Path("."),
             year=2019,
             char_jobs=None,
-            group_reg=False,
-            group_sec=False,
-            group_reg_df=None,
-            group_sec_df=None,
-            group_reg_path=None,
-            group_sec_path=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_reg_df=None,
+            agg_sec_df=None,
+            agg_reg_path=None,
+            agg_sec_path=None,
             parse_oecd_func=lambda full_dir, year: NonIterableRegions(),
         )
 
@@ -79,26 +79,28 @@ def test_parse_and_calc_year_validates_region_sector_inputs() -> None:
             full_dir=Path("."),
             year=2019,
             char_jobs=None,
-            group_reg=False,
-            group_sec=False,
-            group_reg_df=None,
-            group_sec_df=None,
-            group_reg_path=None,
-            group_sec_path=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_reg_df=None,
+            agg_sec_df=None,
+            agg_reg_path=None,
+            agg_sec_path=None,
             parse_oecd_func=lambda full_dir, year: NoneSector(),
         )
 
 
-def test_parse_and_calc_year_covers_grouping_cache_and_oecd_calc_all() -> None:
+def test_parse_and_calc_year_covers_aggregation_cache_and_oecd_calc_all() -> None:
     cfg = SourceConfig(
         requires_characterization=False, required_core=("A",), required_extensions=()
     )
-    reg_df = pd.DataFrame({"original_classification": ["R1", "R2"], "grouped_mrio": ["EU", "ROW"]})
-    sec_df = pd.DataFrame(
-        {"original_classification": ["S1", "S2"], "grouped_mrio": ["Energy", "Other"]}
+    reg_df = pd.DataFrame(
+        {"original_classification": ["R1", "R2"], "aggregated_mrio": ["EU", "ROW"]}
     )
-    reg_cache = {("R1", "R2"): ["EU", "ROW"]}
-    sec_cache = {("S1", "S2"): ["Energy", "Other"]}
+    sec_df = pd.DataFrame(
+        {"original_classification": ["S1", "S2"], "aggregated_mrio": ["Energy", "Other"]}
+    )
+    reg_cache = {}
+    sec_cache = {}
 
     iosys, applied, missing, regions_original, sectors_original, regions_used, sectors_used = (
         parse_and_calc_year(
@@ -107,12 +109,12 @@ def test_parse_and_calc_year_covers_grouping_cache_and_oecd_calc_all() -> None:
             full_dir=Path("."),
             year=2019,
             char_jobs=None,
-            group_reg=True,
-            group_sec=True,
-            group_reg_df=reg_df,
-            group_sec_df=sec_df,
-            group_reg_path=Path("group_reg.csv"),
-            group_sec_path=Path("group_sec.csv"),
+            agg_reg=True,
+            agg_sec=True,
+            agg_reg_df=reg_df,
+            agg_sec_df=sec_df,
+            agg_reg_path=Path("agg_reg.csv"),
+            agg_sec_path=Path("agg_sec.csv"),
             reg_vec_cache=reg_cache,
             sec_vec_cache=sec_cache,
             pymrio_calc_all=True,
@@ -125,6 +127,8 @@ def test_parse_and_calc_year_covers_grouping_cache_and_oecd_calc_all() -> None:
     assert sectors_original == ["S1", "S2"]
     assert regions_used == ["EU", "ROW"]
     assert sectors_used == ["Energy", "Other"]
+    assert ("R1", "R2") in reg_cache
+    assert ("S1", "S2") in sec_cache
     assert iosys.A is not None
     assert iosys.L is not None
     assert iosys.G is not None
@@ -142,12 +146,12 @@ def test_parse_and_calc_year_attaches_raw_corrected_values_summary() -> None:
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
         apply_raw_corrections_func=lambda **kwargs: AppliedCorrectionSummary(
             source="exiobase_3102_ixi",
@@ -167,12 +171,14 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         required_core=("A",),
         required_extensions=(),
     )
-    reg_df = pd.DataFrame({"original_classification": ["R1", "R2"], "grouped_mrio": ["EU", "ROW"]})
-    sec_df = pd.DataFrame(
-        {"original_classification": ["S1", "S2"], "grouped_mrio": ["Energy", "Other"]}
+    reg_df = pd.DataFrame(
+        {"original_classification": ["R1", "R2"], "aggregated_mrio": ["EU", "ROW"]}
     )
-    reg_cache: dict[tuple[str, ...], list[str]] = {}
-    sec_cache: dict[tuple[str, ...], list[str]] = {}
+    sec_df = pd.DataFrame(
+        {"original_classification": ["S1", "S2"], "aggregated_mrio": ["Energy", "Other"]}
+    )
+    reg_cache = {}
+    sec_cache = {}
 
     parse_and_calc_year(
         source="oecd_v2025",
@@ -180,18 +186,34 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=True,
-        group_sec=True,
-        group_reg_df=reg_df,
-        group_sec_df=sec_df,
-        group_reg_path=Path("group_reg.csv"),
-        group_sec_path=Path("group_sec.csv"),
+        agg_reg=True,
+        agg_sec=True,
+        agg_reg_df=reg_df,
+        agg_sec_df=sec_df,
+        agg_reg_path=Path("agg_reg.csv"),
+        agg_sec_path=Path("agg_sec.csv"),
         reg_vec_cache=reg_cache,
         sec_vec_cache=sec_cache,
         parse_oecd_func=lambda full_dir, year: build_dummy_iosystem(),
     )
-    assert reg_cache == {("R1", "R2"): ["EU", "ROW"]}
-    assert sec_cache == {("S1", "S2"): ["Energy", "Other"]}
+    assert reg_cache[("R1", "R2")].aggregated_labels == ("EU", "ROW")
+    assert sec_cache[("S1", "S2")].aggregated_labels == ("Energy", "Other")
+    parse_and_calc_year(
+        source="oecd_v2025",
+        cfg=oecd_cfg,
+        full_dir=Path("."),
+        year=2020,
+        char_jobs=None,
+        agg_reg=True,
+        agg_sec=True,
+        agg_reg_df=reg_df,
+        agg_sec_df=sec_df,
+        agg_reg_path=Path("agg_reg.csv"),
+        agg_sec_path=Path("agg_sec.csv"),
+        reg_vec_cache=reg_cache,
+        sec_vec_cache=sec_cache,
+        parse_oecd_func=lambda full_dir, year: build_dummy_iosystem(),
+    )
 
     exio_cfg = SourceConfig(
         requires_characterization=True, required_core=("A",), required_extensions=()
@@ -202,12 +224,12 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         pymrio_calc_all=True,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
@@ -221,12 +243,12 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         pymrio_calc_all=False,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
@@ -234,25 +256,25 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
     assert missing_minimal is None
     assert exio_minimal.G is not None
 
-    exio_grouped_calc_all, applied_grouped, missing_grouped, *_ = parse_and_calc_year(
+    exio_aggregated_calc_all, applied_aggregated, missing_aggregated, *_ = parse_and_calc_year(
         source="exiobase_396_ixi",
         cfg=exio_cfg,
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=True,
-        group_sec=True,
-        group_reg_df=reg_df,
-        group_sec_df=sec_df,
-        group_reg_path=Path("group_reg.csv"),
-        group_sec_path=Path("group_sec.csv"),
+        agg_reg=True,
+        agg_sec=True,
+        agg_reg_df=reg_df,
+        agg_sec_df=sec_df,
+        agg_reg_path=Path("agg_reg.csv"),
+        agg_sec_path=Path("agg_sec.csv"),
         pymrio_calc_all=True,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
-    assert applied_grouped is None
-    assert missing_grouped is None
-    assert exio_grouped_calc_all.G is not None
-    assert cast(Any, exio_grouped_calc_all).factor_inputs.S is not None
+    assert applied_aggregated is None
+    assert missing_aggregated is None
+    assert exio_aggregated_calc_all.G is not None
+    assert cast(Any, exio_aggregated_calc_all).factor_inputs.S is not None
 
     parse_and_calc_year(
         source="oecd_v2025",
@@ -260,12 +282,12 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         full_dir=Path("."),
         year=2019,
         char_jobs=None,
-        group_reg=True,
-        group_sec=True,
-        group_reg_df=reg_df,
-        group_sec_df=sec_df,
-        group_reg_path=Path("group_reg.csv"),
-        group_sec_path=Path("group_sec.csv"),
+        agg_reg=True,
+        agg_sec=True,
+        agg_reg_df=reg_df,
+        agg_sec_df=sec_df,
+        agg_reg_path=Path("agg_reg.csv"),
+        agg_sec_path=Path("agg_sec.csv"),
         reg_vec_cache=None,
         sec_vec_cache=None,
         parse_oecd_func=lambda full_dir, year: build_dummy_iosystem(),
@@ -303,12 +325,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         full_dir=Path("."),
         year=2019,
         char_jobs=missing_job,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
     assert applied == []
@@ -332,35 +354,35 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
             ),
         )
     }
-    grouped_iosys, grouped_applied, grouped_missing, *_ = parse_and_calc_year(
+    aggregated_iosys, aggregated_applied, aggregated_missing, *_ = parse_and_calc_year(
         source="exiobase_396_ixi",
         cfg=cfg,
         full_dir=Path("."),
         year=2019,
         char_jobs=valid_job,
-        group_reg=True,
-        group_sec=True,
-        group_reg_df=pd.DataFrame(
+        agg_reg=True,
+        agg_sec=True,
+        agg_reg_df=pd.DataFrame(
             {
                 "original_classification": ["R1", "R2"],
-                "grouped_mrio": ["EU", "ROW"],
+                "aggregated_mrio": ["EU", "ROW"],
             }
         ),
-        group_sec_df=pd.DataFrame(
+        agg_sec_df=pd.DataFrame(
             {
                 "original_classification": ["S1", "S2"],
-                "grouped_mrio": ["Energy", "Other"],
+                "aggregated_mrio": ["Energy", "Other"],
             }
         ),
-        group_reg_path=Path("group_reg.csv"),
-        group_sec_path=Path("group_sec.csv"),
+        agg_reg_path=Path("agg_reg.csv"),
+        agg_sec_path=Path("agg_sec.csv"),
         pymrio_calc_all=True,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
-    assert grouped_applied == ["pb_lcia"]
-    assert grouped_missing == {}
-    assert grouped_iosys.G is not None
-    assert cast(Any, grouped_iosys).pb_lcia.S is not None
+    assert aggregated_applied == ["pb_lcia"]
+    assert aggregated_missing == {}
+    assert aggregated_iosys.G is not None
+    assert cast(Any, aggregated_iosys).pb_lcia.S is not None
 
     char_matrix = pd.read_csv(
         project_repo
@@ -386,12 +408,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         full_dir=Path("."),
         year=2019,
         char_jobs=char_jobs,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         pymrio_calc_all=False,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
@@ -406,12 +428,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         full_dir=Path("."),
         year=2019,
         char_jobs=char_jobs,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         pymrio_calc_all=True,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
@@ -449,12 +471,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         full_dir=Path("."),
         year=2019,
         char_jobs=duplicate_retain_jobs,
-        group_reg=False,
-        group_sec=False,
-        group_reg_df=None,
-        group_sec_df=None,
-        group_reg_path=None,
-        group_sec_path=None,
+        agg_reg=False,
+        agg_sec=False,
+        agg_reg_df=None,
+        agg_sec_df=None,
+        agg_reg_path=None,
+        agg_sec_path=None,
         pymrio_calc_all=True,
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
@@ -486,12 +508,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
             full_dir=Path("."),
             year=2019,
             char_jobs=no_retention_job,
-            group_reg=False,
-            group_sec=False,
-            group_reg_df=None,
-            group_sec_df=None,
-            group_reg_path=None,
-            group_sec_path=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_reg_df=None,
+            agg_sec_df=None,
+            agg_reg_path=None,
+            agg_sec_path=None,
             pymrio_calc_all=True,
             parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
         )
@@ -507,12 +529,12 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
             full_dir=Path("."),
             year=2019,
             char_jobs=no_retention_job,
-            group_reg=False,
-            group_sec=False,
-            group_reg_df=None,
-            group_sec_df=None,
-            group_reg_path=None,
-            group_sec_path=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_reg_df=None,
+            agg_sec_df=None,
+            agg_reg_path=None,
+            agg_sec_path=None,
             pymrio_calc_all=False,
             parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
         )

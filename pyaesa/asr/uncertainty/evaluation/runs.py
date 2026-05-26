@@ -16,8 +16,9 @@ from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_compact_run_matrix,
     iter_sparse_run_rows,
     iter_sparse_run_row_windows,
+    sparse_run_rows_per_run_window,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import SparseRunRows
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows
 
 
 def iter_asr_compact_render_product_batches(
@@ -26,6 +27,7 @@ def iter_asr_compact_render_product_batches(
     output_format: str,
     start_run_index: int = 0,
     stop_run_index: int | None = None,
+    batch_size: int | None = None,
 ):
     """Yield yearly ASR values and dynamic cumulative ASR values when owned."""
     acc_paths = acc_run_paths_from_manifest(manifest=plan.acc_manifest)
@@ -35,6 +37,7 @@ def iter_asr_compact_render_product_batches(
         column_count=_acc_public_row_count(plan=plan),
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=batch_size,
     ):
         lca_values = lca_values_for_runs(lca_input=plan.lca_input, run_indices=run_indices)
         values = evaluate_asr_value_matrix(
@@ -71,6 +74,11 @@ def iter_asr_sparse_render_product_batches(
         output_format=output_format,
         start_run_index=start_run_index,
         stop_run_index=stop_run_index,
+        max_rows_per_chunk=sparse_run_rows_per_run_window(
+            path=acc_paths.public_runs,
+            output_format=output_format,
+            batch_size=batch_size,
+        ),
     )
     for run_indices, acc_rows in iter_sparse_run_row_windows(
         chunks=chunks,

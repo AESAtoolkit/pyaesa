@@ -1,13 +1,13 @@
 # Contributor Guide
 
-Thank you for your interest in improving `pyaesa`.
+Thank you for your interest in improving <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
-`pyaesa` is an open-source Python package for absolute
+<span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> is an open-source Python package for absolute
 environmental sustainability assessment (AESA) studies. The project welcomes contributions in
 the form of bug reports, feature requests, documentation improvements, tests,
 and pull requests.
 
-This project is distributed under the [GPL 3.0 only license][License].
+This project is distributed under the [GPL 3.0 license][License].
 By contributing, you agree that your contribution is provided under the same
 license.
 
@@ -17,6 +17,16 @@ license.
 - Thibault Pirson, thibault.pirson@uclouvain.be
 - Gonzalo Puig-Samper, gonzalo.puig-samper@list.lu
 - Jan Marcus Hartmann, jan.hartmann@ltt.rwth-aachen.de
+
+## License
+
+Contributions to <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>
+source code are accepted under the GPL 3.0 license.
+
+Contributors must not add third party data, code, or documentation with licenses that are incompatible with GPL 3.0 distribution.
+
+New data source integrations must document the terms and conditions of the
+given datasets in `README.md`.
 
 ## Useful Resources
 
@@ -37,7 +47,7 @@ When filing an issue, include:
 
 - operating system
 - Python version
-- `pyaesa` version or commit
+- <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> version or commit
 - public function call or notebook step involved
 - steps to reproduce the issue
 - expected behavior
@@ -92,7 +102,7 @@ python -m pytest tests/package --cov=pyaesa --cov-branch --cov-report=term
 ```
 
 The package coverage target is 100 percent line coverage and 100 percent branch
-coverage for `pyaesa`.
+coverage for <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
 For focused development, run the relevant test file or folder first:
 
@@ -117,7 +127,7 @@ python -m pyright pyaesa
 ```
 
 Ruff is the formatting and linting baseline. Pyright is the static type checker
-for package code.
+for source code.
 
 ## Contribution Guidelines
 

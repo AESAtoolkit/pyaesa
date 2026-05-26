@@ -67,7 +67,7 @@ def write_ut_gvaa_identity_closure_audit(
     path = _get_allocate_ut_gvaa_identity_closure_path(
         proj_base=context.proj_base,
         source=output_source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
     )
     if not state.ut_gvaa_identity_closure_rows:
         return path if path.exists() else None

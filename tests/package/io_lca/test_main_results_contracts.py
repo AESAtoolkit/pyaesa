@@ -18,14 +18,14 @@ from pyaesa.io_lca.data.loaders import (
 def _load_main_payload_for_tests(io_lca_dummy_repo) -> tuple[YearMethodMainPayload, IOLCAFUSpec]:
     metadata, metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,
-        group_version=None,
+        agg_version=None,
     )
     spec = resolve_fu_spec(fu_code="L1.a")
     payload, unavailable_reason = load_main_payload(
         source=io_lca_dummy_repo.source,
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
         metadata=metadata,
         metadata_path=metadata_path,
         year=2019,
@@ -118,6 +118,28 @@ def test_build_main_results_rows_covers_empty_and_success(
     with pytest.raises(ValueError):
         build_main_results_rows(
             payload=zero_payload,
+            spec=spec,
+            filters={"r_f": ["FR"], "r_c": None, "r_p": None, "s_p": None},
+        )
+
+    multi_index_zero_payload = YearMethodMainPayload(
+        year=payload.year,
+        lcia_method=payload.lcia_method,
+        saved_dir=payload.saved_dir,
+        year_entry=payload.year_entry,
+        metric=pd.DataFrame(
+            [[0.0, 0.0], [1.0, 2.0]],
+            index=pd.MultiIndex.from_tuples(
+                [("AAL", "FR"), ("BI FD", "FR")],
+                names=["impact", "r_p"],
+            ),
+            columns=pd.Index(["FR", "DE"], name="r_f"),
+        ),
+        unit_by_impact=payload.unit_by_impact,
+    )
+    with pytest.raises(ValueError):
+        build_main_results_rows(
+            payload=multi_index_zero_payload,
             spec=spec,
             filters={"r_f": ["FR"], "r_c": None, "r_p": None, "s_p": None},
         )

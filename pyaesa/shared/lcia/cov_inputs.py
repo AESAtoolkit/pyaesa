@@ -22,15 +22,15 @@ class LCIACoVInputs:
 def load_lcia_cov_inputs(
     *,
     sector_cov_mapping: dict[str, str],
-    group_reg: bool = False,
-    group_version: str | None = None,
-    aggregate_region_covs: bool = False,
+    agg_reg: bool = False,
+    agg_version: str | None = None,
+    grouped_region_covs: bool = False,
 ) -> LCIACoVInputs:
     """Load country, world, and sector CoV values for LCIA sampling."""
     country_covs, world_cov = _load_country_covs(
-        group_reg=group_reg,
-        group_version=group_version,
-        aggregate_region_covs=aggregate_region_covs,
+        agg_reg=agg_reg,
+        agg_version=agg_version,
+        grouped_region_covs=grouped_region_covs,
     )
     sector_covs = _load_sector_covs()
     return LCIACoVInputs(
@@ -102,17 +102,17 @@ def sector_cov_values(*, covs: LCIACoVInputs, sector_key: pd.Series) -> pd.Serie
 
 def _load_country_covs(
     *,
-    group_reg: bool,
-    group_version: str | None,
-    aggregate_region_covs: bool,
+    agg_reg: bool,
+    agg_version: str | None,
+    grouped_region_covs: bool,
 ) -> tuple[dict[str, float], float]:
     asset_name, label = _country_cov_asset(
-        group_reg=group_reg,
-        group_version=group_version,
-        aggregate_region_covs=aggregate_region_covs,
+        agg_reg=agg_reg,
+        agg_version=agg_version,
+        grouped_region_covs=grouped_region_covs,
     )
     path = carbon_account_cov_path(asset_name=asset_name)
-    if (group_reg or aggregate_region_covs) and not path.exists():
+    if (agg_reg or grouped_region_covs) and not path.exists():
         raise ValueError(f"{label} LCIA country CoV file is missing: {path}.")
     frame = pd.read_csv(path)
     missing_columns = sorted({"exio_code", "cov"} - set(frame.columns))
@@ -140,16 +140,16 @@ def _load_country_covs(
 
 def _country_cov_asset(
     *,
-    group_reg: bool,
-    group_version: str | None,
-    aggregate_region_covs: bool,
+    agg_reg: bool,
+    agg_version: str | None,
+    grouped_region_covs: bool,
 ) -> tuple[str, str]:
-    suffix = "_aggreg_indices" if aggregate_region_covs else ""
-    if group_reg:
-        version = _non_empty_text(group_version, field="group_version")
-        return f"reg_cbca_covs_group_{version}{suffix}.csv", "Grouped region"
-    if aggregate_region_covs:
-        return "reg_cbca_covs_aggreg_indices.csv", "Aggregate region"
+    suffix = "_group_indices" if grouped_region_covs else ""
+    if agg_reg:
+        version = _non_empty_text(agg_version, field="agg_version")
+        return f"reg_cbca_covs_agg_{version}{suffix}.csv", "Aggregated region"
+    if grouped_region_covs:
+        return "reg_cbca_covs_group_indices.csv", "Grouped region"
     return "reg_cbca_covs.csv", "Region"
 
 

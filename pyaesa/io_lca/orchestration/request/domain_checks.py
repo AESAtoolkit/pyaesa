@@ -15,29 +15,29 @@ def _years_for_process_hint(years: int | list[int] | range | None) -> list[int]:
     return [int(year) for year in years]
 
 
-def require_grouped_branch(
+def require_aggregated_branch(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     metadata_path: Path,
     methods: list[str],
     years: int | list[int] | range | None,
 ) -> None:
-    """Fail fast when grouped MRIO metadata branch is missing."""
-    if metadata_path.exists() or not (group_reg or group_sec):
+    """Fail fast when aggregated MRIO metadata branch is missing."""
+    if metadata_path.exists() or not (agg_reg or agg_sec):
         return
     hint = _process_mrio_hint(
         source=source,
         years=_years_for_process_hint(years),
-        group_version=group_version,
-        group_reg=group_reg,
-        group_sec=group_sec,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
         lcia_methods=methods,
     )
     raise ValueError(
-        "Grouped processed MRIO branch is missing for this source/group_version. "
+        "Aggregated processed MRIO branch is missing for this source/agg_version. "
         f"Expected metadata at {metadata_path}. Run: {hint}"
     )
 
@@ -54,29 +54,29 @@ def validate_upstream_supported(*, spec: IOLCAFUSpec, upstream_analysis: bool) -
     )
 
 
-def validate_aggreg_indices_supported(*, spec: IOLCAFUSpec, aggreg_indices: bool) -> None:
+def validate_group_indices_supported(*, spec: IOLCAFUSpec, group_indices: bool) -> None:
     """Reject grouped index outputs for TD L2 FUs, aligned with deterministic_asocc."""
-    if not aggreg_indices:
+    if not group_indices:
         return
     if spec.fu_code not in {"L2.a.b", "L2.b.b", "L2.c.b"}:
         return
     raise ValueError(
-        "aggreg_indices=True is not allowed for L2.a.b/L2.b.b/L2.c.b because "
-        "CBA_TD perimeters can introduce double counting when aggregating outputs."
+        "group_indices=True is not allowed for L2.a.b/L2.b.b/L2.c.b because "
+        "CBA_TD perimeters can introduce double counting when aggregation outputs."
     )
 
 
-def validate_aggreg_indices_requires_multi_selection(
+def validate_group_indices_requires_multi_selection(
     *,
-    aggreg_indices: bool,
+    group_indices: bool,
     has_multi_indices: bool,
 ) -> None:
     """Reject grouped index mode when no multi value selector is provided."""
-    if not aggreg_indices:
+    if not group_indices:
         return
     if has_multi_indices:
         return
     raise ValueError(
-        "aggreg_indices=True requires at least one selector with multiple values "
-        "(r_f/r_c/r_p/s_p). For single-index selections, use aggreg_indices=False."
+        "group_indices=True requires at least one selector with multiple values "
+        "(r_f/r_c/r_p/s_p). For single-index selections, use group_indices=False."
     )

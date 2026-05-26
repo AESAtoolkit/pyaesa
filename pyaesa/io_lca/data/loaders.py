@@ -82,11 +82,11 @@ def _align_matrix_axis_names_to_driver(
 def load_domain_metadata(
     *,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> tuple[dict[str, Any], Path]:
     """Load processed MRIO metadata payload and physical path."""
-    meta = _read_metadata(source, matrix_version=group_version)
-    meta_path = _get_metadata_path(source, matrix_version=group_version)
+    meta = _read_metadata(source, matrix_version=agg_version)
+    meta_path = _get_metadata_path(source, matrix_version=agg_version)
     return meta, meta_path
 
 
@@ -94,9 +94,9 @@ def _missing_outputs_error(
     *,
     source: str,
     years: list[int],
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     lcia_methods: list[str],
     detail: str,
 ) -> ValueError:
@@ -104,9 +104,9 @@ def _missing_outputs_error(
     hint = _process_mrio_hint(
         source=source,
         years=sorted({int(year) for year in years}),
-        group_version=group_version,
-        group_reg=group_reg,
-        group_sec=group_sec,
+        agg_version=agg_version,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
         lcia_methods=lcia_methods,
         keep_intermediate_uncasext=True,
     )
@@ -147,9 +147,9 @@ def _load_lcia_metric(
 def load_main_payload(
     *,
     source: str,
-    group_version: str | None,
-    group_reg: bool,
-    group_sec: bool,
+    agg_version: str | None,
+    agg_reg: bool,
+    agg_sec: bool,
     metadata: dict[str, Any],
     metadata_path: Path,
     year: int,
@@ -172,14 +172,14 @@ def load_main_payload(
     if not available:
         return None, (reason or "LCIA unavailable")
 
-    saved_dir = _get_year_saved_path(source, year, matrix_version=group_version)
+    saved_dir = _get_year_saved_path(source, year, matrix_version=agg_version)
     if not saved_dir.exists():
         raise _missing_outputs_error(
             source=source,
             years=[year],
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             lcia_methods=[lcia_method],
             detail=f"Processed MRIO year directory is missing: {saved_dir}.",
         )
@@ -193,9 +193,9 @@ def load_main_payload(
         raise _missing_outputs_error(
             source=source,
             years=[year],
-            group_version=group_version,
-            group_reg=group_reg,
-            group_sec=group_sec,
+            agg_version=agg_version,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
             lcia_methods=[lcia_method],
             detail=f"Processed LCIA output is missing on disk for year {year}.",
         ) from exc
@@ -234,7 +234,7 @@ def _load_fy_matrix(
             "Processed IO-LCA upstream analysis requires the level-1 F_Y pickle "
             f"for lcia_method='{lcia_method}'. Missing file: {fy_path}. "
             "Re-run process_mrio with keep_intermediate_uncasext=True for this source, "
-            "year, grouping scope, and LCIA method."
+            "year, aggregation scope, and LCIA method."
         )
     fy_raw = _read_processed_frame(fy_path)
     if isinstance(fy_raw.columns, pd.MultiIndex):

@@ -12,12 +12,12 @@ def _asocc_deterministic_scope_root(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the deterministic aSoCC scope root for one explicit branch."""
     return (
         _get_asocc_root(proj_base=proj_base)
-        / asocc_source_version_token(source=source, group_version=group_version)
+        / asocc_source_version_token(source=source, agg_version=agg_version)
         / "deterministic"
     )
 
@@ -36,7 +36,7 @@ def _get_asocc_results_root(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     owning_fu_level: str = "level_1",
 ) -> Path:
     """Return the deterministic L1 public results root for one branch."""
@@ -45,7 +45,7 @@ def _get_asocc_results_root(
         _asocc_deterministic_scope_root(
             proj_base=proj_base,
             source=source,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         / "results"
     )
@@ -67,14 +67,14 @@ def _get_asocc_l2_results_root(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     bucket: str,
 ) -> Path:
     """Return the deterministic L2 route root for one bucket."""
     return _asocc_deterministic_scope_root(
         proj_base=proj_base,
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
     ) / _canonical_l2_results_relative_dir(bucket=bucket)
 
 
@@ -82,7 +82,7 @@ def _get_asocc_l1_dir(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     lcia_sub: str | None,
     owning_fu_level: str = "level_1",
 ) -> Path:
@@ -90,7 +90,7 @@ def _get_asocc_l1_dir(
     base = _get_asocc_results_root(
         proj_base=proj_base,
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
         owning_fu_level=owning_fu_level,
     )
     return base / lcia_sub if lcia_sub else base
@@ -100,7 +100,7 @@ def _get_asocc_l2_dir(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     bucket: str,
     lcia_sub: str | None,
 ) -> Path:
@@ -108,7 +108,7 @@ def _get_asocc_l2_dir(
     base = _get_asocc_l2_results_root(
         proj_base=proj_base,
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
         bucket=bucket,
     )
     return base / lcia_sub if lcia_sub else base
@@ -118,7 +118,7 @@ def _get_enacting_metric_dir(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     level: str,
     lcia_sub: str | None = None,
     owning_fu_level: str = "level_1",
@@ -128,7 +128,7 @@ def _get_enacting_metric_dir(
         base = _get_asocc_results_root(
             proj_base=proj_base,
             source=source,
-            group_version=group_version,
+            agg_version=agg_version,
             owning_fu_level=owning_fu_level,
         )
     else:
@@ -136,7 +136,7 @@ def _get_enacting_metric_dir(
             _asocc_deterministic_scope_root(
                 proj_base=proj_base,
                 source=source,
-                group_version=group_version,
+                agg_version=agg_version,
             )
             / "results"
             / "level_2"
@@ -149,7 +149,7 @@ def _get_enacting_metric_output_path(
     *,
     proj_base: Path,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
     level: str,
     key_metric: str,
     key_method: str | None,
@@ -164,7 +164,7 @@ def _get_enacting_metric_output_path(
     out_base = _get_enacting_metric_dir(
         proj_base=proj_base,
         source=source,
-        group_version=group_version,
+        agg_version=agg_version,
         level=level,
         lcia_sub=lcia_sub,
         owning_fu_level=owning_fu_level,
@@ -182,7 +182,7 @@ def _get_asocc_figures_root(
     proj_base: Path,
     level: str,
     source: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the deterministic aSoCC figures root for one FU scope."""
     if level == "level_1":
@@ -193,7 +193,7 @@ def _get_asocc_figures_root(
         _asocc_deterministic_scope_root(
             proj_base=proj_base,
             source=source,
-            group_version=group_version,
+            agg_version=agg_version,
         )
         / dirname
     )
@@ -211,7 +211,7 @@ def reuse_output_path_for(
     base = _get_asocc_l2_dir(
         proj_base=context.proj_base,
         source=context.source,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
         bucket=bucket,
         lcia_sub=None,
     )

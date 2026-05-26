@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from ....data.region_group_mapping import load_region_group_mapping
+from ....data.region_agg_mapping import load_region_agg_mapping
 from ....io.metadata import EnactingMetricKey, RunContext, RunState
 from ....methods.registry.registry import REGISTRY
 from pyaesa.asocc.runtime.scope.filtering import normalize_filter_values
@@ -116,8 +116,8 @@ def _slice_enacting_metric_series_for_run(
             context.filters.get("r_p")
         ) or normalize_filter_values(context.filters.get("r_f"))
         if region_allowed:
-            if "grouped_mrio_code" in names:
-                mask = out.index.get_level_values("grouped_mrio_code").isin(region_allowed)
+            if "aggregated_mrio_code" in names:
+                mask = out.index.get_level_values("aggregated_mrio_code").isin(region_allowed)
                 out = out.loc[mask]
             elif "mrio_code" in names:
                 mask = out.index.get_level_values("mrio_code").isin(region_allowed)
@@ -140,33 +140,34 @@ def _slice_enacting_metric_series_for_run(
     return out
 
 
-def _append_grouped_mrio_code_level(
+def _append_aggregated_mrio_code_level(
     *,
     series: pd.Series,
     region_label: str,
     source_key: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.Series:
-    """Append grouped_mrio_code level next to MRIO region level."""
-    if not group_version:
+    """Append aggregated_mrio_code level next to MRIO region level."""
+    if not agg_version:
         return series
     if not isinstance(series.index, pd.MultiIndex):
         return series
     names = [str(n) for n in series.index.names]
     if region_label not in names:
         return series
-    mapping = load_region_group_mapping(
+    mapping = load_region_agg_mapping(
         source_key=source_key,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     region_values = series.index.get_level_values(region_label)
     missing = sorted({str(code) for code in region_values if code not in mapping})
     if missing:
         raise ValueError(
-            "Regional grouping map is missing MRIO labels referenced by LCIA enacting metric "
+            "Regional MRIO aggregation and disaggregation map is missing MRIO labels "
+            "referenced by LCIA enacting metric "
             f"outputs. Missing labels (sample): {missing[:10]}"
         )
-    grouped_values = region_values.map(mapping.__getitem__)
+    aggregated_values = region_values.map(mapping.__getitem__)
 
     arrays: list[pd.Index] = []
     out_names: list[str] = []
@@ -175,8 +176,8 @@ def _append_grouped_mrio_code_level(
         arrays.append(pd.Index(level_values, name=name))
         out_names.append(name)
         if name == region_label:
-            arrays.append(pd.Index(grouped_values, name="grouped_mrio_code"))
-            out_names.append("grouped_mrio_code")
+            arrays.append(pd.Index(aggregated_values, name="aggregated_mrio_code"))
+            out_names.append("aggregated_mrio_code")
     new_index = pd.MultiIndex.from_arrays(arrays, names=out_names)
     return pd.Series(series.to_numpy(), index=new_index, name=series.name)
 

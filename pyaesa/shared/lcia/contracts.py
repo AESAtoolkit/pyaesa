@@ -1,6 +1,5 @@
-"""Resolve explicit LCIA method rule bindings and bundled static CC metadata."""
+"""Resolve LCIA method names and bundled static CC metadata."""
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
@@ -11,19 +10,7 @@ from .static_cc_schema import NormalizedStaticCCRow, StaticCCSchemaKind, standar
 STATIC_CC_SUFFIX = "_cc_steady_state.csv"
 CHARACTERIZATION_FACTORS_MATRICES_DIRNAME = "characterization_factors_matrices"
 RESPONSIBILITY_PERIODS_DIRNAME = "responsibility_periods"
-
-
-@dataclass(frozen=True)
-class LCIAMethodRule:
-    """Explicit LCIA runtime rules that cannot be inferred from files."""
-
-    dynamic_cc_match: dict[str, str] | None = None
-
-
-_LCIA_METHOD_RULES = {
-    "ef_3.1": LCIAMethodRule(dynamic_cc_match={"impact": "GWP_100"}),
-    "gwp100_lcia": LCIAMethodRule(dynamic_cc_match={"impact": "GWP_100"}),
-}
+_DYNAMIC_AR6_IMPACT = "GWP_100"
 
 
 def normalize_lcia_method_name(lcia_method: str) -> str:
@@ -32,41 +19,6 @@ def normalize_lcia_method_name(lcia_method: str) -> str:
     if not cleaned:
         raise ValueError("LCIA method name cannot be empty.")
     return cleaned
-
-
-def _normalize_dynamic_cc_match(
-    *,
-    lcia_method: str,
-    match: dict[str, str] | None,
-) -> dict[str, str] | None:
-    """Return one validated dynamic CC binding or ``None`` when absent."""
-    if match is None:
-        return None
-    impact = str(match.get("impact", "")).strip()
-    if not impact:
-        raise ValueError(
-            "LCIA dynamic CC rule definitions must provide a non-empty 'impact' "
-            f"binding. Method='{lcia_method}'."
-        )
-    return {"impact": impact}
-
-
-def _normalize_lcia_method_rules(
-    rules: dict[str, LCIAMethodRule],
-) -> dict[str, LCIAMethodRule]:
-    """Return canonical LCIA rules with validated dynamic CC bindings."""
-    normalized: dict[str, LCIAMethodRule] = {}
-    for lcia_method, rule in rules.items():
-        normalized[lcia_method] = LCIAMethodRule(
-            dynamic_cc_match=_normalize_dynamic_cc_match(
-                lcia_method=lcia_method,
-                match=rule.dynamic_cc_match,
-            ),
-        )
-    return normalized
-
-
-_LCIA_METHOD_RULES = _normalize_lcia_method_rules(_LCIA_METHOD_RULES)
 
 
 def load_bundled_static_cc_rows(
@@ -112,15 +64,19 @@ def bundled_cc_impact_unit(*, lcia_method: str, impact: str) -> tuple[Path, str]
 
 
 def dynamic_cc_match(*, lcia_method: str) -> dict[str, str] | None:
-    """Return the explicit dynamic climate binding for one LCIA method."""
-    rule = _LCIA_METHOD_RULES.get(normalize_lcia_method_name(lcia_method), LCIAMethodRule())
-    if rule.dynamic_cc_match is None:
+    """Return the dynamic climate binding inferred from static CC impacts."""
+    cleaned = normalize_lcia_method_name(lcia_method)
+    try:
+        _cc_csv_path, impacts = bundled_cc_expected_impacts(lcia_method=cleaned)
+    except FileNotFoundError:
         return None
-    return dict(rule.dynamic_cc_match)
+    if _DYNAMIC_AR6_IMPACT not in impacts:
+        return None
+    return {"impact": _DYNAMIC_AR6_IMPACT}
 
 
 def dynamic_cc_compatible_methods(*, method_specs: Sequence[str]) -> list[str]:
-    """Return the ordered subset of methods that have an explicit dynamic climate binding."""
+    """Return the ordered subset of methods with a dynamic climate impact."""
     compatible: list[str] = []
     for method_spec in method_specs:
         cleaned = normalize_lcia_method_name(method_spec)

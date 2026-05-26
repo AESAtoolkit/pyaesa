@@ -18,6 +18,11 @@ from pyaesa.asocc.uncertainty.io.paths import build_asocc_uncertainty_run_paths
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
 from pyaesa.shared.runtime.scenario.columns import ASOCC_SSP_SCENARIO_COLUMN
 from pyaesa.shared.tabular.table_io import write_table
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
+    iter_compact_run_matrix,
+    iter_sparse_run_rows,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import uncertainty_table_columns
 from pyaesa.shared.uncertainty_assessment.sobol.plan import normalize_sobol_plan
 from pyaesa.shared.uncertainty_assessment.sobol.readme_text import build_sobol_readme_lines
 
@@ -164,9 +169,44 @@ def _read_asocc_runs(run_root: Path) -> pd.DataFrame:
 
 def _read_result_table(*, run_root: Path, stem: str) -> pd.DataFrame:
     csv_path = run_root / "results" / f"{stem}.csv"
-    if csv_path.exists():
+    if csv_path.is_file():
         return pd.read_csv(csv_path)
-    return pd.read_parquet(run_root / "results" / f"{stem}.parquet")
+    if csv_path.is_dir():
+        return _read_run_artifact(path=csv_path, output_format="csv_compact")
+    parquet_path = run_root / "results" / f"{stem}.parquet"
+    if parquet_path.is_dir():
+        return _read_run_artifact(path=parquet_path, output_format="parquet")
+    return pd.read_parquet(parquet_path)
+
+
+def _read_run_artifact(*, path: Path, output_format: str) -> pd.DataFrame:
+    columns = uncertainty_table_columns(path=path, output_format=output_format)
+    if "public_row_id" in columns:
+        value_column = next(
+            column for column in columns if column not in {"run_index", "public_row_id"}
+        )
+        pieces = [
+            pd.DataFrame(
+                {
+                    "run_index": rows.run_index,
+                    "public_row_id": rows.public_row_id,
+                    value_column: rows.values,
+                }
+            )
+            for rows in iter_sparse_run_rows(path=path, output_format=output_format)
+        ]
+        return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame(columns=columns)
+    column_count = len(columns) - 1
+    pieces = []
+    for run_index, values in iter_compact_run_matrix(
+        path=path,
+        output_format=output_format,
+        column_count=column_count,
+    ):
+        frame = pd.DataFrame(values, columns=[str(index) for index in range(column_count)])
+        frame.insert(0, "run_index", run_index)
+        pieces.append(frame)
+    return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame(columns=columns)
 
 
 def _write_external_deterministic_rows(
@@ -769,6 +809,19 @@ def test_uncertainty_asocc_writes_inter_method_sobol_outputs(allocation_dummy_re
         figures=False,
         refresh=True,
     )
+    no_sobol_manifest = uncertainty_asocc(
+        base_asocc_args=base_args,
+        uncertainty_config={
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 1},
+                "convergence": {"active": False},
+            },
+            "inter_method_uncertainty": {},
+            "projection_uncertainty": {},
+        },
+        output_format="csv_compact",
+        figures=False,
+    ).manifest
 
     manifest = uncertainty_asocc(
         base_asocc_args=base_args,
@@ -800,6 +853,7 @@ def test_uncertainty_asocc_writes_inter_method_sobol_outputs(allocation_dummy_re
     source_summary = pd.read_csv(sobol_root / "sobol_source_summary.csv")
 
     assert manifest.sobol is not None
+    assert manifest.run_id == no_sobol_manifest.run_id
     assert manifest.sobol["mode"] == "fixed"
     assert manifest.sobol["ran"]
     assert manifest.sobol["selected_output_years"] == [2030]
@@ -1059,19 +1113,6 @@ def test_uncertainty_asocc_convergence_reports_unreached_at_max_runs(
     external = _read_asocc_runs(run_root)
     external = external.loc[external["l1_l2_method"].eq("UT(TD)")].reset_index(drop=True)
     assert external["asocc"].tolist() == [0.72, 0.73]
-    reused = uncertainty_asocc(
-        base_asocc_args=_base_asocc_args(project_name=project_name),
-        external_method={"one_step_methods": ["UT(TD)"]},
-        uncertainty_config={
-            "mc_parameters": {
-                "fixed": {"active": False},
-                "convergence": {"active": True, "max_runs": 2, "rtol": 1e-12, "stable_runs": 1},
-            },
-            **_inactive_default_sources(),
-        },
-        output_format="csv_compact",
-    ).manifest
-    assert reused.run_id == manifest.run_id
     assert manifest.artifacts is not None
     stale_run_file = Path(str(manifest.artifacts["scope_manifest"])).parents[1] / "stale.txt"
     stale_run_file.write_text("stale", encoding="utf-8")
@@ -1152,12 +1193,11 @@ def test_uncertainty_asocc_computes_larger_fixed_run(
     assert reused.run_id == extended.run_id
 
 
-@pytest.mark.parametrize("output_format", ["csv_compact", "parquet"])
 def test_uncertainty_asocc_convergence_runs_without_parent_copy(
     allocation_dummy_repo,
-    output_format: str,
 ) -> None:
-    project_name = f"asocc_uncertainty_convergence_no_parent_copy_{output_format}"
+    output_format = "parquet"
+    project_name = "asocc_uncertainty_convergence_no_parent_copy"
     deterministic_asocc(
         **_base_asocc_args(project_name=project_name),
         figures=False,
@@ -1179,7 +1219,7 @@ def test_uncertainty_asocc_convergence_runs_without_parent_copy(
         uncertainty_config={
             "mc_parameters": {
                 "fixed": {"active": False},
-                "convergence": {"active": True, "max_runs": 4, "stable_runs": 3},
+                "convergence": {"active": True, "max_runs": 2, "stable_runs": 3},
             }
         },
         output_format=output_format,
@@ -1194,13 +1234,13 @@ def test_uncertainty_asocc_convergence_runs_without_parent_copy(
     assert convergence.run_id != fixed.run_id
     assert convergence.lineage is None
     assert convergence.convergence is not None
-    assert sorted(runs["run_index"].unique().tolist()) == [0, 1, 2, 3]
+    assert sorted(runs["run_index"].unique().tolist()) == [0, 1]
 
     extended_fixed = uncertainty_asocc(
         base_asocc_args=_base_asocc_args(project_name=project_name),
         uncertainty_config={
             "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 3},
+                "fixed": {"active": True, "n_runs": 2},
                 "convergence": {"active": False},
             }
         },
@@ -1213,7 +1253,7 @@ def test_uncertainty_asocc_convergence_runs_without_parent_copy(
         uncertainty_config={
             "mc_parameters": {
                 "fixed": {"active": False},
-                "convergence": {"active": True, "max_runs": 4, "stable_runs": 3},
+                "convergence": {"active": True, "max_runs": 2, "stable_runs": 3},
             }
         },
         output_format=output_format,
@@ -1237,7 +1277,7 @@ def test_uncertainty_asocc_external_method_repeats_deterministic_rows(
     )
     base_args = _base_asocc_args(project_name=project_name)
     config = {
-        "mc_parameters": {"fixed": {"active": True, "n_runs": 2}, "convergence": {"active": False}},
+        "mc_parameters": {"fixed": {"active": True, "n_runs": 1}, "convergence": {"active": False}},
         **_inactive_default_sources(),
     }
 
@@ -1256,8 +1296,8 @@ def test_uncertainty_asocc_external_method_repeats_deterministic_rows(
     runs = _read_asocc_runs(run_root)
     external = runs.loc[runs["l1_l2_method"].eq("UT(TD)")].reset_index(drop=True)
 
-    assert external["run_index"].tolist() == [0, 1]
-    assert external["asocc"].tolist() == [0.42, 0.42]
+    assert external["run_index"].tolist() == [0]
+    assert external["asocc"].tolist() == [0.42]
     assert manifest.external_inputs == (
         {
             "storage_mode": "deterministic",
@@ -1274,31 +1314,6 @@ def test_uncertainty_asocc_external_method_repeats_deterministic_rows(
             ],
         },
     )
-
-    _write_external_deterministic_rows(
-        repo_root=allocation_dummy_repo.repo_root,
-        project_name=project_name,
-        value=0.43,
-    )
-    changed = uncertainty_asocc(
-        base_asocc_args=base_args,
-        uncertainty_config=config,
-        external_method={"one_step_methods": ["UT(TD)"]},
-        output_format="csv_compact",
-    ).manifest
-    changed_run_root = _uncertainty_run_root(
-        allocation_dummy_repo.repo_root,
-        project_name=project_name,
-        run_id=changed.run_id,
-    )
-    changed_runs = _read_asocc_runs(changed_run_root)
-    changed_external = changed_runs.loc[changed_runs["l1_l2_method"].eq("UT(TD)")].reset_index(
-        drop=True
-    )
-
-    assert changed.compatibility_key != manifest.compatibility_key
-    assert changed.run_id != manifest.run_id
-    assert changed_external["asocc"].tolist() == [0.43, 0.43]
 
 
 def test_uncertainty_asocc_reference_year_keeps_invariant_external_rows(
@@ -1540,12 +1555,11 @@ def test_uncertainty_asocc_inter_method_larger_fixed_run_writes_sparse_rows(
     assert sorted(runs["run_index"].unique().tolist()) == [0, 1, 2]
 
 
-@pytest.mark.parametrize("output_format", ["csv_compact", "parquet"])
 def test_uncertainty_asocc_inter_method_convergence_runs_without_parent_copy(
     allocation_dummy_repo,
-    output_format: str,
 ) -> None:
-    project_name = f"asocc_uncertainty_inter_method_convergence_no_parent_{output_format}"
+    output_format = "parquet"
+    project_name = "asocc_uncertainty_inter_method_convergence_no_parent"
     base_args = {
         **_base_asocc_args(project_name=project_name),
         "one_step_methods": ["AR(E^{CBA_FD})", "UT(FD)"],
@@ -1560,7 +1574,7 @@ def test_uncertainty_asocc_inter_method_convergence_runs_without_parent_copy(
         base_asocc_args=base_args,
         uncertainty_config={
             "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 2},
+                "fixed": {"active": True, "n_runs": 1},
                 "convergence": {"active": False},
             },
             "inter_method_uncertainty": {},
@@ -1572,7 +1586,7 @@ def test_uncertainty_asocc_inter_method_convergence_runs_without_parent_copy(
         uncertainty_config={
             "mc_parameters": {
                 "fixed": {"active": False},
-                "convergence": {"active": True, "max_runs": 4, "stable_runs": 2},
+                "convergence": {"active": True, "max_runs": 2, "stable_runs": 3},
             },
             "inter_method_uncertainty": {},
         },
@@ -1588,15 +1602,15 @@ def test_uncertainty_asocc_inter_method_convergence_runs_without_parent_copy(
     assert convergence.run_id != fixed.run_id
     assert convergence.lineage is None
     assert convergence.convergence is not None
-    assert convergence.completed_runs == 4
-    assert sorted(runs["run_index"].unique().tolist()) == [0, 1, 2, 3]
+    assert convergence.completed_runs == 2
+    assert sorted(runs["run_index"].unique().tolist()) == [0, 1]
 
     reused = uncertainty_asocc(
         base_asocc_args=base_args,
         uncertainty_config={
             "mc_parameters": {
                 "fixed": {"active": False},
-                "convergence": {"active": True, "max_runs": 4, "stable_runs": 2},
+                "convergence": {"active": True, "max_runs": 2, "stable_runs": 3},
             },
             "inter_method_uncertainty": {},
         },

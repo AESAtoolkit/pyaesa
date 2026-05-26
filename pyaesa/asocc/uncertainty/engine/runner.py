@@ -26,7 +26,6 @@ from pyaesa.asocc.uncertainty.engine.phase_reporting import (
 )
 from pyaesa.asocc.uncertainty.engine.reuse.reuse import (
     appendable_run_for_runtime,
-    compatible_complete_run,
     compatible_complete_sobol_run,
     compatible_completed_run_id_for_context,
     compatible_completed_runs_for_context,
@@ -74,17 +73,24 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
 from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
     manifest_with_figure_artifacts,
 )
+from pyaesa.shared.uncertainty_assessment.run_state.sobol_artifacts import (
+    write_manifest_with_sobol_artifacts,
+)
 from pyaesa.shared.uncertainty_assessment.run_state.report import (
     UncertaintyRunReport,
     uncertainty_report,
 )
 from pyaesa.shared.uncertainty_assessment.run_state.runs import (
     cleanup_monte_carlo_runs_for_refresh,
+    complete_run_with_sobol_reuse_status,
 )
 from pyaesa.shared.uncertainty_assessment.request.core import (
     normalize_uncertainty_request,
 )
-from pyaesa.shared.uncertainty_assessment.sobol.plan import normalize_sobol_plan
+from pyaesa.shared.uncertainty_assessment.sobol.plan import (
+    normalize_sobol_plan,
+    sobol_plan_payload,
+)
 from pyaesa.shared.uncertainty_assessment.request.sources import (
     build_source_activation_plan,
 )
@@ -106,6 +112,10 @@ class ASOCCComponentSession:
     monte_carlo_root: Any
     sampling_scope: Any | None = None
     run_result: Any | None = None
+
+    def requires_finalization(self) -> bool:
+        """Return whether this session keeps an unfinished run result."""
+        return self.run_result is not None
 
 
 def run_uncertainty_asocc(
@@ -275,8 +285,13 @@ def run_uncertainty_asocc_component(
         if run_id is None
         else (() if required_run is None else (required_run,))
     )
-    if sobol_plan.enabled:
-        reusable = compatible_complete_sobol_run(
+    reusable, reuse_status = complete_run_with_sobol_reuse_status(
+        compatible=compatible,
+        requested_runs=runtime.n_runs,
+        mode=runtime.mode,
+        mc_parameters=run_context["mc_parameters"],
+        sobol_parameters=sobol_plan_payload(plan=sobol_plan) if sobol_plan.enabled else None,
+        complete_sobol_run=lambda: compatible_complete_sobol_run(
             compatible=compatible,
             runtime=runtime,
             mc_parameters=run_context["mc_parameters"],
@@ -284,93 +299,84 @@ def run_uncertainty_asocc_component(
             external_plan=external_plan,
             sobol_plan=sobol_plan,
             requested_years=tuple(int(year) for year in loaded.requested_years),
+        ),
+    )
+    if reusable is not None:
+        progress_complete(
+            progress=progress,
+            completed=reusable.manifest.completed_runs,
+            max_runs=max(
+                progress_parameters["max_runs"],
+                reusable.manifest.completed_runs,
+            ),
+            mode=progress_parameters["mode"],
+            component=progress_parameters["component"],
+            visible=show_progress
+            and not all((had_component_session, component_parent_convergence)),
         )
-        if reusable is not None:
-            progress_complete(
-                progress=progress,
-                completed=reusable.manifest.completed_runs,
-                max_runs=max(
-                    progress_parameters["max_runs"],
-                    reusable.manifest.completed_runs,
+        reuse_manifest = reusable.manifest
+        if reuse_status == "computed":
+            paths = build_asocc_uncertainty_run_paths(
+                deterministic_manifest_path=loaded.deterministic_manifest_path,
+                run_id=reusable.manifest.run_id,
+                output_format=runtime.output_format,
+                inter_method_parameters=(
+                    sources.parameters_for(INTER_METHOD_SOURCE)
+                    if inter_method_plan is not None
+                    else None
                 ),
-                mode=progress_parameters["mode"],
-                component=progress_parameters["component"],
-                visible=not all((had_component_session, component_parent_convergence)),
             )
-            progress.finish()
-            reused_manifest = render_reusable_asocc_figures_if_requested(
-                manifest=reusable.manifest,
-                figures=figures,
-                figure_options=figure_options,
-                figure_format=figure_format,
-                status=figure_status,
-            )
-            phase_owner.announce(PHASE_B1_ASOCC, "uncertainty_asocc")
-            complete_asocc_uncertainty_phase(
-                phase=completion_phase,
-                manifest=reused_manifest,
-                reuse_status="reused_exact",
-            )
-            write_asocc_phase_index(
-                manifest=reused_manifest,
-                phase_entries=phase_entries,
-                reuse_status="reused_exact",
-            )
-            if owns_phase:
-                phase_owner.finish()
-            return ComponentRun(
-                report=uncertainty_report(
-                    manifest=reused_manifest,
-                    reuse_status="reused_exact",
+            sobol_external_plan = external_plan_for_years(
+                plan=external_plan,
+                years=selected_sobol_years(
+                    plan=sobol_plan,
+                    requested_years=tuple(int(year) for year in loaded.requested_years),
                 ),
-                session=component_session,
             )
-    else:
-        reusable = compatible_complete_run(
-            compatible=compatible,
-            runtime=runtime,
-            mc_parameters=run_context["mc_parameters"],
+            sobol_result = run_asocc_sobol(
+                paths=paths,
+                loaded=loaded,
+                inter_mrio_plan=inter_mrio_plan,
+                runtime=runtime,
+                sources=sources,
+                external_plan=sobol_external_plan,
+                sobol_plan=sobol_plan,
+                status=phase_owner,
+            )
+            reuse_manifest = write_manifest_with_sobol_artifacts(
+                manifest=reuse_manifest,
+                paths=paths,
+                output_format=runtime.output_format,
+                sobol_status=sobol_result.status,
+            )
+        progress.finish()
+        reused_manifest = render_reusable_asocc_figures_if_requested(
+            manifest=reuse_manifest,
+            figures=figures,
+            figure_options=figure_options,
+            figure_format=figure_format,
+            status=figure_status,
         )
-        if reusable is not None:
-            progress_complete(
-                progress=progress,
-                completed=reusable.manifest.completed_runs,
-                max_runs=max(
-                    progress_parameters["max_runs"],
-                    reusable.manifest.completed_runs,
-                ),
-                mode=progress_parameters["mode"],
-                component=progress_parameters["component"],
-                visible=not all((had_component_session, component_parent_convergence)),
-            )
-            progress.finish()
-            reused_manifest = render_reusable_asocc_figures_if_requested(
-                manifest=reusable.manifest,
-                figures=figures,
-                figure_options=figure_options,
-                figure_format=figure_format,
-                status=figure_status,
-            )
-            phase_owner.announce(PHASE_B1_ASOCC, "uncertainty_asocc")
-            complete_asocc_uncertainty_phase(
-                phase=completion_phase,
+        phase_owner.announce(PHASE_B1_ASOCC, "uncertainty_asocc")
+        complete_asocc_uncertainty_phase(
+            phase=completion_phase,
+            manifest=reused_manifest,
+            reuse_status=reuse_status,
+        )
+        write_asocc_phase_index(
+            manifest=reused_manifest,
+            phase_entries=phase_entries,
+            reuse_status=reuse_status,
+        )
+        if owns_phase:
+            phase_owner.finish()
+        return ComponentRun(
+            report=uncertainty_report(
                 manifest=reused_manifest,
-                reuse_status="reused_exact",
-            )
-            write_asocc_phase_index(
-                manifest=reused_manifest,
-                phase_entries=phase_entries,
-                reuse_status="reused_exact",
-            )
-            if owns_phase:
-                phase_owner.finish()
-            return ComponentRun(
-                report=uncertainty_report(
-                    manifest=reused_manifest,
-                    reuse_status="reused_exact",
-                ),
-                session=component_session,
-            )
+                reuse_status=reuse_status,
+            ),
+            session=None if sobol_plan.enabled and finalize_outputs else component_session,
+        )
     append_compatible = compatible
     if component_inventory is not None:
         required_append_run = compatible_completed_run_id_for_context(
@@ -453,7 +459,7 @@ def run_uncertainty_asocc_component(
         and append_run is None
         and component_session.run_result is None
     ):
-        phase_owner.status("Writing inter method tree artifacts", owner="uncertainty_asocc")
+        phase_owner.status("Writing inter-method tree artifacts", owner="uncertainty_asocc")
         write_inter_method_tree_artifacts(
             tree_csv_path=paths.inter_method_tree_csv,
             figure_base_path=paths.inter_method_tree_figure_base,
@@ -560,7 +566,7 @@ def run_uncertainty_asocc_component(
             compatibility_context=run_context["compatibility_context"],
             run_id=manifest.run_id,
         )
-    if figures:
+    if figures and finalize_outputs:
         figure_paths = render_asocc_uncertainty_figures(
             manifest=complete,
             paths=paths,
@@ -594,5 +600,5 @@ def run_uncertainty_asocc_component(
             manifest=complete,
             reuse_status="computed",
         ),
-        session=replace(component_session, run_result=None if finalize_outputs else run_result),
+        session=(None if finalize_outputs else replace(component_session, run_result=run_result)),
     )

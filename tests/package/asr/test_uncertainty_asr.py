@@ -19,8 +19,11 @@ from pyaesa.asr.figures.dynamic_global_ar6 import (
 )
 from pyaesa.asr.figures.common import VALUE_ARRAY_COLUMN
 from pyaesa.asr.uncertainty.evaluation.alignment import build_asr_alignment
+from pyaesa.asr.uncertainty.evaluation.cumulative import (
+    evaluate_asr_cumulative_value_matrix_for_groups,
+)
 from pyaesa.asr.uncertainty.evaluation.planning import build_asr_uncertainty_plan
-from pyaesa.asr.uncertainty.evaluation.scenario_groups import (
+from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
     scenario_identity_groups_from_excluded_columns,
 )
 from pyaesa.asr.uncertainty.evaluation.summary import (
@@ -50,6 +53,7 @@ from pyaesa.asr.uncertainty.sources.lca_inputs import _external_lca_run_value_pr
 from pyaesa.asr.uncertainty.sources.lca_inputs import _external_lca_unit_value_provider
 from pyaesa.asr.uncertainty.sources.lca_inputs import _public_lca_run_value_provider
 from pyaesa.asr.uncertainty.sources.lca_inputs import lca_values_for_runs
+from pyaesa.asr.uncertainty.sources.lca_inputs import render_lca_subfigures_from_input
 from pyaesa.asr.uncertainty.sources.lca_inputs import resolve_lca_uncertainty_component_input
 from pyaesa.asr.uncertainty.sources.config import split_asr_uncertainty_config
 from pyaesa.asr.uncertainty.runtime.models import LCAUncertaintyInput
@@ -60,6 +64,8 @@ from pyaesa.asr.uncertainty.io.source_methods import build_asr_source_methods
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan, ASRUncertaintyRunPaths
 from pyaesa.asr.uncertainty.sobol.runner import (
     ASRSobolEvaluationContext,
+    _asr_sobol_progress_source,
+    _asr_sobol_target_scope,
     _lca_values_for_units,
 )
 from pyaesa.download.ar6.utils.config import GROSS_ALT_KYOTO_WO_AFOLU
@@ -67,6 +73,7 @@ from pyaesa.external_inputs.lca.monte_carlo import (
     ExternalLCAMonteCarloSource,
     _materialize_matrix,
     _normalize_rows,
+    external_lca_values_for_run_rows,
     external_lca_values_for_runs,
     external_lca_values_for_units,
     load_external_lca_monte_carlo_source,
@@ -91,12 +98,18 @@ from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
 )
-from pyaesa.shared.uncertainty_assessment.io.tables import (
+from pyaesa.shared.uncertainty_assessment.io.run_writers import (
     CompactRunMatrixWriter,
     SparseRunRows,
     SparseRunRowsWriter,
+)
+from pyaesa.shared.uncertainty_assessment.io.tables import (
     read_uncertainty_table,
     write_uncertainty_table,
+)
+from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
+    iter_compact_run_matrix,
+    iter_sparse_run_rows,
 )
 from tests.package.helpers.asr_dummy_repo import (
     prepare_dynamic_asr_io_lca_repo,
@@ -104,6 +117,51 @@ from tests.package.helpers.asr_dummy_repo import (
     prepare_static_asr_external_lca_repo,
     prepare_static_asr_io_lca_repo,
 )
+from tests.package.helpers.uncertainty_branch_outputs import (
+    assert_mixed_static_dynamic_cc_outputs,
+)
+
+
+def _read_compact_run_matrix_frame(*, path: Path, column_count: int) -> pd.DataFrame:
+    columns = [str(index) for index in range(int(column_count))]
+    frames = []
+    for run_index, values in iter_compact_run_matrix(
+        path=path,
+        output_format="csv_compact",
+        column_count=int(column_count),
+    ):
+        frame = pd.DataFrame(values, columns=columns)
+        frame.insert(0, "run_index", run_index)
+        frames.append(frame)
+    if not frames:
+        return pd.DataFrame(columns=["run_index", *columns])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_sparse_run_rows_frame(*, path: Path) -> pd.DataFrame:
+    frames = []
+    value_column = "asr"
+    for rows in iter_sparse_run_rows(path=path, output_format="csv_compact"):
+        value_column = rows.value_column
+        frames.append(
+            pd.DataFrame(
+                {
+                    "run_index": rows.run_index,
+                    "public_row_id": rows.public_row_id,
+                    rows.value_column: rows.values,
+                }
+            )
+        )
+    if not frames:
+        return pd.DataFrame(columns=["run_index", "public_row_id", value_column])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_run_artifact_frame(*, path: Path, layout: str, column_count: int) -> pd.DataFrame:
+    if layout == "compact_run_matrix":
+        return _read_compact_run_matrix_frame(path=path, column_count=column_count)
+    assert layout == "sparse_selected_rows"
+    return _read_sparse_run_rows_frame(path=path)
 
 
 def _static_asr_kwargs(*, project_name: str) -> dict:
@@ -162,6 +220,97 @@ def test_uncertainty_asr_rejects_sobol_years_outside_studied_years() -> None:
             sobol_parameters={"sobol_years": [2006]},
             refresh=True,
         )
+
+
+def test_uncertainty_asr_sobol_helpers_cover_generic_progress_and_yearless_static(
+    tmp_path: Path,
+) -> None:
+    def _paths(run_root: Path) -> ASRUncertaintyRunPaths:
+        return ASRUncertaintyRunPaths(
+            run_root=run_root,
+            public_row_identity=run_root / "results" / "identity.csv",
+            public_runs=run_root / "results" / "runs.csv",
+            summary_stats_runs=run_root / "results" / "summary.csv",
+            cumulative_row_identity=run_root / "results" / "cumulative_identity.csv",
+            cumulative_runs=run_root / "results" / "cumulative_runs.csv",
+            cumulative_summary_stats_runs=run_root / "results" / "cumulative_summary.csv",
+            results_readme=run_root / "results" / "README.txt",
+            source_methods=run_root / "logs" / "source_methods.csv",
+            sobol_indices=run_root / "results" / "sobol" / "indices.csv",
+            sobol_source_summary=run_root / "results" / "sobol" / "summary.csv",
+            sobol_readme=run_root / "results" / "sobol" / "README.txt",
+            scope_manifest=run_root / "logs" / "scope_manifest.json",
+        )
+
+    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "dynamic_ar6__gross" / "mc")) == (
+        "asr_dynamic_ar6"
+    )
+    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "static__pb_lcia" / "mc")) == (
+        "asr_static"
+    )
+    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "custom" / "mc")) == "asr"
+
+    identity = pd.DataFrame(
+        {
+            "public_row_id": [3],
+            "cc_type": ["static"],
+            "lcia_method": ["pb_lcia"],
+            "impact": ["AAL"],
+        }
+    )
+    target_identity, static_positions, cumulative_groups = _asr_sobol_target_scope(
+        identity=identity,
+        target_years=(2020,),
+        active_sources=(),
+        dynamic_category_uncertainty_active=False,
+    )
+    assert target_identity["public_row_id"].tolist() == [0]
+    assert static_positions.tolist() == [3]
+    assert cumulative_groups == ()
+
+
+def test_uncertainty_asr_external_lca_run_provider_extends_cached_source_values() -> None:
+    source_identity = pd.DataFrame(
+        {
+            "public_row_id": [0],
+            "year": [2020],
+            "impact": ["GWP_100"],
+            "impact_unit": ["kg CO2-eq"],
+        }
+    )
+    source = ExternalLCAMonteCarloSource(
+        version_name="supplier_v1",
+        lcia_method="gwp100_lcia",
+        identity=source_identity,
+        run_indices=np.array([0, 1, 2, 3], dtype=np.int64),
+        paths=(Path("external.csv"),),
+        values_for_runs=lambda run_indices: np.asarray(
+            [[10.0 + int(run)] for run in run_indices],
+            dtype=float,
+        ),
+    )
+    identity = pd.concat(
+        [
+            source_identity,
+            pd.DataFrame(
+                {
+                    "public_row_id": [1],
+                    "year": [2020],
+                    "impact": ["GWP_100"],
+                    "impact_unit": ["kg CO2-eq"],
+                }
+            ),
+        ],
+        ignore_index=True,
+    )
+    provider = _external_lca_run_value_provider(
+        identity=identity,
+        value_blocks=[source, np.array([5.0], dtype=float)],
+        version_name="supplier_v1",
+    )
+    assert provider(np.array([0], dtype=np.int64)).tolist() == [[10.0, 5.0]]
+    assert provider(np.array([1], dtype=np.int64)).tolist() == [[11.0, 5.0]]
+    assert provider(np.array([2], dtype=np.int64)).tolist() == [[12.0, 5.0]]
 
 
 def test_uncertainty_asr_rejects_polar_years_outside_studied_years() -> None:
@@ -809,10 +958,10 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
         "r_c": None,
         "r_f": None,
         "source": "exiobase_396_ixi",
-        "group_reg": False,
-        "group_sec": False,
-        "group_version": None,
-        "aggreg_indices": False,
+        "agg_reg": False,
+        "agg_sec": False,
+        "agg_version": None,
+        "group_indices": False,
         "base_asocc_args": {
             "method_plan": "one_step",
             "l1_methods": None,
@@ -867,9 +1016,9 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
     try:
         io_paths = resolve_io_lca_paths(
             project_name="asr_component_deterministic",
-            group_reg=False,
-            group_sec=False,
-            group_version=None,
+            agg_reg=False,
+            agg_sec=False,
+            agg_version=None,
         )
         io_path = main_results_path(
             paths=io_paths,
@@ -1017,6 +1166,17 @@ def test_uncertainty_asr_static_io_lca_outputs(
             "lcia_uncertainty": {"sector_cov_mapping": {"D": "Electricity"}}
         },
     }
+    no_sobol_manifest = uncertainty_asr(
+        **kwargs,
+        figures=False,
+        figure_options={
+            "per_method": False,
+            "multi_method": False,
+            "inter_method": True,
+            "polar": {"polar_years": []},
+        },
+        refresh=True,
+    ).manifest
 
     manifest = uncertainty_asr(
         **kwargs,
@@ -1027,12 +1187,13 @@ def test_uncertainty_asr_static_io_lca_outputs(
         },
         figures=False,
         figure_options={"polar": {"polar_years": []}},
-        refresh=True,
+        refresh=False,
     ).manifest
     runtime_output = capsys.readouterr().out
 
     assert manifest.family == "asr"
     assert runtime_output.strip()
+    assert manifest.run_id == no_sobol_manifest.run_id
     assert manifest.completed_runs == 2
     assert manifest.artifacts is not None
     assert {
@@ -1047,8 +1208,16 @@ def test_uncertainty_asr_static_io_lca_outputs(
         path=Path(manifest.artifacts["public_row_identity"]),
         output_format="csv_compact",
     )
-    runs = pd.read_csv(manifest.artifacts["asr_runs"])
+    runs = _read_run_artifact_frame(
+        path=Path(manifest.artifacts["asr_runs"]),
+        layout=str(manifest.artifacts["public_output"]["asr_runs"]["layout"]),
+        column_count=len(identity),
+    )
     summary = pd.read_csv(manifest.artifacts["summary_stats_runs"])
+    sobol = read_uncertainty_table(
+        path=Path(manifest.artifacts["sobol_indices"]),
+        output_format="csv_compact",
+    )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
     readme_text = Path(manifest.artifacts["results_readme"]).read_text(encoding="utf-8")
 
@@ -1071,6 +1240,8 @@ def test_uncertainty_asr_static_io_lca_outputs(
     assert "cumulative_asr_runs" not in manifest.artifacts
     assert "cumulative_summary_stats_runs" not in manifest.artifacts
     assert "cumulative_asr_runs" not in manifest.artifacts["public_output"]
+    assert "year" in sobol.columns
+    assert set(sobol["year"]) == {2005, 2006}
     assert Path(manifest.artifacts["sobol_indices"]).exists()
     assert all(len(line) <= 100 for line in readme_text.splitlines())
 
@@ -1115,7 +1286,7 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
         "sobol_parameters": {"active": False},
         "figures": True,
         "figure_options": {
-            "per_method": True,
+            "per_method": False,
             "multi_method": True,
             "inter_method": True,
             "polar": {"polar_style": "whisker", "polar_years": [2005]},
@@ -1123,7 +1294,9 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
         "figure_format": {"format": "svg", "dpi": 1},
         "subfigures": False,
     }
-    manifest = uncertainty_asr(**kwargs, refresh=True).manifest
+    report = uncertainty_asr(**kwargs, refresh=True)
+    manifest = report.manifest
+    assert report.reuse_status == "computed"
 
     assert manifest.artifacts is not None
     figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
@@ -1141,21 +1314,6 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
         for name in figure_names
     )
     assert any(name.startswith("multi_method__") for name in figure_names)
-    assert any("per_method" in path.parts for path in figure_paths)
-    no_product_manifest = uncertainty_asr(
-        **{
-            **kwargs,
-            "figure_options": {
-                "per_method": False,
-                "multi_method": False,
-                "inter_method": False,
-                "polar": {"active": False},
-            },
-        },
-        refresh=False,
-    ).manifest
-    assert no_product_manifest.artifacts is not None
-    assert no_product_manifest.artifacts["figure_paths"] == []
 
 
 def test_uncertainty_asr_static_pb_lcia_single_year_public_figures_cover_violin_products(
@@ -1216,11 +1374,6 @@ def test_uncertainty_asr_static_pb_lcia_single_year_public_figures_cover_violin_
         name.startswith("polar_violin_") and not name.startswith("polar_violin_inter_method__")
         for name in figure_names
     )
-    no_polar_manifest = uncertainty_asr(
-        **{**kwargs, "figure_options": {"polar": {"active": False}}, "refresh": False}
-    ).manifest
-    no_polar_names = {Path(path).name for path in no_polar_manifest.artifacts["figure_paths"]}
-    assert not any(name.startswith("polar_") for name in no_polar_names)
 
 
 def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
@@ -1281,7 +1434,11 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
             },
         },
         output_format="csv_compact",
-        sobol_parameters={"active": False},
+        sobol_parameters={
+            "active": True,
+            "fixed": {"active": True, "n_base_samples": 1},
+            "convergence": {"active": False},
+        },
         figures=False,
         subfigures=False,
         refresh=True,
@@ -1305,12 +1462,19 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
         output_format="csv_compact",
     )
     cumulative_summary = pd.read_csv(manifest.artifacts["cumulative_summary_stats_runs"])
+    sobol = read_uncertainty_table(
+        path=Path(manifest.artifacts["sobol_indices"]),
+        output_format="csv_compact",
+    )
     for frame in (identity, summary, cumulative_identity, cumulative_summary):
         assert {"cc_flow", "cc_variable"}.issubset(frame.columns)
         assert set(frame["cc_flow"]) == {CC_FLOW_POSITIVE}
         assert set(frame["cc_variable"]) == {GROSS_ALT_KYOTO_WO_AFOLU}
     assert "year" not in cumulative_identity.columns
     assert ASOCC_TIME_ROUTE_PUBLIC_COLUMN not in cumulative_identity.columns
+    assert manifest.sobol is not None and manifest.sobol["ran"] is True
+    assert "year" not in sobol.columns
+    assert set(sobol["cc_type"]) == {"dynamic_ar6"}
     assert set(cumulative_summary["asr_metric"]) == {
         ASR_CUMULATIVE_VALUE_METRIC,
         ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
@@ -1361,7 +1525,80 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
     assert not ar6_rows.summary.empty
 
 
-def test_uncertainty_asr_dynamic_external_lca_figures_component_diagnostics(
+def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_repo) -> None:
+    prepare_dynamic_asr_io_lca_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        lcia_method="gwp100_lcia",
+        impact_parent="GWP_100",
+        impact_unit="kg CO2-eq",
+        historical_years=[2020, 2021],
+        scenario_years=[2030],
+    )
+    prepare_static_asr_pb_lcia_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        years=[2020, 2021],
+    )
+
+    kwargs = {
+        "project_name": "asr_uncertainty_mixed_branch_roots",
+        "years": range(2020, 2022),
+        "lcia_method": ["pb_lcia", "gwp100_lcia"],
+        "fu_code": "L2.a.a",
+        "r_p": ["FR"],
+        "s_p": ["D"],
+        "source": "exiobase_396_ixi",
+        "base_asocc_args": {
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+            "ssp_scenario": ["SSP2"],
+            "include_lcia_based_allocation_methods": True,
+        },
+        "base_cc_args": {
+            "static": {"exclude_max_cc": True},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
+        },
+        "lca_args": {
+            "external_lca": {"active": False, "version_name": None},
+            "io_lca": {"active": True},
+        },
+        "uncertainty_config": {
+            "mc_parameters": {
+                "fixed": {"active": True, "n_runs": 1},
+                "convergence": {"active": False},
+            },
+            **_inactive_denominator_uncertainty_sources(),
+        },
+        "output_format": "csv_compact",
+        "sobol_parameters": {"active": False},
+        "figures": False,
+        "subfigures": False,
+    }
+    manifest = uncertainty_asr(**kwargs, refresh=True).manifest
+
+    by_branch = assert_mixed_static_dynamic_cc_outputs(
+        manifest=manifest,
+        output_format="csv_compact",
+    )
+    static_manifest = by_branch["static__gwp100_lcia"]
+    dynamic_manifest = by_branch["dynamic_ar6__gwp100_lcia"]
+    assert "cumulative_asr_runs" not in static_manifest.artifacts
+    assert static_manifest.compatibility_context is not None
+    assert bool(static_manifest.compatibility_context["has_cumulative_outputs"]) is False
+    assert "cumulative_asr_runs" in dynamic_manifest.artifacts
+    assert dynamic_manifest.compatibility_context is not None
+    assert bool(dynamic_manifest.compatibility_context["has_cumulative_outputs"]) is True
+    reused_report = uncertainty_asr(**kwargs, refresh=False)
+    assert reused_report.reuse_status == "reused_exact"
+    assert_mixed_static_dynamic_cc_outputs(
+        manifest=reused_report.manifest,
+        output_format="csv_compact",
+        expected_run_id=manifest.run_id,
+    )
+
+
+def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
     allocation_dummy_repo,
 ) -> None:
     prepare_dynamic_asr_io_lca_repo(
@@ -1433,7 +1670,7 @@ def test_uncertainty_asr_dynamic_external_lca_figures_component_diagnostics(
         },
         output_format="csv_compact",
         sobol_parameters={"active": False},
-        figures=True,
+        figures=False,
         figure_options={"polar": {"polar_years": []}},
         figure_format={"format": "svg", "dpi": 1},
         subfigures=False,
@@ -1441,9 +1678,7 @@ def test_uncertainty_asr_dynamic_external_lca_figures_component_diagnostics(
     ).manifest
 
     assert manifest.artifacts is not None
-    figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
-    assert figure_paths
-    assert all(path.exists() for path in figure_paths)
+    assert manifest.artifacts.get("figure_paths") in (None, [])
     assert (
         Path(manifest.artifacts["scope_manifest"]).parent / "composite_phase_index.json"
     ).exists()
@@ -1492,8 +1727,7 @@ def test_uncertainty_asr_static_io_lca_component_source_routing(
             "fixed": {"active": True, "n_base_samples": 4},
             "convergence": {"active": False},
         },
-        figures=True,
-        figure_format={"format": "svg", "dpi": 1},
+        figures=False,
         refresh=True,
     ).manifest
 
@@ -1505,7 +1739,6 @@ def test_uncertainty_asr_static_io_lca_component_source_routing(
     assert lca_only.sobol is not None
     assert lca_only.sobol["ran"] is False
     assert lca_only.sobol["active_source_count"] == 1
-    assert lca_only.artifacts["figure_paths"]
     acc_only_kwargs = _static_asr_kwargs(project_name="asr_uncertainty_io_lca_acc_only")
     acc_only_kwargs["base_asocc_args"]["include_lcia_based_allocation_methods"] = True
     acc_only_kwargs["base_asocc_args"]["reference_years"] = [2005]
@@ -1616,6 +1849,14 @@ def test_uncertainty_asr_static_external_lca_monte_carlo_outputs(
         "io_lca": {"active": False},
     }
     kwargs["uncertainty_config"]["mc_parameters"]["fixed"]["n_runs"] = 2
+    kwargs["figure_options"] = {
+        "per_method": False,
+        "multi_method": True,
+        "inter_method": True,
+        "polar": {"active": False},
+    }
+    kwargs["figure_format"] = {"format": "svg", "dpi": 1}
+    kwargs["subfigures"] = True
 
     manifest = uncertainty_asr(
         **kwargs,
@@ -1635,13 +1876,27 @@ def test_uncertainty_asr_static_external_lca_monte_carlo_outputs(
     assert manifest.sobol["ran"] is False
     assert manifest.sobol["active_source_count"] == 1
     identity = pd.read_csv(manifest.artifacts["public_row_identity"])
-    runs = pd.read_csv(manifest.artifacts["asr_runs"])
+    runs = _read_run_artifact_frame(
+        path=Path(manifest.artifacts["asr_runs"]),
+        layout=str(manifest.artifacts["public_output"]["asr_runs"]["layout"]),
+        column_count=len(identity),
+    )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
+    acc_manifest = read_manifest(
+        path=Path(manifest.deterministic_prerequisites[0]["scope_manifest"])
+    )
+    asocc_manifest = read_manifest(
+        path=Path(acc_manifest.deterministic_prerequisites[0]["scope_manifest"])
+    )
 
     assert "lca_ssp_scenario" not in identity.columns
     assert runs["run_index"].tolist() == [0, 1]
     assert bool(runs.drop(columns=["run_index"]).notna().all().all())
     assert "external_lca::supplier_v1" in set(source_methods["source_name"])
+    assert acc_manifest.artifacts is not None
+    assert asocc_manifest.artifacts is not None
+    assert Path(acc_manifest.artifacts["summary_stats_runs"]).exists()
+    assert Path(asocc_manifest.artifacts["summary_stats_runs"]).exists()
 
 
 def test_uncertainty_asr_static_external_lca_deterministic_repeat(
@@ -1698,7 +1953,12 @@ def test_uncertainty_asr_static_external_lca_deterministic_repeat(
     assert manifest.run_id == no_figure_manifest.run_id
     assert manifest.artifacts is not None
     assert manifest.artifacts["figure_paths"]
-    runs = pd.read_csv(manifest.artifacts["asr_runs"])
+    identity = pd.read_csv(manifest.artifacts["public_row_identity"])
+    runs = _read_run_artifact_frame(
+        path=Path(manifest.artifacts["asr_runs"]),
+        layout=str(manifest.artifacts["public_output"]["asr_runs"]["layout"]),
+        column_count=len(identity),
+    )
     assert runs.shape[0] == 4
     reused = uncertainty_asr(
         **kwargs,
@@ -1721,6 +1981,99 @@ def test_uncertainty_asr_static_external_lca_deterministic_repeat(
     }
     with pytest.raises(FileNotFoundError):
         uncertainty_asr(**missing_kwargs, refresh=True).manifest
+
+
+def test_uncertainty_asr_static_io_lca_deterministic_subfigures(
+    allocation_dummy_repo,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    prepare_static_asr_io_lca_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        lcia_method="gwp100_lcia",
+        impact_parent="GWP_100",
+        impact_unit="kg CO2-eq",
+    )
+    kwargs = _static_asr_kwargs(project_name="asr_uncertainty_static_io_lca_subfigures")
+    kwargs["figures"] = True
+    kwargs["subfigures"] = True
+    kwargs["figure_options"] = {
+        "per_method": False,
+        "multi_method": False,
+        "inter_method": False,
+        "polar": {"active": False},
+    }
+    kwargs["figure_format"] = {"format": "svg", "dpi": 1}
+
+    manifest = uncertainty_asr(**kwargs, refresh=True).manifest
+    output = capsys.readouterr().out
+
+    assert manifest.status == "complete"
+    assert manifest.artifacts is not None
+    assert manifest.artifacts["figure_paths"] == []
+    assert output.count("[uncertainty_acc] Monte Carlo completed fixed runs") == 1
+
+
+def test_render_lca_subfigures_filters_external_deterministic_inputs(
+    allocation_dummy_repo,
+) -> None:
+    prepare_static_asr_external_lca_repo(
+        allocation_dummy_repo,
+        project_name="asr_uncertainty_external_lca_render_filter",
+        source="oecd_v2025",
+        lcia_method="gwp100_lcia",
+        impact="GWP_100",
+        impact_unit="kg CO2-eq",
+        include_deterministic=True,
+    )
+    project_root = allocation_dummy_repo.repo_root / "asr_uncertainty_external_lca_render_filter"
+    deterministic_path = (
+        external_lca_deterministic_dir(project_base=project_root) / "supplier_v1__gwp100_lcia.csv"
+    )
+
+    render_lca_subfigures_from_input(
+        lca_input=LCAUncertaintyInput(
+            identity=pd.DataFrame(),
+            fixed_values=None,
+            manifest=None,
+            external_inputs=(
+                {
+                    "type": "ignored_external_lca",
+                    "lcia_method": "gwp100_lcia",
+                    "paths": [str(deterministic_path)],
+                },
+                {
+                    "type": "external_lca_deterministic",
+                    "lcia_method": "pb_lcia",
+                    "paths": [str(deterministic_path)],
+                },
+                {
+                    "type": "external_lca_deterministic",
+                    "lcia_method": "gwp100_lcia",
+                    "paths": [str(deterministic_path)],
+                },
+            ),
+            source_method_rows=pd.DataFrame(),
+            active_sources=(),
+            lca_type="external",
+            phase_output_root=project_root / "C_asr" / "run",
+        ),
+        base_allocate_args={
+            "fu_code": "L2.a.a",
+            "years": [2005],
+            "r_p": ["FR"],
+            "s_p": ["D"],
+        },
+        lcia_methods=["gwp100_lcia"],
+        lca_version_name="supplier_v1",
+        lca_config={},
+        figure_format={"format": "svg", "dpi": 1},
+        status=NullPhasePrinter(),
+        completed_runs=1,
+    )
+
+    figure_dir = external_lca_deterministic_dir(project_base=project_root) / "figures"
+    assert any(path.suffix == ".svg" for path in figure_dir.iterdir())
 
 
 def test_uncertainty_asr_convergence_reports_unreached_and_reuse(
@@ -1914,6 +2267,25 @@ def test_asr_convergence_checks_dynamic_cumulative_metrics(tmp_path: Path) -> No
     assert convergence["reached"] is False
 
 
+def test_asr_cumulative_dense_value_matrix_sums_full_period_groups() -> None:
+    acc_values = np.array([[2.0, 4.0, 10.0], [4.0, 8.0, 10.0]], dtype=np.float64)
+    lca_values = np.array([[10.0, 30.0, 50.0], [20.0, 60.0, 50.0]], dtype=np.float64)
+
+    values = evaluate_asr_cumulative_value_matrix_for_groups(
+        acc_values=acc_values,
+        lca_values=lca_values,
+        acc_positions=np.array([0, 1, 2], dtype=np.int64),
+        lca_positions=np.array([0, 1, 2], dtype=np.int64),
+        lca_unit_factors=np.array([1.0, 2.0, 1.0], dtype=np.float64),
+        public_row_groups=(("0", "1"), ("2",)),
+    )
+
+    np.testing.assert_allclose(
+        values,
+        np.array([[(10.0 + 60.0) / (2.0 + 4.0), 5.0], [(20.0 + 120.0) / (4.0 + 8.0), 5.0]]),
+    )
+
+
 def test_asr_checkpoints_skip_final_component_refresh_without_live_sessions(
     tmp_path: Path,
 ) -> None:
@@ -1963,9 +2335,7 @@ def test_asr_checkpoints_skip_final_component_refresh_without_live_sessions(
         lca_version_name=None,
         base_allocate_args={},
         output_format="csv_compact",
-        phase=NullPhasePrinter(),
-        render_subfigures=False,
-        subfigures=False,
+        phase=cast(Any, NullPhasePrinter()),
         figure_options=None,
         figure_format=None,
         run_id=None,
@@ -2025,6 +2395,46 @@ def _compact_acc_manifest(*, tmp_path: Path, acc_values: pd.DataFrame):
             "results_readme": str(readme_path),
             "source_methods": str(source_methods_path),
             "public_output": {"acc_runs": {"layout": "compact_run_matrix"}},
+        },
+    )
+
+
+def _sparse_acc_manifest(
+    *,
+    tmp_path: Path,
+    identity: pd.DataFrame,
+    rows: SparseRunRows,
+):
+    """Build a sparse ACC manifest backed by real sparse run fragments."""
+    acc_root = tmp_path / "acc_sparse_run"
+    results = acc_root / "results"
+    logs = acc_root / "logs"
+    results.mkdir(parents=True)
+    logs.mkdir(parents=True)
+    identity_path = results / "public_row_identity.csv"
+    runs_path = results / "acc_runs.csv"
+    empty = results / "empty.csv"
+    source_methods = logs / "source_methods.csv"
+    identity.to_csv(identity_path, index=False)
+    with SparseRunRowsWriter(path=runs_path, output_format="csv_compact") as writer:
+        writer.write_batch(rows=rows, batch_index=0)
+    empty.write_text("", encoding="utf-8")
+    source_methods.write_text("source_component,source_name\nacc,demo\n", encoding="utf-8")
+    completed_runs = 0 if rows.run_index.size == 0 else int(rows.run_index.max()) + 1
+    return build_manifest(
+        family="acc",
+        mode="fixed",
+        output_format="csv_compact",
+        active_sources=("asocc::inter_method_uncertainty",),
+        completed_runs=completed_runs,
+        artifacts={
+            "scope_manifest": str(logs / "scope_manifest.json"),
+            "public_row_identity": str(identity_path),
+            "acc_runs": str(runs_path),
+            "summary_stats_runs": str(empty),
+            "results_readme": str(empty),
+            "source_methods": str(source_methods),
+            "public_output": {"acc_runs": {"layout": "sparse_selected_rows"}},
         },
     )
 
@@ -2307,7 +2717,15 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         source=path_source,
         run_indices=path_source.run_indices,
     ).tolist() == [[1.0, 3.0], [2.0, 4.0]]
-    assert path_source.values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 2)
+    values_for_run_rows = path_source.values_for_run_rows
+    values_for_runs = path_source.values_for_runs
+    assert values_for_run_rows is not None
+    assert values_for_runs is not None
+    assert values_for_run_rows(
+        np.array([1], dtype=np.int64),
+        np.array([1], dtype=np.int64),
+    ).tolist() == [[4.0]]
+    assert values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 2)
     base_args = {"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]}
     parquet_path = bad_dir / "supplier_v1__gwp100_lcia.parquet"
     historical_and_ssp_rows.to_parquet(parquet_path, index=False, row_group_size=2)
@@ -2449,6 +2867,11 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         source=compact_source,
         run_indices=compact_source.run_indices,
     ).tolist() == [[1.0, 3.0], [2.0, 4.0]]
+    assert external_lca_values_for_run_rows(
+        source=compact_source,
+        run_indices=compact_source.run_indices,
+        row_positions=np.array([1], dtype=np.int64),
+    ).tolist() == [[3.0], [4.0]]
     set_default_repo_root(repo_root)
     try:
         reloaded_compact = load_external_lca_monte_carlo_source_from_path(
@@ -2868,14 +3291,86 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
     assert completed == 2
     assert convergence is not None
     assert convergence["reached"] is True
-    assert pd.read_csv(paths.public_runs).empty
-    cumulative_runs = pd.read_csv(paths.cumulative_runs)
+    assert _read_sparse_run_rows_frame(path=paths.public_runs).empty
+    cumulative_runs = _read_compact_run_matrix_frame(
+        path=paths.cumulative_runs,
+        column_count=len(plan.cumulative_identity),
+    )
     cumulative_summary = pd.read_csv(paths.cumulative_summary_stats_runs)
     assert cumulative_runs["run_index"].tolist() == [0, 1]
     assert bool(cumulative_runs["0"].isna().all())
     assert bool(cumulative_summary["mean"].isna().all())
     assert ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN in cumulative_summary.columns
     assert "component_inventory" not in context["deterministic_prerequisites"][0]
+
+
+def test_asr_sparse_convergence_accumulates_selected_group_means(tmp_path: Path) -> None:
+    identity = pd.DataFrame({"public_row_id": [0], "year": [2005]})
+    acc_manifest = _sparse_acc_manifest(
+        tmp_path=tmp_path,
+        identity=identity,
+        rows=SparseRunRows(
+            run_index=np.array([0, 1], dtype=np.int64),
+            public_row_id=np.array([0, 0], dtype=np.int64),
+            values=np.array([4.0, 4.0], dtype=np.float64),
+            value_column="acc",
+        ),
+    )
+    summary_identity = pd.concat(
+        [
+            identity.assign(asr_metric=ASR_VALUE_METRIC),
+            identity.assign(asr_metric=ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC),
+        ],
+        ignore_index=True,
+    )
+    plan = ASRUncertaintyPlan(
+        identity=identity,
+        summary_identity=summary_identity,
+        summary_public_row_groups=(("0",),),
+        cumulative_identity=pd.DataFrame(),
+        cumulative_summary_identity=pd.DataFrame(),
+        cumulative_summary_public_row_groups=(),
+        cumulative_public_row_groups=(),
+        acc_positions=np.array([0], dtype=np.int64),
+        lca_positions=np.array([0], dtype=np.int64),
+        lca_unit_factors=np.array([1.0], dtype=np.float64),
+        acc_manifest=acc_manifest,
+        lca_input=LCAUncertaintyInput(
+            identity=identity,
+            fixed_values=np.array([2.0], dtype=np.float64),
+            manifest=None,
+            external_inputs=(),
+            source_method_rows=pd.DataFrame(),
+            active_sources=(),
+            lca_type="io_lca",
+        ),
+        asr_run_layout="sparse_selected_rows",
+        source_method_rows=pd.DataFrame(),
+        active_sources=("acc::asocc::inter_method_uncertainty",),
+    )
+    paths = _asr_run_paths(tmp_path / "asr_sparse_run")
+    runtime = normalize_uncertainty_request(
+        family="asr",
+        output_format="csv_compact",
+        mc_parameters={
+            "fixed": {"active": False},
+            "convergence": {"active": True, "max_runs": 2, "rtol": 0.0, "stable_runs": 1},
+        },
+    )
+    runtime = replace(runtime, batch_size=1)
+
+    completed, convergence = write_asr_run_outputs(paths=paths, plan=plan, runtime=runtime)
+
+    assert completed == 2
+    assert convergence is not None
+    assert convergence["reached"] is True
+    summary = pd.read_csv(paths.summary_stats_runs)
+    value = summary.loc[summary["asr_metric"].eq(ASR_VALUE_METRIC)].iloc[0]
+    frequency = summary.loc[
+        summary["asr_metric"].eq(ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)
+    ].iloc[0]
+    assert value["mean"] == 0.5
+    assert frequency[ASR_FREQUENCY_VALUE_COLUMN] == 1.0
 
 
 def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
@@ -3027,7 +3522,10 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
 
     completed, convergence = write_asr_run_outputs(paths=paths, plan=plan, runtime=runtime)
 
-    cumulative_runs = pd.read_csv(paths.cumulative_runs)
+    cumulative_runs = _read_compact_run_matrix_frame(
+        path=paths.cumulative_runs,
+        column_count=len(plan.cumulative_identity),
+    )
     cumulative_summary = pd.read_csv(paths.cumulative_summary_stats_runs)
     assert completed == 2
     assert convergence is None

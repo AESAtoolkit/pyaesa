@@ -17,7 +17,7 @@ from .io_helpers import (
 )
 
 _L1_STATIC_FIELDS: dict[str, object] = {
-    "aggreg_indices": "ungrouped",
+    "group_indices": "ungrouped",
     "bucket": "l1",
     "l2_country_axis": "",
     "l2_country_code": "",

@@ -2,8 +2,8 @@
 
 Transforms World Bank and IMF (Taiwan) into the processed schema by
 merging the tables, ensuring China/Taiwan splits are applied, filling missing
-years via log linear regression, matching to MRIO regions, and aggregating
-parent regions when requested by MRIO data.
+years via log linear regression, matching to MRIO regions, and parent region
+aggregation when requested by MRIO data.
 """
 
 import math

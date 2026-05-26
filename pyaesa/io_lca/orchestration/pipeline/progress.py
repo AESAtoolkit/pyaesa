@@ -103,7 +103,7 @@ def io_lca_mode_line(
     indices_label = format_indices_label(filters)
     if mode_tag is None:
         return f"{prefix} Branch: fu={fu_code}, indices={indices_label}"
-    return f"{prefix} Branch: fu={fu_code}, indices={indices_label}, aggreg_indices={mode_tag}"
+    return f"{prefix} Branch: fu={fu_code}, indices={indices_label}, group_indices={mode_tag}"
 
 
 def year_progress(*, source: str, action: str, total: int) -> YearProgressPrinter:

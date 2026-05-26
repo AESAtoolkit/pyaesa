@@ -19,13 +19,13 @@ def _reference_saved_dir(
     *,
     source: str,
     ref_year: int,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> Path:
     """Return the deterministic MRIO directory for one reference year."""
     return _get_mrio_year_dir(
         source=source,
         year=int(ref_year),
-        group_version=group_version,
+        agg_version=agg_version,
     )
 
 
@@ -82,21 +82,21 @@ def load_reference_lcia_method_payload(
     state,
     ref_year: int,
     lcia_method: str,
-    group_version: str | None,
+    agg_version: str | None,
     allow_method_year_fallback: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Load one deterministic reference-year LCIA payload for one method."""
     saved_dir = _reference_saved_dir(
         source=context.source,
         ref_year=ref_year,
-        group_version=group_version,
+        agg_version=agg_version,
     )
     lcia_by_method_raw = _load_lcia_for_year(
         context=context,
         state=state,
         year=int(ref_year),
         saved_dir=saved_dir,
-        group_version_override=group_version,
+        agg_version_override=agg_version,
         allow_method_year_fallback=allow_method_year_fallback,
         selected_lcia_methods=[str(lcia_method)],
     )
@@ -113,7 +113,7 @@ def load_reference_lcia_reg(
     ref_year: int,
     lcia_method: str,
     lcia_kind: str,
-    group_version: str | None,
+    agg_version: str | None,
 ) -> pd.DataFrame:
     """Load reference-year regional LCIA data for one method/boundary."""
     try:
@@ -122,7 +122,7 @@ def load_reference_lcia_reg(
             state=state,
             ref_year=ref_year,
             lcia_method=lcia_method,
-            group_version=group_version,
+            agg_version=agg_version,
             allow_method_year_fallback=False,
         )
     except ValueError as exc:
@@ -164,7 +164,7 @@ def load_reference_lcia_reg_for_domain(
         ref_year=ref_year,
         lcia_method=lcia_method,
         lcia_kind=lcia_kind,
-        group_version=None if use_original_domain else context.group_version,
+        agg_version=None if use_original_domain else context.agg_version,
     )
 
 
@@ -181,7 +181,7 @@ def ensure_pr_hr_child_impact_timeseries_loaded(
     lcia_store = state.lcia_timeseries_original if use_original_domain else state.lcia_timeseries
     method_store = lcia_store.setdefault(lcia_method, {"CBA_FD": {}, "PBA": {}})
     kind_store = method_store.setdefault(lcia_kind, {})
-    group_version = None if use_original_domain else context.group_version
+    agg_version = None if use_original_domain else context.agg_version
     metric_key = "e_cba_fd_reg" if lcia_kind == "CBA_FD" else "e_pba_reg"
     for hist_year in sorted(y for y in context.historical_years if y <= int(through_year)):
         if hist_year in kind_store:
@@ -189,7 +189,7 @@ def ensure_pr_hr_child_impact_timeseries_loaded(
         saved_dir = _get_mrio_year_dir(
             source=context.source,
             year=int(hist_year),
-            group_version=group_version,
+            agg_version=agg_version,
         )
         try:
             # PR-HR cumulative windows keep child impacts until after integration.
@@ -216,7 +216,7 @@ def load_ar_l2_reference_lcia_payload(
         state=state,
         ref_year=ref_year,
         lcia_method=lcia_key,
-        group_version=context.group_version,
+        agg_version=context.agg_version,
         allow_method_year_fallback=True,
     )
     allowed_by_axis = _reference_allowed_axes(context=context)

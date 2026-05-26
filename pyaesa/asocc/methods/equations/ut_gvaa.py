@@ -94,11 +94,11 @@ def compute_ut_gvaa_l2(
         if fu_code == "L2.b.b":
             weights = _divide_frame_by_series(weighted_by_rc, gva_safe)
             return _stack_to_year(weights, year, "r_u")
-        grouped = pd.DataFrame(
+        aggregated = pd.DataFrame(
             weighted_by_rc.groupby(level=["r_c", "s_p"]).sum(min_count=1),
             copy=False,
         )
-        weights = _divide_frame_by_series(grouped, gva_safe)
+        weights = _divide_frame_by_series(aggregated, gva_safe)
         return _stack_to_year(weights, year, "r_u")
 
     active_l1_weights = cast(pd.Series, l1_weights)
@@ -117,9 +117,9 @@ def compute_ut_gvaa_l2(
             l1_weights=active_l1_weights,
             year=year,
         )
-    grouped = pd.DataFrame(
+    aggregated = pd.DataFrame(
         weighted_by_rc.groupby(level=["r_c", "s_p"]).sum(min_count=1),
         copy=False,
     )
-    weights = _divide_frame_by_series(grouped, gva_safe)
+    weights = _divide_frame_by_series(aggregated, gva_safe)
     return _collapse_weighted_result(weights=weights, l1_weights=active_l1_weights, year=year)

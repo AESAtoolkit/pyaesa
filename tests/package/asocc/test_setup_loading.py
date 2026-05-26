@@ -20,9 +20,9 @@ def test_resolve_years_real_paths(allocation_dummy_repo) -> None:
     out = mod._resolve_years(
         years=None,
         source="oecd_v2025",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     )
     assert out.resolved_years == [2005, 2006]
     assert out.historical_years == [2005, 2006]
@@ -39,36 +39,36 @@ def test_resolve_years_real_paths(allocation_dummy_repo) -> None:
         mod._resolve_years(
             years=None,
             source="oecd_v2025",
-            group_version="empty",
-            group_reg=False,
-            group_sec=False,
+            agg_version="empty",
+            agg_reg=False,
+            agg_sec=False,
         )
 
     with pytest.raises(ValueError):
         mod._resolve_years(
             years=range(2005, 2005),
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
 
     with pytest.raises(ValueError):
         mod._resolve_years(
             years=[1994],
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
 
     with pytest.raises(ValueError):
         mod._resolve_years(
             years=[2007],
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
             upstream_analysis=True,
         )
 
@@ -83,9 +83,9 @@ def test_resolve_years_real_paths(allocation_dummy_repo) -> None:
         mod._resolve_years(
             years=None,
             source="oecd_v2025",
-            group_version="gap",
-            group_reg=False,
-            group_sec=False,
+            agg_version="gap",
+            agg_reg=False,
+            agg_sec=False,
         )
 
     allocation_dummy_repo.write_mrio_metadata(
@@ -98,9 +98,9 @@ def test_resolve_years_real_paths(allocation_dummy_repo) -> None:
     out_sparse = mod._resolve_years(
         years=[2024],
         source="oecd_v2025",
-        group_version="sparse_future",
-        group_reg=False,
-        group_sec=False,
+        agg_version="sparse_future",
+        agg_reg=False,
+        agg_sec=False,
     )
     assert out_sparse.historical_years == [2020]
     assert out_sparse.out_of_range_years == [2024]
@@ -130,24 +130,24 @@ def test_validate_region_filter_labels_real_paths(allocation_dummy_repo) -> None
 
     mod._validate_region_filter_labels(
         source=mod.ISO3_SOURCE_KEY,
-        group_version=None,
-        group_reg=False,
+        agg_version=None,
+        agg_reg=False,
         filters={"r_p": ["X"], "r_c": None, "r_f": None},
         wb_df=wb,
         ssp_df=ssp,
     )
     mod._validate_region_filter_labels(
         source="oecd_v2025",
-        group_version=None,
-        group_reg=False,
+        agg_version=None,
+        agg_reg=False,
         filters={"r_p": None, "r_c": None, "r_f": None},
         wb_df=wb,
         ssp_df=ssp,
     )
     mod._validate_region_filter_labels(
         source="oecd_v2025",
-        group_version="demo_reg",
-        group_reg=True,
+        agg_version="demo_reg",
+        agg_reg=True,
         filters={"r_p": ["EU"], "r_c": None, "r_f": None},
         wb_df=wb,
         ssp_df=ssp,
@@ -156,8 +156,8 @@ def test_validate_region_filter_labels_real_paths(allocation_dummy_repo) -> None
     with pytest.raises(ValueError):
         mod._validate_region_filter_labels(
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
+            agg_version=None,
+            agg_reg=False,
             filters={"r_p": ["ZZZ"], "r_c": None, "r_f": None},
             wb_df=wb,
             ssp_df=ssp,
@@ -172,9 +172,9 @@ def test_resolve_reference_years(
             reference_years=None,
             historical_years=[2005, 2006],
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
         is None
     )
@@ -182,9 +182,9 @@ def test_resolve_reference_years(
         reference_years=[2005],
         historical_years=[2005, 2006],
         source="oecd_v2025",
-        group_version=None,
-        group_reg=False,
-        group_sec=False,
+        agg_version=None,
+        agg_reg=False,
+        agg_sec=False,
     ) == [2005]
 
     with pytest.raises(ValueError):
@@ -192,9 +192,9 @@ def test_resolve_reference_years(
             reference_years=[2007],
             historical_years=[2005, 2006],
             source="oecd_v2025",
-            group_version=None,
-            group_reg=False,
-            group_sec=False,
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
         )
 
 

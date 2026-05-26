@@ -34,6 +34,7 @@ from pyaesa.process.mrios.utils.io.paths import (
     _get_year_saved_path,
     _resolve_version_tag,
 )
+from pyaesa.process.mrios.utils.aggregation.aggregation import AggregationSpec
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
     _build_characterization_jobs,
@@ -45,7 +46,7 @@ from pyaesa.process.mrios.utils.pipeline.contracts import (
     SourceConfig,
     UNCASEXT_INTERMEDIATE_CORE_MATRICES,
 )
-from pyaesa.process.mrios.utils.pipeline.grouping_validation import validate_metadata_grouping
+from pyaesa.process.mrios.utils.pipeline.aggregation_validation import validate_metadata_aggregation
 from pyaesa.process.mrios.utils.pipeline.lcia_tracking import (
     build_year_entry_payload,
     expected_pyaesa_lcia_methods,
@@ -75,7 +76,7 @@ from pyaesa.process.mrios.utils.pipeline.persistence import (
 )
 from pyaesa.process.mrios.utils.pipeline.process_setup import (
     _normalize_lcia_methods,
-    _resolve_grouping_inputs,
+    _resolve_aggregation_inputs,
     _resolve_year_characterization_jobs,
     _update_report_clipping_stats,
 )
@@ -122,18 +123,18 @@ class YearProcessContext:
     version_tag: str
     is_exio: bool
     refresh: bool
-    group_reg: bool
-    group_sec: bool
-    group_reg_df: pd.DataFrame | None
-    group_sec_df: pd.DataFrame | None
-    group_reg_path: Path | None
-    group_sec_path: Path | None
+    agg_reg: bool
+    agg_sec: bool
+    agg_reg_df: pd.DataFrame | None
+    agg_sec_df: pd.DataFrame | None
+    agg_reg_path: Path | None
+    agg_sec_path: Path | None
     keep_intermediate_uncasext: bool
     pymrio_calc_all: bool
     requested_lcia_methods: list[str]
     char_jobs_cache: dict[str, ExioCharacterizationOptions]
-    reg_vec_cache: dict[tuple[str, ...], list[str]]
-    sec_vec_cache: dict[tuple[str, ...], list[str]]
+    reg_vec_cache: dict[tuple[str, ...], AggregationSpec]
+    sec_vec_cache: dict[tuple[str, ...], AggregationSpec]
     runtime_env: dict[str, str]
     report: ProcessReportMRIO
     progress: YearProgressPrinter
@@ -145,9 +146,9 @@ def run_process_mrio(
     *,
     refresh: bool = False,
     lcia_method: Optional[str | Sequence[str]] = None,
-    group_reg: bool = False,
-    group_sec: bool = False,
-    group_version: Optional[str] = None,
+    agg_reg: bool = False,
+    agg_sec: bool = False,
+    agg_version: Optional[str] = None,
     keep_intermediate_uncasext: bool = False,
     pymrio_calc_all: bool = False,
 ) -> ProcessReportMRIO | None:
@@ -162,12 +163,12 @@ def run_process_mrio(
             "OECD ICIO does not support LCIA characterization."
         )
 
-    group_version_clean = _resolve_group_version(
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version,
+    agg_version_clean = _resolve_agg_version(
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version,
     )
-    matrix_version = group_version_clean if (group_reg or group_sec) else None
+    matrix_version = agg_version_clean if (agg_reg or agg_sec) else None
     version_tag = _resolve_version_tag(matrix_version)
     years_list = [int(year) for year in normalize_mrio_years(years, source_key=source_key)]
     report = ProcessReportMRIO(source=source_key, requested=years_list)
@@ -180,33 +181,33 @@ def run_process_mrio(
     metadata_path = _get_metadata_path(source_key, matrix_version=matrix_version)
 
     (
-        group_reg_path,
-        group_sec_path,
-        group_reg_df,
-        group_sec_df,
-        grouping_payload,
-    ) = _resolve_grouping_inputs(
+        agg_reg_path,
+        agg_sec_path,
+        agg_reg_df,
+        agg_sec_df,
+        aggregation_payload,
+    ) = _resolve_aggregation_inputs(
         source=source_key,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_version=group_version_clean,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_version=agg_version_clean,
     )
-    validate_metadata_grouping(
+    validate_metadata_aggregation(
         metadata=metadata,
         version_tag=version_tag,
-        grouping_payload=grouping_payload,
-        group_reg=group_reg,
-        group_sec=group_sec,
-        group_reg_df=group_reg_df,
-        group_sec_df=group_sec_df,
-        group_reg_path=group_reg_path,
-        group_sec_path=group_sec_path,
+        aggregation_payload=aggregation_payload,
+        agg_reg=agg_reg,
+        agg_sec=agg_sec,
+        agg_reg_df=agg_reg_df,
+        agg_sec_df=agg_sec_df,
+        agg_reg_path=agg_reg_path,
+        agg_sec_path=agg_sec_path,
         metadata_path=metadata_path,
     )
     if not metadata.get("version_tag"):
         metadata["version_tag"] = version_tag
-    if not metadata.get("grouping"):
-        metadata["grouping"] = grouping_payload
+    if not metadata.get("aggregation"):
+        metadata["aggregation"] = aggregation_payload
 
     requested_char_jobs: dict[str, ExioCharacterizationOptions] = {}
     char_jobs_cache: dict[str, ExioCharacterizationOptions] = {}
@@ -248,12 +249,12 @@ def run_process_mrio(
             version_tag=version_tag,
             is_exio=is_exio,
             refresh=refresh,
-            group_reg=group_reg,
-            group_sec=group_sec,
-            group_reg_df=group_reg_df,
-            group_sec_df=group_sec_df,
-            group_reg_path=group_reg_path,
-            group_sec_path=group_sec_path,
+            agg_reg=agg_reg,
+            agg_sec=agg_sec,
+            agg_reg_df=agg_reg_df,
+            agg_sec_df=agg_sec_df,
+            agg_reg_path=agg_reg_path,
+            agg_sec_path=agg_sec_path,
             keep_intermediate_uncasext=keep_intermediate_uncasext,
             pymrio_calc_all=pymrio_calc_all,
             requested_lcia_methods=requested_lcia_methods,
@@ -280,22 +281,22 @@ def run_process_mrio(
     return None
 
 
-def _resolve_group_version(
+def _resolve_agg_version(
     *,
-    group_reg: bool,
-    group_sec: bool,
-    group_version: Optional[str],
+    agg_reg: bool,
+    agg_sec: bool,
+    agg_version: Optional[str],
 ) -> str | None:
-    """Return normalized group version after public grouping argument validation."""
-    cleaned = "" if group_version is None else str(group_version).strip()
-    if group_reg or group_sec:
+    """Return normalized aggregate version after public aggregation argument validation."""
+    cleaned = "" if agg_version is None else str(agg_version).strip()
+    if agg_reg or agg_sec:
         if not cleaned:
-            raise ValueError("group_version must be provided when group_reg or group_sec is True.")
+            raise ValueError("agg_version must be provided when agg_reg or agg_sec is True.")
         return cleaned
     if cleaned:
         raise ValueError(
-            "group_version was provided but grouping is disabled. "
-            "Either enable grouping or omit group_version."
+            "agg_version was provided but aggregation is disabled. "
+            "Either enable aggregation or omit agg_version."
         )
     return None
 
@@ -468,12 +469,12 @@ def _process_mrio_year(
                 full_dir=context.full_dir,
                 year=year,
                 char_jobs=year_char_jobs,
-                group_reg=context.group_reg,
-                group_sec=context.group_sec,
-                group_reg_df=context.group_reg_df,
-                group_sec_df=context.group_sec_df,
-                group_reg_path=context.group_reg_path,
-                group_sec_path=context.group_sec_path,
+                agg_reg=context.agg_reg,
+                agg_sec=context.agg_sec,
+                agg_reg_df=context.agg_reg_df,
+                agg_sec_df=context.agg_sec_df,
+                agg_reg_path=context.agg_reg_path,
+                agg_sec_path=context.agg_sec_path,
                 reg_vec_cache=context.reg_vec_cache,
                 sec_vec_cache=context.sec_vec_cache,
                 pymrio_calc_all=context.pymrio_calc_all,
@@ -633,9 +634,9 @@ def _record_label_payload(
             for key in label_keys
         }
         action = (
-            "Process a compatible year set for this MRIO source. For grouped scopes, "
-            "use a different group_version for incompatible grouped axes or refresh "
-            "the grouped processed MRIO scope."
+            "Process a compatible year set for this MRIO source. For aggregated scopes, "
+            "use a different agg_version for incompatible aggregated axes or refresh "
+            "the custom classified processed MRIO scope."
         )
         raise ValueError(
             "MRIO label metadata is incompatible across processed years. "
