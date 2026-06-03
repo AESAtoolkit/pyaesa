@@ -33,7 +33,7 @@ from pyaesa.asocc.uncertainty.sources.names import (
 )
 from pyaesa.shared.acc_asr_common.scope.composite import base_asocc_kwargs_from_allocate_args
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
     PHASE_B1_ASOCC,
     phase_ready_detail,
     phase_reused_detail,
@@ -86,8 +86,30 @@ def initial_acc_components(
     asocc_session: Any | None = None,
     dynamic_cc_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_component_phases: bool = True,
 ) -> ACCInitialComponents:
     """Resolve the first aSoCC and dynamic AR6 CC component inventories."""
+    dynamic_component = _initial_dynamic_cc_input(
+        phase=phase,
+        scope=scope,
+        years=scope.base_args["years"],
+        config=config,
+        output_format=output_format,
+        target_runs=target_runs,
+        parent_mode=parent_mode,
+        parent_max_runs=parent_max_runs,
+        figure_format=figure_format,
+        progress=dynamic_cc_progress,
+        run_id=current_run_id,
+        refresh=refresh,
+        component_session=dynamic_cc_session,
+        finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_component_phases,
+    )
+    dynamic_input = dynamic_component.input
+    run_id = current_run_id
+    if run_id is None and dynamic_input is not None and dynamic_input.manifest is not None:
+        run_id = dynamic_input.manifest.run_id
     asocc_component = initial_asocc_input(
         phase=phase,
         base_allocate_args=scope.base_allocate_args,
@@ -102,32 +124,14 @@ def initial_acc_components(
         figure_options=figure_options,
         figure_format=figure_format,
         progress=asocc_progress,
-        run_id=current_run_id,
+        run_id=run_id,
         refresh=refresh,
         component_session=asocc_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_component_phases,
     )
     asocc_input = asocc_component.input
-    run_id = _component_run_id(current_run_id=current_run_id, asocc_input=asocc_input)
-    dynamic_component = _initial_dynamic_cc_input(
-        phase=phase,
-        scope=scope,
-        years=scope.base_args["years"],
-        config=config,
-        output_format=output_format,
-        target_runs=target_runs,
-        parent_mode=parent_mode,
-        parent_max_runs=parent_max_runs,
-        figure_format=figure_format,
-        progress=dynamic_cc_progress,
-        run_id=run_id,
-        refresh=refresh,
-        component_session=dynamic_cc_session,
-        finalize_component_inventory=finalize_component_inventory,
-    )
-    dynamic_input = dynamic_component.input
-    if run_id is None and dynamic_input is not None and dynamic_input.manifest is not None:
-        run_id = dynamic_input.manifest.run_id
+    run_id = _component_run_id(current_run_id=run_id, asocc_input=asocc_input)
     return ACCInitialComponents(
         asocc_input=asocc_input,
         asocc_session=asocc_component.session,
@@ -156,6 +160,7 @@ def initial_asocc_input(
     refresh: bool,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentInput[ACCAsoccInput]:
     """Resolve deterministic or stochastic aSoCC input for aCC."""
     sources = _asocc_source_plan(config=config)
@@ -193,6 +198,7 @@ def initial_asocc_input(
         progress=progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_phase,
     )
     return ComponentInput(
         input=ACCAsoccInput(
@@ -234,7 +240,7 @@ def deterministic_asocc_input(
         figure_external_method=external_method if figures else None,
         phase=phase,
     )
-    phase.status("Loading deterministic aSoCC outputs", owner="deterministic_asocc")
+    phase.status("Loading deterministic aSoCC input rows", owner="uncertainty_asocc")
     loaded = load_final_deterministic_asocc_rows(prerequisite=prerequisite)
     if external_asocc_has_monte_carlo_rows(
         loaded=loaded,
@@ -289,6 +295,7 @@ def asocc_inventory_report(
     progress: RunProgressPrinter | None = None,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentRun:
     """Run or reuse the aSoCC component inventory for one aCC checkpoint."""
     asocc_config = {
@@ -319,6 +326,7 @@ def asocc_inventory_report(
         progress=progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_phase,
     )
 
 
@@ -338,13 +346,14 @@ def _initial_dynamic_cc_input(
     refresh: bool,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentInput[ACCDynamicCCInput | None]:
     if scope.dynamic_branch is None:
         return ComponentInput(input=None, session=None)
-    phase.expect_visible(PHASE_B1_AR6_DYNAMIC_CC)
+    phase.expect_visible(PHASE_B0_AR6_DYNAMIC_CC)
     source_parameters = dynamic_cc_source_parameters(config.get(AR6_DYNAMIC_CC_SOURCE))
     if source_parameters is None:
-        phase.announce(PHASE_B1_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
+        phase.announce(PHASE_B0_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
     try:
         dynamic_input = dynamic_cc_input(
             branch=scope.dynamic_branch,
@@ -363,6 +372,7 @@ def _initial_dynamic_cc_input(
             refresh=refresh,
             component_session=component_session,
             finalize_component_inventory=finalize_component_inventory,
+            complete_phase=complete_phase,
         )
     finally:
         progress.finish()
@@ -392,6 +402,7 @@ def dynamic_cc_input(
     refresh: bool,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentInput[ACCDynamicCCInput | None]:
     """Resolve deterministic or uncertain dynamic AR6 CC input for aCC."""
     source_parameters = dynamic_cc_source_parameters(config.get(AR6_DYNAMIC_CC_SOURCE))
@@ -407,7 +418,7 @@ def dynamic_cc_input(
             ),
             session=None,
         )
-    phase.announce(PHASE_B1_AR6_DYNAMIC_CC, "uncertainty_ar6_cc")
+    phase.announce(PHASE_B0_AR6_DYNAMIC_CC, "uncertainty_ar6_cc")
     dynamic_input, session = dynamic_ar6_cc_uncertainty_input(
         branch=branch,
         years=years,
@@ -430,6 +441,7 @@ def dynamic_cc_input(
         progress=progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_phase,
     )
     return ComponentInput(input=dynamic_input, session=session)
 

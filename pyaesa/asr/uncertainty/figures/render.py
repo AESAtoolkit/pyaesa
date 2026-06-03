@@ -26,7 +26,7 @@ from pyaesa.asr.figures.axis import (
     asr_zero_log_scale_warning_message,
     asr_zero_log_scale_warning_needed,
 )
-from pyaesa.asr.figures.frequency import CUMULATIVE_FNT_FRACTION_COLUMN, FNT_FRACTION_COLUMN
+from pyaesa.asr.figures.frequency import CUMULATIVE_FT_FRACTION_COLUMN, FT_FRACTION_COLUMN
 from pyaesa.asr.figures.dynamic_global_ar6 import (
     UncertaintyGlobalAR6Source,
     uncertainty_global_ar6_source,
@@ -77,7 +77,7 @@ from pyaesa.shared.figures.request_validation import (
 from pyaesa.shared.figures.selector_slices import selector_slices
 from pyaesa.shared.figures.dynamic_ar6 import DYNAMIC_AR6_CC_TYPE
 from pyaesa.shared.figures.trajectory_bands import SUMMARY_COLUMNS as TRAJECTORY_SUMMARY_COLUMNS
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
@@ -119,6 +119,7 @@ def render_asr_uncertainty_figures(
     if not (context.per_method or context.multi_method or _inter_method_active(context)):
         clear_uncertainty_figure_scope(paths=paths)
         return ASRUncertaintyFigureResult(paths=[], warning_messages=())
+    show_optional_status(status, "[uncertainty_asr] Preparing figure inputs")
     tables = read_figure_tables(
         context=context,
         include_cumulative=single_requested_year(context) is None,
@@ -922,7 +923,7 @@ def _with_polar_summary_rows(
         subset=key_columns,
         ignore_index=True,
     )
-    frequency = frequency.rename(columns={ASR_FREQUENCY_VALUE_COLUMN: FNT_FRACTION_COLUMN})
+    frequency = frequency.rename(columns={ASR_FREQUENCY_VALUE_COLUMN: FT_FRACTION_COLUMN})
     out = rows.merge(summary, on=key_columns, how="left")
     out = out.merge(frequency, on=key_columns, how="left")
     return out
@@ -932,7 +933,7 @@ def _summary_merge_columns(*, rows: pd.DataFrame, summary_rows: pd.DataFrame) ->
     excluded = {
         VALUE_ARRAY_COLUMN,
         "public_row_id",
-        FNT_FRACTION_COLUMN,
+        FT_FRACTION_COLUMN,
         "l1_l2_method",
         "l1_method",
         "l2_method",
@@ -970,7 +971,7 @@ def _with_frequency_summary(rows: pd.DataFrame, frequency_rows: pd.DataFrame) ->
     ]
     value_column = _frequency_value_column(frequency_rows)
     frequency = frequency_rows.loc[:, [*key_columns, value_column]].rename(
-        columns={value_column: FNT_FRACTION_COLUMN}
+        columns={value_column: FT_FRACTION_COLUMN}
     )
     return rows.merge(frequency, on=key_columns, how="left")
 
@@ -989,7 +990,7 @@ def _with_cumulative_values(
     del context
     drop_columns = {
         VALUE_ARRAY_COLUMN,
-        FNT_FRACTION_COLUMN,
+        FT_FRACTION_COLUMN,
         "public_row_id",
         "year",
         ASOCC_SSP_SCENARIO_COLUMN,
@@ -1013,11 +1014,11 @@ def _with_cumulative_values(
         for column in rows.columns
         if column in cumulative_rows.columns and column not in drop_columns
     ]
-    cumulative = cumulative_rows.loc[:, [*key_columns, VALUE_ARRAY_COLUMN, FNT_FRACTION_COLUMN]]
+    cumulative = cumulative_rows.loc[:, [*key_columns, VALUE_ARRAY_COLUMN, FT_FRACTION_COLUMN]]
     cumulative = cumulative.rename(
         columns={
             VALUE_ARRAY_COLUMN: "__cumulative_values",
-            FNT_FRACTION_COLUMN: CUMULATIVE_FNT_FRACTION_COLUMN,
+            FT_FRACTION_COLUMN: CUMULATIVE_FT_FRACTION_COLUMN,
         }
     )
     out = rows.merge(cumulative, on=key_columns, how="left")

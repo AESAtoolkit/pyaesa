@@ -96,7 +96,7 @@ from pyaesa.shared.acc_asr_common.deterministic.downstream.inputs import (
 from pyaesa.shared.runtime.metadata.contracts import SCOPE_MANIFEST_FILENAME
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
 )
 from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
 from pyaesa.shared.runtime.scenario.columns import (
@@ -497,14 +497,14 @@ def test_deterministic_acc_report_renders_dynamic_ar6_phase_once() -> None:
         impacts_used=["GWP_100"],
         phase_entries=(
             CompositePhaseIndexEntry(
-                phase=PHASE_B1_AR6_DYNAMIC_CC,
+                phase=PHASE_B0_AR6_DYNAMIC_CC,
                 function="deterministic_ar6_cc",
                 status="complete",
                 reuse_status="computed",
                 output_root=None,
             ),
             CompositePhaseIndexEntry(
-                phase=PHASE_B1_AR6_DYNAMIC_CC,
+                phase=PHASE_B0_AR6_DYNAMIC_CC,
                 function="deterministic_asocc",
                 status="complete",
                 reuse_status="computed",

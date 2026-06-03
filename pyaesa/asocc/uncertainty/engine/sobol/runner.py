@@ -22,7 +22,7 @@ from pyaesa.shared.uncertainty_assessment.sobol.plan import (
 from pyaesa.shared.uncertainty_assessment.sobol.runner import run_sobol_analysis
 from pyaesa.shared.uncertainty_assessment.request.sources import SourceActivationPlan
 from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 
 
 @dataclass(frozen=True)
@@ -93,6 +93,7 @@ def run_asocc_sobol(
         progress_source="uncertainty_asocc",
         status=status,
     )
+    show_optional_status(status, "[uncertainty_asocc] Sobol writing outputs")
     write_uncertainty_table(
         path=paths.sobol_indices,
         frame=result.indices,

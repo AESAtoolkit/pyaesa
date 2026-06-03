@@ -55,7 +55,7 @@ from pyaesa.shared.runtime.reporting.status import StatusSink
 
 @dataclass
 class ASRMetricConvergenceState:
-    """Streaming convergence state for one ASR value and fNT target set."""
+    """Streaming convergence state for one ASR value and fT target set."""
 
     value: MeanConvergenceAccumulator
     frequency: MeanConvergenceAccumulator
@@ -548,7 +548,9 @@ def _append_summaries_and_check(
 
 def _metric_convergence_state(*, identity: Any) -> ASRMetricConvergenceState:
     metric = identity[ASR_SUMMARY_METRIC_COLUMN].astype(str)
-    value_rows = identity.loc[metric.eq(_value_metric_for_identity(identity=identity))]
+    value_rows = _convergence_value_rows(
+        identity=identity.loc[metric.eq(_value_metric_for_identity(identity=identity))]
+    )
     if ASR_SUMMARY_SCOPE_COLUMN in value_rows.columns:
         scope = value_rows[ASR_SUMMARY_SCOPE_COLUMN].astype(str)
         inter_positions = np.flatnonzero(scope.eq(ASR_SUMMARY_SCOPE_INTER_METHOD).to_numpy())
@@ -562,6 +564,13 @@ def _metric_convergence_state(*, identity: Any) -> ASRMetricConvergenceState:
         frequency=MeanConvergenceAccumulator.empty(row_count=len(positions)),
         positions=positions,
     )
+
+
+def _convergence_value_rows(*, identity: Any) -> Any:
+    """Return ASR value rows monitored for Monte Carlo convergence."""
+    if "cc_bound" not in identity.columns:
+        return identity
+    return identity.loc[identity["cc_bound"].astype(str).eq("min_cc")]
 
 
 def _value_metric_for_identity(*, identity: Any) -> str:
@@ -578,7 +587,7 @@ def _update_metric_convergence_state(
 ) -> None:
     values = summary_values[:, state.positions]
     observed = ~np.isnan(values)
-    frequency = np.where(observed, values <= 1.0, np.nan).astype(np.float64)
+    frequency = np.where(observed, values > 1.0, np.nan).astype(np.float64)
     state.value.update(values=values)
     state.frequency.update(values=frequency)
 
@@ -611,7 +620,7 @@ def _update_sparse_metric_convergence_state(
         state.value.accumulate_group_observations(groups=groups, values=means)
         state.frequency.accumulate_group_observations(
             groups=groups,
-            values=np.where(means <= 1.0, 1.0, 0.0),
+            values=np.where(means > 1.0, 1.0, 0.0),
         )
 
 

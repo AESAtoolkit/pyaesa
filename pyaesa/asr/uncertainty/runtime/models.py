@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 LCARunValueProvider = Callable[[np.ndarray], np.ndarray]
+LCAUnitValueProvider = Callable[[np.ndarray, np.ndarray | None], np.ndarray]
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ class LCAUncertaintyInput:
     active_sources: tuple[str, ...]
     lca_type: str
     run_values_for_runs: LCARunValueProvider | None = None
-    run_values_for_units: LCARunValueProvider | None = None
+    run_values_for_units: LCAUnitValueProvider | None = None
     run_inventory_size: int | None = None
     phase_function: str = "external_lca"
     phase_reuse_status: str = "computed"

@@ -41,9 +41,13 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
     write_manifest,
 )
 from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
+    clear_manifest_figure_paths,
+    log_current_figure_artifacts,
     manifest_figure_artifacts_current,
     manifest_with_figure_artifacts,
+    write_manifest_figure_paths,
 )
+from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
 from pyaesa.shared.uncertainty_assessment.run_state.report import uncertainty_report
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.shared.uncertainty_assessment.run_state.runs import (
@@ -1448,12 +1452,12 @@ def test_sparse_public_summary_allows_overlapping_groups(
     assert summary_only["median"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
     assert pd.isna(summary_only.loc[3, "median"])
     assert identity_summary["scope"].tolist() == ["per_a", "per_b"]
-    assert frequency[:3].tolist() == [1.0, 0.5, 0.5]
+    assert frequency[:3].tolist() == [0.0, 0.5, 0.5]
     assert pd.isna(frequency[3])
-    assert identity_frequency.tolist() == [1.0, 0.5]
+    assert identity_frequency.tolist() == [0.0, 0.5]
     assert bounded_summary["median"].iloc[:3].tolist() == [0.35, 1.2, 0.775]
     assert pd.isna(bounded_summary.loc[3, "median"])
-    assert bounded_frequency[:3].tolist() == [1.0, 0.5, 0.5]
+    assert bounded_frequency[:3].tolist() == [0.0, 0.5, 0.5]
     assert pd.isna(bounded_frequency[3])
 
 
@@ -1535,10 +1539,37 @@ def test_manifest_allocates_run_ids_and_round_trips(tmp_path: Path) -> None:
     )
     assert "WARNING:" in str(figure_report)
     assert "figure warning" in str(figure_report)
+    persisted_figure_path = tmp_path / "persisted_figure.png"
+    persisted_figure_path.write_text("figure", encoding="utf-8")
+    write_manifest_figure_paths(
+        manifest_path=path,
+        figure_paths=[persisted_figure_path],
+        figure_options={"polar": {"polar_years": [2005]}},
+        figure_format={"format": "png", "dpi": 10},
+        warning_messages=("persisted warning",),
+    )
+    assert read_manifest(path=path).lineage is not None
+    clear_manifest_figure_paths(manifest_path=path)
+    assert not persisted_figure_path.exists()
     assert manifest_figure_artifacts_current(
         manifest=figure_manifest,
         figure_options={"polar": {"polar_years": [2005]}},
         figure_format={"format": "png", "dpi": 10},
+    )
+    assert not manifest_figure_artifacts_current(
+        manifest=figure_manifest,
+        figure_options={"polar": {"polar_years": [2010]}},
+        figure_format={"format": "png", "dpi": 10},
+    )
+    log_current_figure_artifacts(
+        manifest=figure_manifest,
+        status=TransientStatusPrinter("figures"),
+        source="uncertainty_asocc",
+    )
+    log_current_figure_artifacts(
+        manifest=figure_manifest,
+        status=None,
+        source="uncertainty_asocc",
     )
     missing_paths_manifest = replace(
         figure_manifest,
@@ -1551,6 +1582,24 @@ def test_manifest_allocates_run_ids_and_round_trips(tmp_path: Path) -> None:
         figure_options={"polar": {"polar_years": [2005]}},
         figure_format={"format": "png", "dpi": 10},
     )
+    figure_warning_only = manifest_with_figure_artifacts(
+        manifest=replace(
+            manifest,
+            lineage={
+                "summary_records": [
+                    {
+                        "severity": "WARNING",
+                        "source": "figures",
+                        "message": "old warning",
+                    }
+                ]
+            },
+        ),
+        figure_paths=[figure_path],
+        figure_options=None,
+        figure_format=None,
+    )
+    assert figure_warning_only.lineage is None
 
     generated = build_manifest(
         family="asocc",

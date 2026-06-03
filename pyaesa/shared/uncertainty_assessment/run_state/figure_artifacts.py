@@ -8,6 +8,8 @@ from pyaesa.shared.figures.request_validation import normalize_figure_format
 from pyaesa.shared.figures.persisted_outputs import delete_persisted_figure_paths
 from pyaesa.shared.runtime.manifest_contract import manifest_digest, manifest_json_value
 from pyaesa.shared.runtime.metadata.json import read_json_dict, write_json_dict
+from pyaesa.shared.runtime.reporting.labels import plural_label
+from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
     UncertaintyManifest,
     read_manifest,
@@ -93,6 +95,23 @@ def manifest_figure_artifacts_current(
     if not isinstance(figure_paths, list) or not figure_paths:
         return False
     return all(Path(str(path)).exists() for path in figure_paths)
+
+
+def log_current_figure_artifacts(
+    *,
+    manifest: UncertaintyManifest,
+    status: StatusSink | None,
+    source: str,
+) -> None:
+    """Log the current figure count for an unchanged figure request."""
+    if status is None:
+        return
+    count = len(tuple(manifest.artifacts.get(_FIGURE_PATHS_KEY) or ()))
+    noun = plural_label(count, "figure")
+    status.log_message(
+        f"[{source}] Generated {noun} {count}/{count}.",
+        persistent=True,
+    )
 
 
 def _figure_artifacts(

@@ -47,7 +47,7 @@ from pyaesa.shared.figures.request_validation import (
     validate_consecutive_multi_year_figure_request,
 )
 from pyaesa.shared.figures.selector_slices import selector_slices
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 from pyaesa.shared.runtime.scenario.columns import (
     AR6_CC_SSP_SCENARIO_COLUMN,
 )
@@ -82,6 +82,7 @@ def render_acc_uncertainty_figures(
     ):
         clear_uncertainty_figure_scope(paths=paths)
         return []
+    show_optional_status(status, "[uncertainty_acc] Preparing figure inputs")
     tables = read_figure_tables(
         context=context,
         include_summary=single_requested_year(context) is None,

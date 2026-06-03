@@ -38,7 +38,7 @@ from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
     PHASE_A_LCA,
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
 )
 from pyaesa.shared.runtime.scenario.columns import (
     AR6_CC_SSP_SCENARIO_COLUMN,
@@ -171,14 +171,14 @@ def test_deterministic_asr_report_renders_dynamic_ar6_and_external_lca_phases() 
                 output_root=None,
             ),
             CompositePhaseIndexEntry(
-                phase=PHASE_B1_AR6_DYNAMIC_CC,
+                phase=PHASE_B0_AR6_DYNAMIC_CC,
                 function="deterministic_ar6_cc",
                 status="complete",
                 reuse_status="computed",
                 output_root=None,
             ),
             CompositePhaseIndexEntry(
-                phase=PHASE_B1_AR6_DYNAMIC_CC,
+                phase=PHASE_B0_AR6_DYNAMIC_CC,
                 function="deterministic_acc",
                 status="complete",
                 reuse_status="computed",
@@ -995,7 +995,6 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
         assert bool(first_output[column].lt(1).all())
     assert bool(first_output["cumulative_asr"].gt(0).all())
     assert bool(first_output["cumulative_asr"].lt(1).all())
-    assert "cumulative_no_transgression" not in first_output.columns
 
     reused_dynamic_report = deterministic_asr(
         project_name="asr_dynamic_reuse",

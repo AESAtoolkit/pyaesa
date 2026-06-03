@@ -100,7 +100,10 @@ from pyaesa.shared.runtime.reporting.run_progress import (
     visible_status_for_run_work,
 )
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
-from pyaesa.shared.uncertainty_assessment.orchestration import progress_complete
+from pyaesa.shared.uncertainty_assessment.orchestration import (
+    progress_complete,
+    progress_complete_sobol,
+)
 
 
 @dataclass(frozen=True)
@@ -174,6 +177,7 @@ def run_uncertainty_asocc_component(
     progress: RunProgressPrinter | None,
     component_session: ASOCCComponentSession | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentRun:
     """Run or append one aSoCC component inventory using a local session."""
     owns_phase = phase is None
@@ -197,7 +201,9 @@ def run_uncertainty_asocc_component(
         runtime_mode=runtime.mode,
         runtime_n_runs=runtime.n_runs,
     )
-    completion_phase = NullPhasePrinter() if component_parent_convergence else phase_owner
+    completion_phase = (
+        NullPhasePrinter() if component_parent_convergence and not finalize_outputs else phase_owner
+    )
     sources = build_source_activation_plan(
         uncertainty_config=config,
         allowed_sources=ASOCC_UNCERTAINTY_SOURCES,
@@ -226,7 +232,7 @@ def run_uncertainty_asocc_component(
         complete_deterministic_asocc_phase(phase=phase_owner, prerequisite=prerequisite)
         phase_entries = asocc_deterministic_phase_entries(prerequisite=prerequisite)
         row_scope = resolve_final_deterministic_asocc_row_scope(prerequisite=prerequisite)
-        phase_owner.status("Loading deterministic aSoCC outputs", owner="deterministic_asocc")
+        phase_owner.status("Loading deterministic aSoCC input rows", owner="uncertainty_asocc")
         loaded = load_final_deterministic_asocc_rows(
             prerequisite=prerequisite,
             row_scope=row_scope,
@@ -312,9 +318,20 @@ def run_uncertainty_asocc_component(
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
             visible=show_progress
-            and not all((had_component_session, component_parent_convergence)),
+            and not (
+                had_component_session and component_parent_convergence and not finalize_outputs
+            ),
+            reached=bool((reusable.manifest.convergence or {}).get("reached")),
+            final_checkpoint=finalize_outputs,
         )
         reuse_manifest = reusable.manifest
+        if reuse_status == "reused_exact":
+            progress_complete_sobol(
+                source="uncertainty_asocc",
+                status=phase_owner,
+                sobol=reuse_manifest.sobol,
+                visible=sobol_plan.enabled,
+            )
         if reuse_status == "computed":
             paths = build_asocc_uncertainty_run_paths(
                 deterministic_manifest_path=loaded.deterministic_manifest_path,
@@ -358,11 +375,12 @@ def run_uncertainty_asocc_component(
             status=figure_status,
         )
         phase_owner.announce(PHASE_B1_ASOCC, "uncertainty_asocc")
-        complete_asocc_uncertainty_phase(
-            phase=completion_phase,
-            manifest=reused_manifest,
-            reuse_status=reuse_status,
-        )
+        if complete_phase:
+            complete_asocc_uncertainty_phase(
+                phase=completion_phase,
+                manifest=reused_manifest,
+                reuse_status=reuse_status,
+            )
         write_asocc_phase_index(
             manifest=reused_manifest,
             phase_entries=phase_entries,
@@ -459,7 +477,10 @@ def run_uncertainty_asocc_component(
         and append_run is None
         and component_session.run_result is None
     ):
-        phase_owner.status("Writing inter-method tree artifacts", owner="uncertainty_asocc")
+        phase_owner.status(
+            "Preparing inter-method uncertainty artifacts",
+            owner="uncertainty_asocc",
+        )
         write_inter_method_tree_artifacts(
             tree_csv_path=paths.inter_method_tree_csv,
             figure_base_path=paths.inter_method_tree_figure_base,
@@ -489,8 +510,20 @@ def run_uncertainty_asocc_component(
         progress_component=progress_parameters["component"],
         previous_result=component_session.run_result,
     )
-    if finalize_outputs and not component_parent_convergence:
-        phase_owner.status("Writing uncertainty run logs", owner="uncertainty_asocc")
+    if not (runtime.mode == "fixed" and progress_parameters["mode"] == "fixed"):
+        progress_complete(
+            progress=progress,
+            completed=run_result.completed_runs,
+            max_runs=progress_parameters["max_runs"],
+            mode=progress_parameters["mode"],
+            component=progress_parameters["component"],
+            visible=show_progress,
+            reached=run_result.convergence is not None
+            and bool(run_result.convergence.get("reached")),
+            final_checkpoint=finalize_outputs,
+        )
+    if finalize_outputs:
+        phase_owner.status("Writing Monte Carlo summaries and logs", owner="uncertainty_asocc")
     write_run_logs(
         paths=paths,
         loaded=loaded,
@@ -535,6 +568,7 @@ def run_uncertainty_asocc_component(
         )
     else:
         artifacts = outputs_payload(paths=paths, output_format=runtime.output_format)
+        artifacts.pop("summary_stats_runs", None)
         artifacts["public_output"] = {
             "asocc_runs": {
                 "layout": (
@@ -582,7 +616,7 @@ def run_uncertainty_asocc_component(
         )
     write_manifest(path=paths.scope_manifest, manifest=complete)
     progress.finish()
-    if finalize_outputs:
+    if finalize_outputs and complete_phase:
         complete_asocc_uncertainty_phase(
             phase=completion_phase,
             manifest=complete,

@@ -1,8 +1,7 @@
 """Public aCC uncertainty runtime orchestration."""
 
 from dataclasses import dataclass, replace
-from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from pyaesa.acc.uncertainty.io.paths import (
     acc_monte_carlo_branch_root,
@@ -10,10 +9,7 @@ from pyaesa.acc.uncertainty.io.paths import (
 )
 from pyaesa.acc.uncertainty.figures.render import render_acc_uncertainty_figures
 from pyaesa.acc.uncertainty.figures.reuse import render_reusable_acc_figures_if_requested
-from pyaesa.ar6_cc.uncertainty.figures.reuse import (
-    render_reusable_ar6_cc_figures_if_requested,
-)
-from pyaesa.asocc.uncertainty.figures.reuse import render_reusable_asocc_figures_if_requested
+from pyaesa.acc.uncertainty.figures.final_subfigures import render_final_acc_subfigures
 from pyaesa.acc.uncertainty.io.manifest_payloads import (
     acc_outputs_payload,
     acc_public_output_payload,
@@ -22,16 +18,20 @@ from pyaesa.acc.uncertainty.io.manifest_payloads import (
     initial_acc_sobol_status,
 )
 from pyaesa.acc.uncertainty.runtime.models import (
-    ACCAsoccInput,
-    ACCDynamicCCInput,
     ACCUncertaintyPlan,
+)
+from pyaesa.acc.uncertainty.runtime.memory import acc_batch_memory_blocks
+from pyaesa.acc.uncertainty.runtime.phase_entries import (
+    asocc_phase_entries,
+    dynamic_cc_phase_entries,
+)
+from pyaesa.acc.uncertainty.runtime.reuse_dependencies import (
+    plan_from_reused_acc_dependencies,
 )
 from pyaesa.acc.uncertainty.runtime.component_inputs import (
     ACCInitialComponents,
-    deterministic_asocc_input,
     initial_acc_components,
 )
-from pyaesa.acc.uncertainty.sources.dynamic_cc import deterministic_dynamic_cc_input
 from pyaesa.acc.uncertainty.runtime.checkpoints import run_acc_checkpoints
 from pyaesa.acc.uncertainty.runtime.scope import (
     ACCUncertaintyScope,
@@ -74,7 +74,6 @@ from pyaesa.shared.uncertainty_assessment.request.core import (
     UncertaintyRuntimeRequest,
     memory_bounded_batch_size,
     normalize_uncertainty_request,
-    sparse_selected_run_memory_blocks,
 )
 from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import (
     ComponentRun,
@@ -102,9 +101,6 @@ from pyaesa.shared.uncertainty_assessment.sobol.plan import (
 )
 from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
-    CompositePhaseIndexEntry,
-    PHASE_B1_AR6_DYNAMIC_CC,
-    PHASE_B1_ASOCC,
     PHASE_B2_ACC,
     phase_reused_detail,
     phase_uncertainty_done_detail,
@@ -114,12 +110,12 @@ from pyaesa.shared.runtime.reporting.run_progress import (
     monte_carlo_run_progress,
     visible_status_for_run_work,
 )
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
+from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.selectors.time_selectors import normalize_requested_years
 from pyaesa.shared.uncertainty_assessment.orchestration import (
-    deterministic_phase_index_entry,
     manifest_output_root,
     progress_complete,
+    progress_complete_sobol,
     uncertainty_phase_index_entry,
     write_uncertainty_phase_index,
 )
@@ -245,6 +241,9 @@ def run_uncertainty_acc_component(
     finalize_component_inventory: bool = False,
     branch_scope: ACCUncertaintyScope | None = None,
     asocc_base_allocate_args: dict[str, Any] | None = None,
+    report_reused_progress: bool = False,
+    complete_component_phases: bool | None = None,
+    complete_phase: bool = True,
 ) -> ComponentRun:
     """Run aCC using a stored session, one branch scope, or public arguments."""
     owns_phase = phase is None
@@ -261,6 +260,11 @@ def run_uncertainty_acc_component(
     finalize_outputs = component_inventory_finalizes(
         component_inventory=component_inventory,
         finalize_component_inventory=finalize_component_inventory,
+    )
+    complete_component_phases = (
+        not (figures and subfigures)
+        if complete_component_phases is None
+        else complete_component_phases
     )
     had_component_session = component_session is not None
     progress_parameters = component_inventory_progress_parameters(
@@ -366,7 +370,7 @@ def run_uncertainty_acc_component(
         if current_run_id is not None or component_session is None
         else component_session.run_id
     )
-    if component_session is not None and component_session.output_state is not None:
+    if component_session is not None:
         components = ACCInitialComponents(
             asocc_input=component_session.plan.asocc_input,
             asocc_session=component_session.asocc_session,
@@ -398,6 +402,7 @@ def run_uncertainty_acc_component(
                 checkpoints=checkpoints,
                 finalize_outputs=finalize_outputs,
             ),
+            complete_component_phases=complete_component_phases,
         )
     asocc_input = components.asocc_input
     dynamic_cc_input = components.dynamic_cc_input
@@ -405,8 +410,8 @@ def run_uncertainty_acc_component(
     dynamic_cc_session = components.dynamic_cc_session
     current_run_id = components.run_id
     phase_entries = [
-        *_asocc_phase_entries(asocc_input=asocc_input),
-        *_dynamic_cc_phase_entries(dynamic_cc_input=dynamic_cc_input),
+        *asocc_phase_entries(asocc_input=asocc_input),
+        *dynamic_cc_phase_entries(dynamic_cc_input=dynamic_cc_input),
     ]
     if component_session is None:
         phase_owner.status("Building aCC uncertainty plan", owner="uncertainty_acc")
@@ -427,7 +432,7 @@ def run_uncertainty_acc_component(
         batch_size=memory_bounded_batch_size(
             runtime=runtime,
             primary_block=BatchMemoryBlock("acc_run_values", len(plan.identity)),
-            extra_blocks=_acc_batch_memory_blocks(plan=plan),
+            extra_blocks=acc_batch_memory_blocks(plan=plan),
         ),
     )
     context = build_acc_manifest_context(
@@ -475,13 +480,24 @@ def run_uncertainty_acc_component(
             max_runs=max(progress_parameters["max_runs"], reusable.manifest.completed_runs),
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
-            visible=show_progress
-            and not all((had_component_session, component_parent_convergence)),
+            visible=(show_progress or report_reused_progress)
+            and not (
+                had_component_session and component_parent_convergence and not finalize_outputs
+            ),
+            reached=bool((reusable.manifest.convergence or {}).get("reached")),
+            final_checkpoint=finalize_outputs,
         )
         asocc_progress.finish()
         dynamic_cc_progress.finish()
         acc_progress.finish()
         reuse_manifest = reusable.manifest
+        if reuse_status == "reused_exact":
+            progress_complete_sobol(
+                source="uncertainty_acc",
+                status=phase_owner,
+                sobol=reuse_manifest.sobol,
+                visible=sobol_plan.enabled,
+            )
         if reuse_status == "computed":
             paths = build_acc_uncertainty_run_paths(
                 monte_carlo_root=scope.root,
@@ -516,20 +532,27 @@ def run_uncertainty_acc_component(
             status=acc_figure_status,
         )
         if figures and subfigures:
-            _render_final_acc_subfigures(
+            reuse_plan = plan_from_reused_acc_dependencies(
                 plan=plan,
+                manifest=reuse_manifest,
+            )
+            render_final_acc_subfigures(
+                plan=reuse_plan,
                 scope=scope,
                 figure_options=figure_options,
                 figure_format=figure_format,
+                phase=phase_owner,
                 status=acc_figure_status,
+                report_reused_progress=report_reused_progress,
             )
-        if not component_parent_convergence:
+        if complete_phase and (not component_parent_convergence or finalize_outputs):
             if reuse_status == "reused_exact":
                 phase_owner.complete(
                     phase_reused_detail(
                         scope_name="aCC uncertainty",
                         output_root=manifest_output_root(reused_manifest),
-                    )
+                    ),
+                    owner="uncertainty_acc",
                 )
             else:
                 phase_owner.complete(
@@ -538,7 +561,8 @@ def run_uncertainty_acc_component(
                         mode=reused_manifest.mode,
                         convergence=reused_manifest.convergence,
                         output_root=manifest_output_root(reused_manifest),
-                    )
+                    ),
+                    owner="uncertainty_acc",
                 )
         write_uncertainty_phase_index(
             manifest=reused_manifest,
@@ -561,7 +585,7 @@ def run_uncertainty_acc_component(
             ),
             session=(
                 None
-                if finalize_outputs
+                if finalize_outputs and component_inventory is None
                 else ACCComponentSession(
                     scope=scope,
                     plan=plan,
@@ -667,10 +691,13 @@ def run_uncertainty_acc_component(
                 progress_mode=progress_parameters["mode"],
                 progress_max_runs=progress_parameters["max_runs"],
                 progress_component=progress_parameters["component"],
+                phase=phase_owner,
                 initial_output_state=(
                     None if component_session is None else component_session.output_state
                 ),
                 finalize_outputs=finalize_outputs,
+                show_final_component_progress=show_component_progress
+                and not (figures and subfigures),
             )
         finally:
             asocc_progress.finish()
@@ -683,6 +710,7 @@ def run_uncertainty_acc_component(
         output_state = checkpoint_result.output_state
         completed_runs = checkpoint_result.completed_runs
         convergence = checkpoint_result.convergence
+        acc_progress.show("[uncertainty_acc] Writing Monte Carlo outputs")
         context = build_acc_manifest_context(
             base_args=scope.base_args,
             runtime=runtime,
@@ -726,6 +754,7 @@ def run_uncertainty_acc_component(
             )
         else:
             artifacts = acc_outputs_payload(paths=paths, output_format=runtime.output_format)
+            artifacts.pop("summary_stats_runs", None)
             artifacts["public_output"] = {"acc_runs": {"layout": plan.acc_run_layout}}
             complete = build_manifest(
                 family="acc",
@@ -762,22 +791,25 @@ def run_uncertainty_acc_component(
             )
         write_manifest(path=paths.scope_manifest, manifest=complete)
         if figures and subfigures:
-            _render_final_acc_subfigures(
+            render_final_acc_subfigures(
                 plan=plan,
                 scope=scope,
                 figure_options=figure_options,
                 figure_format=figure_format,
+                phase=phase_owner,
                 status=acc_figure_status,
+                report_reused_progress=False,
             )
         acc_progress.finish()
-        if not component_parent_convergence:
+        if complete_phase and (not component_parent_convergence or finalize_outputs):
             phase_owner.complete(
                 phase_uncertainty_done_detail(
                     scope_name="aCC uncertainty",
                     mode=complete.mode,
                     convergence=complete.convergence,
                     output_root=manifest_output_root(complete),
-                )
+                ),
+                owner="uncertainty_acc",
             )
         if finalize_outputs:
             write_uncertainty_phase_index(
@@ -803,14 +835,14 @@ def run_uncertainty_acc_component(
         ),
         session=(
             None
-            if finalize_outputs
+            if finalize_outputs and component_inventory is None
             else ACCComponentSession(
                 scope=scope,
                 plan=plan,
                 asocc_session=asocc_session,
                 dynamic_cc_session=dynamic_cc_session,
                 run_id=complete.run_id,
-                output_state=output_state,
+                output_state=None if finalize_outputs else output_state,
             )
         ),
     )
@@ -886,6 +918,7 @@ def _run_acc_branch_set(
             component_session=None,
             finalize_component_inventory=True,
             branch_scope=branch_scope,
+            report_reused_progress=False,
         ).report
 
     report = run_branch_set_report(
@@ -942,117 +975,3 @@ def _acc_component_checkpoints(
         return checkpoints
     completed = int(component_session.output_state.completed_runs)
     return (completed, *(checkpoint for checkpoint in checkpoints if int(checkpoint) != completed))
-
-
-def _acc_batch_memory_blocks(*, plan: ACCUncertaintyPlan) -> tuple[BatchMemoryBlock, ...]:
-    """Return aCC batch memory blocks derived from the active plan dimensions."""
-    if plan.acc_run_layout != "sparse_selected_rows":
-        return (
-            BatchMemoryBlock("acc_source_values", len(plan.identity)),
-            BatchMemoryBlock("acc_summary_values", len(plan.summary_identity)),
-        )
-    return sparse_selected_run_memory_blocks(
-        prefix="acc",
-        public_row_count=len(plan.identity),
-        summary_row_count=len(plan.summary_identity),
-        filters_and_sorts_output=True,
-    )
-
-
-def _render_final_acc_subfigures(
-    *,
-    plan: ACCUncertaintyPlan,
-    scope: ACCUncertaintyScope,
-    figure_options: dict[str, Any] | None,
-    figure_format: dict[str, Any] | None,
-    status,
-) -> None:
-    if plan.asocc_input.manifest is not None:
-        render_reusable_asocc_figures_if_requested(
-            manifest=plan.asocc_input.manifest,
-            figures=True,
-            figure_options=figure_options,
-            figure_format=figure_format,
-            status=status,
-        )
-    else:
-        deterministic_asocc_input(
-            phase=NullPhasePrinter(),
-            base_asocc_args=base_asocc_kwargs_from_allocate_args(
-                base_allocate_args=scope.base_allocate_args
-            ),
-            external_lcia_methods=scope.asocc_lcia_methods,
-            external_method=scope.base_args["external_method"],
-            figures=True,
-            figure_options=figure_options,
-            figure_format=figure_format,
-            refresh=False,
-        )
-    dynamic_cc_input = plan.dynamic_cc_input
-    if dynamic_cc_input is not None and dynamic_cc_input.manifest is not None:
-        render_reusable_ar6_cc_figures_if_requested(
-            manifest=dynamic_cc_input.manifest,
-            figure_options=None,
-            figure_format=figure_format,
-            status=status,
-        )
-    elif (
-        dynamic_cc_input is not None
-        and dynamic_cc_input.deterministic_manifest_path is not None
-        and scope.dynamic_branch is not None
-    ):
-        deterministic_dynamic_cc_input(
-            branch=scope.dynamic_branch,
-            years=scope.base_args["years"],
-            figures=True,
-            figure_format=figure_format,
-            status=status,
-            refresh=False,
-        )
-
-
-def _asocc_phase_entries(*, asocc_input: ACCAsoccInput) -> list[CompositePhaseIndexEntry]:
-    """Return the completed aSoCC component phase entry for one aCC run."""
-    if asocc_input.manifest is not None:
-        return [
-            uncertainty_phase_index_entry(
-                phase_label=PHASE_B1_ASOCC,
-                function_name="uncertainty_asocc",
-                manifest=asocc_input.manifest,
-                reuse_status=asocc_input.reuse_status,
-            )
-        ]
-    return [
-        deterministic_phase_index_entry(
-            phase_label=PHASE_B1_ASOCC,
-            function_name="deterministic_asocc",
-            metadata_path=cast(Path, asocc_input.deterministic_manifest_path),
-            reuse_status=asocc_input.reuse_status,
-        )
-    ]
-
-
-def _dynamic_cc_phase_entries(
-    *,
-    dynamic_cc_input: ACCDynamicCCInput | None,
-) -> list[CompositePhaseIndexEntry]:
-    """Return the completed dynamic AR6 CC component phase entry for one aCC run."""
-    if dynamic_cc_input is None:
-        return []
-    if dynamic_cc_input.manifest is not None:
-        return [
-            uncertainty_phase_index_entry(
-                phase_label=PHASE_B1_AR6_DYNAMIC_CC,
-                function_name="uncertainty_ar6_cc",
-                manifest=dynamic_cc_input.manifest,
-                reuse_status=dynamic_cc_input.reuse_status,
-            )
-        ]
-    return [
-        deterministic_phase_index_entry(
-            phase_label=PHASE_B1_AR6_DYNAMIC_CC,
-            function_name="deterministic_ar6_cc",
-            metadata_path=cast(Path, dynamic_cc_input.deterministic_manifest_path),
-            reuse_status=dynamic_cc_input.reuse_status,
-        )
-    ]

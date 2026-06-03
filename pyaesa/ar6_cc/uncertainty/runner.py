@@ -67,7 +67,7 @@ from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import (
 )
 from pyaesa.shared.uncertainty_assessment.request.sources import build_source_activation_plan
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
     phase_ready_detail,
     phase_reused_detail,
     phase_uncertainty_done_detail,
@@ -155,6 +155,7 @@ def run_uncertainty_ar6_cc_component(
     progress: RunProgressPrinter | None,
     component_session: AR6CCComponentSession | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> ComponentRun:
     """Run or append one AR6 CC component inventory using a local session."""
     owns_phase = phase is None
@@ -190,8 +191,8 @@ def run_uncertainty_ar6_cc_component(
             base_ar6_cc_args=base_ar6_cc_args,
             source_parameters=sources.parameters_for(AR6_DYNAMIC_CC_SOURCE),
         )
-        phase_owner.expect_visible(PHASE_B1_AR6_DYNAMIC_CC)
-        phase_owner.announce(PHASE_B1_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
+        phase_owner.expect_visible(PHASE_B0_AR6_DYNAMIC_CC)
+        phase_owner.announce(PHASE_B0_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
         prerequisite = prepare_ar6_cc_deterministic_prerequisite(
             request=request,
             refresh=refresh,
@@ -213,7 +214,7 @@ def run_uncertainty_ar6_cc_component(
         )
         phase_entries = [
             deterministic_phase_index_entry(
-                phase_label=PHASE_B1_AR6_DYNAMIC_CC,
+                phase_label=PHASE_B0_AR6_DYNAMIC_CC,
                 function_name="deterministic_ar6_cc",
                 metadata_path=prerequisite.metadata_path,
                 reuse_status=prerequisite.reuse_status,
@@ -281,7 +282,7 @@ def run_uncertainty_ar6_cc_component(
         plan=plan,
         component_inventory=component_inventory,
     )
-    phase_owner.announce(PHASE_B1_AR6_DYNAMIC_CC, "uncertainty_ar6_cc")
+    phase_owner.announce(PHASE_B0_AR6_DYNAMIC_CC, "uncertainty_ar6_cc")
     external_progress = progress is not None
     progress = progress or monte_carlo_run_progress(
         source="uncertainty_ar6_cc",
@@ -328,7 +329,11 @@ def run_uncertainty_ar6_cc_component(
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
             visible=show_progress
-            and not all((had_component_session, component_parent_convergence)),
+            and not (
+                had_component_session and component_parent_convergence and not finalize_outputs
+            ),
+            reached=bool((reusable.manifest.convergence or {}).get("reached")),
+            final_checkpoint=finalize_outputs,
         )
         progress.finish()
         reused_manifest = (
@@ -341,19 +346,20 @@ def run_uncertainty_ar6_cc_component(
             if figures
             else reusable.manifest
         )
-        if not component_parent_convergence:
+        if complete_phase and (not component_parent_convergence or finalize_outputs):
             phase_owner.complete(
                 phase_reused_detail(
                     scope_name="dynamic AR6 CC uncertainty",
                     output_root=manifest_output_root(reused_manifest),
-                )
+                ),
+                owner="uncertainty_ar6_cc",
             )
         write_uncertainty_phase_index(
             manifest=reused_manifest,
             entries=[
                 *phase_entries,
                 uncertainty_phase_index_entry(
-                    phase_label=PHASE_B1_AR6_DYNAMIC_CC,
+                    phase_label=PHASE_B0_AR6_DYNAMIC_CC,
                     function_name="uncertainty_ar6_cc",
                     manifest=reused_manifest,
                     reuse_status="reused_exact",
@@ -452,6 +458,18 @@ def run_uncertainty_ar6_cc_component(
                 final_checkpoint=finalize_outputs,
             )
         )
+        if not (runtime.mode == "fixed" and progress_parameters["mode"] == "fixed"):
+            progress_complete(
+                progress=progress,
+                completed=completed_runs,
+                max_runs=progress_parameters["max_runs"],
+                mode=progress_parameters["mode"],
+                component=progress_parameters["component"],
+                visible=show_progress,
+                reached=convergence is not None and bool(convergence.get("reached")),
+                final_checkpoint=finalize_outputs,
+            )
+        progress.show("[uncertainty_ar6_cc] Writing Monte Carlo outputs")
         write_ar6_cc_source_methods(path=paths.source_methods, rows=plan.source_method_rows)
         write_ar6_cc_results_readme(
             paths=paths,
@@ -516,14 +534,15 @@ def run_uncertainty_ar6_cc_component(
             )
         write_manifest(path=paths.scope_manifest, manifest=complete)
         progress.finish()
-        if not component_parent_convergence:
+        if complete_phase and (not component_parent_convergence or finalize_outputs):
             phase_owner.complete(
                 phase_uncertainty_done_detail(
                     scope_name="dynamic AR6 CC uncertainty",
                     mode=complete.mode,
                     convergence=complete.convergence,
                     output_root=manifest_output_root(complete),
-                )
+                ),
+                owner="uncertainty_ar6_cc",
             )
         if finalize_outputs:
             write_uncertainty_phase_index(
@@ -531,7 +550,7 @@ def run_uncertainty_ar6_cc_component(
                 entries=[
                     *phase_entries,
                     uncertainty_phase_index_entry(
-                        phase_label=PHASE_B1_AR6_DYNAMIC_CC,
+                        phase_label=PHASE_B0_AR6_DYNAMIC_CC,
                         function_name="uncertainty_ar6_cc",
                         manifest=complete,
                         reuse_status="computed",

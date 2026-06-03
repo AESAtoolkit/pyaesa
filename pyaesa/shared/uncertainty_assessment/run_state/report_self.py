@@ -30,6 +30,7 @@ def self_section(
     if reuse_status is not None:
         lines.append(f"Run status: {public_reuse_status(reuse_status)}")
     lines.extend(_owner_scope_lines(manifest=manifest))
+    lines.extend(monte_carlo_lines(manifest=manifest))
     lines.append(f"Run id: {manifest.run_id}")
     output_root = uncertainty_manifest_output_root(manifest)
     lines.append(f"Output folder: {output_root}")
@@ -44,6 +45,42 @@ def self_section(
         lines=lines,
         warnings=warnings,
     )
+
+
+def monte_carlo_lines(*, manifest: UncertaintyManifest) -> list[str]:
+    """Return public Monte Carlo status lines for one uncertainty manifest."""
+    mc_parameters = manifest.mc_parameters or {}
+    requested = int(mc_parameters.get("requested_runs", manifest.requested_runs) or 0)
+    if manifest.mode == "fixed":
+        component_inventory = manifest.component_inventory or {}
+        if str(component_inventory.get("parent_mode", "")) == "convergence":
+            maximum = int(component_inventory.get("parent_max_runs", manifest.requested_runs) or 0)
+            return [
+                f"Monte Carlo: convergence component checkpoint; "
+                f"completed runs {manifest.completed_runs}; maximum allowed runs {maximum}"
+            ]
+        return [f"Monte Carlo: fixed; completed fixed runs {manifest.completed_runs}"]
+    maximum = int(mc_parameters.get("max_runs", requested or manifest.requested_runs) or 0)
+    convergence = manifest.convergence or {}
+    reached = "not reached"
+    if convergence:
+        reached = "reached" if bool(convergence.get("reached")) else "not reached"
+        maximum = int(convergence.get("max_runs", maximum) or maximum)
+    line = (
+        f"Monte Carlo: convergence; completed runs {manifest.completed_runs}; "
+        f"maximum allowed runs {maximum}; convergence {reached}"
+    )
+    lines = [line]
+    context = manifest.compatibility_context or {}
+    if str(context.get("artifact_contract", "")).endswith("_branch_set"):
+        lines.append(
+            "Convergence scope: independent per branch; each branch scope manifest "
+            "records its own convergence status."
+        )
+    reason = convergence.get("reason") if convergence else None
+    if reason is not None:
+        lines.append(f"Convergence reason: {reason}")
+    return lines
 
 
 def _owner_scope_lines(*, manifest: UncertaintyManifest) -> list[str]:

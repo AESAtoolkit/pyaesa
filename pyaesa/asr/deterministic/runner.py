@@ -16,6 +16,7 @@ from pyaesa.shared.runtime.reporting.composite_phase_index import (
     PHASE_C_ASR,
     phase_ready_detail,
 )
+from pyaesa.shared.runtime.reporting.figure_progress import log_figure_completion
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.asr.deterministic.state.branch_state import (
@@ -432,13 +433,19 @@ def run_single_asr(
             compute_compatible=coverage_signature_covers,
         )
     ):
+        cached_figures = cached_path_list(
+            existing_metadata=matched_metadata,
+            field_name="figure_paths",
+        )
+        log_figure_completion(
+            source="deterministic_asr",
+            status=status,
+            count=len(cached_figures),
+        )
         return build_asr_branch_report(
             state=cached_branch_state(
                 existing_metadata=matched_metadata,
-                figure_paths=cached_path_list(
-                    existing_metadata=matched_metadata,
-                    field_name="figure_paths",
-                ),
+                figure_paths=cached_figures,
                 meta_path=meta_path,
             ),
             lca_type=lca_type,

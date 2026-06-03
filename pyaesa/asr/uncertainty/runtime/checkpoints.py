@@ -19,7 +19,7 @@ from pyaesa.asr.uncertainty.runtime.models import (
 )
 from pyaesa.io_lca.data.contracts import IO_LCA_FAMILY
 from pyaesa.asr.uncertainty.sources.lca_inputs import resolve_lca_uncertainty_component_input
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
+from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
     monte_carlo_run_progress,
@@ -82,6 +82,7 @@ def run_asr_checkpoints(
     progress_mode: str,
     progress_max_runs: int,
     progress_component: bool,
+    show_final_component_progress: bool,
 ) -> ASRCheckpointResult:
     """Append ASR checkpoint outputs and refresh component inventories as needed."""
     plan = initial_plan
@@ -170,6 +171,8 @@ def run_asr_checkpoints(
                 max_runs=progress_max_runs,
                 mode=progress_mode,
                 component=progress_component,
+                reached=convergence is not None and bool(convergence.get("reached")),
+                final_checkpoint=checkpoint == runtime.n_runs,
             )
             if convergence is not None and bool(convergence.get("reached")):
                 break
@@ -178,14 +181,15 @@ def run_asr_checkpoints(
             or (lca_session is not None and lca_session.requires_finalization())
         )
         if finalize_components:
-            silent_phase: Any = NullPhasePrinter()
-            silent_acc_progress = monte_carlo_run_progress(
+            final_acc_progress = monte_carlo_run_progress(
                 source="uncertainty_acc",
-                enabled=False,
+                enabled=show_final_component_progress,
+                status=phase,
             )
-            silent_lca_progress = monte_carlo_run_progress(
+            final_lca_progress = monte_carlo_run_progress(
                 source="uncertainty_io_lca",
-                enabled=False,
+                enabled=show_final_component_progress,
+                status=phase,
             )
             acc_manifest, acc_session = _checkpoint_acc(
                 project_name=project_name,
@@ -203,7 +207,7 @@ def run_asr_checkpoints(
                 source_config=source_config.acc_config,
                 external_method=external_method,
                 output_format=output_format,
-                phase=silent_phase,
+                phase=phase,
                 target_runs=state.completed_runs,
                 parent_mode=runtime.mode,
                 parent_max_runs=runtime.n_runs,
@@ -212,9 +216,10 @@ def run_asr_checkpoints(
                 figure_options=figure_options,
                 figure_format=figure_format,
                 run_id=run_id,
-                acc_progress=silent_acc_progress,
+                acc_progress=final_acc_progress,
                 component_session=acc_session,
                 finalize_component_inventory=finalize_components,
+                show_progress=show_final_component_progress,
             )
             lca_input, lca_session = _checkpoint_lca(
                 lca_input=lca_input,
@@ -227,16 +232,17 @@ def run_asr_checkpoints(
                 source_config=source_config.lca_config,
                 output_format=output_format,
                 refresh=False,
-                phase=silent_phase,
+                phase=phase,
                 target_runs=state.completed_runs,
                 parent_mode=runtime.mode,
                 parent_max_runs=runtime.n_runs,
                 figures=False,
                 figure_format=figure_format,
                 run_id=run_id,
-                lca_progress=silent_lca_progress,
+                lca_progress=final_lca_progress,
                 component_session=lca_session,
                 finalize_component_inventory=finalize_components,
+                show_progress=show_final_component_progress,
             )
             plan = replace(plan, acc_manifest=acc_manifest, lca_input=lca_input)
         return ASRCheckpointResult(
@@ -281,6 +287,7 @@ def _checkpoint_acc(
     acc_progress: RunProgressPrinter,
     component_session: Any | None,
     finalize_component_inventory: bool,
+    show_progress: bool = True,
 ) -> tuple[UncertaintyManifest, Any | None]:
     """Run or reuse the aCC component at one ASR checkpoint."""
     phase.announce(PHASE_B2_ACC, "uncertainty_acc")
@@ -308,13 +315,15 @@ def _checkpoint_acc(
         figure_options=figure_options,
         figure_format=figure_format,
         subfigures=subfigures,
-        show_progress=True,
-        show_component_progress=True,
+        show_progress=show_progress,
+        show_component_progress=show_progress,
         run_id=run_id,
         refresh=False,
         progress=acc_progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_component_phases=show_progress,
+        complete_phase=show_progress,
     )
     return report.report.manifest, report.session
 
@@ -341,6 +350,7 @@ def _checkpoint_lca(
     lca_progress: RunProgressPrinter,
     component_session: Any | None,
     finalize_component_inventory: bool,
+    show_progress: bool = True,
 ) -> tuple[LCAUncertaintyInput, Any | None]:
     """Run or reuse the LCA component at one ASR checkpoint."""
     # External LCA inventories are immutable within one ASR run; IO-LCA owns
@@ -370,12 +380,13 @@ def _checkpoint_lca(
         ),
         figures=figures,
         figure_format=figure_format,
-        show_progress=True,
+        show_progress=show_progress,
         run_id=run_id,
         status=lca_progress,
         progress=lca_progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
         figure_run_count=target_runs,
+        complete_phase=show_progress,
     )
     return resolved.input, resolved.session

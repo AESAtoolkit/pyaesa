@@ -293,6 +293,7 @@ def _append_compact_run_outputs(
             final_checkpoint=final_checkpoint,
         )
         if final_checkpoint or convergence is not None:
+            progress.show(f"[uncertainty_{runtime.family}] Monte Carlo writing summaries")
             write_downstream_summary(
                 paths=paths,
                 plan=plan,
@@ -409,6 +410,7 @@ def _append_sparse_run_outputs(
             final_checkpoint=final_checkpoint,
         )
         if final_checkpoint or convergence is not None:
+            progress.show(f"[uncertainty_{runtime.family}] Monte Carlo writing summaries")
             write_downstream_summary(
                 paths=paths,
                 plan=plan,

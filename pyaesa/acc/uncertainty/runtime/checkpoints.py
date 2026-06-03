@@ -19,7 +19,7 @@ from pyaesa.acc.uncertainty.runtime.models import (
     ACCUncertaintyPlan,
     ACCUncertaintyRunPaths,
 )
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
+from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import RunProgressPrinter
 from pyaesa.shared.uncertainty_assessment.orchestration import progress_begin, progress_complete
 from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import (
@@ -69,8 +69,10 @@ def run_acc_checkpoints(
     progress_mode: str,
     progress_max_runs: int,
     progress_component: bool,
+    phase: PhasePrinter,
     initial_output_state: Any | None = None,
     finalize_outputs: bool = True,
+    show_final_component_progress: bool = True,
 ) -> ACCCheckpointResult:
     """Append aCC checkpoint outputs and refresh component inventories as needed."""
     plan = initial_plan
@@ -105,6 +107,7 @@ def run_acc_checkpoints(
                     figure_format=figure_format,
                     run_id=run_id,
                     progress=asocc_progress,
+                    phase=phase,
                     component_session=asocc_session,
                     finalize_component_inventory=False,
                 )
@@ -120,6 +123,7 @@ def run_acc_checkpoints(
                     figures=False,
                     figure_format=figure_format,
                     progress=dynamic_cc_progress,
+                    phase=phase,
                     run_id=run_id,
                     component_session=dynamic_cc_session,
                     finalize_component_inventory=False,
@@ -159,6 +163,8 @@ def run_acc_checkpoints(
                 max_runs=progress_max_runs,
                 mode=progress_mode,
                 component=progress_component,
+                reached=convergence is not None and bool(convergence.get("reached")),
+                final_checkpoint=bool(finalize_outputs and checkpoint == runtime.n_runs),
             )
             if convergence is not None and bool(convergence.get("reached")):
                 break
@@ -197,8 +203,10 @@ def run_acc_checkpoints(
                 figure_format=figure_format,
                 run_id=run_id,
                 progress=asocc_progress,
+                phase=phase,
                 component_session=asocc_session,
                 finalize_component_inventory=finalize_components,
+                show_progress=show_final_component_progress,
             )
             dynamic_component = _checkpoint_dynamic_cc(
                 dynamic_cc=dynamic_cc,
@@ -212,9 +220,11 @@ def run_acc_checkpoints(
                 figures=False,
                 figure_format=figure_format,
                 progress=dynamic_cc_progress,
+                phase=phase,
                 run_id=run_id,
                 component_session=dynamic_cc_session,
                 finalize_component_inventory=finalize_components,
+                show_progress=show_final_component_progress,
             )
             dynamic_cc = dynamic_component.input
             dynamic_cc_session = dynamic_component.session
@@ -251,9 +261,11 @@ def _checkpoint_dynamic_cc(
     figures: bool,
     figure_format: dict[str, Any] | None,
     progress: RunProgressPrinter,
+    phase: PhasePrinter,
     run_id: str | None,
     component_session: Any | None,
     finalize_component_inventory: bool,
+    show_progress: bool = False,
 ) -> ComponentInput[ACCDynamicCCInput | None]:
     if dynamic_branch is None:
         return ComponentInput(input=None, session=None)
@@ -267,10 +279,10 @@ def _checkpoint_dynamic_cc(
         parent_max_runs=parent_max_runs,
         figures=figures,
         figure_format=figure_format,
-        show_progress=False,
+        show_progress=show_progress,
         progress=progress,
         run_id=run_id,
-        phase=NullPhasePrinter(),
+        phase=phase if show_progress else NullPhasePrinter(),
         refresh=False,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
@@ -293,8 +305,10 @@ def _checkpoint_asocc_input(
     figure_format: dict[str, Any] | None,
     run_id: str | None,
     progress: RunProgressPrinter,
+    phase: PhasePrinter,
     component_session: Any | None,
     finalize_component_inventory: bool,
+    show_progress: bool = False,
 ) -> tuple[ACCAsoccInput, Any | None]:
     if asocc_input.manifest is None:
         return asocc_input, component_session
@@ -310,8 +324,8 @@ def _checkpoint_asocc_input(
         figures=figures,
         figure_options=figure_options,
         figure_format=figure_format,
-        show_progress=False,
-        phase=NullPhasePrinter(),
+        show_progress=show_progress,
+        phase=phase if show_progress else NullPhasePrinter(),
         run_id=run_id,
         refresh=False,
         progress=progress,

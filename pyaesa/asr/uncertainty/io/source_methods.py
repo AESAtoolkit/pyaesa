@@ -76,9 +76,9 @@ def write_asr_results_readme(
         "- public_row_identity: public ASR rows, one row per run matrix column.",
         *public_run_artifact_readme_lines(run_name="asr_runs"),
         "  Layout: ASR values by run and public row.",
-        "- summary_stats_runs: exact yearly ASR and frequency of no transgression",
+        "- summary_stats_runs: exact yearly ASR and frequency of transgression",
         "  outputs computed from all runs. ASR rows carry summary statistics;",
-        "  frequency rows carry the fNT fraction.",
+        "  frequency rows carry the fT fraction.",
     ]
     if include_cumulative:
         artifact_lines.extend(
@@ -87,8 +87,8 @@ def write_asr_results_readme(
                 *public_run_artifact_readme_lines(run_name="cumulative_asr_runs"),
                 "  Layout: cumulative ASR values by run and period identity.",
                 "- cumulative_summary_stats_runs: cumulative ASR and frequency of",
-                "  no-transgression outputs computed from all cumulative runs. Cumulative",
-                "  ASR rows carry summary statistics; frequency rows carry the fNT fraction.",
+                "  transgression outputs computed from all cumulative runs. Cumulative",
+                "  ASR rows carry summary statistics; frequency rows carry the fT fraction.",
             ]
         )
     artifact_lines.extend(

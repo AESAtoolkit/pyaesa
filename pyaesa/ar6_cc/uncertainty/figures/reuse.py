@@ -11,6 +11,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
 )
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
+    log_current_figure_artifacts,
     manifest_figure_artifacts_current,
 )
 
@@ -28,6 +29,11 @@ def render_reusable_ar6_cc_figures_if_requested(
         figure_options=figure_options,
         figure_format=figure_format,
     ):
+        log_current_figure_artifacts(
+            manifest=manifest,
+            status=status,
+            source="uncertainty_ar6_cc",
+        )
         return manifest
     paths = ar6_cc_run_paths_from_manifest(manifest=manifest)
     figure_paths = render_ar6_cc_uncertainty_figures(

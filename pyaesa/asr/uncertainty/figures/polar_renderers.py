@@ -7,7 +7,7 @@ import pandas as pd
 
 from pyaesa.asr.figures.axis import ASR_LOG_SCALE, ASRScaleMode
 from pyaesa.asr.figures.common import VALUE_ARRAY_COLUMN, ordered_impacts, visible_values
-from pyaesa.asr.figures.frequency import FNT_FRACTION_COLUMN
+from pyaesa.asr.figures.frequency import FT_FRACTION_COLUMN
 from pyaesa.asr.figures.polar import PolarStyle, render_asr_polar
 from pyaesa.shared.figures.lcia_scope import resolve_unique_lcia_method
 
@@ -33,7 +33,7 @@ def plot_polar_scope(
         payload = np.concatenate(arrays)
         values[str(impact)] = payload
         summaries[str(impact)] = _summary_for_panel(panel)
-        frequencies[str(impact)] = summaries[str(impact)].get(FNT_FRACTION_COLUMN, np.nan)
+        frequencies[str(impact)] = summaries[str(impact)].get(FT_FRACTION_COLUMN, np.nan)
     lcia_method = str(resolve_unique_lcia_method(frame) or visible_values(frame, "lcia_method")[0])
     return render_asr_polar(
         frame=frame,
@@ -62,6 +62,6 @@ def _summary_for_panel(panel: pd.DataFrame) -> dict[str, float]:
         "p75",
         "p95",
         "max",
-        FNT_FRACTION_COLUMN,
+        FT_FRACTION_COLUMN,
     )
     return {column: float(row[column]) for column in columns if column in panel.columns}

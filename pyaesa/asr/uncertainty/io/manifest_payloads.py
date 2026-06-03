@@ -26,7 +26,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (
     public_run_output_payload,
 )
 
-ASR_ARTIFACT_CONTRACT = "asr_uncertainty_runs_with_frequency_of_no_transgression"
+ASR_ARTIFACT_CONTRACT = "asr_uncertainty_runs_with_frequency_of_transgression"
 
 
 def build_asr_manifest_context(
@@ -199,7 +199,7 @@ def asr_public_output_payload(
         run_key="asr_runs",
         metric="asr",
         layout=run_layout,
-        summary_metrics=["asr", "frequency_of_no_transgression"],
+        summary_metrics=["asr", "frequency_of_transgression"],
     )
     if include_cumulative:
         cumulative_run_columns = uncertainty_table_columns(
@@ -230,7 +230,7 @@ def asr_public_output_payload(
                 },
                 "cumulative_summary_metrics": [
                     "cumulative_asr",
-                    "cumulative_frequency_of_no_transgression",
+                    "cumulative_frequency_of_transgression",
                 ],
                 "cumulative_summary_columns": cumulative_summary_columns,
             }

@@ -971,8 +971,6 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
     prospective_output = output_by_stem["UT(FD)__gwp100_lcia__dynamic_ar6__SSP2"]
     assert historical_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
     assert prospective_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
-    assert "cumulative_no_transgression" not in historical_output.columns
-    assert "cumulative_no_transgression" not in prospective_output.columns
     del allocation_dummy_repo
 
 
@@ -1123,7 +1121,6 @@ def test_compute_contracts_cover_selector_resolution_matching_and_ratios() -> No
     assert scenario_lca_result["2029"].tolist() == [pytest.approx(1.5), pytest.approx(1.5)]
     assert scenario_lca_result["2030"].tolist() == [pytest.approx(2.0), pytest.approx(3.0)]
     assert "cumulative_asr" not in scenario_lca_result.columns
-    assert "cumulative_no_transgression" not in scenario_lca_result.columns
 
     with pytest.raises(ValueError):
         compute_mod.deterministic_asr_for_acc_file(

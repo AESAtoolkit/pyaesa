@@ -12,6 +12,12 @@ from pyaesa.external_inputs.lca.monte_carlo import (
     external_lca_values_for_run_rows,
 )
 from pyaesa.io_lca.figures.common import lca_prospective_scope_slices, selector_groups
+from pyaesa.io_lca.figures.common import (
+    figure_stem,
+    lcia_method_tag,
+    normalize_plot_years,
+    selector_scope_token,
+)
 from pyaesa.io_lca.plot.figure_writers import (
     write_lcia_method_checkpoint_figures,
     write_lcia_method_figures,
@@ -26,6 +32,7 @@ from pyaesa.shared.runtime.scenario.columns import EXT_LCA_SSP_SCENARIO_COLUMN
 from pyaesa.shared.figures.contracts import SELECTOR_COLUMNS
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.runtime.reporting.labels import plural_label
+from pyaesa.shared.figures.paths import output_paths
 from pyaesa.shared.uncertainty_assessment.io.summary_kernels import (
     assign_summary_columns,
     column_block_width,
@@ -103,8 +110,6 @@ def render_external_lca_deterministic_figures_from_rows(
     status: StatusSink | None = None,
 ) -> list[Path]:
     """Render deterministic external LCA figures from already loaded LCA rows."""
-    if status is not None:
-        status.show("[external_lca] Generating figure: external LCA")
     figure_frame = _normalize_for_figures(
         frame=rows,
         lcia_method=lcia_method,
@@ -116,6 +121,19 @@ def render_external_lca_deterministic_figures_from_rows(
         argument_name="external LCA version_name",
     )
     unique_years = sorted({int(year) for year in cast(pd.Series, figure_frame["year"]).tolist()})
+    expected_paths = _deterministic_figure_paths(
+        figure_frame=figure_frame,
+        figures_dir=scope_dir,
+        lcia_method=lcia_method,
+        years=unique_years,
+        output_format=output_format,
+        file_stem_prefix=file_stem_prefix,
+    )
+    if _figure_paths_current(expected_paths):
+        _log_external_lca_figure_completion(status=status, paths=expected_paths)
+        return expected_paths
+    if status is not None:
+        status.show("[external_lca] Generating figure: external LCA")
     if len(unique_years) == 1:
         paths = write_lcia_method_checkpoint_figures(
             lcia_method_frame=figure_frame,
@@ -156,8 +174,6 @@ def render_external_lca_uncertainty_figures_from_source(
     status: StatusSink | None = None,
 ) -> list[Path]:
     """Render external LCA Monte Carlo figures from scoped source row values."""
-    if status is not None:
-        status.show("[external_lca] Generating figure: external LCA")
     years = sorted({int(year) for year in source.identity["year"].tolist()})
     figures_dir = external_lca_monte_carlo_figures_dir(project_base=proj_base)
     file_stem_prefix = normalize_external_lca_version_name(
@@ -169,6 +185,19 @@ def render_external_lca_uncertainty_figures_from_source(
         frame=source.identity,
         lcia_method=source.lcia_method,
     )
+    expected_paths = _uncertainty_figure_paths(
+        identity_frame=identity_frame,
+        figures_dir=figures_dir,
+        lcia_method=source.lcia_method,
+        years=years,
+        output_format=output_format,
+        file_stem_prefix=file_stem_prefix,
+    )
+    if _figure_paths_current(expected_paths):
+        _log_external_lca_figure_completion(status=status, paths=expected_paths)
+        return expected_paths
+    if status is not None:
+        status.show("[external_lca] Generating figure: external LCA")
     if len(years) == 1:
         paths = _render_uncertainty_violin_figures(
             source=source,
@@ -192,6 +221,115 @@ def render_external_lca_uncertainty_figures_from_source(
         )
     _log_external_lca_figure_completion(status=status, paths=paths)
     return paths
+
+
+def _deterministic_figure_paths(
+    *,
+    figure_frame: pd.DataFrame,
+    figures_dir: Path,
+    lcia_method: str,
+    years: list[int],
+    output_format: str,
+    file_stem_prefix: str,
+) -> list[Path]:
+    selector_cols, groups = selector_groups(
+        frame=figure_frame,
+        selector_columns=SELECTOR_COLUMNS,
+    )
+    paths: list[Path] = []
+    single_year = len(years) == 1
+    for _group_key, base_group_df in groups:
+        base_group_df = normalize_plot_years(frame=base_group_df.copy())
+        for scenario_token, _scenario_title, group_df in lca_prospective_scope_slices(
+            base_group_df
+        ):
+            selector_token = selector_scope_token(
+                group_frame=group_df,
+                selector_cols=selector_cols,
+                reference_frame=figure_frame,
+            )
+            checkpoint_years = years if single_year else [None]
+            for checkpoint_year in checkpoint_years:
+                out_base = figures_dir / figure_stem(
+                    lcia_method=lcia_method_tag(lcia_method),
+                    selector_scope_token=selector_token,
+                    scenario_token=scenario_token,
+                    year=checkpoint_year,
+                    stem_prefix=file_stem_prefix,
+                )
+                paths.extend(output_paths(base_path=out_base, output_format=output_format))
+    return sorted({Path(path) for path in paths})
+
+
+def _uncertainty_figure_paths(
+    *,
+    identity_frame: pd.DataFrame,
+    figures_dir: Path,
+    lcia_method: str,
+    years: list[int],
+    output_format: str,
+    file_stem_prefix: str,
+) -> list[Path]:
+    paths: list[Path] = []
+    for scope in _lca_figure_scopes(identity_frame):
+        paths.extend(
+            _uncertainty_scope_paths(
+                frame=scope,
+                reference_frame=identity_frame,
+                figures_dir=figures_dir,
+                lcia_method=lcia_method,
+                years=years,
+                output_format=output_format,
+                file_stem_prefix=file_stem_prefix,
+            )
+        )
+    return sorted({Path(path) for path in paths})
+
+
+def _uncertainty_scope_paths(
+    *,
+    frame: pd.DataFrame,
+    reference_frame: pd.DataFrame,
+    figures_dir: Path,
+    lcia_method: str,
+    years: list[int],
+    output_format: str,
+    file_stem_prefix: str,
+) -> list[Path]:
+    selector_cols, groups = selector_groups(frame=frame, selector_columns=SELECTOR_COLUMNS)
+    paths: list[Path] = []
+    single_year = len(years) == 1
+    for _group_key, group_df in groups:
+        group_df = group_df.copy()
+        group_df["year"] = pd.Series(pd.to_numeric(group_df["year"], errors="raise")).astype(int)
+        for scenario_token, _scenario_title, scoped_group in lca_prospective_scope_slices(group_df):
+            checkpoint_years = years if single_year else [None]
+            for checkpoint_year in checkpoint_years:
+                year_frame = (
+                    scoped_group.loc[
+                        scoped_group["year"].astype(int).eq(int(checkpoint_year))
+                    ].copy()
+                    if checkpoint_year is not None
+                    else scoped_group
+                )
+                selector_token = selector_scope_token(
+                    group_frame=year_frame,
+                    selector_cols=selector_cols,
+                    reference_frame=reference_frame,
+                )
+                out_base = figures_dir / figure_stem(
+                    lcia_method=lcia_method_tag(lcia_method),
+                    selector_scope_token=selector_token,
+                    scenario_token=scenario_token,
+                    year=checkpoint_year,
+                    stem_prefix=file_stem_prefix,
+                )
+                paths.extend(output_paths(base_path=out_base, output_format=output_format))
+    return paths
+
+
+def _figure_paths_current(paths: list[Path]) -> bool:
+    return bool(paths) and all(path.exists() for path in paths)
 
 
 def _log_external_lca_figure_completion(*, status: StatusSink | None, paths: list[Path]) -> None:

@@ -4,10 +4,11 @@ from pathlib import Path
 
 from pyaesa.shared.figures.request_validation import normalize_figure_format
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
     phase_ready_detail,
     phase_reused_detail,
 )
+from pyaesa.shared.runtime.reporting.figure_progress import log_figure_completion
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
 
 from .deterministic.runner import run_deterministic_ar6_cc
@@ -161,7 +162,7 @@ def deterministic_ar6_cc(
         status = _status
     try:
         if owned_phase is not None:
-            owned_phase.announce(PHASE_B1_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
+            owned_phase.announce(PHASE_B0_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
         report = run_deterministic_ar6_cc(
             years=years,
             harmonization=harmonization,
@@ -178,6 +179,7 @@ def deterministic_ar6_cc(
             refresh=refresh,
             _status=status,
         )
+        _log_reused_figure_count(status=status, report=report, figures=figures)
         if owned_phase is not None:
             if report.reuse_status in {"reused_exact", "partially_reused"}:
                 _complete_cached_process_ar6(report=report, phase=owned_phase)
@@ -200,6 +202,22 @@ def deterministic_ar6_cc(
             owned_phase.finish()
 
 
+def _log_reused_figure_count(
+    *,
+    status: PhasePrinter | NullPhasePrinter,
+    report: ComputeAR6CCReport,
+    figures: bool,
+) -> None:
+    """Print stored deterministic figure count for exact figure reuse."""
+    if not (figures and report.reuse_status == "reused_exact" and report.figure_paths):
+        return
+    log_figure_completion(
+        source="deterministic_ar6_cc",
+        status=status,
+        count=len(report.figure_paths),
+    )
+
+
 def _complete_cached_process_ar6(*, report: ComputeAR6CCReport, phase: PhasePrinter) -> None:
     """Print the cached process_ar6 prerequisite line inside a visible dynamic phase."""
     payload = report.process_ar6
@@ -209,6 +227,6 @@ def _complete_cached_process_ar6(*, report: ComputeAR6CCReport, phase: PhasePrin
         else phase_ready_detail
     )
     phase.complete(
-        detail(scope_name="AR6 processed", output_root=Path(str(payload["output_root"]))),
+        detail(scope_name="process AR6", output_root=Path(str(payload["output_root"]))),
         owner="process_ar6",
     )

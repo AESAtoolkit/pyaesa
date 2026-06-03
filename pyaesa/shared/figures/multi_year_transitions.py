@@ -429,3 +429,9 @@ def _render_prospective_shade(
 def transition_boundary_x(year: int) -> float:
     """Return the visible x position of one retrospective/prospective divider."""
     return float(year)
+
+
+def post_study_boundary_x(post_years: Sequence[int]) -> float:
+    """Return the divider before the first post study period year."""
+    post_values = sorted(int(year) for year in post_years)
+    return transition_boundary_x(post_values[0] - 1)

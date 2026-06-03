@@ -6,6 +6,7 @@ from typing import Any
 from pyaesa.shared.runtime.reuse.derived_state import request_state_matches, set_request_state
 from pyaesa.shared.runtime.reuse.contracts import asocc_signature_payload_matches_request
 from pyaesa.shared.runtime.metadata.json import read_optional_json_dict, write_json_dict
+from pyaesa.shared.runtime.reporting.figure_progress import log_figure_completion
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.figures.request_validation import (
     validate_consecutive_multi_year_figure_request,
@@ -86,6 +87,8 @@ def render_asocc_figures(
             compute_compatible=_asocc_figure_compute_covers,
         )
     ):
+        paths = [Path(str(path)) for path in payload[state_key].get("paths", [])]
+        log_figure_completion(source=status_source, status=status, count=len(paths))
         return None
     delete_persisted_figure_state_paths(
         payload=payload,

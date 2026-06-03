@@ -226,7 +226,7 @@ def _frequency_mean(*, values: np.ndarray) -> np.ndarray:
     observed = ~np.isnan(values)
     counts = observed.sum(axis=0)
     return np.divide(
-        np.logical_and(observed, values <= 1.0).sum(axis=0),
+        np.logical_and(observed, values > 1.0).sum(axis=0),
         counts,
         out=np.full(values.shape[1], np.nan, dtype=np.float64),
         where=counts > 0,

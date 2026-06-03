@@ -1,6 +1,6 @@
 # Study objectives
 
-Study objectives are study endpoints from the user perspective. A study objective corresponds to an *expected output* for the user. In <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>, five study objectives are currently available:
+Study objectives are study endpoints from the user perspective. A study objective corresponds to an *expected output* for the user. In `pyaesa`, five study objectives are currently available:
 
 | Study objective | Corresponding output for the user|
 | --- | --- |
@@ -12,16 +12,16 @@ Study objectives are study endpoints from the user perspective. A study objectiv
 
 ![High-level overview of pyaesa with main functions, study objectives, and prerequisites.](https://raw.githubusercontent.com/AESAtoolkit/pyaesa/main/images/fig-pyaesa-high-level.svg)
 
-## <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> automatically orchestrates functions to reach study objectives
+## `pyaesa` automatically orchestrates functions to reach study objectives
 
-**It is very important for the user to understand that to reach a desired study objective**, <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> automatically *orchestrates* the call of relevant functions to reach the desired endpoint.
-This means that <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> automatically runs upstream computations needed to produce that endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. The user hence only needs to focus on *what is the study objective of interest*, and run the relevant function.
+**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` automatically *orchestrates* the call of relevant functions to reach the desired endpoint.
+This means that `pyaesa` automatically runs upstream computations needed to produce that endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. The user hence only needs to focus on *what is the study objective of interest*, and run the relevant function.
 
 For instance:
-- For B.2 study objectives (i.e., aCC endpoints), the final entry function can auto run <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned
+- For B.2 study objectives (i.e., aCC endpoints), the final entry function can auto run `pyaesa` owned
 deterministic aSoCC and dynamic AR6 CC outputs when needed.
 - For C study objectives (i.e., ASR endpoints)
-with <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA, the final entry function can auto run <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned
+with `pyaesa` owned IO-LCA, the final entry function can auto run `pyaesa` owned
 aCC and IO-LCA outputs when needed.
 - For ASR with external aSoCC or external LCA,
 `prepare_external_inputs(...)` creates the external input folders, and users
@@ -29,85 +29,46 @@ must stage the external files before the ASR call.
 
 Choose the **study objective** (i.e., the endpoint) and call the corresponding deterministic or uncertainty function directly.\
 
-<table>
-  <thead>
-    <tr>
-      <th>Study objective</th>
-      <th>Final entry function</th>
-      <th>Reference notebook</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>(A)<br>IO-LCA results</td>
-      <td>
-        <code>deterministic_io_lca(...)</code><br>
-        <code>uncertainty_io_lca(...)</code>
-      </td>
-      <td>
-        <a href="phase_a_iolca_deterministic.html"><code>tutorials/study_objectives/(A) LCA/Phase_A_iolca_deterministic.ipynb</code></a><br>
-        <a href="phase_a_iolca_uncertainty.html"><code>tutorials/study_objectives/(A) LCA/Phase_A_iolca_uncertainty.ipynb</code></a>
-      </td>
-    </tr>
-    <tr>
-      <td>(B.0)<br>Dynamic AR6 climate change CC</td>
-      <td>
-        <code>deterministic_ar6_cc(...)</code><br>
-        <code>uncertainty_ar6_cc(...)</code>
-      </td>
-      <td>
-        <a href="phase_b0_dynamic_cc_ar6_deterministic.html"><code>tutorials/study_objectives/(B.0) CC/Phase_B0_dynamic_CC_ar6_deterministic.ipynb</code></a><br>
-        <a href="phase_b0_dynamic_cc_ar6_uncertainty.html"><code>tutorials/study_objectives/(B.0) CC/Phase_B0_dynamic_CC_ar6_uncertainty.ipynb</code></a>
-      </td>
-    </tr>
-    <tr>
-      <td>(B.1)<br>aSoCC results</td>
-      <td>
-        <code>deterministic_asocc(...)</code><br>
-        <code>uncertainty_asocc(...)</code>
-      </td>
-      <td>
-        <a href="phase_b1_asocc_deterministic.html"><code>tutorials/study_objectives/(B.1) aSoCC/Phase_B1_asocc_deterministic.ipynb</code></a><br>
-        <a href="phase_b1_asocc_uncertainty.html"><code>tutorials/study_objectives/(B.1) aSoCC/Phase_B1_asocc_uncertainty.ipynb</code></a><br>
-      </td>
-    </tr>
-    <tr>
-      <td>(B.2)<br>aCC results</td>
-      <td>
-        <code>deterministic_acc(...)</code><br>
-        <code>uncertainty_acc(...)</code>
-      </td>
-      <td>
-        <a href="phase_b2_acc_deterministic.html"><code>tutorials/study_objectives/(B.2) aCC/Phase_B2_acc_deterministic.ipynb</code></a><br>
-        <a href="phase_b2_acc_uncertainty.html"><code>tutorials/study_objectives/(B.2) aCC/Phase_B2_acc_uncertainty.ipynb</code></a>
-      </td>
-    </tr>
-    <tr>
-      <td>(C)<br>ASR results with <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA</td>
-      <td>
-        <code>deterministic_asr(...)</code><br>
-        <code>uncertainty_asr(...)</code>
-      </td>
-      <td>
-        <a href="phase_c_asr_deterministic.html"><code>tutorials/study_objectives/(C) ASR/Phase_C_asr_deterministic.ipynb</code></a><br>
-        <a href="phase_c_asr_uncertainty.html"><code>tutorials/study_objectives/(C) ASR/Phase_C_asr_uncertainty.ipynb</code></a>
-      </td>
-    </tr>
-    <tr>
-      <td>(C)<br>ASR results with external aSoCC or external LCA</td>
-      <td>
-        <code>deterministic_asr(...)</code><br>
-        <code>uncertainty_asr(...)</code>
-      </td>
-      <td>
-        <a href="../optional/external_asocc_lca_input_staging.html"><code>tutorials/optional_workflows/external_asocc_lca_input_staging.ipynb</code></a><br>
-        <a href="phase_c_asr_deterministic.html"><code>tutorials/study_objectives/(C) ASR/Phase_C_asr_deterministic.ipynb</code></a><br>
-        <a href="phase_c_asr_uncertainty.html"><code>tutorials/study_objectives/(C) ASR/Phase_C_asr_uncertainty.ipynb</code></a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+```{list-table}
+:header-rows: 1
+:widths: 16 24 60
+
+* - Study objective
+  - Final entry function
+  - Reference notebooks
+* - (A) IO-LCA results
+  - `deterministic_io_lca(...)`  
+    `uncertainty_io_lca(...)`
+  - {doc}`Deterministic IO-LCA tutorial </tutorials/study_objectives/(A) LCA/Phase_A_iolca_deterministic>`  
+    {doc}`Uncertainty IO-LCA tutorial </tutorials/study_objectives/(A) LCA/Phase_A_iolca_uncertainty>`
+* - (B.0) Dynamic AR6 climate change CC
+  - `deterministic_ar6_cc(...)`  
+    `uncertainty_ar6_cc(...)`
+  - {doc}`Deterministic dynamic AR6 CC tutorial </tutorials/study_objectives/(B.0) CC/Phase_B0_dynamic_CC_ar6_deterministic>`  
+    {doc}`Uncertainty dynamic AR6 CC tutorial </tutorials/study_objectives/(B.0) CC/Phase_B0_dynamic_CC_ar6_uncertainty>`
+* - (B.1) aSoCC results
+  - `deterministic_asocc(...)`  
+    `uncertainty_asocc(...)`
+  - {doc}`Deterministic aSoCC tutorial </tutorials/study_objectives/(B.1) aSoCC/Phase_B1_asocc_deterministic>`  
+    {doc}`Uncertainty aSoCC tutorial </tutorials/study_objectives/(B.1) aSoCC/Phase_B1_asocc_uncertainty>`
+* - (B.2) aCC results
+  - `deterministic_acc(...)`  
+    `uncertainty_acc(...)`
+  - {doc}`Deterministic aCC tutorial </tutorials/study_objectives/(B.2) aCC/Phase_B2_acc_deterministic>`  
+    {doc}`Uncertainty aCC tutorial </tutorials/study_objectives/(B.2) aCC/Phase_B2_acc_uncertainty>`
+* - (C) ASR results with `pyaesa` owned IO-LCA
+  - `deterministic_asr(...)`  
+    `uncertainty_asr(...)`
+  - {doc}`Deterministic ASR tutorial </tutorials/study_objectives/(C) ASR/Phase_C_asr_deterministic>`  
+    {doc}`Uncertainty ASR tutorial </tutorials/study_objectives/(C) ASR/Phase_C_asr_uncertainty>`
+* - (C) ASR results with external aSoCC or external LCA
+  - `deterministic_asr(...)`  
+    `uncertainty_asr(...)`
+  - {doc}`External input staging tutorial </tutorials/optional_workflows/external_asocc_lca_input_staging>`  
+    {doc}`Deterministic ASR tutorial </tutorials/study_objectives/(C) ASR/Phase_C_asr_deterministic>`  
+    {doc}`Uncertainty ASR tutorial </tutorials/study_objectives/(C) ASR/Phase_C_asr_uncertainty>`
+```
 
 # What to do next
 
-Check out [tutorials/study_objectives/1_functional_units_and_allocation_methods.md](1_functional_units_and_allocation_methods.md) before discovering the notebooks provided for each study objective available in <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
+Check out [tutorials/study_objectives/1_functional_units_and_allocation_methods.md](1_functional_units_and_allocation_methods.md) before discovering the notebooks provided for each study objective available in `pyaesa`.

@@ -29,11 +29,11 @@ from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_tab
 
 ASR_SUMMARY_METRIC_COLUMN = "asr_metric"
 ASR_VALUE_METRIC = "asr"
-ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC = "frequency_of_no_transgression"
+ASR_FREQUENCY_OF_TRANSGRESSION_METRIC = "frequency_of_transgression"
 ASR_CUMULATIVE_VALUE_METRIC = "cumulative_asr"
-ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC = "cumulative_frequency_of_no_transgression"
-ASR_FREQUENCY_VALUE_COLUMN = "frequency_of_no_transgression"
-ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN = "cumulative_frequency_of_no_transgression"
+ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC = "cumulative_frequency_of_transgression"
+ASR_FREQUENCY_VALUE_COLUMN = "frequency_of_transgression"
+ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN = "cumulative_frequency_of_transgression"
 ASR_SUMMARY_SCOPE_COLUMN = "asr_summary_scope"
 ASR_SUMMARY_SCOPE_PER_METHOD = "per_method"
 ASR_SUMMARY_SCOPE_INTER_METHOD = "inter_method"
@@ -135,20 +135,20 @@ def asr_sparse_public_row_group_membership_index(*, plan: ASRUncertaintyPlan) ->
 
 
 def summary_identity_with_metrics(base: pd.DataFrame) -> pd.DataFrame:
-    """Return yearly ASR and frequency of no-transgression summary identities."""
+    """Return yearly ASR and frequency of transgression summary identities."""
     asr = base.copy()
     frequency = base.copy()
     asr[ASR_SUMMARY_METRIC_COLUMN] = ASR_VALUE_METRIC
-    frequency[ASR_SUMMARY_METRIC_COLUMN] = ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
+    frequency[ASR_SUMMARY_METRIC_COLUMN] = ASR_FREQUENCY_OF_TRANSGRESSION_METRIC
     return pd.concat([asr, frequency], ignore_index=True)
 
 
 def cumulative_summary_identity_with_metrics(base: pd.DataFrame) -> pd.DataFrame:
-    """Return cumulative ASR and frequency of no-transgression summary identities."""
+    """Return cumulative ASR and frequency of transgression summary identities."""
     asr = base.copy()
     frequency = base.copy()
     asr[ASR_SUMMARY_METRIC_COLUMN] = ASR_CUMULATIVE_VALUE_METRIC
-    frequency[ASR_SUMMARY_METRIC_COLUMN] = ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
+    frequency[ASR_SUMMARY_METRIC_COLUMN] = ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC
     return pd.concat([asr, frequency], ignore_index=True)
 
 
@@ -187,12 +187,12 @@ def asr_summary_table_from_public_runs(
     public_row_groups: tuple[tuple[str, ...], ...],
     sparse: bool,
 ) -> pd.DataFrame:
-    """Return ASR value statistics and fNT means from public run artifacts."""
+    """Return ASR value statistics and fT means from public run artifacts."""
     metric = pd.Series(identity_frame[ASR_SUMMARY_METRIC_COLUMN], copy=False).astype(str)
     frequency_mask = metric.isin(
         [
-            ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
-            ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+            ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
+            ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
         ]
     ).to_numpy(dtype=bool)
     value_positions = np.flatnonzero(~frequency_mask)
@@ -216,19 +216,19 @@ def asr_summary_table_from_public_runs(
 
 
 def asr_summary_output_table(summary: pd.DataFrame) -> pd.DataFrame:
-    """Return public ASR summary rows with fNT exposed as a frequency column."""
+    """Return public ASR summary rows with fT exposed as a frequency column."""
     out = summary.copy()
     metric = pd.Series(out[ASR_SUMMARY_METRIC_COLUMN], copy=False).astype(str)
     _move_frequency_mean(
         frame=out,
         metric=metric,
-        metric_name=ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+        metric_name=ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
         output_column=ASR_FREQUENCY_VALUE_COLUMN,
     )
     _move_frequency_mean(
         frame=out,
         metric=metric,
-        metric_name=ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+        metric_name=ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
         output_column=ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN,
     )
     return out

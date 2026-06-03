@@ -151,6 +151,7 @@ def test_render_transition_markers_and_boundary_position() -> None:
     assert len(ax.lines) == 2
     assert [text.get_text() for text in ax.texts] == ["switch"]
     assert math.isclose(transitions_mod.transition_boundary_x(2035), 2035.0)
+    assert math.isclose(transitions_mod.post_study_boundary_x([2061, 2062]), 2060.0)
 
     plt.close(fig)
 

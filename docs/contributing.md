@@ -1,8 +1,8 @@
 # Contributor Guide
 
-Thank you for your interest in improving <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
+Thank you for your interest in improving `pyaesa`.
 
-<span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> is an open-source Python package for absolute
+`pyaesa` is an open-source Python package for absolute
 environmental sustainability assessment (AESA) studies. The project welcomes contributions in
 the form of bug reports, feature requests, documentation improvements, tests,
 and pull requests.
@@ -20,7 +20,7 @@ license.
 
 ## License
 
-Contributions to <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>
+Contributions to `pyaesa`
 source code are accepted under the GPL 3.0 license.
 
 Contributors must not add third party data, code, or documentation with licenses that are incompatible with GPL 3.0 distribution.
@@ -47,7 +47,7 @@ When filing an issue, include:
 
 - operating system
 - Python version
-- <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> version or commit
+- `pyaesa` version or commit
 - public function call or notebook step involved
 - steps to reproduce the issue
 - expected behavior
@@ -102,7 +102,7 @@ python -m pytest tests/package --cov=pyaesa --cov-branch --cov-report=term
 ```
 
 The package coverage target is 100 percent line coverage and 100 percent branch
-coverage for <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
+coverage for `pyaesa`.
 
 For focused development, run the relevant test file or folder first:
 

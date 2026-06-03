@@ -21,7 +21,7 @@ from pyaesa.process.ar6.utils.pipeline.study_period import resolve_study_period
 from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
     PHASE_B1_ASOCC,
     phase_ready_detail,
     phase_reused_detail,
@@ -153,8 +153,8 @@ def ensure_acc_branch_prerequisites(
         )
     )
     if cc_type == "dynamic_ar6":
-        phase.expect_visible(PHASE_B1_AR6_DYNAMIC_CC)
-        phase.announce(PHASE_B1_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
+        phase.expect_visible(PHASE_B0_AR6_DYNAMIC_CC)
+        phase.announce(PHASE_B0_AR6_DYNAMIC_CC, "deterministic_ar6_cc")
         normalized_study_period = ar6_study_period.resolve_study_period(years)
         cc_years = range(int(normalized_study_period[0]), int(normalized_study_period[1]) + 1)
         cc_report = deterministic_ar6_cc(
@@ -230,7 +230,7 @@ def ensure_acc_branch_prerequisites(
         phase.complete(cc_detail, owner="deterministic_ar6_cc")
         phase_entries.append(
             CompositePhaseIndexEntry(
-                phase=PHASE_B1_AR6_DYNAMIC_CC,
+                phase=PHASE_B0_AR6_DYNAMIC_CC,
                 function="deterministic_ar6_cc",
                 status="complete",
                 reuse_status=public_phase_reuse_status(run_status=cc_report.reuse_status),

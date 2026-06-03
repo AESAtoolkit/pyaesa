@@ -58,6 +58,7 @@ def dynamic_ar6_cc_uncertainty_input(
     progress: RunProgressPrinter | None = None,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    complete_phase: bool = True,
 ) -> tuple[ACCDynamicCCInput, Any | None]:
     """Run or reuse AR6 CC uncertainty and expose it as an aCC component."""
     run = run_uncertainty_ar6_cc_component(
@@ -78,6 +79,7 @@ def dynamic_ar6_cc_uncertainty_input(
         progress=progress,
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
+        complete_phase=complete_phase,
     )
     return (
         ACCDynamicCCInput(

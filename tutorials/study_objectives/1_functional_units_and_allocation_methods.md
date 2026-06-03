@@ -11,7 +11,7 @@ method selectors used by:
 The functional unit (FU) and allocation method tables of this file summarize
 <a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
 That appendix provides the definitions and mathematical expressions for each
-allocation method available in <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
+allocation method available in `pyaesa`.
 
 ## Functional units
 
@@ -95,13 +95,13 @@ with `process_mrio(...)` arguments: `agg_reg`, `agg_sec`, and `agg_version`.
 The definitions and mathematical expressions for each allocation method are
 provided in
 <a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
-The allocation method labels below use the syntax accepted by <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
+The allocation method labels below use the syntax accepted by `pyaesa`.
 
 ### Allocation paths overview
 
 ![Overview of allocation paths and methods across allocation levels and accounting system boundaries](https://raw.githubusercontent.com/AESAtoolkit/pyaesa/main/images/fig-asocc-paths.svg)
 
-**Figure 1: Overview of UNCASExt/<span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> allocation paths and methods across
+**Figure 1: Overview of UNCASExt/pyaesa allocation paths and methods across
 allocation levels and accounting system boundaries.** The figure summarizes the
 allocation routes and method labels available across levels and accounting
 system boundaries.
@@ -116,13 +116,13 @@ here named one-step `UT(TD)`. This one-step total demand approach is therefore
 neither consumption- nor production-anchored, analogously to one-step
 `AR(E^{CBA_TD})`.
 
-*L3 and L4 are not yet covered by <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> directly and can only be covered by
-doing "manual" postprocessing of <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> outputs. L3 and L4 require case study
+*L3 and L4 are not yet covered by `pyaesa` directly and can only be covered by
+doing "manual" postprocessing of `pyaesa` outputs. L3 and L4 require case study
 specific data. Examples include company revenues to scale a sector-level
 allocation to a firm-level allocation by comparing company turnover to total
 sector output in the MRIO, or activity data (e.g., passenger-kilometers
 delivered) benchmarked against corresponding totals at the relevant MRIO level.
-A future update of <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> will include the possibility to address these levels
+A future update of `pyaesa` will include the possibility to address these levels
 via user provided L3 and L4 datasets.*
 
 ### Method label syntax

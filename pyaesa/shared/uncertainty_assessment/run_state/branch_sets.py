@@ -17,6 +17,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (
     mc_parameters_payload,
 )
 from pyaesa.shared.runtime.manifest_contract import manifest_json_value
+from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
 from pyaesa.shared.uncertainty_assessment.run_state.report import (
     UncertaintyRunReport,
 )
@@ -89,7 +90,14 @@ def run_branch_set_report(
         requested_run_id=requested_run_id,
         refresh=refresh,
     )
-    branch_reports = [run_branch(branch, run_id) for branch in branches]
+    status = TransientStatusPrinter(f"uncertainty_{family}")
+    try:
+        branch_reports = []
+        for branch in branches:
+            status.log_message(f"Branch: {_branch_token(branch=branch)}")
+            branch_reports.append(run_branch(branch, run_id))
+    finally:
+        status.finish()
     manifest = build_branch_set_manifest(
         family=family,
         runtime=runtime,
@@ -176,7 +184,12 @@ def branch_set_run_id(
 
 def _branch_root(*, root: Path, branch: dict[str, Any]) -> Path:
     """Return the Monte Carlo root for one carrying capacity branch."""
-    return Path(root) / cc_branch_token(
+    return Path(root) / _branch_token(branch=branch)
+
+
+def _branch_token(*, branch: dict[str, Any]) -> str:
+    """Return the public branch token for one carrying capacity branch."""
+    return cc_branch_token(
         cc_source=str(branch["cc_source"]),
         cc_type=str(branch["cc_type"]),
     )
@@ -198,8 +211,8 @@ def _branch_public_output(*, manifest: UncertaintyManifest) -> dict[str, Any]:
         "scope_manifest": str(manifest.artifacts["scope_manifest"]),
         "base_cc_args": arguments["base_cc_args"],
     }
-    if manifest.compatibility_context is not None:
-        has_cumulative = manifest.compatibility_context.get("has_cumulative_outputs")
-        if has_cumulative is not None:
-            payload["has_cumulative_outputs"] = bool(has_cumulative)
+    context = manifest.compatibility_context or {}
+    has_cumulative = context.get("has_cumulative_outputs")
+    if has_cumulative is not None:
+        payload["has_cumulative_outputs"] = bool(has_cumulative)
     return payload

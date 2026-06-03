@@ -274,6 +274,7 @@ def _write_dispatched_runs(
         runtime=runtime,
     )
     if final_checkpoint:
+        progress.show("[uncertainty_ar6_cc] Monte Carlo writing summaries")
         _write_summaries(
             paths=paths,
             states=states,

@@ -401,7 +401,7 @@ def render_bottom_legend(
     lower_zone_label: str,
     middle_zone_label: str | None,
     upper_zone_label: str,
-    fnt_label: str,
+    ft_label: str,
     deterministic_note: str | None = None,
 ) -> None:
     """Render the polar legend below the figure."""
@@ -453,7 +453,7 @@ def render_bottom_legend(
             width=left_w,
             height=height,
             style=style,
-            fnt_label=fnt_label,
+            ft_label=ft_label,
         )
     render_asr_risk_scale_contents(
         fig,
@@ -493,7 +493,7 @@ def _render_glyph_legend(
     width: float,
     height: float,
     style: str,
-    fnt_label: str,
+    ft_label: str,
 ) -> None:
     axis = fig.add_axes([x, y, width, height], zorder=3)
     axis.set_facecolor("none")
@@ -567,7 +567,7 @@ def _render_glyph_legend(
     axis.text(
         0.0,
         0.01,
-        format_scientific_figure_text(fnt_label),
+        format_scientific_figure_text(ft_label),
         fontsize=8,
         ha="left",
         va="bottom",

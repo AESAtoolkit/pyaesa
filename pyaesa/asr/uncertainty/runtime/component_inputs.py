@@ -58,6 +58,8 @@ def initial_asr_components(
     acc_progress: RunProgressPrinter,
     lca_progress: RunProgressPrinter,
     finalize_component_inventory: bool = False,
+    complete_lca_phase: bool = True,
+    complete_acc_component_phases: bool = True,
     run_id: str | None = None,
 ) -> ASRInitialComponents:
     """Resolve the first ASR aCC and LCA component inventories."""
@@ -92,6 +94,8 @@ def initial_asr_components(
         progress=acc_progress,
         component_session=None,
         finalize_component_inventory=finalize_component_inventory,
+        complete_component_phases=complete_acc_component_phases,
+        complete_phase=complete_acc_component_phases,
     )
     phase.announce(PHASE_B2_ACC, "uncertainty_acc")
     acc_manifest = acc_run.report.manifest
@@ -125,6 +129,7 @@ def initial_asr_components(
         component_session=None,
         finalize_component_inventory=finalize_component_inventory,
         figure_run_count=target_runs,
+        complete_phase=complete_lca_phase,
     )
     return ASRInitialComponents(
         acc_manifest=acc_manifest,
@@ -175,6 +180,9 @@ def acc_inventory_report(
     progress: RunProgressPrinter | None = None,
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
+    report_reused_progress: bool = False,
+    complete_component_phases: bool | None = None,
+    complete_phase: bool = True,
 ) -> ComponentRun:
     """Run or reuse the aCC component with the ASR aSoCC request."""
     return run_uncertainty_acc_component(
@@ -220,6 +228,9 @@ def acc_inventory_report(
         component_session=component_session,
         finalize_component_inventory=finalize_component_inventory,
         asocc_base_allocate_args=base_allocate_args,
+        report_reused_progress=report_reused_progress,
+        complete_component_phases=complete_component_phases,
+        complete_phase=complete_phase,
     )
 
 

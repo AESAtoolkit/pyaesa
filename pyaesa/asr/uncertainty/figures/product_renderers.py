@@ -54,9 +54,9 @@ from pyaesa.asr.figures.dynamic_global_ar6 import (
     uncertainty_global_ar6_rows_from_source,
 )
 from pyaesa.asr.figures.frequency import (
-    CUMULATIVE_FNT_FRACTION_COLUMN,
-    FNT_FRACTION_COLUMN,
-    fnt_legend_entry,
+    CUMULATIVE_FT_FRACTION_COLUMN,
+    FT_FRACTION_COLUMN,
+    ft_legend_entry,
 )
 from pyaesa.asr.figures.risk_guides import (
     ASR_NON_POLAR_RISK_BACKGROUND_ALPHA_SCALE,
@@ -114,8 +114,8 @@ from pyaesa.shared.figures.layout import (
 )
 from pyaesa.shared.figures.multi_year_transitions import (
     TransitionMarker,
+    post_study_boundary_x,
     render_transition_markers,
-    transition_boundary_x,
     transition_title_pad,
 )
 from pyaesa.shared.figures.scientific_text import format_scientific_figure_text
@@ -275,9 +275,8 @@ def plot_band_scope(
         paths.extend(
             _plot_impact_panel_frequency_scope(
                 frame=frame,
-                output_stem=output_stem.parent
-                / f"{output_stem.name}__frequency_of_no_transgression",
-                title=f"{title} | frequency of no-transgression",
+                output_stem=output_stem.parent / f"{output_stem.name}__frequency_of_transgression",
+                title=f"{title} | frequency of transgression",
                 dpi=dpi,
                 output_format=output_format,
                 include_method_in_label=include_method_in_label,
@@ -350,7 +349,7 @@ def plot_band_scope(
         )
     )
     frequency_axis.set_title(
-        "Frequency of no-transgression",
+        "Frequency of transgression",
         fontweight="bold",
         pad=frequency_title_pad,
     )
@@ -482,7 +481,7 @@ def plot_mean_line_scope(
         )
     )
     frequency_axis.set_title(
-        "Frequency of no-transgression",
+        "Frequency of transgression",
         fontweight="bold",
         pad=frequency_title_pad,
     )
@@ -717,7 +716,7 @@ def _plot_dynamic_band_scope(
             post_years=post_years,
         )
         frequency_axis.set_title(
-            "Frequency of no-transgression",
+            "Frequency of transgression",
             fontweight="bold",
             pad=frequency_title_pad,
         )
@@ -730,7 +729,7 @@ def _plot_dynamic_band_scope(
             label_order=cumulative_label_order,
         )
         cumulative_frequency_axis.set_title(
-            "Cumulative frequency of no-transgression",
+            "Cumulative frequency of transgression",
             fontweight="bold",
             pad=frequency_title_pad,
         )
@@ -995,7 +994,7 @@ def _plot_dynamic_mean_scope(
             post_years=post_years,
         )
         frequency_axis.set_title(
-            "Frequency of no-transgression",
+            "Frequency of transgression",
             fontweight="bold",
             pad=frequency_title_pad,
         )
@@ -1008,7 +1007,7 @@ def _plot_dynamic_mean_scope(
             label_order=cumulative_label_order,
         )
         cumulative_frequency_axis.set_title(
-            "Cumulative frequency of no-transgression",
+            "Cumulative frequency of transgression",
             fontweight="bold",
             pad=frequency_title_pad,
         )
@@ -1100,7 +1099,7 @@ def _extend_post_study_pathway_axis(
 def _post_study_transition_right(post_years: list[int]) -> float | None:
     if not post_years:
         return None
-    return transition_boundary_x(int(post_years[0]))
+    return post_study_boundary_x(post_years)
 
 
 def _render_global_ar6_row(
@@ -1387,7 +1386,7 @@ def _plot_impact_panel_frequency_scope(
         fig,
         legend_note=None,
         max_columns=1,
-        extra_entries=[_fnt_legend_entry(frame)],
+        extra_entries=[_ft_legend_entry(frame)],
     )
     paths = save_figure(fig, output_stem=output_stem, output_format=output_format, dpi=dpi)
     plt.close(fig)
@@ -1400,7 +1399,7 @@ def _component_scope(
     frame: pd.DataFrame,
     include_method_axis: bool,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    method_axis = include_method_axis or bool(visible_values(frame, "__method"))
+    method_axis = include_method_axis
     acc_source = components.acc_method if method_axis else components.acc_inter
     acc_rows = component_scope_rows(
         acc_source,
@@ -1778,7 +1777,7 @@ def _render_frequency_axis(
     ):
         ordered = group.sort_values("year", kind="stable")
         year_values = pd.Series(pd.to_numeric(ordered["year"], errors="raise")).astype(int)
-        frequency = pd.Series(pd.to_numeric(ordered[FNT_FRACTION_COLUMN], errors="raise")).astype(
+        frequency = pd.Series(pd.to_numeric(ordered[FT_FRACTION_COLUMN], errors="raise")).astype(
             float
         )
         visible_label = (
@@ -1809,8 +1808,8 @@ def _render_frequency_axis(
     return list(markers.values())
 
 
-def _fnt_legend_entry(frame: pd.DataFrame) -> tuple[Any, str]:
-    return fnt_legend_entry(cc_source=visible_values(frame, "lcia_method")[0])
+def _ft_legend_entry(frame: pd.DataFrame) -> tuple[Any, str]:
+    return ft_legend_entry(cc_source=visible_values(frame, "lcia_method")[0])
 
 
 def _render_cumulative_asr_axis(
@@ -1960,7 +1959,7 @@ def _cumulative_entries(
         values = np.asarray(row[_CUMULATIVE_VALUES_COLUMN], dtype=np.float64)
         color = colors[label] if include_method_in_label else _DEFAULT_COLOR
         frequency_value = pd.Series(
-            pd.to_numeric(pd.Series([row[CUMULATIVE_FNT_FRACTION_COLUMN]]), errors="raise")
+            pd.to_numeric(pd.Series([row[CUMULATIVE_FT_FRACTION_COLUMN]]), errors="raise")
         ).iloc[0]
         frequency = float(frequency_value)
         entries.append(
@@ -2026,9 +2025,9 @@ def _series_group_excluded_columns(frame: pd.DataFrame) -> set[str]:
         "public_row_id",
         "year",
         "asr_metric",
-        FNT_FRACTION_COLUMN,
+        FT_FRACTION_COLUMN,
         _CUMULATIVE_VALUES_COLUMN,
-        CUMULATIVE_FNT_FRACTION_COLUMN,
+        CUMULATIVE_FT_FRACTION_COLUMN,
         MODEL_SCENARIO_PAIR_COUNT_COLUMN,
         MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
     }
@@ -2131,7 +2130,7 @@ def _dynamic_uncertainty_note(*, frame: pd.DataFrame, include_distribution_note:
             [
                 "ASR and aCC vs. LCA pathway lines represent Monte Carlo runs mean values.",
                 (
-                    "Frequency of no-transgression lines are computed from the "
+                    "Frequency of transgression lines are computed from the "
                     "full uncertainty distribution."
                 ),
             ]
@@ -2158,9 +2157,7 @@ def _dynamic_distribution_footer_extra_height(
 
 
 def _frequency_note(prefix: str) -> str:
-    text = (
-        "Frequency of no-transgression lines are computed from the full uncertainty distribution."
-    )
+    text = "Frequency of transgression lines are computed from the full uncertainty distribution."
     return f"{str(prefix).strip()}\n{text}"
 
 

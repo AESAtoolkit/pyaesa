@@ -84,7 +84,7 @@ def _ar6_cc_summary_document(*, report: ComputeAR6CCReport) -> SummaryDocument:
         lines=_ar6_cc_common_lines(report=report),
         sections=(
             section(
-                "Phase B.1: Dynamic AR6 CC",
+                "Phase B.0: Dynamic AR6 CC",
                 children=tuple(_ar6_cc_phase_children(report=report)),
             ),
         ),

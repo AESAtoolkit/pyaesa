@@ -47,7 +47,7 @@ defensive validation for invariants already guaranteed by those owners.
 | --- | --- |
 | `deterministic/` | Deterministic ASR runner, prerequisite resolution, row computation, dynamic cumulative assembly, state, reports, and figures. |
 | `shared/` | ASR path helpers, LCA route request normalization, deterministic external LCA helpers, component unit conversion contracts, and ASR figure shared utilities. |
-| `uncertainty/` | ASR uncertainty runner with responsibility subfolders for IO, runtime component inputs, checkpoint orchestration, LCA sources, source keys, vectorized run evaluation, summaries, manifests, source methods, figures, and Sobol evaluation. The `uncertainty/evaluation/` package is split by owner: `planning.py` builds the ASR plan from upstream manifests, `alignment.py` owns numerator denominator row alignment, `runs.py` owns yearly ASR run products, `cumulative.py` owns dynamic AR6 full period cumulative ASR identities and values, and `summary.py` owns ASR summary identities and frequency of no-transgression metric collapse. |
+| `uncertainty/` | ASR uncertainty runner with responsibility subfolders for IO, runtime component inputs, checkpoint orchestration, LCA sources, source keys, vectorized run evaluation, summaries, manifests, source methods, figures, and Sobol evaluation. The `uncertainty/evaluation/` package is split by owner: `planning.py` builds the ASR plan from upstream manifests, `alignment.py` owns numerator denominator row alignment, `runs.py` owns yearly ASR run products, `cumulative.py` owns dynamic AR6 full period cumulative ASR identities and values, and `summary.py` owns ASR summary identities and frequency of transgression metric collapse. `uncertainty/runtime/memory.py` owns ASR batch memory block planning, `uncertainty/runtime/reuse_dependencies.py` rebuilds reused ASR subfigure plans from completed dependency manifests, and `uncertainty/figures/final_subfigures.py` owns final nested aCC and LCA subfigure rendering. |
 | `pyaesa/shared/acc_asr_common/` | Shared aCC and ASR branch expansion, deterministic downstream loading, shared branch identity guards, and request payload helpers. |
 | `pyaesa/external_inputs/lca/` | Canonical external LCA filename parsing, templates, deterministic loading, Monte Carlo loading, validation, and manifest identity. |
 
@@ -92,7 +92,7 @@ Uncertainty ASR:
    `uncertainty/evaluation/cumulative.py`; cumulative ASR remains a period
    metric and is not assigned to one studied year or one aSoCC time route.
    Static ASR writes yearly
-   ASR and yearly frequency of no-transgression summaries only.
+   ASR and yearly frequency of transgression summaries only.
 6. Write public row identity, run values, summaries, source methods,
    README, and `scope_manifest.json`. `uncertainty/io/manifest_payloads.py`
    owns ASR manifest payload assembly and output column metadata. The
@@ -203,6 +203,11 @@ roots; each branch still stores its complete ASR artifacts under
 - ASR reused figure rendering is owned by
   `uncertainty/figures/reuse.py` and records updated figure paths in the run
   manifest for the reused Monte Carlo folder.
+- ASR full run reuse rebuilds nested figure component plans from the completed
+  aCC and IO LCA dependency manifests recorded by the reused ASR manifest.
+  The canonical owner is `uncertainty/runtime/reuse_dependencies.py`.
+  Running component checkpoints are not figure ready inputs for ASR reused
+  subfigure rendering.
 - Compact ASR run tables contain every requested public row id and are used
   by direct public id indexing. Sparse selected row tables contain only selected
   rows and may omit identities outside the selected sparse scope.
@@ -226,7 +231,7 @@ roots; each branch still stores its complete ASR artifacts under
   Carlo run folder within each LCIA method figure family. Negative ASR values
   and ASR values below `1e-5` select normal scale; values above `10` select log
   scale only when no negative or small value is visible. Static ASR figures and
-  dynamic ASR aCC versus LCA plus ASR rows consume this resolved mode. fNT rows
+  dynamic ASR aCC versus LCA plus ASR rows consume this resolved mode. fT rows
   and Global AR6 CC rows use their own axis contracts.
 - Figure visible text is formatted by the shared figure scientific text
   contract for labels, titles, legends, axes, and panel text. Output table
@@ -245,6 +250,7 @@ roots; each branch still stores its complete ASR artifacts under
 | Upstream auto runs | Report aCC first, then IO-LCA for the pyaesa owned IO-LCA route. |
 | Progress cleanup | Clear upstream progress before ASR work and before failures return. |
 | Subfigures | Forward `subfigures=True` to upstream aCC and LCA prerequisites. aCC then renders deterministic figures for fixed aSoCC or AR6 CC lanes and uncertainty figures for active stochastic lanes. |
+| Reused run subfigures | Use completed dependency manifests recorded by the reused ASR manifest, not transient component sessions created during prerequisite probing. |
 | Figure summaries | Public summaries use `Figures available` and `Figures folder`. |
 | Refresh scope | Refresh affects the resolved ASR Monte Carlo branch or branch set and deterministic IO-LCA prerequisites only. |
 

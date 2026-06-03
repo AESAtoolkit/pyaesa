@@ -57,7 +57,8 @@ def complete_deterministic_asocc_phase(
         detail_builder(
             scope_name="aSoCC deterministic",
             output_root=output_root_from_path(prerequisite.deterministic_manifest_path),
-        )
+        ),
+        owner="deterministic_asocc",
     )
 
 
@@ -80,7 +81,7 @@ def complete_asocc_uncertainty_phase(
             convergence=manifest.convergence,
             output_root=manifest_output_root(manifest),
         )
-    phase.complete(detail)
+    phase.complete(detail, owner="uncertainty_asocc")
 
 
 def write_asocc_phase_index(

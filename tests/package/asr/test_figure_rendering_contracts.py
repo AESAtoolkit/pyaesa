@@ -32,14 +32,14 @@ from pyaesa.asr.figures.axis import (
     resolve_asr_scale_mode,
 )
 from pyaesa.asr.figures.frequency import (
-    CUMULATIVE_FNT_FRACTION_COLUMN,
-    FNT_FRACTION_COLUMN,
-    fnt_legend_entry,
-    format_fnt_math_label,
-    format_fnt_percent,
-    render_fnt_box,
-    render_fnt_box_groups,
-    render_fnt_boxes,
+    CUMULATIVE_FT_FRACTION_COLUMN,
+    FT_FRACTION_COLUMN,
+    ft_legend_entry,
+    format_ft_math_label,
+    format_ft_percent,
+    render_ft_box,
+    render_ft_box_groups,
+    render_ft_boxes,
 )
 from pyaesa.asr.figures.dynamic_global_ar6 import (
     deterministic_global_ar6_source,
@@ -187,9 +187,9 @@ from pyaesa.asr.uncertainty.figures.row_reader import (
 )
 from pyaesa.asr.uncertainty.figures.scope_planner import FigureContext
 from pyaesa.asr.uncertainty.evaluation.summary import (
-    ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+    ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN,
-    ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+    ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ASR_FREQUENCY_VALUE_COLUMN,
     ASR_SUMMARY_METRIC_COLUMN,
     ASR_SUMMARY_SCOPE_INTER_METHOD,
@@ -295,10 +295,10 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
     fig, axis = plt.subplots()
     try:
         apply_frequency_axis(axis)
-        render_fnt_box(axis, x=0.5, value=0.25)
+        render_ft_box(axis, x=0.5, value=0.25)
         fitted_y = float(axis.texts[-1].get_position()[1])
-        render_fnt_boxes(axis, entries=[(0.6, 0.5), (0.7, 0.75)], y=fitted_y)
-        assert axis.get_ylabel() == r"$f^{\mathrm{NT}}$"
+        render_ft_boxes(axis, entries=[(0.6, 0.5), (0.7, 0.75)], y=fitted_y)
+        assert axis.get_ylabel() == r"$f^{\mathrm{T}}$"
         assert axis.get_ylim() == (-5.0, 105.0)
     finally:
         plt.close(fig)
@@ -306,9 +306,9 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
     fig_a, axis_a = plt.subplots()
     fig_b, axis_b = plt.subplots()
     try:
-        render_fnt_box_groups([(axis_a, [])])
+        render_ft_box_groups([(axis_a, [])])
         with pytest.raises(ValueError, match="same figure"):
-            render_fnt_box_groups([(axis_a, [(0.5, 0.25)]), (axis_b, [(0.5, 0.25)])])
+            render_ft_box_groups([(axis_a, [(0.5, 0.25)]), (axis_b, [(0.5, 0.25)])])
     finally:
         plt.close(fig_a)
         plt.close(fig_b)
@@ -479,12 +479,12 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
         > 0.0
     )
 
-    assert format_fnt_percent(0.0) == "0%"
-    assert format_fnt_percent(1.0) == "100%"
-    assert format_fnt_percent(0.375) == "37.5%"
-    assert format_fnt_math_label(0.25) == r"$f^{\mathrm{NT}}=25.0\%$"
-    _handle, label = fnt_legend_entry(cc_source="pb_lcia")
-    assert "frequency of no-transgression" in label
+    assert format_ft_percent(0.0) == "0%"
+    assert format_ft_percent(1.0) == "100%"
+    assert format_ft_percent(0.375) == "37.5%"
+    assert format_ft_math_label(0.25) == r"$f^{\mathrm{T}}=25.0\%$"
+    _handle, label = ft_legend_entry(cc_source="pb_lcia")
+    assert "frequency of transgression" in label
     assert has_max_asr_threshold(frame=None) is False
 
 
@@ -547,14 +547,14 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
     stem = asr_scope_stem(
         "multi_method",
         frame,
-        product="frequency_of_no_transgression",
+        product="frequency_of_transgression",
         selector_token="rp_FR__sp_D",
         include_impact=True,
         studied_year=2030,
     )
 
     expected = (
-        "multi_method__frequency_of_no_transgression__rp_FR__sp_D__"
+        "multi_method__frequency_of_transgression__rp_FR__sp_D__"
         "pb_lcia__AAL__SSP2__C1__min_cc__2030"
     )
     assert stem == expected
@@ -916,7 +916,7 @@ def test_asr_polar_layout_and_renderer_contracts(
                 lower_zone_label="Safe operating space",
                 middle_zone_label="Zone of increasing risk",
                 upper_zone_label="High risk zone",
-                fnt_label="fNT",
+                ft_label="fT",
                 deterministic_note="Min variant compression: ref_year=2005.",
             )
             if style == "deterministic":
@@ -929,7 +929,7 @@ def test_asr_polar_layout_and_renderer_contracts(
                     lower_zone_label="Safe operating space",
                     middle_zone_label=None,
                     upper_zone_label="High risk zone",
-                    fnt_label="fNT",
+                    ft_label="fT",
                 )
         finally:
             plt.close(fig)
@@ -1056,7 +1056,7 @@ def _asr_uncertainty_figure_frame(*, impacts: list[str], include_values: bool) -
                     ASOCC_SSP_SCENARIO_COLUMN: scenario,
                     EXT_LCA_SSP_SCENARIO_COLUMN: scenario,
                     ASOCC_TIME_ROUTE_PUBLIC_COLUMN: route,
-                    FNT_FRACTION_COLUMN: 0.25 + 0.1 * method_index,
+                    FT_FRACTION_COLUMN: 0.25 + 0.1 * method_index,
                     "__asr_max_threshold": 4.0,
                     "mean": value,
                     "median": value,
@@ -1098,9 +1098,9 @@ def _asr_dynamic_uncertainty_figure_frame(*, include_values: bool = False) -> pd
                 ASOCC_TIME_ROUTE_PUBLIC_COLUMN: route,
                 MODEL_SCENARIO_PAIR_COUNT_COLUMN: 2,
                 MODEL_SCENARIO_SAMPLING_METHOD_COLUMN: "srs",
-                FNT_FRACTION_COLUMN: 0.6 + year_index * 0.1,
+                FT_FRACTION_COLUMN: 0.6 + year_index * 0.1,
                 "__asr_max_threshold": np.nan,
-                CUMULATIVE_FNT_FRACTION_COLUMN: 0.0 if method_index == 0 else 0.8,
+                CUMULATIVE_FT_FRACTION_COLUMN: 0.0 if method_index == 0 else 0.8,
                 "__cumulative_values": np.array([1.2 + method_index, 1.4 + method_index]),
                 "mean": value,
                 "median": value,
@@ -1796,11 +1796,11 @@ def test_asr_uncertainty_mean_lines_split_multi_impact_products(
     assert single_no_method_paths[0].exists()
     assert sorted(path.name for path in band_paths) == [
         "bands.svg",
-        "bands__frequency_of_no_transgression.svg",
+        "bands__frequency_of_transgression.svg",
     ]
     assert sorted(path.name for path in no_transition_paths) == [
         "bands_no_transition.svg",
-        "bands_no_transition__frequency_of_no_transgression.svg",
+        "bands_no_transition__frequency_of_transgression.svg",
     ]
     assert sorted(path.name for path in paths) == ["mean_lines__AAL.svg", "mean_lines__SOD.svg"]
     assert all(path.exists() for path in [*band_paths, *no_transition_paths, *paths])
@@ -2081,24 +2081,24 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
             "lcia_method": ["gwp100_lcia"],
             "impact": ["GWP_100"],
             "cc_type": ["dynamic_ar6"],
-            "frequency_of_no_transgression": [0.5],
+            "frequency_of_transgression": [0.5],
         }
     )
     frequency_rows = _with_frequency_summary(
-        frame.head(1).drop(columns=[FNT_FRACTION_COLUMN]), frequency
+        frame.head(1).drop(columns=[FT_FRACTION_COLUMN]), frequency
     )
-    assert frequency_rows[FNT_FRACTION_COLUMN].tolist() == [0.5]
+    assert frequency_rows[FT_FRACTION_COLUMN].tolist() == [0.5]
     cumulative_rows = pd.DataFrame(
         {
             "lcia_method": ["gwp100_lcia"],
             "impact": ["GWP_100"],
             "cc_type": ["dynamic_ar6"],
             VALUE_ARRAY_COLUMN: [np.array([1.2, 1.4])],
-            FNT_FRACTION_COLUMN: [0.75],
+            FT_FRACTION_COLUMN: [0.75],
         }
     )
     with_cumulative = _with_cumulative_values(
-        frame.head(1).drop(columns=["__cumulative_values", CUMULATIVE_FNT_FRACTION_COLUMN]),
+        frame.head(1).drop(columns=["__cumulative_values", CUMULATIVE_FT_FRACTION_COLUMN]),
         cumulative_rows,
         context=context,
     )
@@ -2181,7 +2181,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
             ),
             static_identity.assign(
                 **{
-                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
                     ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD,
                     ASR_FREQUENCY_VALUE_COLUMN: [0.5, 0.6, 0.7, 0.8],
                 }
@@ -2481,14 +2481,14 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
             ),
             dynamic_identity.assign(
                 **{
-                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
                     ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD,
                     ASR_FREQUENCY_VALUE_COLUMN: [0.5, 0.6],
                 }
             ),
             dynamic_identity.assign(
                 **{
-                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                    ASR_SUMMARY_METRIC_COLUMN: ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
                     ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_INTER_METHOD,
                     "__method": "",
                     ASR_FREQUENCY_VALUE_COLUMN: [0.5, 0.6],
@@ -2501,18 +2501,14 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
         [
             dynamic_identity.assign(
                 **{
-                    ASR_SUMMARY_METRIC_COLUMN: (
-                        ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
-                    ),
+                    ASR_SUMMARY_METRIC_COLUMN: (ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
                     ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD,
                     ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN: [0.7, 0.8],
                 }
             ),
             dynamic_identity.assign(
                 **{
-                    ASR_SUMMARY_METRIC_COLUMN: (
-                        ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
-                    ),
+                    ASR_SUMMARY_METRIC_COLUMN: (ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
                     ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_INTER_METHOD,
                     "__method": "",
                     ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN: [0.7, 0.8],
@@ -2742,8 +2738,8 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
             ASR_SUMMARY_METRIC_COLUMN: [
                 ASR_VALUE_METRIC,
                 ASR_VALUE_METRIC,
-                ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
-                ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
+                ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
             ],
             ASR_SUMMARY_SCOPE_COLUMN: [
                 ASR_SUMMARY_SCOPE_PER_METHOD,
@@ -2938,8 +2934,8 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
     cumulative_summary = pd.DataFrame(
         {
             ASR_SUMMARY_METRIC_COLUMN: [
-                ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
-                ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
+                ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
             ],
             ASR_SUMMARY_SCOPE_COLUMN: [
                 ASR_SUMMARY_SCOPE_PER_METHOD,

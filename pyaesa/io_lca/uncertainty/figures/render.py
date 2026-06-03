@@ -30,7 +30,7 @@ from pyaesa.io_lca.uncertainty.runtime.models import (
 from pyaesa.io_lca.figures.common import selector_groups
 from pyaesa.shared.figures.checkpoints import default_checkpoint_years
 from pyaesa.shared.figures.jobs import PlannedFigureJob, render_figure_jobs
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
 
@@ -52,6 +52,7 @@ def render_io_lca_uncertainty_figures(
         figure_format=figure_format,
     )
     single_year = len(set(context.requested_years)) == 1
+    show_optional_status(status, "[uncertainty_io_lca] Preparing figure inputs")
     tables = read_figure_tables(context=context, include_summary=not single_year)
     clear_uncertainty_figure_scope(paths=paths)
 

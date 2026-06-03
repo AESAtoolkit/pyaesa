@@ -1,6 +1,6 @@
 # Workflow Reference
 
-This reference maps the main <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> workflows from data preparation to AESA
+This reference maps the main `pyaesa` workflows from data preparation to AESA
 outputs. It identifies the data sources used by each phase, the prerequisite
 steps to run, the public functions that produce each output, the matching
 tutorials, and indicative runtime and storage requirements.
@@ -9,7 +9,7 @@ tutorials, and indicative runtime and storage requirements.
 
 | AESA phase or route | Data source | Used for |
 | --- | --- | --- |
-| Phase A IO-LCA | EXIOBASE 3.10.2 MRIO | <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA results and ASR numerators. |
+| Phase A IO-LCA | EXIOBASE 3.10.2 MRIO | `pyaesa` owned IO-LCA results and ASR numerators. |
 | Phase B aSoCC allocation | EXIOBASE 3.10.2 or OECD ICIO v2025 MRIO | Allocation enacting metrics, final demand, production, value added, and environmental extensions after LCIA characterization when available. |
 | Phase B aSoCC retrospective scope | World Bank population/GDP | Historical population and GDP allocation inputs. |
 | Phase B aSoCC prospective scope | SSP population/GDP | Future population and GDP allocation inputs. |
@@ -20,12 +20,12 @@ EXIOBASE 3.10.2 but EXIOBASE 3.9.6 is also supported.
 
 ### Data Source Licenses And Terms
 
-The GPL 3.0 license applies to <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> source code only.
+The GPL 3.0 license applies to `pyaesa` source code only.
 Downloaded datasets remain governed by their original providers' terms and
 conditions. For all data sources, cite the original provider following the
 [recommended citation guide](../methodological_notes/recommended_citations.txt).
 
-| Data source | Used in <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> | Terms and conditions | Link |
+| Data source | Used in `pyaesa` | Terms and conditions | Link |
 | --- | --- | --- | --- |
 | EXIOBASE 3 | EXIOBASE 3.10.2 and 3.9.6 MRIO downloads for IO-LCA and allocation inputs. | <ul><li>Noncommercial use: allowed for academic use under the EXIOBASE license.</li><li>Commercial use: requires a commercial license.</li></ul> | [EXIOBASE terms and conditions](https://exiobase.eu/terms-of-use/) and [Zenodo EXIOBASE record](https://doi.org/10.5281/zenodo.3583070) |
 | OECD ICIO v2025 | OECD ICIO MRIO downloads for allocation inputs. | <ul><li>Noncommercial use: allowed under OECD data terms.</li><li>Commercial use: allowed under OECD data terms.</li></ul> | [OECD ICIO page](https://www.oecd.org/en/data/datasets/inter-country-input-output-tables.html) and [OECD terms and conditions](https://www.oecd-ilibrary.org/en/about/terms-conditions.html) |
@@ -35,7 +35,7 @@ conditions. For all data sources, cite the original provider following the
 
 Current EXIOBASE LCIA coverage is `gwp100_lcia` and `pb_lcia`. EF3.1 is
 available for non LCIA based allocation routes, but it is not currently
-available for <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA or LCIA based allocation methods.
+available for `pyaesa` owned IO-LCA or LCIA based allocation methods.
 The {doc}`process data tutorial <tutorials/core_prerequisites/2_process_data>` explains the
 detailed process for adding LCIA methods with EXIOBASE characterization
 matrices and matching carrying capacity thresholds, either for private project
@@ -46,7 +46,7 @@ use or for public package submission.
 Run `set_workspace(...)` once at the beginning of each Python session.
 
 Run the download and processing functions needed before the selected study
-endpoint: MRIO processing for aSoCC and <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA, and population/GDP
+endpoint: MRIO processing for aSoCC and `pyaesa` owned IO-LCA, and population/GDP
 processing for allocation methods that use those inputs. Once run, they are
 kept on disk and can be reused across studies. For dynamic AR6 CC and
 downstream routes that use it, download AR6 raw inputs; the matching processed
@@ -59,7 +59,7 @@ it does not need to be run separately.
 | {func}`~pyaesa.download_mrio` | Downloads raw MRIO files for the selected source and years. | See MRIO tables | See MRIO tables |
 | {func}`~pyaesa.download_pop_gdp` | Downloads raw World Bank and SSP population/GDP files. | 1 MB | 1 min |
 | {func}`~pyaesa.download_ar6` | Downloads raw AR6 climate pathway and historical baseline files. | 210 MB | 1 min |
-| {func}`~pyaesa.process_mrio` | Builds processed MRIO matrices, optional region or sector aggregation and disaggregation scopes, metadata, economic enacting metrics such as final demand and value added, and environmental enacting metrics after LCIA characterization. These outputs are reused by aSoCC allocation methods and <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA. | See MRIO tables | See MRIO tables |
+| {func}`~pyaesa.process_mrio` | Builds processed MRIO matrices, optional region or sector aggregation and disaggregation scopes, metadata, economic enacting metrics such as final demand and value added, and environmental enacting metrics after LCIA characterization. These outputs are reused by aSoCC allocation methods and `pyaesa` owned IO-LCA. | See MRIO tables | See MRIO tables |
 | {func}`~pyaesa.process_pop_gdp` | Builds harmonized historical and SSP population/GDP tables, aligns country coverage to the supported MRIO scopes, records missing value treatment, and harmonizes GDP PPP units. These outputs are reused by retrospective and prospective aSoCC allocation methods. | 2 MB | <1 min |
 | {func}`~pyaesa.process_ar6` | Builds retained and optionally harmonized AR6 pathway workbooks for dynamic climate change CC, including Kyoto gases and CO2 variables with and without AFOLU, category and SSP budget summaries, logs, and optional diagnostic figures. | 14 MB without figures; 63 MB with figures | 1 min without figures; figures add about 2 min |
 
@@ -86,18 +86,55 @@ Core i7 1165G7 CPU, 32 GB RAM.
 
 ## AESA Functions
 
-| Phase | Mode | Function | What it computes and writes |
-| --- | --- | --- | --- |
-| A | deterministic | {func}`~pyaesa.deterministic_io_lca` | Computes <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> owned IO-LCA result tables from processed EXIOBASE assets and figures. |
-| A | uncertainty | {func}`~pyaesa.uncertainty_io_lca` | Monte Carlo IO-LCA run tables, summaries, source logs, and figures. |
-| B | deterministic | {func}`~pyaesa.deterministic_asocc` | Allocated shares of carrying capacity (aSoCC) tables and figures. |
-| B | uncertainty | {func}`~pyaesa.uncertainty_asocc` | aSoCC Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested. |
-| B | deterministic | {func}`~pyaesa.deterministic_ar6_cc` | Dynamic AR6 climate change carrying capacity (CC) pathway tables and figures. |
-| B | uncertainty | {func}`~pyaesa.uncertainty_ar6_cc` | AR6 CC Monte Carlo trajectory run tables, summaries, source logs, and figures. |
-| B | deterministic | {func}`~pyaesa.deterministic_acc` | Allocated carrying capacity (aCC) tables as `aSoCC * CC` and figures. |
-| B | uncertainty | {func}`~pyaesa.uncertainty_acc` | aCC Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested. |
-| C | deterministic | {func}`~pyaesa.deterministic_asr` | Absolute sustainability ratio (ASR) tables as `LCA / aCC` and figures. |
-| C | uncertainty | {func}`~pyaesa.uncertainty_asr` | ASR Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested. |
+```{list-table}
+:header-rows: 1
+:widths: 8 14 28 50
+
+* - Phase
+  - Mode
+  - Function
+  - What it computes and writes
+* - A
+  - deterministic
+  - {func}`~pyaesa.deterministic_io_lca`
+  - Computes `pyaesa` owned IO-LCA result tables from processed EXIOBASE assets and figures.
+* - A
+  - uncertainty
+  - {func}`~pyaesa.uncertainty_io_lca`
+  - Monte Carlo IO-LCA run tables, summaries, source logs, and figures.
+* - B
+  - deterministic
+  - {func}`~pyaesa.deterministic_asocc`
+  - Allocated shares of carrying capacity (aSoCC) tables and figures.
+* - B
+  - uncertainty
+  - {func}`~pyaesa.uncertainty_asocc`
+  - aSoCC Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested.
+* - B
+  - deterministic
+  - {func}`~pyaesa.deterministic_ar6_cc`
+  - Dynamic AR6 climate change carrying capacity (CC) pathway tables and figures.
+* - B
+  - uncertainty
+  - {func}`~pyaesa.uncertainty_ar6_cc`
+  - AR6 CC Monte Carlo trajectory run tables, summaries, source logs, and figures.
+* - B
+  - deterministic
+  - {func}`~pyaesa.deterministic_acc`
+  - Allocated carrying capacity (aCC) tables as `aSoCC * CC` and figures.
+* - B
+  - uncertainty
+  - {func}`~pyaesa.uncertainty_acc`
+  - aCC Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested.
+* - C
+  - deterministic
+  - {func}`~pyaesa.deterministic_asr`
+  - Absolute sustainability ratio (ASR) tables as `LCA / aCC` and figures.
+* - C
+  - uncertainty
+  - {func}`~pyaesa.uncertainty_asr`
+  - ASR Monte Carlo run tables, summaries, source logs, figures by default, and Sobol outputs when requested.
+```
 
 ## Support Functions
 
@@ -114,7 +151,7 @@ Study objectives are study endpoints from the user perspective. A study
 objective corresponds to an expected output.
 
 Choose the study objective, i.e. the endpoint, and call the corresponding
-deterministic or uncertainty function directly. <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span> automatically runs
+deterministic or uncertainty function directly. `pyaesa` automatically runs
 upstream computations needed to produce that endpoint, i.e. to ensure that all
 previous outputs are available before running the downstream function providing
 the endpoint.

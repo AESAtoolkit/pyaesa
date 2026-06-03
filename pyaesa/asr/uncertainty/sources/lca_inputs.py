@@ -89,6 +89,7 @@ def resolve_lca_uncertainty_component_input(
     component_session: Any | None = None,
     finalize_component_inventory: bool = False,
     figure_run_count: int | None = None,
+    complete_phase: bool = True,
 ) -> ComponentInput[LCAUncertaintyInput]:
     """Resolve LCA input and local session for ASR component checkpoints."""
     if lca_type == IO_LCA_FAMILY:
@@ -122,12 +123,14 @@ def resolve_lca_uncertainty_component_input(
         status=status,
         figure_run_count=figure_run_count,
     )
-    phase.complete(
-        phase_ready_detail(
-            scope_name=f"LCA external {cast(str, lca_version_name)}",
-            output_root=external.phase_output_root,
+    if complete_phase:
+        phase.complete(
+            phase_ready_detail(
+                scope_name=f"LCA external {cast(str, lca_version_name)}",
+                output_root=external.phase_output_root,
+            ),
+            owner="external_lca",
         )
-    )
     return ComponentInput(input=external, session=None)
 
 
@@ -164,6 +167,8 @@ def render_lca_subfigures_from_input(
     figure_format: dict[str, Any] | None,
     status: StatusSink,
     completed_runs: int,
+    phase: PhasePrinter | None = None,
+    complete_phase: bool = False,
 ) -> None:
     """Render persisted LCA subfigures after the parent ASR run is final."""
     if lca_input.lca_type == IO_LCA_FAMILY:
@@ -234,6 +239,14 @@ def render_lca_subfigures_from_input(
                 figure_format=figure_format,
                 status=status,
             )
+    if complete_phase and phase is not None:
+        phase.complete(
+            phase_ready_detail(
+                scope_name=f"LCA external {version_name}",
+                output_root=lca_input.phase_output_root,
+            ),
+            owner="external_lca",
+        )
 
 
 def _io_lca_input(
@@ -604,21 +617,36 @@ def _external_lca_unit_value_provider(
     identity: pd.DataFrame,
     value_blocks: list[np.ndarray | ExternalLCAMonteCarloSource],
 ):
-    def provider(unit_values: np.ndarray) -> np.ndarray:
+    def provider(unit_values: np.ndarray, row_positions: np.ndarray | None = None) -> np.ndarray:
         units = np.asarray(unit_values, dtype=np.float64)
-        values = np.empty((len(units), len(identity)), dtype=np.float64)
+        rows = (
+            np.arange(len(identity), dtype=np.int64)
+            if row_positions is None
+            else np.asarray(row_positions, dtype=np.int64)
+        )
+        values = np.empty((len(units), len(rows)), dtype=np.float64)
         start = 0
         for block in value_blocks:
-            if isinstance(block, ExternalLCAMonteCarloSource):
-                stop = start + len(block.identity)
-                values[:, start:stop] = external_lca_values_for_units(
-                    source=block,
-                    unit_values=units,
-                )
-            else:
-                base = cast(np.ndarray, block)
-                stop = start + len(base)
-                values[:, start:stop] = base[None, :]
+            block_length = (
+                len(block.identity)
+                if isinstance(block, ExternalLCAMonteCarloSource)
+                else len(block)
+            )
+            stop = start + block_length
+            selected = np.flatnonzero((rows >= start) & (rows < stop)).astype(
+                np.int64,
+                copy=False,
+            )
+            if selected.size:
+                local_rows = rows[selected] - start
+                if isinstance(block, ExternalLCAMonteCarloSource):
+                    values[:, selected] = external_lca_values_for_units(
+                        source=block,
+                        unit_values=units,
+                        row_positions=local_rows,
+                    )
+                else:
+                    values[:, selected] = cast(np.ndarray, block)[local_rows][None, :]
             start = stop
         return values
 

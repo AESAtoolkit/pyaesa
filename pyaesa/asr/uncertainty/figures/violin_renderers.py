@@ -19,10 +19,10 @@ from pyaesa.asr.figures.common import (
     visible_values,
 )
 from pyaesa.asr.figures.frequency import (
-    FNT_FRACTION_COLUMN,
-    fnt_box_legend_entry,
-    render_fnt_box_groups,
-    render_fnt_boxes,
+    FT_FRACTION_COLUMN,
+    ft_box_legend_entry,
+    render_ft_box_groups,
+    render_ft_boxes,
 )
 from pyaesa.asr.figures.risk_guides import (
     ASR_RISK_LEGEND_GROUP_TITLE,
@@ -134,7 +134,7 @@ def plot_violin_scope(
         render_violin_summary_legend_below(
             fig,
             summary="full",
-            extra_entries=[_fnt_legend_handle(frame)],
+            extra_entries=[_ft_legend_handle(frame)],
             extra_height_in=risk_extra,
             frameon=False,
             title="Uncertainty",
@@ -159,7 +159,7 @@ def _plot_impact_panel_violin_scope(
     impacts = ordered_impacts(frame)
     ncols = 2
     nrows = (len(impacts) + 1) // ncols
-    has_frequency = FNT_FRACTION_COLUMN in frame.columns
+    has_frequency = FT_FRACTION_COLUMN in frame.columns
     fig, axes = plt.subplots(
         nrows=nrows,
         ncols=ncols,
@@ -209,7 +209,7 @@ def _plot_impact_panel_violin_scope(
             loc="left",
             pad=_FREQUENCY_TITLE_PAD if _has_frequency_rows(rows) else 24,
         )
-    render_fnt_box_groups(frequency_groups)
+    render_ft_box_groups(frequency_groups)
     hide_unused_axes(axes=axes, used=len(impacts))
     render_figure_title(fig, title)
     hspace = _TWO_COLUMN_FREQUENCY_PANEL_HSPACE if has_frequency else _TWO_COLUMN_PANEL_HSPACE
@@ -238,7 +238,7 @@ def _plot_impact_panel_violin_scope(
         render_violin_summary_legend_below(
             fig,
             summary=summary,
-            extra_entries=[_fnt_legend_handle(frame)],
+            extra_entries=[_ft_legend_handle(frame)],
             extra_height_in=risk_extra,
             frameon=False,
             title="Uncertainty",
@@ -380,19 +380,19 @@ def _attach_violin_legend_handles(
     for handle in violin_summary_legend_handles(summary=summary):
         bind_deterministic_legend_group(handle, VIOLIN_SUMMARY_LEGEND_GROUP_TITLE)
         axis.add_line(handle)
-    fnt_handle, _label = _fnt_legend_entry(frame)
-    bind_deterministic_legend_group(fnt_handle, ASR_RISK_LEGEND_GROUP_TITLE)
-    axis.add_line(fnt_handle)
+    ft_handle, _label = _ft_legend_entry(frame)
+    bind_deterministic_legend_group(ft_handle, ASR_RISK_LEGEND_GROUP_TITLE)
+    axis.add_line(ft_handle)
 
 
-def _fnt_legend_entry(frame: pd.DataFrame) -> tuple[Line2D, str]:
+def _ft_legend_entry(frame: pd.DataFrame) -> tuple[Line2D, str]:
     cc_source = visible_values(frame, "lcia_method")[0]
-    handle, label = fnt_box_legend_entry(cc_source=cc_source)
+    handle, label = ft_box_legend_entry(cc_source=cc_source)
     return handle, label
 
 
-def _fnt_legend_handle(frame: pd.DataFrame) -> Line2D:
-    handle, _label = _fnt_legend_entry(frame)
+def _ft_legend_handle(frame: pd.DataFrame) -> Line2D:
+    handle, _label = _ft_legend_entry(frame)
     return handle
 
 
@@ -401,7 +401,7 @@ def _annotate_frequencies(
     axis,
     rows: list[tuple[str, np.ndarray, pd.Series]],
 ) -> None:
-    render_fnt_boxes(axis, entries=_frequency_entries(rows=rows))
+    render_ft_boxes(axis, entries=_frequency_entries(rows=rows))
 
 
 def _frequency_entries(
@@ -409,11 +409,11 @@ def _frequency_entries(
     rows: list[tuple[str, np.ndarray, pd.Series]],
 ) -> list[tuple[float, float]]:
     entries = [
-        (float(index), float(cast(float | int | str, row.to_dict()[FNT_FRACTION_COLUMN])))
+        (float(index), float(cast(float | int | str, row.to_dict()[FT_FRACTION_COLUMN])))
         for index, (_label, _values, row) in enumerate(rows, start=1)
     ]
     return entries
 
 
 def _has_frequency_rows(rows: list[tuple[str, np.ndarray, pd.Series]]) -> bool:
-    return bool(rows) and FNT_FRACTION_COLUMN in rows[0][2].index
+    return bool(rows) and FT_FRACTION_COLUMN in rows[0][2].index

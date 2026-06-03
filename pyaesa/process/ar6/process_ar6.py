@@ -12,7 +12,7 @@ from pyaesa.download.ar6.utils.io.paths import (
 )
 from pyaesa.shared.figures.request_validation import normalize_figure_format
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
-    PHASE_B1_AR6_DYNAMIC_CC,
+    PHASE_B0_AR6_DYNAMIC_CC,
     phase_ready_detail,
     phase_reused_detail,
 )
@@ -160,7 +160,7 @@ def process_ar6(
         phase_owner = _status
     status: StatusSink = phase_owner
     try:
-        phase_owner.announce(PHASE_B1_AR6_DYNAMIC_CC, "process_ar6")
+        phase_owner.announce(PHASE_B0_AR6_DYNAMIC_CC, "process_ar6")
         study_period_norm = resolve_study_period(years)
         categories = normalize_ar6_categories(category)
         if figures and not harmonization:
@@ -210,7 +210,7 @@ def process_ar6(
             phase_reused_detail if report.reuse_status == "reused_exact" else phase_ready_detail
         )
         phase_owner.complete(
-            detail(scope_name="AR6 processed", output_root=report.processed_dir),
+            detail(scope_name="process AR6", output_root=report.processed_dir),
             owner="process_ar6",
         )
         return report

@@ -71,7 +71,7 @@ def acc_lca_cumulative_title(*, emissions_mode: str | None) -> str:
 
 
 def frequency_color_map(labels: list[str], *, include_method_in_label: bool) -> dict[str, str]:
-    """Return colors for frequency of no-transgression series."""
+    """Return colors for frequency of transgression series."""
     if include_method_in_label:
         return single_or_distinct_colors(labels)
     return {label: DEFAULT_SINGLE_SERIES_COLOR for label in labels}

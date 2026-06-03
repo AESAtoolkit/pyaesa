@@ -62,7 +62,7 @@ from pyaesa.shared.uncertainty_assessment.sobol.runner import (
 from pyaesa.shared.lcia.uncertainty_source import LCIA_SOURCE
 from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 
 
 @dataclass(frozen=True)
@@ -134,14 +134,16 @@ def run_asr_sobol(
                 "parameters": sobol_plan_payload(plan=sobol_plan),
             },
         )
+    progress_source = _asr_sobol_progress_source(paths=paths)
     result = run_sobol_analysis(
         plan=sobol_plan,
         dimension_names=context.source_names,
         evaluate=lambda chunk: _evaluate_chunk(context=context, chunk=chunk),
         max_base_chunk_rows=asr_sobol_base_chunk_rows(context=context),
-        progress_source=_asr_sobol_progress_source(paths=paths),
+        progress_source=progress_source,
         status=status,
     )
+    show_optional_status(status, f"[{progress_source}] Sobol writing outputs")
     write_uncertainty_table(
         path=paths.sobol_indices,
         frame=result.indices,
@@ -306,21 +308,30 @@ def evaluate_asr_sobol_target_units(
         context=context.acc_context,
         units=units[:, :acc_count],
     )
-    lca_values = _lca_values_for_units(
-        context=context,
-        units=units[:, acc_count:],
-    )
-    yearly_values = evaluate_asr_value_matrix(
-        acc_values=acc_values,
-        lca_values=lca_values,
-        acc_positions=context.acc_positions,
-        lca_positions=context.lca_positions,
-        lca_unit_factors=context.lca_unit_factors,
-    )
+    lca_units = units[:, acc_count:]
     blocks = []
     if context.static_target_positions.size:
-        blocks.append(yearly_values[:, context.static_target_positions])
+        public_row_ids = context.static_target_positions
+        source_lca_positions, local_lca_positions = np.unique(
+            context.lca_positions[public_row_ids],
+            return_inverse=True,
+        )
+        lca_values = _lca_values_for_units(
+            context=context,
+            units=lca_units,
+            row_positions=source_lca_positions.astype(np.int64, copy=False),
+        )
+        blocks.append(
+            evaluate_asr_value_matrix(
+                acc_values=acc_values,
+                lca_values=lca_values,
+                acc_positions=context.acc_positions[public_row_ids],
+                lca_positions=local_lca_positions.astype(np.int64, copy=False),
+                lca_unit_factors=context.lca_unit_factors[public_row_ids],
+            )
+        )
     if context.cumulative_target_public_row_groups:
+        lca_values = _lca_values_for_units(context=context, units=lca_units)
         blocks.append(
             evaluate_asr_cumulative_value_matrix_for_groups(
                 acc_values=acc_values,
@@ -334,15 +345,21 @@ def evaluate_asr_sobol_target_units(
     return context.target_identity, np.concatenate(blocks, axis=1)
 
 
-def _lca_values_for_units(*, context: ASRSobolEvaluationContext, units: np.ndarray) -> np.ndarray:
+def _lca_values_for_units(
+    *,
+    context: ASRSobolEvaluationContext,
+    units: np.ndarray,
+    row_positions: np.ndarray | None = None,
+) -> np.ndarray:
     if context.lca_context is not None:
         _, values = evaluate_io_lca_sobol_units(context=context.lca_context, units=units[:, :1])
-        return values
+        return values if row_positions is None else values[:, row_positions]
     if context.lca_input.run_values_for_units is not None:
         source_units = units[:, 0]
-        return context.lca_input.run_values_for_units(source_units)
+        return context.lca_input.run_values_for_units(source_units, row_positions)
     fixed = cast(np.ndarray, context.lca_input.fixed_values)
-    return np.broadcast_to(fixed, (units.shape[0], len(fixed)))
+    values = np.broadcast_to(fixed, (units.shape[0], len(fixed)))
+    return values if row_positions is None else values[:, row_positions]
 
 
 def _acc_dynamic_category_uncertainty_active(

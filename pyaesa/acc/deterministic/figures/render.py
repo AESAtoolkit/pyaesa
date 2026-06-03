@@ -17,6 +17,7 @@ from pyaesa.acc.deterministic.figures.row_reader import load_deterministic_figur
 from pyaesa.shared.figures.request_validation import (
     validate_consecutive_multi_year_figure_request,
 )
+from pyaesa.shared.runtime.reporting.figure_progress import log_figure_completion
 from pyaesa.shared.runtime.reporting.status import StatusSink
 
 
@@ -47,7 +48,9 @@ def render_acc_deterministic_figures(
         request_signature=request_signature,
         compute_signature=compute_signature,
     ):
-        return recorded_figure_paths(payload=figure_payload), True
+        paths = recorded_figure_paths(payload=figure_payload)
+        log_figure_completion(source="deterministic_acc", status=status, count=len(paths))
+        return paths, True
     if not (bool(figure_options["per_method"]) or bool(figure_options["multi_method"])):
         clear_deterministic_figure_scope(metadata_path=metadata_path)
         write_branch_figure_paths(

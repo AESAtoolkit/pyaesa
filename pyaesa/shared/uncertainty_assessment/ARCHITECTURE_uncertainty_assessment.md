@@ -45,6 +45,7 @@ This package owns:
 | `run_state/report.py` and `run_state/report_*.py` | Public uncertainty report assembly, argument extraction, output root discovery, dependency phase sections, dependency message propagation, and summary log writing. Generic phase labels and generic value formatting remain in `pyaesa/shared/runtime/reporting/`. |
 | `run_state/branch_sets.py` | Mixed branch run id reuse, branch set manifests, branch scope manifest lists, and public branch set reports for composite uncertainty calls. |
 | `run_state/figure_artifacts.py` | Figure artifact paths, figure request signatures, and rerender checks for complete uncertainty runs. |
+| `run_state/completed_dependencies.py` | Completed dependency manifest lookup and validation for parent manifests that render nested reused component figures. |
 | `run_state/runs.py` | Completed run discovery, appendable run selection, and requested Sobol reuse status checks for complete runs. |
 | `run_state/sobol_artifacts.py` | Manifest persistence for completed runs that receive requested Sobol artifacts after initial Monte Carlo output generation. |
 | `orchestration.py` | Family neutral convergence component figure timing, reusable progress labels, public output root discovery, and phase index entry construction. |

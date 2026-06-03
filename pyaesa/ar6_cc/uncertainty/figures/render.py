@@ -30,7 +30,7 @@ from pyaesa.ar6_cc.uncertainty.figures.scope_planner import (
 from pyaesa.ar6_cc.uncertainty.io.paths import ar6_cc_uncertainty_figures_root
 from pyaesa.ar6_cc.uncertainty.runtime.models import AR6CCUncertaintyRunPaths
 from pyaesa.shared.figures.jobs import PlannedFigureJob, render_figure_jobs
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
 
@@ -49,6 +49,7 @@ def render_ar6_cc_uncertainty_figures(
         figure_options=figure_options,
         figure_format=figure_format,
     )
+    show_optional_status(status, "[uncertainty_ar6_cc] Preparing figure inputs")
     tables = read_figure_tables(context=context)
     clear_uncertainty_figure_scope(paths=paths)
 

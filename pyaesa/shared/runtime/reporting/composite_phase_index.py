@@ -12,15 +12,15 @@ from pyaesa.shared.runtime.reporting.reuse_status import public_reuse_status
 # for aCC and ASR orchestration reports. The separate function field records
 # which public function executed in each phase.
 PHASE_A_LCA = "Phase A: LCA"
+PHASE_B0_AR6_DYNAMIC_CC = "Phase B.0: Dynamic AR6 CC"
 PHASE_B1_ASOCC = "Phase B.1: aSoCC"
-PHASE_B1_AR6_DYNAMIC_CC = "Phase B.1: Dynamic AR6 CC"
 PHASE_B2_ACC = "Phase B.2: aCC"
 PHASE_C_ASR = "Phase C: ASR"
 COMPOSITE_PHASE_ORDER = (
-    PHASE_A_LCA,
+    PHASE_B0_AR6_DYNAMIC_CC,
     PHASE_B1_ASOCC,
-    PHASE_B1_AR6_DYNAMIC_CC,
     PHASE_B2_ACC,
+    PHASE_A_LCA,
     PHASE_C_ASR,
 )
 PUBLIC_PHASE_REUSE_STATUSES = frozenset({"computed", "updated", "reused"})
@@ -31,9 +31,9 @@ _OWNER_PHASES = {
     "deterministic_asocc": PHASE_B1_ASOCC,
     "uncertainty_asocc": PHASE_B1_ASOCC,
     "disaggregate_asocc": PHASE_B1_ASOCC,
-    "process_ar6": PHASE_B1_AR6_DYNAMIC_CC,
-    "deterministic_ar6_cc": PHASE_B1_AR6_DYNAMIC_CC,
-    "uncertainty_ar6_cc": PHASE_B1_AR6_DYNAMIC_CC,
+    "process_ar6": PHASE_B0_AR6_DYNAMIC_CC,
+    "deterministic_ar6_cc": PHASE_B0_AR6_DYNAMIC_CC,
+    "uncertainty_ar6_cc": PHASE_B0_AR6_DYNAMIC_CC,
     "deterministic_acc": PHASE_B2_ACC,
     "uncertainty_acc": PHASE_B2_ACC,
     "deterministic_asr": PHASE_C_ASR,
@@ -50,7 +50,7 @@ _REPORT_SOURCE_PHASES = {
 _UNCERTAINTY_FAMILY_PHASES = {
     "io_lca": PHASE_A_LCA,
     "asocc": PHASE_B1_ASOCC,
-    "ar6_cc": PHASE_B1_AR6_DYNAMIC_CC,
+    "ar6_cc": PHASE_B0_AR6_DYNAMIC_CC,
     "acc": PHASE_B2_ACC,
     "asr": PHASE_C_ASR,
 }

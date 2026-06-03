@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from pyaesa.asr.figures.axis import ASR_LOG_SCALE, ASRScaleMode, positive_asr_values
-from pyaesa.asr.figures.frequency import format_fnt_math_label
+from pyaesa.asr.figures.frequency import format_ft_math_label
 from pyaesa.asr.figures.polar_artists import (
     render_risk_background,
     render_threshold_arcs,
@@ -162,7 +162,7 @@ def render_asr_polar(
         lower_zone_label=contract.lower_zone_label,
         middle_zone_label=contract.middle_zone_label,
         upper_zone_label=contract.upper_zone_label,
-        fnt_label=contract.fnt_label,
+        ft_label=contract.ft_label,
         deterministic_note=deterministic_note,
     )
     del zero_count
@@ -187,7 +187,7 @@ def _impact_label(*, lcia_method: str, impact: str) -> str:
     metadata = load_lcia_metadata(lcia_method)
     raw = str(metadata.labels.get(impact, impact)).strip()
     without_code = _label_without_parenthetical_code(raw)
-    return _wrap_two_line_label(without_code, width=NON_PB_POLAR_LABEL_WIDTH)
+    return _wrap_impact_label(without_code, width=NON_PB_POLAR_LABEL_WIDTH)
 
 
 def _label_without_parenthetical_code(label: str) -> str:
@@ -196,14 +196,12 @@ def _label_without_parenthetical_code(label: str) -> str:
     return label
 
 
-def _wrap_two_line_label(label: str, *, width: int) -> str:
+def _wrap_impact_label(label: str, *, width: int) -> str:
     wrapped = textwrap.wrap(
         label,
         width=width,
         break_long_words=False,
         break_on_hyphens=False,
-        max_lines=2,
-        placeholder="",
     )
     return "\n".join(part.strip() for part in wrapped if part.strip())
 
@@ -284,7 +282,7 @@ def _summary_for_impact(
 
 
 def _frequency_label(value: float) -> str:
-    return format_fnt_math_label(float(value))
+    return format_ft_math_label(float(value))
 
 
 def _radius_from_value(value: float, *, scale_mode: ASRScaleMode) -> float:

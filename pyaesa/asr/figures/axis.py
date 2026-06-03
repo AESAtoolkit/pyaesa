@@ -167,11 +167,11 @@ def apply_positive_log_axis(axis, *, limits: tuple[float, float]) -> None:
 
 
 def apply_frequency_axis(axis) -> None:
-    """Apply ASR frequency of no-transgression axis formatting."""
+    """Apply ASR frequency of transgression axis formatting."""
     axis.set_ylim(-5.0, 105.0)
     axis.set_yticks([0.0, 25.0, 50.0, 75.0, 100.0])
     axis.yaxis.set_major_formatter(PercentFormatter(xmax=100.0))
-    axis.set_ylabel(format_scientific_figure_text("fNT"))
+    axis.set_ylabel(format_scientific_figure_text("fT"))
     axis.set_xlabel("")
     axis.grid(alpha=0.25)
 

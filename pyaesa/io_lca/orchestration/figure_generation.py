@@ -9,7 +9,7 @@ import pandas as pd
 from pyaesa.shared.figures.checkpoints import default_checkpoint_years
 from pyaesa.shared.figures.jobs import PlannedFigureJob, render_figure_jobs
 from pyaesa.shared.figures.title_contract import selector_scope_request_from_filters
-from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.runtime.reporting.status import StatusSink, show_optional_status
 from pyaesa.shared.runtime.reuse.contracts import normalize_selector_payload
 from pyaesa.shared.tabular.scalars import sanitize_token
 from pyaesa.io_lca.figures.common import normalize_plot_years, selector_groups
@@ -223,6 +223,7 @@ def render_io_lca_figures(
     scope["paths_written"] = []
     scope["complete"] = False
     scope["status"]["figures"] = {}
+    show_optional_status(status, "[deterministic_io_lca] Preparing figure inputs")
 
     table_extension = table_extension_for_output(io_output_format)
     figure_paths: list[Path] = []

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,6 +27,7 @@ from pyaesa.acc.uncertainty.figures.product_renderers import (
 )
 from pyaesa.acc.uncertainty.figures.violin_renderers import plot_violin_scope
 from pyaesa.acc.uncertainty.figures.render import _collapsed_inter_method_rows
+from pyaesa.acc.uncertainty.figures.final_subfigures import render_final_acc_subfigures
 from pyaesa.acc.uncertainty.evaluation import branches as branch_mod
 from pyaesa.acc.uncertainty.evaluation import source_unit_evaluator as source_unit_mod
 from pyaesa.acc.uncertainty.evaluation import sparse_runs as sparse_render_mod
@@ -60,11 +62,25 @@ from pyaesa.acc.uncertainty.io.run_outputs import write_acc_run_outputs
 from pyaesa.acc.uncertainty.io.manifest_payloads import build_acc_manifest_context
 from pyaesa.acc.uncertainty.io.source_methods import build_acc_source_methods
 from pyaesa.acc.uncertainty.request.normalization import normalize_acc_uncertainty_config
-from pyaesa.acc.uncertainty.runner import _acc_branch_scope, run_uncertainty_acc_component
+from pyaesa.acc.uncertainty.runner import (
+    _acc_branch_scope,
+    run_uncertainty_acc_component,
+)
+from pyaesa.acc.uncertainty.runtime.reuse_dependencies import (
+    plan_from_reused_acc_dependencies,
+)
 from pyaesa.acc.uncertainty.runtime.scope import build_acc_uncertainty_scope
+from pyaesa.acc.uncertainty.runtime.scope import ACCUncertaintyScope
 from pyaesa.asocc.runtime.paths.external import get_asocc_external_method_level_dir
 from pyaesa.asocc.runtime.scope.branch_resolution import outputs_project_root
-from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest, read_manifest
+from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
+    build_manifest,
+    read_manifest,
+    write_manifest,
+)
+from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
+    manifest_with_figure_artifacts,
+)
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
@@ -821,6 +837,256 @@ def test_uncertainty_acc_static_fixed_sobol_outputs(allocation_dummy_repo) -> No
     assert "sobol_source_summary" in manifest.artifacts["public_output"]
     assert not (root / "results" / "sobol" / "sobol_methods.csv").exists()
     assert not list(root.glob(".summary_values_*.dat"))
+
+
+def test_reused_acc_subfigure_plan_uses_completed_dependency_manifests(tmp_path: Path) -> None:
+    running_asocc = build_manifest(
+        family="asocc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("projection_uncertainty",),
+        status="running",
+        completed_runs=1,
+        artifacts={
+            "scope_manifest": str(tmp_path / "running_asocc" / "logs" / "scope_manifest.json"),
+            "public_row_identity": str(tmp_path / "running_asocc" / "results" / "identity.csv"),
+            "asocc_runs": str(tmp_path / "running_asocc" / "results" / "runs.csv"),
+            "results_readme": str(tmp_path / "running_asocc" / "results" / "README.txt"),
+            "source_methods": str(tmp_path / "running_asocc" / "logs" / "source_methods.csv"),
+            "public_output": {"asocc_runs": {"layout": "compact_run_matrix"}},
+        },
+    )
+    running_ar6 = build_manifest(
+        family="ar6_cc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("dynamic_ar6_cc_uncertainty",),
+        status="running",
+        completed_runs=1,
+        artifacts={
+            "scope_manifest": str(tmp_path / "running_ar6" / "logs" / "scope_manifest.json"),
+            "public_row_identity": str(tmp_path / "running_ar6" / "results" / "identity.csv"),
+            "ar6_cc_runs": str(tmp_path / "running_ar6" / "results" / "runs.csv"),
+            "summary_stats_runs": str(tmp_path / "running_ar6" / "results" / "summary.csv"),
+            "results_readme": str(tmp_path / "running_ar6" / "results" / "README.txt"),
+            "source_methods": str(tmp_path / "running_ar6" / "logs" / "source_methods.csv"),
+            "public_output": {"ar6_cc_runs": {"layout": "compact_run_matrix"}},
+        },
+    )
+    completed_asocc_path = tmp_path / "completed_asocc" / "logs" / "scope_manifest.json"
+    completed_ar6_path = tmp_path / "completed_ar6" / "logs" / "scope_manifest.json"
+    completed_asocc = build_manifest(
+        family="asocc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("projection_uncertainty",),
+        status="complete",
+        completed_runs=2,
+        artifacts={
+            "scope_manifest": str(completed_asocc_path),
+            "summary_stats_runs": str(tmp_path / "completed_asocc" / "results" / "summary.csv"),
+        },
+    )
+    completed_ar6 = build_manifest(
+        family="ar6_cc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("dynamic_ar6_cc_uncertainty",),
+        status="complete",
+        completed_runs=2,
+        artifacts={
+            "scope_manifest": str(completed_ar6_path),
+            "summary_stats_runs": str(tmp_path / "completed_ar6" / "results" / "summary.csv"),
+        },
+    )
+    write_manifest(path=completed_asocc_path, manifest=completed_asocc)
+    write_manifest(path=completed_ar6_path, manifest=completed_ar6)
+    plan = ACCUncertaintyPlan(
+        identity=pd.DataFrame({"public_row_id": [0]}),
+        summary_identity=pd.DataFrame({"public_row_id": [0]}),
+        summary_public_row_groups=(("0",),),
+        branch_plans=(),
+        asocc_input=ACCAsoccInput(
+            identity=None,
+            deterministic_values=None,
+            manifest=running_asocc,
+            deterministic_manifest_path=None,
+            reuse_status="computed",
+        ),
+        dynamic_cc_input=ACCDynamicCCInput(
+            identity=None,
+            deterministic_values=None,
+            manifest=running_ar6,
+            deterministic_manifest_path=None,
+            reuse_status="computed",
+        ),
+        acc_run_layout="compact_run_matrix",
+        deterministic_cc_values=None,
+        source_method_rows=pd.DataFrame(),
+        active_sources=("asocc::projection_uncertainty", "ar6_cc::dynamic_ar6_cc_uncertainty"),
+    )
+    acc_manifest = build_manifest(
+        family="acc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=plan.active_sources,
+        status="complete",
+        completed_runs=2,
+        deterministic_prerequisites=(
+            {
+                "base_function_source": "uncertainty_asocc",
+                "scope_manifest": str(completed_asocc_path),
+                "reuse_status": "reused_exact",
+            },
+            {
+                "base_function_source": "uncertainty_ar6_cc",
+                "scope_manifest": str(completed_ar6_path),
+                "reuse_status": "computed",
+            },
+        ),
+    )
+
+    reuse_plan = plan_from_reused_acc_dependencies(plan=plan, manifest=acc_manifest)
+
+    assert reuse_plan.asocc_input.manifest is not None
+    assert reuse_plan.asocc_input.manifest.run_id == completed_asocc.run_id
+    assert reuse_plan.asocc_input.reuse_status == "reused_exact"
+    assert reuse_plan.dynamic_cc_input is not None
+    assert reuse_plan.dynamic_cc_input.manifest is not None
+    assert reuse_plan.dynamic_cc_input.manifest.run_id == completed_ar6.run_id
+    assert reuse_plan.dynamic_cc_input.reuse_status == "computed"
+    with pytest.raises(ValueError):
+        plan_from_reused_acc_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="acc",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=plan.active_sources,
+                status="complete",
+                completed_runs=2,
+            ),
+        )
+    with pytest.raises(ValueError):
+        plan_from_reused_acc_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="acc",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=plan.active_sources,
+                status="complete",
+                completed_runs=2,
+                deterministic_prerequisites=(
+                    {
+                        "base_function_source": "uncertainty_asocc",
+                        "scope_manifest": str(completed_asocc_path),
+                    },
+                    {
+                        "base_function_source": "uncertainty_asocc",
+                        "scope_manifest": str(completed_asocc_path),
+                    },
+                ),
+            ),
+        )
+    running_asocc_path = tmp_path / "running_asocc" / "logs" / "scope_manifest.json"
+    write_manifest(path=running_asocc_path, manifest=running_asocc)
+    with pytest.raises(ValueError):
+        plan_from_reused_acc_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="acc",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=plan.active_sources,
+                status="complete",
+                completed_runs=2,
+                deterministic_prerequisites=(
+                    {
+                        "base_function_source": "uncertainty_asocc",
+                        "scope_manifest": str(running_asocc_path),
+                    },
+                ),
+            ),
+        )
+    deterministic_plan = replace(
+        plan,
+        asocc_input=ACCAsoccInput(
+            identity=pd.DataFrame({"public_row_id": [0]}),
+            deterministic_values=np.array([[1.0]], dtype=np.float64),
+            manifest=None,
+            deterministic_manifest_path=tmp_path / "asocc_metadata.json",
+            reuse_status="reused_exact",
+        ),
+        dynamic_cc_input=None,
+    )
+    deterministic_reuse_plan = plan_from_reused_acc_dependencies(
+        plan=deterministic_plan,
+        manifest=acc_manifest,
+    )
+    assert deterministic_reuse_plan.asocc_input.manifest is None
+    assert deterministic_reuse_plan.dynamic_cc_input is None
+
+
+def test_reused_acc_final_subfigures_use_current_static_asocc_figures(tmp_path: Path) -> None:
+    figure_path = tmp_path / "asocc" / "figures" / "current.svg"
+    figure_path.parent.mkdir(parents=True)
+    figure_path.write_text("<svg />", encoding="utf-8")
+    manifest_path = tmp_path / "asocc" / "logs" / "scope_manifest.json"
+    asocc_manifest = manifest_with_figure_artifacts(
+        manifest=build_manifest(
+            family="asocc",
+            mode="fixed",
+            output_format="csv_compact",
+            active_sources=("inter_method_uncertainty",),
+            artifacts={
+                "scope_manifest": str(manifest_path),
+                "summary_stats_runs": str(tmp_path / "asocc" / "results" / "summary.csv"),
+            },
+        ),
+        figure_paths=[figure_path],
+        figure_options=None,
+        figure_format=None,
+    )
+    plan = ACCUncertaintyPlan(
+        identity=pd.DataFrame({"public_row_id": [0]}),
+        summary_identity=pd.DataFrame({"public_row_id": [0]}),
+        summary_public_row_groups=(("0",),),
+        branch_plans=(),
+        asocc_input=ACCAsoccInput(
+            identity=None,
+            deterministic_values=None,
+            manifest=asocc_manifest,
+            deterministic_manifest_path=None,
+            reuse_status="reused_exact",
+        ),
+        dynamic_cc_input=None,
+        acc_run_layout="compact_run_matrix",
+        deterministic_cc_values=None,
+        source_method_rows=pd.DataFrame(),
+        active_sources=("asocc::inter_method_uncertainty",),
+    )
+    render_final_acc_subfigures(
+        plan=plan,
+        scope=ACCUncertaintyScope(
+            shared_methods=["gwp100_lcia"],
+            mrio_scope={},
+            asocc_config={},
+            cc_config={},
+            base_allocate_args={},
+            asocc_lcia_methods=None,
+            branches=[],
+            dynamic_branch=None,
+            root=tmp_path,
+            base_args={"external_method": None, "years": [2005]},
+        ),
+        figure_options=None,
+        figure_format=None,
+        phase=NullPhasePrinter(),
+        status=None,
+        report_reused_progress=False,
+    )
+    assert figure_path.exists()
 
 
 def test_uncertainty_acc_static_fixed_uses_deterministic_components(

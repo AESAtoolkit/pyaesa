@@ -304,11 +304,18 @@ def external_lca_values_for_units(
     *,
     source: ExternalLCAMonteCarloSource,
     unit_values: np.ndarray,
+    row_positions: np.ndarray | None = None,
 ) -> np.ndarray:
     """Map Sobol unit interval values onto the empirical external LCA inventory."""
     values = np.asarray(unit_values, dtype=np.float64)
     clipped = np.clip(values, 0.0, np.nextafter(1.0, 0.0))
     positions = np.floor(clipped * len(source.run_indices)).astype(np.int64)
+    if row_positions is not None:
+        return external_lca_values_for_run_rows(
+            source=source,
+            run_indices=positions,
+            row_positions=np.asarray(row_positions, dtype=np.int64),
+        )
     return external_lca_values_for_runs(source=source, run_indices=positions)
 
 

@@ -4,6 +4,7 @@ from dataclasses import replace
 from typing import Any
 
 from pyaesa.asr.uncertainty.evaluation.planning import build_asr_uncertainty_plan
+from pyaesa.asr.uncertainty.figures.final_subfigures import render_final_asr_subfigures
 from pyaesa.asr.uncertainty.figures.render import render_asr_uncertainty_figures
 from pyaesa.asr.uncertainty.figures.reuse import render_reusable_asr_figures_if_requested
 from pyaesa.asr.uncertainty.io.manifest_payloads import (
@@ -22,16 +23,19 @@ from pyaesa.asr.uncertainty.io.source_methods import (
 )
 from pyaesa.asr.uncertainty.runtime.checkpoints import run_asr_checkpoints
 from pyaesa.asr.uncertainty.runtime.component_inputs import (
-    acc_inventory_report,
     initial_asr_components,
     io_lca_progress_enabled,
 )
+from pyaesa.asr.uncertainty.runtime.memory import asr_batch_memory_blocks
+from pyaesa.asr.uncertainty.runtime.reuse_dependencies import (
+    completed_acc_component_session,
+    plan_from_reused_asr_dependencies,
+)
 from pyaesa.asr.uncertainty.runtime.scope import ASRUncertaintyScope, build_asr_uncertainty_scope
 from pyaesa.asr.uncertainty.sobol.runner import run_asr_sobol
-from pyaesa.asr.uncertainty.sources.config import ASRSourceConfig, split_asr_uncertainty_config
+from pyaesa.asr.uncertainty.sources.config import split_asr_uncertainty_config
 from pyaesa.asr.uncertainty.sources.lca_inputs import (
     base_io_lca_args_from_allocate_args,
-    render_lca_subfigures_from_input,
 )
 from pyaesa.shared.acc_asr_common.scope.composite import (
     base_asocc_kwargs_from_allocate_args,
@@ -42,6 +46,7 @@ from pyaesa.shared.figures.request_validation import (
     normalize_figure_options,
     resolve_nested_polar_years,
 )
+from pyaesa.io_lca.data.contracts import IO_LCA_FAMILY
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     PHASE_A_LCA,
     PHASE_B2_ACC,
@@ -49,7 +54,7 @@ from pyaesa.shared.runtime.reporting.composite_phase_index import (
     phase_reused_detail,
     phase_uncertainty_done_detail,
 )
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
+from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import (
     monte_carlo_run_progress,
 )
@@ -65,6 +70,7 @@ from pyaesa.shared.uncertainty_assessment.orchestration import (
     manifest_output_root,
     phase_index_entry,
     progress_complete,
+    progress_complete_sobol,
     uncertainty_phase_index_entry,
     write_uncertainty_phase_index,
 )
@@ -73,7 +79,6 @@ from pyaesa.shared.uncertainty_assessment.request.core import (
     UncertaintyRuntimeRequest,
     memory_bounded_batch_size,
     normalize_uncertainty_request,
-    sparse_selected_run_memory_blocks,
 )
 from pyaesa.shared.uncertainty_assessment.run_state.figure_artifacts import (
     manifest_with_figure_artifacts,
@@ -248,6 +253,8 @@ def run_uncertainty_asr(
         finalize_component_inventory=initial_component_inventory_finalizes(
             checkpoints=checkpoints,
         ),
+        complete_lca_phase=not (figures and subfigures and scope.lca_type != IO_LCA_FAMILY),
+        complete_acc_component_phases=not (figures and subfigures),
         run_id=current_run_id,
     )
     acc_manifest = components.acc_manifest
@@ -279,7 +286,7 @@ def run_uncertainty_asr(
         batch_size=memory_bounded_batch_size(
             runtime=runtime,
             primary_block=BatchMemoryBlock("asr_run_values", len(plan.identity)),
-            extra_blocks=_asr_batch_memory_blocks(plan=plan),
+            extra_blocks=asr_batch_memory_blocks(plan=plan),
         ),
     )
     context = build_asr_manifest_context(
@@ -318,11 +325,20 @@ def run_uncertainty_asr(
             completed=reusable.manifest.completed_runs,
             max_runs=runtime.n_runs,
             mode=runtime.mode,
+            reached=bool((reusable.manifest.convergence or {}).get("reached")),
+            final_checkpoint=True,
         )
         acc_progress.finish()
         lca_progress.finish()
         asr_progress.finish()
         reuse_manifest = reusable.manifest
+        if reuse_status == "reused_exact":
+            progress_complete_sobol(
+                source="uncertainty_asr",
+                status=phase,
+                sobol=reuse_manifest.sobol,
+                visible=sobol_plan.enabled,
+            )
         if reuse_status == "computed":
             paths = build_asr_uncertainty_run_paths(
                 monte_carlo_root=scope.root,
@@ -365,16 +381,28 @@ def run_uncertainty_asr(
             status=asr_progress,
         )
         if figures and subfigures:
-            _render_final_asr_subfigures(
+            reuse_plan = plan_from_reused_asr_dependencies(
                 plan=plan,
+                manifest=reuse_manifest,
+            )
+            render_final_asr_subfigures(
+                plan=reuse_plan,
                 scope=scope,
                 source_config=source_config,
                 base_cc_args=base_cc_args,
                 output_format=runtime.output_format,
                 figure_options=figure_options_norm,
                 figure_format=figure_format,
+                phase=phase,
                 status=asr_progress,
                 completed_runs=reusable.manifest.completed_runs,
+                component_session=completed_acc_component_session(
+                    acc_session=components.acc_session,
+                    acc_manifest=reuse_plan.acc_manifest,
+                ),
+                parent_mode=runtime.mode,
+                parent_max_runs=runtime.n_runs,
+                report_reused_progress=True,
             )
         if reuse_status == "reused_exact":
             phase.complete(
@@ -491,6 +519,7 @@ def run_uncertainty_asr(
                 progress_mode=runtime.mode,
                 progress_max_runs=runtime.n_runs,
                 progress_component=False,
+                show_final_component_progress=not (figures and subfigures),
             )
         finally:
             acc_progress.finish()
@@ -500,6 +529,7 @@ def run_uncertainty_asr(
         lca_input = checkpoint_result.lca_input
         completed_runs = checkpoint_result.completed_runs
         convergence = checkpoint_result.convergence
+        asr_progress.show("[uncertainty_asr] Writing Monte Carlo outputs")
         context = build_asr_manifest_context(
             base_args=scope.base_args,
             runtime=runtime,
@@ -555,7 +585,7 @@ def run_uncertainty_asr(
             )
         write_manifest(path=paths.scope_manifest, manifest=complete)
         if figures and subfigures:
-            _render_final_asr_subfigures(
+            render_final_asr_subfigures(
                 plan=plan,
                 scope=scope,
                 source_config=source_config,
@@ -563,8 +593,13 @@ def run_uncertainty_asr(
                 output_format=runtime.output_format,
                 figure_options=figure_options_norm,
                 figure_format=figure_format,
+                phase=phase,
                 status=asr_progress,
                 completed_runs=completed_runs,
+                component_session=checkpoint_result.acc_session,
+                parent_mode=runtime.mode,
+                parent_max_runs=runtime.n_runs,
+                report_reused_progress=True,
             )
         asr_progress.finish()
         phase.complete(
@@ -692,109 +727,4 @@ def _asr_branch_scope(
             "lcia_method": branch_methods,
             "base_cc_args": branch_cc_config,
         },
-    )
-
-
-def _asr_batch_memory_blocks(*, plan) -> tuple[BatchMemoryBlock, ...]:
-    blocks = [
-        BatchMemoryBlock("lca_input_values", len(plan.identity)),
-        BatchMemoryBlock("acc_input_values", len(plan.identity)),
-    ]
-    if plan.asr_run_layout == "sparse_selected_rows":
-        blocks.extend(
-            sparse_selected_run_memory_blocks(
-                prefix="asr",
-                public_row_count=len(plan.identity),
-                summary_row_count=len(plan.summary_public_row_groups),
-                filters_and_sorts_output=False,
-            )
-        )
-    else:
-        blocks.append(BatchMemoryBlock("yearly_summary_values", len(plan.summary_identity)))
-        selected_component_arrays = ("yearly_lca", "yearly_acc")
-        if plan.has_cumulative_outputs:
-            selected_component_arrays = (
-                *selected_component_arrays,
-                "cumulative_lca",
-                "cumulative_acc",
-            )
-        blocks.append(
-            BatchMemoryBlock(
-                "asr_selected_component_values",
-                len(plan.identity),
-                len(selected_component_arrays),
-            )
-        )
-    if plan.has_cumulative_outputs:
-        blocks.extend(
-            [
-                BatchMemoryBlock("cumulative_numerator_sums", len(plan.cumulative_identity)),
-                BatchMemoryBlock("cumulative_denominator_sums", len(plan.cumulative_identity)),
-                BatchMemoryBlock("cumulative_output_values", len(plan.cumulative_identity)),
-                BatchMemoryBlock(
-                    "cumulative_summary_values", len(plan.cumulative_summary_identity)
-                ),
-            ]
-        )
-    return tuple(blocks)
-
-
-def _render_final_asr_subfigures(
-    *,
-    plan,
-    scope: ASRUncertaintyScope,
-    source_config: ASRSourceConfig,
-    base_cc_args: dict[str, Any],
-    output_format: str,
-    figure_options: dict[str, Any] | None,
-    figure_format: dict[str, Any] | None,
-    status,
-    completed_runs: int,
-) -> None:
-    args = scope.base_args
-    acc_progress = monte_carlo_run_progress(
-        source="uncertainty_acc",
-        enabled=True,
-        status=status,
-    )
-    acc_inventory_report(
-        project_name=str(args["project_name"]),
-        years=args["years"],
-        shared_methods=scope.shared_methods,
-        base_allocate_args=scope.base_allocate_args,
-        fu_code=str(args["fu_code"]),
-        r_p=args["r_p"],
-        s_p=args["s_p"],
-        r_c=args["r_c"],
-        r_f=args["r_f"],
-        mrio_scope=scope.mrio_scope,
-        asocc_config=scope.asocc_config,
-        base_cc_args=base_cc_args,
-        source_config=source_config.acc_config,
-        external_method=scope.external_method,
-        output_format=output_format,
-        phase=NullPhasePrinter(),
-        target_runs=completed_runs,
-        parent_mode="fixed",
-        parent_max_runs=completed_runs,
-        figures=True,
-        figure_options=figure_options,
-        figure_format=figure_format,
-        subfigures=True,
-        show_progress=False,
-        show_component_progress=False,
-        run_id=plan.acc_manifest.run_id,
-        refresh=False,
-        progress=acc_progress,
-        finalize_component_inventory=True,
-    )
-    render_lca_subfigures_from_input(
-        lca_input=plan.lca_input,
-        base_allocate_args=scope.base_allocate_args,
-        lcia_methods=scope.shared_methods,
-        lca_version_name=scope.lca_version_name,
-        lca_config=source_config.lca_config,
-        figure_format=figure_format,
-        status=status,
-        completed_runs=completed_runs,
     )

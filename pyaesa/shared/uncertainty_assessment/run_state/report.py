@@ -9,9 +9,11 @@ from pyaesa.shared.runtime.reporting.labels import (
 from pyaesa.shared.runtime.reporting.reuse_status import public_reuse_status
 from pyaesa.shared.runtime.reporting.summary import (
     SummaryDocument,
+    SummarySection,
     SummaryWarning,
     document,
     render_summary,
+    section,
     warning,
 )
 from pyaesa.shared.runtime.reporting.summary_log import summary_log_path, write_summary_log
@@ -24,8 +26,10 @@ from pyaesa.shared.runtime.reporting.values import (
 from pyaesa.shared.uncertainty_assessment.run_state.report_arguments import scope_arguments
 from pyaesa.shared.uncertainty_assessment.run_state.report_dependencies import payload_source
 from pyaesa.shared.uncertainty_assessment.run_state.report_sections import phase_sections
+from pyaesa.shared.uncertainty_assessment.run_state.report_self import monte_carlo_lines
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
     UncertaintyManifest,
+    read_manifest,
 )
 
 
@@ -65,6 +69,8 @@ def _summary_document(
     manifest: UncertaintyManifest,
     reuse_status: str,
 ) -> SummaryDocument:
+    if _is_branch_set_manifest(manifest=manifest):
+        return _branch_set_summary_document(manifest=manifest, reuse_status=reuse_status)
     return document(
         f"uncertainty_{manifest.family}",
         lines=_run_lines(manifest=manifest, reuse_status=reuse_status),
@@ -84,9 +90,64 @@ def _run_lines(
     lines = [f"Run status: {public_reuse_status(reuse_status)}"]
     lines.extend(_common_scope_lines(manifest=manifest))
     lines.extend(_active_source_lines(manifest=manifest))
-    lines.extend(_monte_carlo_lines(manifest=manifest))
+    lines.extend(monte_carlo_lines(manifest=manifest))
     lines.extend(_sobol_lines(manifest=manifest))
     return tuple(lines)
+
+
+def _branch_set_summary_document(
+    *,
+    manifest: UncertaintyManifest,
+    reuse_status: str,
+) -> SummaryDocument:
+    branch_manifests = _branch_manifests(manifest=manifest)
+    lines = [f"Run status: {public_reuse_status(reuse_status)}"]
+    lines.extend(_common_scope_lines(manifest=manifest))
+    lines.extend(_active_source_lines(manifest=manifest))
+    lines.append("Monte Carlo: branch set; independent branch statuses below")
+    lines.extend(_branch_set_sobol_lines(branch_manifests=branch_manifests))
+    return document(
+        f"uncertainty_{manifest.family}",
+        lines=lines,
+        sections=tuple(
+            _branch_section(index=index, manifest=branch_manifest)
+            for index, branch_manifest in enumerate(branch_manifests, start=1)
+        ),
+    )
+
+
+def _branch_section(*, index: int, manifest: UncertaintyManifest) -> SummarySection:
+    return section(
+        f"Branch {index}: {_branch_label(manifest=manifest)}",
+        children=phase_sections(
+            manifest=manifest,
+            run_warnings=_run_warnings(manifest=manifest),
+            warning_builder=lambda nested_manifest: _run_warnings(manifest=nested_manifest),
+        ),
+    )
+
+
+def _branch_set_sobol_lines(*, branch_manifests: tuple[UncertaintyManifest, ...]) -> list[str]:
+    if any(branch.sobol for branch in branch_manifests):
+        return ["Sobol: branch set; independent branch statuses below"]
+    return ["Sobol: not requested"]
+
+
+def _branch_manifests(*, manifest: UncertaintyManifest) -> tuple[UncertaintyManifest, ...]:
+    paths = manifest.artifacts.get("branch_scope_manifests") or ()
+    return tuple(read_manifest(path=Path(str(path))) for path in paths)
+
+
+def _branch_label(*, manifest: UncertaintyManifest) -> str:
+    path = manifest.artifacts["scope_manifest"]
+    return Path(str(path)).parents[2].name
+
+
+def _is_branch_set_manifest(*, manifest: UncertaintyManifest) -> bool:
+    context = manifest.compatibility_context or {}
+    return bool(manifest.artifacts.get("branch_scope_manifests")) and str(
+        context.get("artifact_contract", "")
+    ).endswith("_branch_set")
 
 
 def _common_scope_lines(*, manifest: UncertaintyManifest) -> list[str]:
@@ -160,34 +221,6 @@ def _active_source_lines(*, manifest: UncertaintyManifest) -> list[str]:
     return lines
 
 
-def _monte_carlo_lines(*, manifest: UncertaintyManifest) -> list[str]:
-    mc_parameters = manifest.mc_parameters or {}
-    requested = int(mc_parameters.get("requested_runs", manifest.requested_runs) or 0)
-    if manifest.mode == "fixed":
-        return [f"Monte Carlo: fixed; completed fixed runs {manifest.completed_runs}"]
-    maximum = int(mc_parameters.get("max_runs", requested or manifest.requested_runs) or 0)
-    convergence = manifest.convergence or {}
-    reached = "not reached"
-    if convergence:
-        reached = "reached" if bool(convergence.get("reached")) else "not reached"
-        maximum = int(convergence.get("max_runs", maximum) or maximum)
-    line = (
-        f"Monte Carlo: convergence; completed runs {manifest.completed_runs}; "
-        f"maximum allowed runs {maximum}; convergence {reached}"
-    )
-    lines = [line]
-    context = manifest.compatibility_context or {}
-    if str(context.get("artifact_contract", "")).endswith("_branch_set"):
-        lines.append(
-            "Convergence scope: independent per branch; each branch scope manifest "
-            "records its own convergence status."
-        )
-    reason = convergence.get("reason") if convergence else None
-    if reason is not None:
-        lines.append(f"Convergence reason: {reason}")
-    return lines
-
-
 def _sobol_lines(*, manifest: UncertaintyManifest) -> list[str]:
     sobol = manifest.sobol or {}
     if not sobol:
@@ -200,6 +233,12 @@ def _sobol_lines(*, manifest: UncertaintyManifest) -> list[str]:
     mode = str(sobol.get("mode", "fixed"))
     samples = sobol.get("n_base_samples")
     dimension_count = sobol.get("active_source_count")
+    if dimension_count is None:
+        method = sobol.get("method")
+        if isinstance(method, dict):
+            dimensions = method.get("source_dimensions")
+            if isinstance(dimensions, (list, tuple)):
+                dimension_count = len(dimensions)
     evaluations = None
     if samples is not None and dimension_count is not None:
         evaluations = int(samples) * (int(dimension_count) + 2)
@@ -207,7 +246,11 @@ def _sobol_lines(*, manifest: UncertaintyManifest) -> list[str]:
         line = f"Sobol: fixed; base samples {samples}"
     else:
         reached = "reached" if bool(sobol.get("reached")) else "not reached"
-        max_samples = sobol.get("max_base_samples", samples)
+        max_samples = sobol.get("max_base_samples")
+        parameters = sobol.get("parameters")
+        if max_samples is None and isinstance(parameters, dict):
+            max_samples = parameters.get("max_base_samples")
+        max_samples = samples if max_samples is None else max_samples
         line = (
             f"Sobol: convergence; base samples {samples}; "
             f"maximum base samples {max_samples}; convergence {reached}"

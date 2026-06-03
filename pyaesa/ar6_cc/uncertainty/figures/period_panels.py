@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib.ticker import FuncFormatter
 
 from pyaesa.shared.figures.figure_footer import render_two_panel_legends_below
-from pyaesa.shared.figures.multi_year_transitions import transition_boundary_x
+from pyaesa.shared.figures.multi_year_transitions import post_study_boundary_x
 from pyaesa.shared.figures.nonnegative_axis import apply_zero_floor_if_nonnegative
 from pyaesa.shared.figures.scientific_text import format_scientific_figure_text
 from pyaesa.shared.figures.scientific_ticks import scientific_tick_formatter
@@ -46,7 +46,7 @@ def render_study_transition(
     """Render the study to post study period divider on one uncertainty axis."""
     post_values = sorted(int(year) for year in post_years)
     study_values = sorted(int(year) for year in study_years)
-    boundary = transition_boundary_x(post_values[0])
+    boundary = post_study_boundary_x(post_values)
     _render_transition(axis, boundary=boundary)
     _render_period_labels(
         axis,

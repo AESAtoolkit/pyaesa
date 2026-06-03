@@ -1,4 +1,19 @@
 /* Notebook argument checklists are raw HTML tables rendered through nbsphinx. */
+.pyaesa-brand-py {
+  color: #366e9c;
+  font-weight: 700;
+}
+
+.pyaesa-brand-aesa {
+  color: #c83737;
+  font-weight: 700;
+}
+
+.pyaesa-brand {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .rst-content details {
   margin: 1rem 0 1.5rem;
 }
@@ -11,10 +26,11 @@
 
 .rst-content details > table {
   border-collapse: collapse;
-  display: block;
+  display: table;
   margin: 0.75rem 0 1.25rem;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
+  table-layout: fixed;
   width: 100%;
 }
 
@@ -25,6 +41,8 @@
   text-align: left;
   vertical-align: top;
   white-space: normal !important;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .rst-content details > table th {
@@ -33,23 +51,31 @@
   font-weight: 700;
 }
 
+.rst-content details > table th:first-child,
 .rst-content details > table td:first-child {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-weight: 700;
-  min-width: 10rem;
-  width: 10rem;
+  max-width: 14rem;
+  min-width: 14rem;
+  width: 14rem;
+}
+
+.rst-content details > table th:last-child,
+.rst-content details > table td:last-child {
+  min-width: 0;
+  width: auto;
 }
 
 .rst-content details > table td:first-child p {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .rst-content details > table td p {
   color: inherit;
   line-height: 1.35rem;
   margin: 0.2rem 0;
-  white-space: pre-line;
+  white-space: normal;
 }
 
 .rst-content details > table td ul {
@@ -57,16 +83,51 @@
   margin-top: 0.35rem;
 }
 
+.rst-content details > table .pyaesa-argument-intro {
+  margin-bottom: 0.35rem;
+}
+
+.rst-content details > table .pyaesa-nested-heading {
+  font-weight: 700;
+  margin-top: 0.55rem;
+}
+
+.rst-content details > table ul.pyaesa-nested-args {
+  list-style-position: outside;
+  margin: 0.35rem 0 0.6rem 1.25rem;
+  padding-left: 0.75rem;
+}
+
+.rst-content details > table ul.pyaesa-nested-args-child {
+  margin-bottom: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.rst-content details > table ul.pyaesa-nested-args li {
+  line-height: 1.35rem;
+  margin: 0.3rem 0;
+  padding-left: 0.1rem;
+}
+
 .rst-content details > table code,
+.rst-content details > table code *,
 .rst-content details > table .docutils.literal,
-.rst-content details > table tt {
+.rst-content details > table .docutils.literal *,
+.rst-content details > table tt,
+.rst-content details > table tt *,
+.rst-content details > table span.pre,
+.rst-content details > table a {
   color: inherit;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+  word-break: normal;
 }
 
 /* Read the Docs tables need explicit wrapping for long Markdown cells. */
 .rst-content .wy-table-responsive table.docutils,
 .rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) {
-  table-layout: fixed;
+  max-width: 100%;
+  table-layout: auto;
   width: 100%;
 }
 
@@ -74,8 +135,39 @@
 .rst-content .wy-table-responsive table.docutils th,
 .rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) td,
 .rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) th {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   white-space: normal !important;
+  word-break: normal;
+}
+
+.rst-content a,
+.rst-content code.docutils.literal,
+.rst-content .docutils.literal,
+.rst-content .docutils.literal span.pre,
+.rst-content tt,
+.rst-content tt span.pre {
+  overflow-wrap: break-word;
+  white-space: normal !important;
+  word-break: normal;
+}
+
+.rst-content > .document p,
+.rst-content > .document li {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.rst-content table p,
+.rst-content table li,
+.rst-content > .document table p,
+.rst-content > .document table li {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.rst-content > .document details > table td p,
+.rst-content > .document details > table td li {
+  overflow-wrap: break-word;
   word-break: normal;
 }
 
@@ -87,8 +179,104 @@
 .rst-content
   table.docutils:not(.field-list):not(.footnote):not(.citation)
   .docutils.literal {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  white-space: nowrap !important;
+  word-break: normal;
+}
+
+.rst-content .wy-table-responsive table.docutils .docutils.literal span.pre,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation)
+  .docutils.literal
+  span.pre {
+  overflow-wrap: normal;
+  white-space: nowrap !important;
+  word-break: normal;
+}
+
+.rst-content .wy-table-responsive table.docutils a,
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) a {
+  overflow-wrap: normal;
   white-space: normal !important;
+  word-break: normal;
+}
+
+.rst-content section#study-objectives > table.docutils:first-of-type {
+  table-layout: fixed;
+}
+
+.rst-content section#study-objectives > table.docutils:first-of-type col:nth-child(1) {
+  width: 10rem !important;
+}
+
+.rst-content section#study-objectives > table.docutils:first-of-type col:nth-child(2) {
+  width: auto !important;
+}
+
+.rst-content
+  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
+  table.docutils {
+  table-layout: fixed;
+}
+
+.rst-content
+  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
+  table.docutils
+  col:nth-child(1) {
+  width: 10.5rem !important;
+}
+
+.rst-content
+  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
+  table.docutils
+  col:nth-child(2) {
+  width: 15rem !important;
+}
+
+.rst-content
+  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
+  table.docutils
+  col:nth-child(3) {
+  width: auto !important;
+}
+
+.rst-content section#aesa-functions table.docutils {
+  table-layout: fixed;
+}
+
+.rst-content section#aesa-functions table.docutils col:nth-child(1) {
+  width: 4.5rem !important;
+}
+
+.rst-content section#aesa-functions table.docutils col:nth-child(2) {
+  width: 7rem !important;
+}
+
+.rst-content section#aesa-functions table.docutils col:nth-child(3) {
+  width: 13rem !important;
+}
+
+.rst-content section#aesa-functions table.docutils col:nth-child(4) {
+  width: auto !important;
+}
+
+.rst-content pre,
+.rst-content pre code,
+.rst-content .highlight pre,
+.rst-content .highlight pre span.pre,
+.rst-content .nbinput pre,
+.rst-content .nboutput pre {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.rst-content .highlight,
+.rst-content .nbinput,
+.rst-content .nboutput {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .pyaesa-argument-legend {
@@ -114,4 +302,50 @@
   border-left: 3px solid currentColor;
   margin: 0.35rem 0;
   padding-left: 0.5rem;
+}
+
+@media screen and (max-width: 640px) {
+  .wy-nav-content,
+  .rst-content,
+  .rst-content .document {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .rst-content .wy-table-responsive,
+  .rst-content pre,
+  .rst-content .highlight,
+  .rst-content .nbinput,
+  .rst-content .nboutput {
+    overflow-x: auto;
+  }
+
+  .rst-content details > table,
+  .rst-content details > table tbody,
+  .rst-content details > table tr,
+  .rst-content details > table th,
+  .rst-content details > table td {
+    display: block;
+    max-width: 100%;
+    width: 100% !important;
+  }
+
+  .rst-content details > table thead {
+    display: none;
+  }
+
+  .rst-content details > table tr {
+    border: 1px solid #d9e1e5;
+    margin: 0 0 0.75rem;
+  }
+
+  .rst-content details > table th,
+  .rst-content details > table td {
+    border: 0;
+  }
+
+  .rst-content details > table td:first-child {
+    background: #f3f6f8;
+    border-bottom: 1px solid #d9e1e5;
+  }
 }

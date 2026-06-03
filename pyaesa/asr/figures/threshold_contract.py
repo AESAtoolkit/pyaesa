@@ -18,7 +18,7 @@ class AsrThresholdContract:
     lower_zone_label: str
     middle_zone_label: str | None
     upper_zone_label: str
-    fnt_label: str
+    ft_label: str
 
 
 def has_max_asr_threshold(*, frame: pd.DataFrame | None) -> bool:
@@ -53,10 +53,10 @@ def build_asr_threshold_contract(
     lower_zone = "Safe operating space" if is_planetary_boundary else "Safe zone"
     middle_zone = "Zone of increasing risk" if has_max_threshold else None
     upper_zone = "High risk zone"
-    fnt_label = (
-        r"$f^{\mathrm{NT}}$ = frequency of no-transgression of Min SOS (ASR <= 1)"
+    ft_label = (
+        r"$f^{\mathrm{T}}$ = frequency of transgression of Min SOS (ASR > 1)"
         if is_planetary_boundary
-        else r"$f^{\mathrm{NT}}$ = frequency of no-transgression of Min CC (ASR <= 1)"
+        else r"$f^{\mathrm{T}}$ = frequency of transgression of Min CC (ASR > 1)"
     )
     return AsrThresholdContract(
         has_max_threshold=has_max_threshold,
@@ -66,5 +66,5 @@ def build_asr_threshold_contract(
         lower_zone_label=lower_zone,
         middle_zone_label=middle_zone,
         upper_zone_label=upper_zone,
-        fnt_label=fnt_label,
+        ft_label=ft_label,
     )

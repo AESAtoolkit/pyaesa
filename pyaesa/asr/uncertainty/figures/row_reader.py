@@ -13,8 +13,8 @@ from pyaesa.acc.uncertainty.sources.source_keys import (
 )
 from pyaesa.asr.figures.common import VALUE_ARRAY_COLUMN, attach_common_columns
 from pyaesa.asr.uncertainty.evaluation.summary import (
-    ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
-    ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+    ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
+    ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ASR_SUMMARY_SCOPE_COLUMN,
     ASR_SUMMARY_SCOPE_INTER_METHOD,
     ASR_SUMMARY_METRIC_COLUMN,
@@ -120,9 +120,9 @@ def prepared_summary_rows(*, context: FigureContext, summary: pd.DataFrame) -> p
 
 
 def prepared_frequency_rows(*, context: FigureContext, summary: pd.DataFrame) -> pd.DataFrame:
-    """Return frequency of no-transgression summary rows."""
+    """Return frequency of transgression summary rows."""
     rows = _filter_requested_years(
-        frame=_metric_rows(summary, ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC),
+        frame=_metric_rows(summary, ASR_FREQUENCY_OF_TRANSGRESSION_METRIC),
         context=context,
     )
     rows = _asr_value_bound_rows(rows)
@@ -135,10 +135,10 @@ def prepared_cumulative_frequency_rows(
     context: FigureContext,
     cumulative_summary: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Return cumulative frequency of no-transgression summary rows."""
+    """Return cumulative frequency of transgression summary rows."""
     rows = _metric_rows(
         cumulative_summary,
-        ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+        ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
     )
     rows = _asr_value_bound_rows(rows)
     rows["fu_code"] = context.fu_code

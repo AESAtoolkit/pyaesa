@@ -127,7 +127,7 @@ def observed_group_summary_arrays(
         stats["p75"][group_index] = quantiles[3]
         stats["p95"][group_index] = quantiles[4]
         if frequency_threshold is not None:
-            frequency[group_index] = np.count_nonzero(observed <= float(frequency_threshold)) / len(
+            frequency[group_index] = np.count_nonzero(observed > float(frequency_threshold)) / len(
                 observed
             )
     return stats, frequency

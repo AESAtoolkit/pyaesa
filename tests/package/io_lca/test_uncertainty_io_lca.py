@@ -388,6 +388,32 @@ def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
         **cast(Any, kwargs),
     ).report.manifest
 
+    checkpoint = run_uncertainty_io_lca_component(
+        base_io_lca_args={
+            **_base_args(
+                io_lca_dummy_repo=io_lca_dummy_repo,
+                project_name="uncertainty_io_lca_component_method_scope",
+            ),
+            "years": [io_lca_dummy_repo.available_year],
+            "r_f": ["FR"],
+        },
+        refresh=False,
+        **cast(
+            Any,
+            {
+                **kwargs,
+                "component_inventory": component_inventory_payload(
+                    composite_family="asr",
+                    component_name="io_lca",
+                    target_runs=2,
+                    parent_mode="convergence",
+                    parent_max_runs=4,
+                ),
+                "finalize_component_inventory": False,
+            },
+        ),
+    ).report.manifest
+
     second = run_uncertainty_io_lca_component(
         base_io_lca_args={
             **_base_args(
@@ -403,6 +429,7 @@ def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
     ).report.manifest
 
     assert first.run_id == "mc_shared_component"
+    assert checkpoint.run_id == first.run_id
     assert second.run_id != first.run_id
     assert first.artifacts is not None
     assert second.artifacts is not None

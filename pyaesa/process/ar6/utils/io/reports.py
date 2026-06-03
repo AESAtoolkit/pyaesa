@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from collections.abc import Iterator
 from pathlib import Path
 
-from pyaesa.shared.runtime.reporting.composite_phase_index import PHASE_B1_AR6_DYNAMIC_CC
+from pyaesa.shared.runtime.reporting.composite_phase_index import PHASE_B0_AR6_DYNAMIC_CC
 from pyaesa.shared.runtime.reporting.ar6_process_coverage import process_ar6_coverage_line
 from pyaesa.shared.runtime.reporting.output_inventory import (
     OutputInventoryItem,
@@ -177,7 +177,7 @@ class ProcessReportAR6:
                 lines=tuple(run_lines),
                 sections=(
                     section(
-                        PHASE_B1_AR6_DYNAMIC_CC,
+                        PHASE_B0_AR6_DYNAMIC_CC,
                         children=(
                             section(
                                 "process_ar6",

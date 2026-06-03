@@ -45,7 +45,7 @@ def render_with_progress(
             paths.extend(rendered)
             del rendered
             gc.collect()
-        status.log_message(_generated_message(source, len(paths)))
+        log_figure_completion(source=source, status=status, count=len(paths))
     finally:
         status.clear_transient()
         if own_status:
@@ -59,6 +59,14 @@ def _item_count(item: ItemT, *, item_count: Callable[[ItemT], int] | None) -> in
     return max(1, int(item_count(item)))
 
 
-def _generated_message(source: str, file_count: int) -> str:
-    noun = plural_label(file_count, "figure")
-    return f"[{source}] Generated {noun} {file_count}/{file_count}."
+def log_figure_completion(*, source: str, status: StatusSink | None, count: int) -> None:
+    """Persist one completed figure count line when a status sink is available."""
+    if status is None:
+        return
+    status.log_message(figure_completion_message(source=source, count=count))
+
+
+def figure_completion_message(*, source: str, count: int) -> str:
+    """Return the standard completed figure count line."""
+    noun = plural_label(count, "figure")
+    return f"[{source}] Generated {noun} {count}/{count}."

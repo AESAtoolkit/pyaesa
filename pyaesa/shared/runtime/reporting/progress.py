@@ -372,7 +372,7 @@ class YearProgressPrinter:
                             shown_done=resume_shown_done,
                         )
             else:
-                text = compact_user_text(message)
+                text = self._transient_text(message)
                 if self._ipy_display:
                     self._render_ipy("\n".join([*self._message_history, text]))
                     self._active = True
@@ -394,6 +394,12 @@ class YearProgressPrinter:
     def show(self, message: str) -> None:
         """Render one transient status message on this progress line."""
         self.log_message(message, persistent=False)
+
+    def _transient_text(self, message: str) -> str:
+        """Return transient text formatted for the active rendering backend."""
+        if self._ipy_display:
+            return "\n".join(compact_user_text(line) for line in str(message).splitlines())
+        return compact_user_text(message)
 
     def clear_transient(self) -> None:
         """Clear the current transient line while keeping persistent history."""

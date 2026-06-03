@@ -286,7 +286,11 @@ def run_uncertainty_io_lca_component(
             mode=progress_parameters["mode"],
             component=progress_parameters["component"],
             visible=show_progress
-            and not all((had_component_session, component_parent_convergence)),
+            and not (
+                had_component_session and component_parent_convergence and not finalize_outputs
+            ),
+            reached=bool((reusable.manifest.convergence or {}).get("reached")),
+            final_checkpoint=finalize_outputs,
         )
         progress.finish()
         reused_manifest = render_reusable_io_lca_figures_if_requested(
@@ -297,12 +301,13 @@ def run_uncertainty_io_lca_component(
             figure_format=figure_format,
             status=figure_status,
         )
-        if not component_parent_convergence:
+        if not component_parent_convergence or finalize_outputs:
             phase_owner.complete(
                 phase_reused_detail(
                     scope_name="LCA uncertainty",
                     output_root=manifest_output_root(reused_manifest),
-                )
+                ),
+                owner="uncertainty_io_lca",
             )
         write_uncertainty_phase_index(
             manifest=reused_manifest,
@@ -394,6 +399,17 @@ def run_uncertainty_io_lca_component(
             progress_component=progress_parameters["component"],
         )
         completed_runs = output_state.completed_runs
+        progress_complete(
+            progress=progress,
+            completed=completed_runs,
+            max_runs=progress_parameters["max_runs"],
+            mode=progress_parameters["mode"],
+            component=progress_parameters["component"],
+            visible=show_progress,
+            reached=convergence is not None and bool(convergence.get("reached")),
+            final_checkpoint=finalize_outputs,
+        )
+        progress.show("[uncertainty_io_lca] Writing Monte Carlo outputs")
         write_uncertainty_table(
             path=paths.public_row_identity,
             frame=plan.identity,
@@ -460,14 +476,15 @@ def run_uncertainty_io_lca_component(
             close_downstream_run_output_state(state=output_state)
             output_state = None
         progress.finish()
-        if not component_parent_convergence:
+        if not component_parent_convergence or finalize_outputs:
             phase_owner.complete(
                 phase_uncertainty_done_detail(
                     scope_name="LCA uncertainty",
                     mode=complete.mode,
                     convergence=complete.convergence,
                     output_root=manifest_output_root(complete),
-                )
+                ),
+                owner="uncertainty_io_lca",
             )
         if finalize_outputs:
             write_uncertainty_phase_index(

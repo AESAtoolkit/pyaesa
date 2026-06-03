@@ -6,6 +6,7 @@ from pyaesa.shared.uncertainty_assessment.request.core import (
     UncertaintyRuntimeRequest,
     normalize_uncertainty_request,
 )
+from pyaesa.shared.uncertainty_assessment.orchestration import manifest_output_root
 from pyaesa.shared.uncertainty_assessment.run_state.branch_sets import (
     branch_set_run_id,
     branch_set_run_id_for_request,
@@ -23,6 +24,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.report import UncertaintyRun
 
 def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
     tmp_path: Path,
+    capsys,
 ) -> None:
     runtime = normalize_uncertainty_request(
         family="asr",
@@ -76,7 +78,17 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
     )
 
     assert "scope_manifest" not in report.manifest.artifacts
-    assert "Run status:" in str(report)
+    assert manifest_output_root(report.manifest) == tmp_path
+    report_text = str(report)
+    assert "Run status:" in report_text
+    assert "branch set" in report_text
+    assert "Sobol:" in report_text
+    assert "static__gwp100_lcia" in report_text
+    assert "static__pb_lcia" in report_text
+    assert "completed fixed runs 5" in report_text
+    live_output = capsys.readouterr().out
+    assert "static__gwp100_lcia" in live_output
+    assert "static__pb_lcia" in live_output
     assert not (tmp_path / "mc_reuse").exists()
     assert (
         branch_set_run_id_for_request(
@@ -84,6 +96,17 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
             runtime=runtime,
             arguments=arguments,
             branches=branches,
+        )
+        == "mc_reuse"
+    )
+    assert (
+        branch_set_run_id(
+            root=tmp_path,
+            runtime=runtime,
+            arguments=arguments,
+            branches=branches,
+            requested_run_id=None,
+            refresh=False,
         )
         == "mc_reuse"
     )
@@ -96,6 +119,15 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
         refresh=False,
     )
     assert allocated.startswith("mc_")
+    refreshed = branch_set_run_id(
+        root=tmp_path / "empty_refresh",
+        runtime=runtime,
+        arguments=arguments,
+        branches=branches,
+        requested_run_id=None,
+        refresh=True,
+    )
+    assert refreshed.startswith("mc_")
 
 
 def _write_branch_manifest(
@@ -124,6 +156,10 @@ def _write_branch_manifest(
             "base_cc_args": {"static": {"exclude_max_cc": True, "bounds": ["min_cc"]}},
         },
         artifacts={"scope_manifest": str(manifest_path)},
+        compatibility_context=(
+            {"has_cumulative_outputs": True} if branch["cc_source"] == "gwp100_lcia" else {}
+        ),
+        sobol={"ran": False},
     )
     write_manifest(path=manifest_path, manifest=manifest)
     return UncertaintyRunReport(manifest=manifest, reuse_status="computed")

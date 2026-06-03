@@ -119,7 +119,11 @@ aCC path and public artifact ownership is split by scope:
 | Monte Carlo branch roots, result files, Sobol files, and log files | `pyaesa/acc/uncertainty/io/paths.py` |
 | aCC uncertainty manifest compatibility payloads and public output metadata | `pyaesa/acc/uncertainty/io/manifest_payloads.py` |
 | aCC pyaesa owned component inputs and convergence checkpoints | `pyaesa/acc/uncertainty/runtime/component_inputs.py`, `pyaesa/acc/uncertainty/runtime/checkpoints.py` |
+| aCC uncertainty batch memory block planning | `pyaesa/acc/uncertainty/runtime/memory.py` |
+| aCC uncertainty composite phase index entries | `pyaesa/acc/uncertainty/runtime/phase_entries.py` |
+| aCC reused dependency manifest plan reconstruction | `pyaesa/acc/uncertainty/runtime/reuse_dependencies.py` |
 | aCC reused figure rendering | `pyaesa/acc/uncertainty/figures/reuse.py` |
+| aCC final nested component subfigure rendering | `pyaesa/acc/uncertainty/figures/final_subfigures.py` |
 | Family neutral completed run reuse and appendable run selection | `pyaesa/shared/uncertainty_assessment/run_state/runs.py` |
 
 The deterministic branch root is keyed only by the source token, carrying
@@ -215,6 +219,7 @@ dynamic AR6 CC sources as `ar6_cc::<source_name>`.
 | Upstream auto runs | Report aSoCC first, then dynamic AR6 CC for dynamic branches. |
 | Progress cleanup | Clear upstream progress before aCC work and before failures return. |
 | Subfigures | Render deterministic prerequisite figures for fixed lanes and uncertainty figures for active stochastic lanes. |
+| Reused run subfigures | Rebuild visible nested component plans from completed dependency manifests recorded by the reused aCC manifest. Running component checkpoints are not figure ready inputs. |
 | Figure summaries | Public summaries use `Figures available` and `Figures folder`. |
 | Refresh scope | Refresh affects only the resolved aCC Monte Carlo branch or branch set scope. |
 

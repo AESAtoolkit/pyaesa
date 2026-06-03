@@ -76,6 +76,8 @@ def run_sobol_analysis(
     status: StatusSink | None = None,
 ) -> SobolAnalysisResult:
     """Run fixed or convergence Sobol analysis with one family evaluator."""
+    progress = sobol_progress(source=progress_source, status=status)
+    progress.begin(label="preparing design")
     checkpoints = sobol_base_sequence(
         mode=plan.mode,
         n_base_samples=plan.n_base_samples,
@@ -103,7 +105,6 @@ def run_sobol_analysis(
     final_source_summary = pd.DataFrame()
     cached_chunks = [_CachedSobolChunk(row_start=0, evaluated=first)]
     cached_stop = 1
-    progress = sobol_progress(source=progress_source, status=status)
     try:
         for checkpoint_index, n_base in enumerate(checkpoints):
             progress.begin(

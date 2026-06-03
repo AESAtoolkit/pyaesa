@@ -28,21 +28,23 @@ from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
 )
 from pyaesa.asr.uncertainty.evaluation.summary import (
     ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN,
-    ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+    ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ASR_CUMULATIVE_VALUE_METRIC,
     ASR_FREQUENCY_VALUE_COLUMN,
-    ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+    ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ASR_SUMMARY_SCOPE_COLUMN,
     ASR_SUMMARY_SCOPE_INTER_METHOD,
     ASR_SUMMARY_SCOPE_PER_METHOD,
     ASR_VALUE_METRIC,
 )
 from pyaesa.asr.uncertainty.figures.component_data import (
+    ComponentDiagnosticRows,
     _component_cumulative_value_rows,
     _lca_component_rows,
     component_scope_rows,
     cumulative_component_entries,
 )
+from pyaesa.asr.uncertainty.figures.product_renderers import _component_scope
 from pyaesa.asr.uncertainty.figures.render import (
     _collapsed_inter_method_value_rows,
     _uncertainty_jobs,
@@ -58,6 +60,9 @@ from pyaesa.asr.uncertainty.sources.lca_inputs import resolve_lca_uncertainty_co
 from pyaesa.asr.uncertainty.sources.config import split_asr_uncertainty_config
 from pyaesa.asr.uncertainty.runtime.models import LCAUncertaintyInput
 from pyaesa.asr.uncertainty.runtime.checkpoints import run_asr_checkpoints
+from pyaesa.asr.uncertainty.runtime.reuse_dependencies import (
+    plan_from_reused_asr_dependencies,
+)
 from pyaesa.asr.uncertainty.io.run_outputs import write_asr_run_outputs
 from pyaesa.asr.uncertainty.io.manifest_payloads import build_asr_manifest_context
 from pyaesa.asr.uncertainty.io.source_methods import build_asr_source_methods
@@ -84,14 +89,18 @@ from pyaesa.shared.figures.dynamic_ar6 import (
     AR6_CATEGORY_SCOPE_COLUMN,
     MODEL_SCENARIO_PAIR_COUNT_COLUMN,
 )
-from pyaesa.shared.uncertainty_assessment.run_state.manifest import build_manifest, read_manifest
+from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
+    build_manifest,
+    read_manifest,
+    write_manifest,
+)
 from pyaesa.shared.uncertainty_assessment.request.core import normalize_uncertainty_request
 from pyaesa.external_inputs.lca.paths import (
     external_lca_deterministic_dir,
     external_lca_monte_carlo_dir,
 )
 from pyaesa.io_lca.data.paths import main_results_path, resolve_io_lca_paths
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
+from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
 from pyaesa.shared.runtime.reporting.run_progress import monte_carlo_run_progress
 from pyaesa.workspace_initialisation.workspace import clear_default_repo_root, set_default_repo_root
 from pyaesa.shared.runtime.scenario.columns import (
@@ -395,12 +404,12 @@ def test_asr_summary_groups_drop_active_dynamic_cc_category_axis(tmp_path: Path)
     assert plan.source_method_rows["source_component"].tolist() == ["acc", "asr"]
     assert plan.summary_identity["asr_metric"].tolist() == [
         "asr",
-        "frequency_of_no_transgression",
+        "frequency_of_transgression",
     ]
     assert "year" not in plan.cumulative_identity.columns
     assert plan.cumulative_summary_identity["asr_metric"].tolist() == [
         ASR_CUMULATIVE_VALUE_METRIC,
-        ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+        ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
     ]
 
 
@@ -836,6 +845,41 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
             "__method": ["A", "A", "A"],
         }
     )
+    component_asr_frame = rows.drop(columns=[VALUE_ARRAY_COLUMN]).assign(__method="aCC")
+    component_summary_base = {
+        "year": [2024, 2030],
+        "cc_type": ["dynamic_ar6", "dynamic_ar6"],
+        "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+        "impact": ["GWP_100", "GWP_100"],
+        "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
+        ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP2"],
+        "ar6_cc_ssp_scenario": ["SSP2", "SSP2"],
+        "s_p": ["D", "D"],
+        "r_c": ["FR", "FR"],
+        "mean": [10.0, 11.0],
+        "std": [0.0, 0.0],
+        "min": [10.0, 11.0],
+        "p5": [10.0, 11.0],
+        "p25": [10.0, 11.0],
+        "median": [10.0, 11.0],
+        "p75": [10.0, 11.0],
+        "p95": [10.0, 11.0],
+        "max": [10.0, 11.0],
+    }
+    component_rows = ComponentDiagnosticRows(
+        acc_method=pd.DataFrame({**component_summary_base, "__method": ["UT(FD)", "UT(FD)"]}),
+        acc_inter=pd.DataFrame(component_summary_base),
+        lca=pd.DataFrame({**component_summary_base, "mean": [20.0, 21.0]}),
+        manifest=context.manifest,
+        requested_years=context.requested_years,
+        emissions_mode="gross_alt",
+    )
+    inter_acc_rows, _inter_lca_rows = _component_scope(
+        components=component_rows,
+        frame=component_asr_frame,
+        include_method_axis=False,
+    )
+    assert inter_acc_rows["mean"].tolist() == [10.0, 11.0]
 
     collapsed = collapsed_value_rows(rows=rows, context=context, include_method_axis=False)
     assert sorted(collapsed[ASOCC_SSP_SCENARIO_COLUMN].dropna().astype(str)) == ["SSP2", "SSP3"]
@@ -1229,7 +1273,7 @@ def test_uncertainty_asr_static_io_lca_outputs(
     assert any(name.startswith("io_lca::") for name in manifest.active_sources)
     assert {"mean", "median"}.issubset(summary.columns)
     frequency = summary.loc[
-        summary["asr_metric"].eq(ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)
+        summary["asr_metric"].eq(ASR_FREQUENCY_OF_TRANSGRESSION_METRIC)
     ].reset_index(drop=True)
     assert ASR_FREQUENCY_VALUE_COLUMN in frequency.columns
     assert bool(frequency["mean"].isna().all())
@@ -1306,9 +1350,7 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
         name.startswith("inter_method__") and name.endswith("__pb_lcia.svg")
         for name in figure_names
     )
-    assert any(
-        name.endswith("__pb_lcia__frequency_of_no_transgression.svg") for name in figure_names
-    )
+    assert any(name.endswith("__pb_lcia__frequency_of_transgression.svg") for name in figure_names)
     assert any(
         name.startswith("polar_whisker_inter_method__") and "__pb_lcia__" in name
         for name in figure_names
@@ -1477,10 +1519,10 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
     assert set(sobol["cc_type"]) == {"dynamic_ar6"}
     assert set(cumulative_summary["asr_metric"]) == {
         ASR_CUMULATIVE_VALUE_METRIC,
-        ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+        ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
     }
     cumulative_frequency = cumulative_summary.loc[
-        cumulative_summary["asr_metric"].eq(ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)
+        cumulative_summary["asr_metric"].eq(ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC)
     ]
     assert ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN in cumulative_frequency.columns
     assert bool(cumulative_frequency["mean"].isna().all())
@@ -2011,11 +2053,12 @@ def test_uncertainty_asr_static_io_lca_deterministic_subfigures(
     assert manifest.status == "complete"
     assert manifest.artifacts is not None
     assert manifest.artifacts["figure_paths"] == []
-    assert output.count("[uncertainty_acc] Monte Carlo completed fixed runs") == 1
+    assert "[uncertainty_acc] Monte Carlo completed fixed runs" in output
 
 
 def test_render_lca_subfigures_filters_external_deterministic_inputs(
     allocation_dummy_repo,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     prepare_static_asr_external_lca_repo(
         allocation_dummy_repo,
@@ -2030,7 +2073,29 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
     deterministic_path = (
         external_lca_deterministic_dir(project_base=project_root) / "supplier_v1__gwp100_lcia.csv"
     )
+    lca_phase = PhasePrinter("uncertainty_asr")
+    resolve_lca_uncertainty_component_input(
+        proj_base=project_root,
+        source_label="oecd_v2025",
+        lca_type="external",
+        lca_version_name="supplier_v1",
+        base_allocate_args={
+            "fu_code": "L2.a.a",
+            "years": [2005],
+            "r_p": ["FR"],
+            "s_p": ["D"],
+        },
+        lcia_methods=["gwp100_lcia"],
+        uncertainty_config={},
+        output_format="csv",
+        refresh=False,
+        phase=lca_phase,
+        status=NullPhasePrinter(),
+        complete_phase=False,
+    )
+    lca_phase.finish()
 
+    phase = PhasePrinter("uncertainty_asr")
     render_lca_subfigures_from_input(
         lca_input=LCAUncertaintyInput(
             identity=pd.DataFrame(),
@@ -2070,10 +2135,46 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
         figure_format={"format": "svg", "dpi": 1},
         status=NullPhasePrinter(),
         completed_runs=1,
+        phase=phase,
+        complete_phase=True,
     )
+    phase.finish()
 
     figure_dir = external_lca_deterministic_dir(project_base=project_root) / "figures"
     assert any(path.suffix == ".svg" for path in figure_dir.iterdir())
+    output = capsys.readouterr().out
+    assert "Phase A: LCA" in output
+    assert "LCA external supplier_v1 scope ready" in output
+    render_lca_subfigures_from_input(
+        lca_input=LCAUncertaintyInput(
+            identity=pd.DataFrame(),
+            fixed_values=None,
+            manifest=None,
+            external_inputs=(
+                {
+                    "type": "external_lca_deterministic",
+                    "lcia_method": "gwp100_lcia",
+                    "paths": [str(deterministic_path)],
+                },
+            ),
+            source_method_rows=pd.DataFrame(),
+            active_sources=(),
+            lca_type="external",
+            phase_output_root=project_root / "C_asr" / "run",
+        ),
+        base_allocate_args={
+            "fu_code": "L2.a.a",
+            "years": [2005],
+            "r_p": ["FR"],
+            "s_p": ["D"],
+        },
+        lcia_methods=["gwp100_lcia"],
+        lca_version_name="supplier_v1",
+        lca_config={},
+        figure_format={"format": "svg", "dpi": 1},
+        status=NullPhasePrinter(),
+        completed_runs=1,
+    )
 
 
 def test_uncertainty_asr_convergence_reports_unreached_and_reuse(
@@ -2216,13 +2317,13 @@ def test_asr_convergence_checks_frequency_mean_from_public_runs(tmp_path: Path) 
         show_progress=False,
     )
     summary = pd.read_csv(paths.summary_stats_runs)
-    frequency = summary.loc[summary["asr_metric"].eq(ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)]
+    frequency = summary.loc[summary["asr_metric"].eq(ASR_FREQUENCY_OF_TRANSGRESSION_METRIC)]
 
     assert completed == 4
     assert convergence is not None
     assert convergence["reached"] is False
     assert bool(frequency["mean"].isna().all())
-    np.testing.assert_allclose(frequency[ASR_FREQUENCY_VALUE_COLUMN], [0.75])
+    np.testing.assert_allclose(frequency[ASR_FREQUENCY_VALUE_COLUMN], [0.25])
 
 
 def test_asr_convergence_checks_dynamic_cumulative_metrics(tmp_path: Path) -> None:
@@ -2345,6 +2446,7 @@ def test_asr_checkpoints_skip_final_component_refresh_without_live_sessions(
         progress_mode="fixed",
         progress_max_runs=1,
         progress_component=False,
+        show_final_component_progress=False,
     )
 
     assert result.completed_runs == 1
@@ -2453,7 +2555,7 @@ def _compact_asr_plan(
         summary_identity=pd.concat(
             [
                 identity.assign(asr_metric=ASR_VALUE_METRIC),
-                identity.assign(asr_metric=ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC),
+                identity.assign(asr_metric=ASR_FREQUENCY_OF_TRANSGRESSION_METRIC),
             ],
             ignore_index=True,
         ),
@@ -2465,9 +2567,7 @@ def _compact_asr_plan(
             pd.concat(
                 [
                     cumulative.assign(asr_metric=ASR_CUMULATIVE_VALUE_METRIC),
-                    cumulative.assign(
-                        asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
-                    ),
+                    cumulative.assign(asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
                 ],
                 ignore_index=True,
             )
@@ -2499,6 +2599,122 @@ def _compact_asr_plan(
         source_method_rows=pd.DataFrame(),
         active_sources=(),
     )
+
+
+def test_reused_asr_subfigure_plan_uses_completed_dependency_manifest(tmp_path: Path) -> None:
+    identity = pd.DataFrame({"public_row_id": [0], "year": [2005]})
+    running_root = tmp_path / "asocc_running_component"
+    running_manifest_path = running_root / "logs" / "scope_manifest.json"
+    running_manifest = build_manifest(
+        family="asocc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("inter_method_uncertainty",),
+        status="running",
+        completed_runs=1,
+        artifacts={
+            "scope_manifest": str(running_manifest_path),
+            "summary_stats_runs": str(running_root / "results" / "summary_stats_runs.csv"),
+        },
+    )
+    write_manifest(path=running_manifest_path, manifest=running_manifest)
+    completed_root = tmp_path / "acc_completed"
+    completed_manifest_path = completed_root / "logs" / "scope_manifest.json"
+    completed_summary = completed_root / "results" / "summary_stats_runs.csv"
+    completed_summary.parent.mkdir(parents=True)
+    completed_summary.write_text("metric,value\nmean,1.0\n", encoding="utf-8")
+    completed_manifest = build_manifest(
+        family="acc",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("asocc::inter_method_uncertainty",),
+        status="complete",
+        completed_runs=2,
+        artifacts={
+            "scope_manifest": str(completed_manifest_path),
+            "summary_stats_runs": str(completed_summary),
+        },
+    )
+    write_manifest(path=completed_manifest_path, manifest=completed_manifest)
+    asr_manifest = build_manifest(
+        family="asr",
+        mode="convergence",
+        output_format="csv_compact",
+        active_sources=("acc::asocc::inter_method_uncertainty",),
+        status="complete",
+        completed_runs=2,
+        deterministic_prerequisites=(
+            {
+                "base_function_source": "uncertainty_acc",
+                "scope_manifest": str(completed_manifest_path),
+                "reuse_status": "reused_exact",
+            },
+        ),
+    )
+    plan = _compact_asr_plan(
+        identity=identity,
+        acc_manifest=running_manifest,
+        lca_values=pd.Series([1.0, 1.0]).to_numpy(dtype=float).reshape(2, 1),
+    )
+
+    reuse_plan = plan_from_reused_asr_dependencies(plan=plan, manifest=asr_manifest)
+
+    assert reuse_plan.acc_manifest.run_id == completed_manifest.run_id
+    assert reuse_plan.acc_manifest.status == "complete"
+    assert reuse_plan.acc_manifest.artifacts["summary_stats_runs"] == str(completed_summary)
+    with pytest.raises(ValueError):
+        plan_from_reused_asr_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="asr",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=("acc::asocc::inter_method_uncertainty",),
+                status="complete",
+                completed_runs=2,
+                deterministic_prerequisites=(
+                    {
+                        "base_function_source": "uncertainty_acc",
+                        "scope_manifest": str(running_manifest_path),
+                        "reuse_status": "computed",
+                    },
+                ),
+            ),
+        )
+    with pytest.raises(ValueError):
+        plan_from_reused_asr_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="asr",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=("acc::asocc::inter_method_uncertainty",),
+                status="complete",
+                completed_runs=2,
+            ),
+        )
+    with pytest.raises(ValueError):
+        plan_from_reused_asr_dependencies(
+            plan=plan,
+            manifest=build_manifest(
+                family="asr",
+                mode="convergence",
+                output_format="csv_compact",
+                active_sources=("acc::asocc::inter_method_uncertainty",),
+                status="complete",
+                completed_runs=2,
+                deterministic_prerequisites=(
+                    {
+                        "base_function_source": "uncertainty_acc",
+                        "scope_manifest": str(completed_manifest_path),
+                    },
+                    {
+                        "base_function_source": "uncertainty_acc",
+                        "scope_manifest": str(completed_manifest_path),
+                    },
+                ),
+            ),
+        )
 
 
 def _asr_run_paths(root: Path) -> ASRUncertaintyRunPaths:
@@ -2626,9 +2842,10 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             source=source,
             run_indices=run_indices,
         ),
-        run_values_for_units=lambda units: external_lca_values_for_units(
+        run_values_for_units=lambda units, row_positions: external_lca_values_for_units(
             source=source,
             unit_values=units,
+            row_positions=row_positions,
         ),
         run_inventory_size=len(source.run_indices),
     )
@@ -2717,6 +2934,11 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         source=path_source,
         run_indices=path_source.run_indices,
     ).tolist() == [[1.0, 3.0], [2.0, 4.0]]
+    assert external_lca_values_for_units(
+        source=path_source,
+        unit_values=pd.Series([0.0, 0.99]).to_numpy(dtype=float),
+        row_positions=np.array([1], dtype=np.int64),
+    ).tolist() == [[3.0], [4.0]]
     values_for_run_rows = path_source.values_for_run_rows
     values_for_runs = path_source.values_for_runs
     assert values_for_run_rows is not None
@@ -2727,6 +2949,37 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     ).tolist() == [[4.0]]
     assert values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 2)
     base_args = {"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]}
+    assert external_lca_values_for_run_rows(
+        source=path_source,
+        run_indices=np.array([0], dtype=np.int64),
+        row_positions=np.empty(0, dtype=np.int64),
+    ).shape == (1, 0)
+    with pytest.raises(ValueError):
+        external_lca_values_for_run_rows(
+            source=path_source,
+            run_indices=np.array([2], dtype=np.int64),
+            row_positions=np.array([0], dtype=np.int64),
+        )
+    pickle_path = bad_dir / "supplier_v1__gwp100_lcia.pickle"
+    historical_and_ssp_rows.to_pickle(pickle_path)
+    set_default_repo_root(repo_root)
+    try:
+        pickle_source = load_external_lca_monte_carlo_source_from_path(
+            path=pickle_path,
+            version_name="supplier_v1",
+            lcia_method="gwp100_lcia",
+            years=[2005, 2006],
+            base_allocate_args=base_args,
+        )
+    finally:
+        clear_default_repo_root()
+    assert pickle_source.values_for_runs(np.empty(0, dtype=np.int64)).shape == (0, 2)
+    values_for_pickle_rows = pickle_source.values_for_run_rows
+    assert values_for_pickle_rows is not None
+    assert values_for_pickle_rows(
+        np.array([1], dtype=np.int64),
+        np.array([1], dtype=np.int64),
+    ).tolist() == [[4.0]]
     parquet_path = bad_dir / "supplier_v1__gwp100_lcia.parquet"
     historical_and_ssp_rows.to_parquet(parquet_path, index=False, row_group_size=2)
     set_default_repo_root(repo_root)
@@ -2980,6 +3233,10 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         unit_provider(np.array([0.0, 0.75], dtype=np.float64)),
         [[1.0, 99.0], [2.0, 99.0]],
     )
+    np.testing.assert_allclose(
+        unit_provider(np.array([0.0, 0.75], dtype=np.float64), np.array([1], dtype=np.int64)),
+        [[99.0], [99.0]],
+    )
 
     public_runs = bad_dir / "public_lca_runs.csv"
     with CompactRunMatrixWriter(path=public_runs, output_format="csv_compact") as writer:
@@ -3084,6 +3341,18 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             )(),
         ),
         units=pd.Series([0.25]).to_numpy(dtype=float)[:, None],
+    ).tolist() == [[1.0]]
+    assert _lca_values_for_units(
+        context=cast(
+            ASRSobolEvaluationContext,
+            type(
+                "Context",
+                (),
+                {"lca_context": None, "lca_input": lca_input},
+            )(),
+        ),
+        units=pd.Series([0.25]).to_numpy(dtype=float)[:, None],
+        row_positions=np.array([0], dtype=np.int64),
     ).tolist() == [[1.0]]
 
     deterministic_input = LCAUncertaintyInput(
@@ -3217,7 +3486,7 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
     summary_identity = pd.concat(
         [
             identity.assign(asr_metric="asr"),
-            identity.assign(asr_metric="frequency_of_no_transgression"),
+            identity.assign(asr_metric="frequency_of_transgression"),
         ],
         ignore_index=True,
     )
@@ -3225,9 +3494,7 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
     cumulative_summary_identity = pd.concat(
         [
             cumulative_identity.assign(asr_metric=ASR_CUMULATIVE_VALUE_METRIC),
-            cumulative_identity.assign(
-                asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC
-            ),
+            cumulative_identity.assign(asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
         ],
         ignore_index=True,
     )
@@ -3305,39 +3572,45 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
 
 
 def test_asr_sparse_convergence_accumulates_selected_group_means(tmp_path: Path) -> None:
-    identity = pd.DataFrame({"public_row_id": [0], "year": [2005]})
+    identity = pd.DataFrame(
+        {
+            "public_row_id": [0, 1],
+            "year": [2005, 2005],
+            "cc_bound": ["min_cc", "max_cc"],
+        }
+    )
     acc_manifest = _sparse_acc_manifest(
         tmp_path=tmp_path,
         identity=identity,
         rows=SparseRunRows(
-            run_index=np.array([0, 1], dtype=np.int64),
-            public_row_id=np.array([0, 0], dtype=np.int64),
-            values=np.array([4.0, 4.0], dtype=np.float64),
+            run_index=np.array([0, 0, 1, 1], dtype=np.int64),
+            public_row_id=np.array([0, 1, 0, 1], dtype=np.int64),
+            values=np.array([4.0, 1.0, 4.0, 4.0], dtype=np.float64),
             value_column="acc",
         ),
     )
     summary_identity = pd.concat(
         [
             identity.assign(asr_metric=ASR_VALUE_METRIC),
-            identity.assign(asr_metric=ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC),
+            identity.assign(asr_metric=ASR_FREQUENCY_OF_TRANSGRESSION_METRIC),
         ],
         ignore_index=True,
     )
     plan = ASRUncertaintyPlan(
         identity=identity,
         summary_identity=summary_identity,
-        summary_public_row_groups=(("0",),),
+        summary_public_row_groups=(("0",), ("1",)),
         cumulative_identity=pd.DataFrame(),
         cumulative_summary_identity=pd.DataFrame(),
         cumulative_summary_public_row_groups=(),
         cumulative_public_row_groups=(),
-        acc_positions=np.array([0], dtype=np.int64),
-        lca_positions=np.array([0], dtype=np.int64),
-        lca_unit_factors=np.array([1.0], dtype=np.float64),
+        acc_positions=np.array([0, 1], dtype=np.int64),
+        lca_positions=np.array([0, 1], dtype=np.int64),
+        lca_unit_factors=np.array([1.0, 1.0], dtype=np.float64),
         acc_manifest=acc_manifest,
         lca_input=LCAUncertaintyInput(
             identity=identity,
-            fixed_values=np.array([2.0], dtype=np.float64),
+            fixed_values=np.array([2.0, 2.0], dtype=np.float64),
             manifest=None,
             external_inputs=(),
             source_method_rows=pd.DataFrame(),
@@ -3365,12 +3638,20 @@ def test_asr_sparse_convergence_accumulates_selected_group_means(tmp_path: Path)
     assert convergence is not None
     assert convergence["reached"] is True
     summary = pd.read_csv(paths.summary_stats_runs)
-    value = summary.loc[summary["asr_metric"].eq(ASR_VALUE_METRIC)].iloc[0]
+    value = summary.loc[
+        summary["cc_bound"].eq("min_cc") & summary["asr_metric"].eq(ASR_VALUE_METRIC)
+    ].iloc[0]
     frequency = summary.loc[
-        summary["asr_metric"].eq(ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)
+        summary["cc_bound"].eq("min_cc")
+        & summary["asr_metric"].eq(ASR_FREQUENCY_OF_TRANSGRESSION_METRIC)
+    ].iloc[0]
+    max_frequency = summary.loc[
+        summary["cc_bound"].eq("max_cc")
+        & summary["asr_metric"].eq(ASR_FREQUENCY_OF_TRANSGRESSION_METRIC)
     ].iloc[0]
     assert value["mean"] == 0.5
-    assert frequency[ASR_FREQUENCY_VALUE_COLUMN] == 1.0
+    assert frequency[ASR_FREQUENCY_VALUE_COLUMN] == 0.0
+    assert max_frequency[ASR_FREQUENCY_VALUE_COLUMN] == 0.5
 
 
 def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
@@ -3431,7 +3712,7 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
                 **{ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD},
             ),
             identity.assign(
-                asr_metric=ASR_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                asr_metric=ASR_FREQUENCY_OF_TRANSGRESSION_METRIC,
                 **{ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD},
             ),
         ],
@@ -3458,14 +3739,14 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
                 }
             ),
             cumulative_identity.assign(
-                asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC,
+                asr_metric=ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
                 **{ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD},
             ),
             pd.DataFrame(
                 {
                     "public_row_id": [pd.NA],
                     "asocc_ssp_scenario": [pd.NA],
-                    "asr_metric": [ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC],
+                    "asr_metric": [ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC],
                     ASR_SUMMARY_SCOPE_COLUMN: [ASR_SUMMARY_SCOPE_INTER_METHOD],
                 }
             ),
@@ -3538,13 +3819,13 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
     ]
     assert cumulative_asr["mean"].round(12).tolist() == [0.9, 1.2, 1.05]
     cumulative_frequency = cumulative_summary.loc[
-        cumulative_summary["asr_metric"].eq(ASR_CUMULATIVE_FREQUENCY_OF_NO_TRANSGRESSION_METRIC)
+        cumulative_summary["asr_metric"].eq(ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC)
     ]
     assert bool(cumulative_frequency["mean"].isna().all())
     assert cumulative_frequency[ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN].tolist() == [
+        0.0,
         1.0,
-        0.0,
-        0.0,
+        1.0,
     ]
     assert cumulative_summary[ASR_SUMMARY_SCOPE_COLUMN].unique().tolist() == [
         ASR_SUMMARY_SCOPE_PER_METHOD,

@@ -578,6 +578,18 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     assert deterministic_status.messages[0].startswith("[external_lca] Generating figure")
     assert "Generating figures" not in deterministic_status.messages[0]
     assert deterministic_status.messages[1].startswith("[external_lca] Generated figure")
+    deterministic_reuse_status = _StatusRecorder()
+    assert figures_mod.render_external_lca_deterministic_figures_from_rows(
+        proj_base=report.project_root,
+        version_name="supplier_v1",
+        lcia_method=lcia_method,
+        rows=rows.loc[rows["year"].astype(int).eq(2005)].rename(columns={"value": "lca_value"}),
+        output_format="png",
+        dpi=10,
+        status=deterministic_reuse_status,
+    )
+    assert len(deterministic_reuse_status.messages) == 1
+    assert deterministic_reuse_status.messages[0].startswith("[external_lca] Generated figure")
 
     status = _StatusRecorder()
     source_values = pd.DataFrame({"0": [1.0], "1": [2.0]}).to_numpy(dtype=float).T
@@ -632,6 +644,17 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     assert status.messages[0].startswith("[external_lca] Generating figure")
     assert "Generating figures" not in status.messages[0]
     assert status.messages[1].startswith("[external_lca] Generated figure")
+    mc_reuse_status = _StatusRecorder()
+    assert figures_mod.render_external_lca_uncertainty_figures_from_source(
+        proj_base=report.project_root,
+        source=source,
+        output_format="png",
+        dpi=10,
+        completed_runs=1,
+        status=mc_reuse_status,
+    )
+    assert len(mc_reuse_status.messages) == 1
+    assert mc_reuse_status.messages[0].startswith("[external_lca] Generated figure")
     assert figures_mod.render_external_lca_uncertainty_figures_from_source(
         proj_base=report.project_root,
         source=source,

@@ -14,6 +14,7 @@ from pyaesa.shared.runtime.reporting.progress import YearProgressPrinter
 
 
 _OWNER_PREFIX_RE = re.compile(r"^\[(?P<owner>[^\]]+)\]\s*(?P<message>.*)$")
+_TRANSIENT_SLOT_ORDER = ("monte_carlo", "sobol", "figures", "status")
 
 
 class PhasePrinter:
@@ -22,6 +23,7 @@ class PhasePrinter:
     def __init__(self, source: str) -> None:
         self._source = str(source)
         self._printers: dict[str, YearProgressPrinter] = {}
+        self._transient_slots: dict[str, dict[str, str]] = {}
         self._current_label: str | None = None
         self._current_owner: str | None = None
         self._announced: set[str] = set()
@@ -31,6 +33,10 @@ class PhasePrinter:
     def _printer_for(self, label: str) -> YearProgressPrinter:
         """Return the display owner for one public phase label."""
         clean_label = str(label).strip()
+        previous_label = self._current_label
+        if previous_label is not None and previous_label != clean_label:
+            self._clear_transient_slots(label=previous_label)
+            self._printers[previous_label].clear_transient()
         printer = self._printers.get(clean_label)
         if printer is None:
             printer = YearProgressPrinter(
@@ -56,6 +62,55 @@ class PhasePrinter:
         return self._ensure_announced(cast(str, self._current_label))
 
     @staticmethod
+    def _workstream_slot(text: str) -> str | None:
+        """Return the phase-local status slot for known run workstreams."""
+        clean = str(text).strip()
+        if clean.startswith("Monte Carlo "):
+            return "monte_carlo"
+        if clean.startswith("Sobol "):
+            return "sobol"
+        if clean.startswith(("Generating figure", "Generated figure")):
+            return "figures"
+        return None
+
+    def _show_transient(self, *, text: str, line: str) -> None:
+        """Render one phase-local transient status line."""
+        label = cast(str, self._current_label)
+        slot = self._workstream_slot(text) or "status"
+        slots = self._transient_slots.setdefault(label, {})
+        if slot != "status":
+            slots.pop("status", None)
+        slots[slot] = compact_user_text(line)
+        self._render_transients(label=label)
+
+    def _persist_message(self, *, text: str, line: str) -> None:
+        """Render one persistent message and keep remaining transient work visible."""
+        label = cast(str, self._current_label)
+        slots = self._transient_slots.get(label)
+        slot = self._workstream_slot(text)
+        if slots is not None:
+            if slot is None:
+                slots.clear()
+            else:
+                slots.pop(slot, None)
+                slots.pop("status", None)
+        self._current_printer().log_message(line, persistent=True)
+        self._render_transients(label=label)
+
+    def _render_transients(self, *, label: str) -> None:
+        """Refresh the current phase display with active transient lanes."""
+        slots = self._transient_slots.get(label) or {}
+        lines = [slots[slot] for slot in _TRANSIENT_SLOT_ORDER if slot in slots]
+        if not lines:
+            self._transient_slots.pop(label, None)
+            return
+        self._ensure_announced(label).log_message("\n".join(lines), persistent=False)
+
+    def _clear_transient_slots(self, *, label: str) -> None:
+        """Clear all transient lanes for one phase label."""
+        self._transient_slots.pop(label, None)
+
+    @staticmethod
     def _split_owner(message: str, owner: str | None) -> tuple[str | None, str]:
         """Return explicit owner and message text from a status line."""
         text = str(message).strip()
@@ -73,9 +128,11 @@ class PhasePrinter:
 
     def _select_owner_phase(self, owner: str | None) -> None:
         """Select the canonical phase for a nested owner when needed."""
-        phase_label = phase_label_for_owner(owner)
+        clean_owner = None if owner is None else str(owner).strip() or None
+        phase_label = phase_label_for_owner(clean_owner)
         if phase_label is not None:
             self._printer_for(phase_label)
+            self._current_owner = clean_owner
 
     def announce(self, label: str, detail: str | None = None) -> None:
         """Select the active phase and subphase owner without printing."""
@@ -94,10 +151,7 @@ class PhasePrinter:
             return
         self._select_owner_phase(line_owner)
         prefix = "" if line_owner is None else f"[{line_owner}] "
-        self._current_printer().log_message(
-            compact_user_text(f"{prefix}{text}"),
-            persistent=False,
-        )
+        self._show_transient(text=text, line=f"{prefix}{text}")
         self._active_work.add(cast(str, self._current_label))
 
     def show(self, message: str) -> None:
@@ -111,10 +165,11 @@ class PhasePrinter:
             return
         self._select_owner_phase(line_owner)
         prefix = "" if line_owner is None else f"[{line_owner}] "
-        self._current_printer().log_message(
-            compact_user_text(f"{prefix}{text}"),
-            persistent=persistent,
-        )
+        line = f"{prefix}{text}"
+        if persistent:
+            self._persist_message(text=text, line=line)
+        else:
+            self._show_transient(text=text, line=line)
         if not persistent and self._current_label is not None:
             self._active_work.add(self._current_label)
 
@@ -122,6 +177,7 @@ class PhasePrinter:
         """Clear the current phase transient line."""
         if self._current_label is None:
             return
+        self._clear_transient_slots(label=self._current_label)
         self._printers[self._current_label].clear_transient()
 
     def complete(self, detail: str, *, owner: str | None = None) -> None:
@@ -132,19 +188,24 @@ class PhasePrinter:
         line_owner, message = self._split_owner(text, owner or self._current_owner)
         self._select_owner_phase(line_owner)
         exact_reuse = self._is_exact_reuse_detail(text)
-        current_label = self._current_label
-        visible = current_label is not None and (
-            current_label in self._active_work or current_label in self._visible_expected
+        current_label = cast(str, self._current_label)
+        visible = (
+            current_label in self._active_work
+            or current_label in self._visible_expected
+            or current_label in self._announced
         )
         if exact_reuse and not visible:
             return
         prefix = "" if line_owner is None else f"[{line_owner}] "
-        self._current_printer().log_message(f"{prefix}{message}", persistent=True)
+        line = f"{prefix}{message}"
+        self._clear_transient_slots(label=current_label)
+        self._current_printer().log_message(line, persistent=True)
 
     def finish(self) -> None:
         """Finalize all phase display sections owned by this session."""
         for printer in self._printers.values():
             printer.finish()
+        self._transient_slots = {}
 
 
 class NullPhasePrinter:

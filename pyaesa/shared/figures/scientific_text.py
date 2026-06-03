@@ -46,7 +46,7 @@ _POSITIVE_ION_PATTERN = re.compile(r"\bH\+(?=$|\s|[,;:)\]])")
 def format_scientific_figure_text(value: object) -> str:
     """Return one label using compact scientific math text where applicable."""
     text = str(value)
-    text = text.replace("fNT", r"$f^{\mathrm{NT}}$")
+    text = text.replace("fT", r"$f^{\mathrm{T}}$")
     for formula, formatted in _CHEMICAL_REPLACEMENTS:
         text = text.replace(formula, formatted)
     text = _POSITIVE_ION_PATTERN.sub(r"H$^+$", text)

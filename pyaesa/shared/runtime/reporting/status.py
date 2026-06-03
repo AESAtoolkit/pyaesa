@@ -59,3 +59,10 @@ class TransientStatusPrinter:
     def finish(self) -> None:
         """Finalize the live status line."""
         self._printer.finish()
+
+
+def show_optional_status(status: StatusSink | None, message: str) -> None:
+    """Render one transient status message when a status sink is available."""
+    if status is None:
+        return
+    status.show(message)

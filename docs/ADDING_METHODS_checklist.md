@@ -54,7 +54,7 @@ Use this decision table before adding code.
 | User supplied completed aSoCC values | Use external aSoCC inputs, not a package method. |
 | Only a new method weight scenario | Use the inter-method weight CSV. |
 
-Package method code is justified only when pyaesa can compute the method
+Package method code is justified only when `pyaesa` can compute the method
 from package inputs.
 
 ## 3. Understand The Method Forms

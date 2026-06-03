@@ -113,8 +113,8 @@ from pyaesa.shared.figures.layout import (
 from pyaesa.shared.figures.lcia_metadata import resolve_frame_impact_title
 from pyaesa.shared.figures.multi_year_transitions import (
     TransitionMarker,
+    post_study_boundary_x,
     render_transition_markers,
-    transition_boundary_x,
     transition_title_pad,
 )
 from pyaesa.shared.figures.nonnegative_axis import apply_zero_floor_if_nonnegative
@@ -1025,7 +1025,7 @@ def _extend_post_study_pathway_axis(
 def _post_study_transition_right(post_years: list[int]) -> float | None:
     if not post_years:
         return None
-    return transition_boundary_x(int(post_years[0]))
+    return post_study_boundary_x(post_years)
 
 
 def _render_dynamic_global_ar6_row(

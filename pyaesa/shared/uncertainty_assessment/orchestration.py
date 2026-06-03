@@ -1,6 +1,8 @@
 """Shared orchestration helpers for public uncertainty runners."""
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any, cast
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
     public_phase_reuse_status,
@@ -14,8 +16,11 @@ from pyaesa.shared.runtime.reporting.run_progress import (
     RunProgressPrinter,
     monte_carlo_completion_is_persistent,
     monte_carlo_run_drawing_label,
+    monte_carlo_run_progress,
     monte_carlo_run_progress_label,
+    sobol_progress,
 )
+from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 from pyaesa.shared.uncertainty_assessment.run_state.report import UncertaintyRunReport
 from pyaesa.shared.uncertainty_assessment.run_state.report_roots import (
@@ -149,6 +154,8 @@ def progress_complete(
     persistent: bool | None = None,
     component: bool = False,
     visible: bool = True,
+    reached: bool = False,
+    final_checkpoint: bool = False,
 ) -> None:
     """Complete one Monte Carlo progress line."""
     if not visible:
@@ -165,8 +172,79 @@ def progress_complete(
                 completed=completed,
                 max_runs=max_runs,
                 mode=mode,
+                reached=reached,
+                final_checkpoint=final_checkpoint,
             )
             if persistent is None
             else persistent
         ),
     )
+
+
+def progress_complete_sobol(
+    *,
+    source: str,
+    status: StatusSink,
+    sobol: Mapping[str, Any] | None,
+    visible: bool = True,
+) -> None:
+    """Complete one reused Sobol progress line from a run manifest."""
+    sobol_status = {} if sobol is None else dict(sobol)
+    if not visible or not bool(sobol_status.get("ran")):
+        return
+    progress = sobol_progress(source=source, status=status)
+    progress.complete(label=_sobol_completion_label(sobol=sobol_status), persistent=True)
+
+
+def progress_complete_manifest(
+    *,
+    source: str,
+    status: StatusSink,
+    manifest: UncertaintyManifest,
+    visible: bool = True,
+) -> None:
+    """Complete one reused Monte Carlo progress line from a run manifest."""
+    if not visible:
+        return
+    parameters = _manifest_progress_parameters(manifest=manifest)
+    progress_complete(
+        progress=monte_carlo_run_progress(source=source, status=status),
+        completed=manifest.completed_runs,
+        max_runs=parameters["max_runs"],
+        mode=parameters["mode"],
+        component=parameters["component"],
+        reached=bool((manifest.convergence or {}).get("reached")),
+        final_checkpoint=True,
+    )
+
+
+def _manifest_progress_parameters(*, manifest: UncertaintyManifest) -> dict[str, Any]:
+    inventory = manifest.component_inventory
+    if inventory is not None and str(inventory["parent_mode"]) == "convergence":
+        return {
+            "mode": "convergence",
+            "max_runs": int(inventory["parent_max_runs"]),
+            "component": True,
+        }
+    return {
+        "mode": manifest.mode,
+        "max_runs": max(int(manifest.requested_runs), int(manifest.completed_runs)),
+        "component": False,
+    }
+
+
+def _sobol_completion_label(*, sobol: Mapping[str, Any]) -> str:
+    n_base = int(cast(int, sobol["n_base_samples"]))
+    dimension_count = int(sobol.get("active_source_count") or 0)
+    if dimension_count <= 0:
+        method = cast(Mapping[str, Any], sobol["method"])
+        dimension_count = len(cast(Sequence[Any], method["source_dimensions"]))
+    evaluations = n_base * (dimension_count + 2)
+    max_base = sobol.get("max_base_samples")
+    if max_base is None:
+        parameters = cast(Mapping[str, Any], sobol["parameters"])
+        max_base = parameters["max_base_samples"]
+    if str(sobol.get("mode", "fixed")) == "fixed":
+        return f"completed fixed base {n_base} of {int(cast(int, max_base))}; evals {evaluations}"
+    max_base_int = int(cast(int, max_base))
+    return f"completed base {n_base}; max {max_base_int}; evals {evaluations}; checkpoint checked"
