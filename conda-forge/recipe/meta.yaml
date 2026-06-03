@@ -1,5 +1,5 @@
 {% set name = "pyaesa" %}
-{% set version = "1.2.2" %}
+{% set version = "1.2.3" %}
 {% set python_min = "3.11" %}
 
 package:
@@ -8,7 +8,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: c43ae709ce9dd29bd680cdffaf593fa985b5ac3fdc43f5d27c7e91e8fc3e4756
+  sha256: 615fd87a8a8282efb4d1c813229bf38175bdc636d5101810039b86bde489c071
 
 build:
   noarch: python
