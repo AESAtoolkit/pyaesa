@@ -73,6 +73,7 @@ from pyaesa.shared.figures.trajectory_bands import (
     trajectory_band_legend_handles,
 )
 from pyaesa.shared.figures.dynamic_ar6 import (
+    AR6_CATEGORY_SCOPE_COLUMN,
     MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
     model_scenario_sampling_method,
 )
@@ -645,6 +646,7 @@ def _series_groups(*, frame: pd.DataFrame, include_method_in_label: bool):
         VALUE_ARRAY_COLUMN,
         BUDGET_VALUES_COLUMN,
         PAIR_COUNT_COLUMN,
+        AR6_CATEGORY_SCOPE_COLUMN,
         MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
         *ASOCC_TRANSITION_SERIES_EXCLUDED_COLUMNS,
     }

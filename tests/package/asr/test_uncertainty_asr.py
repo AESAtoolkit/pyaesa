@@ -277,6 +277,26 @@ def test_uncertainty_asr_sobol_helpers_cover_generic_progress_and_yearless_stati
     assert static_positions.tolist() == [3]
     assert cumulative_groups == ()
 
+    bounded_identity = pd.DataFrame(
+        {
+            "public_row_id": [4, 5],
+            "cc_type": ["static", "static"],
+            "lcia_method": ["pb_lcia", "pb_lcia"],
+            "cc_bound": ["min_cc", "max_cc"],
+            "year": [2020, 2020],
+            "impact": ["AAL", "AAL"],
+        }
+    )
+    target_identity, static_positions, cumulative_groups = _asr_sobol_target_scope(
+        identity=bounded_identity,
+        target_years=(2020,),
+        active_sources=(),
+        dynamic_category_uncertainty_active=False,
+    )
+    assert target_identity["cc_bound"].tolist() == ["min_cc"]
+    assert static_positions.tolist() == [4]
+    assert cumulative_groups == ()
+
 
 def test_uncertainty_asr_external_lca_run_provider_extends_cached_source_values() -> None:
     source_identity = pd.DataFrame(
@@ -568,6 +588,10 @@ def test_asr_inter_method_summaries_use_visible_external_lca_scenario_scope(
         plan.summary_identity[ASR_SUMMARY_SCOPE_COLUMN].eq(ASR_SUMMARY_SCOPE_INTER_METHOD)
         & plan.summary_identity["asr_metric"].eq(ASR_VALUE_METRIC)
     ]
+    inter_frequency = plan.summary_identity.loc[
+        plan.summary_identity[ASR_SUMMARY_SCOPE_COLUMN].eq(ASR_SUMMARY_SCOPE_INTER_METHOD)
+        & plan.summary_identity["asr_metric"].eq(ASR_FREQUENCY_OF_TRANSGRESSION_METRIC)
+    ]
     cumulative_inter_asr = plan.cumulative_summary_identity.loc[
         plan.cumulative_summary_identity[ASR_SUMMARY_SCOPE_COLUMN].eq(
             ASR_SUMMARY_SCOPE_INTER_METHOD
@@ -579,10 +603,8 @@ def test_asr_inter_method_summaries_use_visible_external_lca_scenario_scope(
         2024,
         2030,
     ]
-    assert inter_asr[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].tolist() == [
-        "historical",
-        "regression_proj",
-    ]
+    assert inter_asr[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].isna().all()
+    assert inter_frequency[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].isna().all()
     assert plan.summary_public_row_groups[-2:] == (("0", "2"), ("1", "3"))
     assert plan.cumulative_public_row_groups == (("0", "1"), ("2", "3"))
     assert cumulative_inter_asr["asocc_ssp_scenario"].tolist() == ["SSP2"]
@@ -1262,6 +1284,10 @@ def test_uncertainty_asr_static_io_lca_outputs(
         path=Path(manifest.artifacts["sobol_indices"]),
         output_format="csv_compact",
     )
+    sobol_summary = read_uncertainty_table(
+        path=Path(manifest.artifacts["sobol_source_summary"]),
+        output_format="csv_compact",
+    )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
     readme_text = Path(manifest.artifacts["results_readme"]).read_text(encoding="utf-8")
 
@@ -1286,6 +1312,7 @@ def test_uncertainty_asr_static_io_lca_outputs(
     assert "cumulative_asr_runs" not in manifest.artifacts["public_output"]
     assert "year" in sobol.columns
     assert set(sobol["year"]) == {2005, 2006}
+    assert "variance_weighted_ST" in sobol_summary.columns
     assert Path(manifest.artifacts["sobol_indices"]).exists()
     assert all(len(line) <= 100 for line in readme_text.splitlines())
 

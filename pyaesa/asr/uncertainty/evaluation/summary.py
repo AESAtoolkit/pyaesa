@@ -15,7 +15,6 @@ from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
 )
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan
 from pyaesa.shared.runtime.scenario.columns import ASOCC_TIME_ROUTE_PUBLIC_COLUMN
-from pyaesa.shared.runtime.scenario.time_routes import collapse_asocc_time_route
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     collapse_values_to_summary_groups,
     identity_groups_from_excluded_columns,
@@ -32,8 +31,8 @@ ASR_VALUE_METRIC = "asr"
 ASR_FREQUENCY_OF_TRANSGRESSION_METRIC = "frequency_of_transgression"
 ASR_CUMULATIVE_VALUE_METRIC = "cumulative_asr"
 ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC = "cumulative_frequency_of_transgression"
-ASR_FREQUENCY_VALUE_COLUMN = "frequency_of_transgression"
-ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN = "cumulative_frequency_of_transgression"
+ASR_FREQUENCY_VALUE_COLUMN = ASR_FREQUENCY_OF_TRANSGRESSION_METRIC
+ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN = ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC
 ASR_SUMMARY_SCOPE_COLUMN = "asr_summary_scope"
 ASR_SUMMARY_SCOPE_PER_METHOD = "per_method"
 ASR_SUMMARY_SCOPE_INTER_METHOD = "inter_method"
@@ -78,29 +77,12 @@ def asr_summary_identity_groups(
     )
     method_identity = method_identity.copy()
     inter_identity = inter_identity.copy()
-    if ASOCC_TIME_ROUTE_PUBLIC_COLUMN in identity.columns:
-        inter_identity[ASOCC_TIME_ROUTE_PUBLIC_COLUMN] = _collapsed_time_routes_for_groups(
-            identity=identity,
-            public_row_groups=inter_groups,
-        )
     method_identity[ASR_SUMMARY_SCOPE_COLUMN] = ASR_SUMMARY_SCOPE_PER_METHOD
     inter_identity[ASR_SUMMARY_SCOPE_COLUMN] = ASR_SUMMARY_SCOPE_INTER_METHOD
     return (
         pd.concat([method_identity, inter_identity], ignore_index=True, sort=False),
         (*method_groups, *inter_groups),
     )
-
-
-def _collapsed_time_routes_for_groups(
-    *,
-    identity: pd.DataFrame,
-    public_row_groups: tuple[tuple[str, ...], ...],
-) -> list[object]:
-    route_by_public_id = identity.set_index("public_row_id")[ASOCC_TIME_ROUTE_PUBLIC_COLUMN]
-    return [
-        collapse_asocc_time_route(route_by_public_id.loc[[int(value) for value in group]].tolist())
-        for group in public_row_groups
-    ]
 
 
 def collapse_asr_values_to_summary(

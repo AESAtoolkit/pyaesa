@@ -3153,6 +3153,40 @@ def test_summary_identity_groups_source_sampled_axes() -> None:
     assert unchanged_groups == (("0",), ("1",), ("2",))
 
 
+def test_summary_identity_groups_inter_method_uses_visible_scenario_scope() -> None:
+    identity = pd.DataFrame(
+        {
+            "public_row_id": [0, 1, 2],
+            "l1_l2_method": ["A", "B", "C"],
+            "l1_method": ["A1", "B1", "C1"],
+            "l2_method": ["A2", "B2", "C2"],
+            "year": [2060, 2060, 2060],
+            "impact": ["AAL", "AAL", "AAL"],
+            ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP2", "SSP2"],
+            ASOCC_TIME_ROUTE_COLUMN: [
+                ASOCC_TIME_ROUTE_HISTORICAL_REUSE,
+                ASOCC_TIME_ROUTE_HISTORICAL_REUSE,
+                ASOCC_TIME_ROUTE_REGRESSION,
+            ],
+        }
+    )
+
+    summary_identity, groups = summary_identity_groups(
+        identity=identity,
+        sources=SourceActivationPlan(
+            sources=(ActiveSource(name=INTER_METHOD_SOURCE, parameters={}),)
+        ),
+        inter_method_only=True,
+    )
+
+    assert groups == (("0", "1", "2"),)
+    assert summary_identity[ASOCC_SSP_SCENARIO_COLUMN].tolist() == ["SSP2"]
+    assert summary_identity[ASOCC_SUMMARY_SCOPE_COLUMN].tolist() == [
+        ASOCC_SUMMARY_SCOPE_INTER_METHOD
+    ]
+    assert ASOCC_TIME_ROUTE_COLUMN not in summary_identity.columns
+
+
 def test_asocc_sobol_year_scope_and_selector_summary() -> None:
     default_plan = SobolPlan(
         enabled=True,
@@ -3263,14 +3297,10 @@ def test_asocc_sobol_year_scope_and_selector_summary() -> None:
         requested_ssp_scenarios=("SSP1", "SSP5"),
     )
     selector_summary = summary.loc[summary["summary_level"].eq("selector")].reset_index(drop=True)
-    lcia_method_summary = summary.loc[summary["summary_level"].eq("lcia_method")].reset_index(
-        drop=True
-    )
 
     assert {"r_c", "s_p", "lcia_method", "impact", "asocc_ssp_scenario", "year"}.issubset(
         summary.columns
     )
-    assert set(summary["summary_level"]) == {"selector", "lcia_method"}
     mixed_2030 = selector_summary.loc[selector_summary["year"].eq(2030)].reset_index(drop=True)
     historical_2020 = selector_summary.loc[selector_summary["year"].eq(2020)].reset_index(drop=True)
 
@@ -3285,8 +3315,6 @@ def test_asocc_sobol_year_scope_and_selector_summary() -> None:
     assert mixed_2030["ssp_invariant_output_count"].tolist() == [1, 1, 1, 1]
     assert historical_2020["asocc_ssp_scenario"].isna().all()
     assert historical_2020["contains_ssp_invariant_outputs"].tolist() == [False, False]
-    assert lcia_method_summary["impact"].isna().all()
-    assert sorted(lcia_method_summary["year"].unique().tolist()) == [2020, 2030]
 
     plain_summary = asocc_sobol_source_summary(
         identity=pd.DataFrame({"public_row_id": [0], "year": [2030]}),

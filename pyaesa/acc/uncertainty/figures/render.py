@@ -22,8 +22,11 @@ from pyaesa.acc.uncertainty.figures.product_renderers import (
 )
 from pyaesa.acc.uncertainty.figures.violin_renderers import plot_violin_scope
 from pyaesa.acc.uncertainty.figures.row_reader import (
-    attach_dynamic_budget_values,
+    attach_cumulative_budget_values,
+    attach_dynamic_run_metadata,
     collapsed_value_rows,
+    cumulative_value_rows_from_runs,
+    prepared_cumulative_identity_rows,
     prepared_identity_rows,
     prepared_summary_rows,
     read_figure_tables,
@@ -86,6 +89,7 @@ def render_acc_uncertainty_figures(
     tables = read_figure_tables(
         context=context,
         include_summary=single_requested_year(context) is None,
+        include_cumulative=single_requested_year(context) is None,
     )
     validate_inactive_axes_for_figures(identity=tables.identity, context=context)
     clear_uncertainty_figure_scope(paths=paths)
@@ -95,6 +99,7 @@ def render_acc_uncertainty_figures(
             context=context,
             identity=tables.identity,
             summary=tables.summary,
+            cumulative_identity=tables.cumulative_identity,
         ),
         status=status,
     )
@@ -105,9 +110,15 @@ def _uncertainty_jobs(
     context: FigureContext,
     identity: pd.DataFrame,
     summary: pd.DataFrame,
+    cumulative_identity: pd.DataFrame,
 ) -> Iterator[PlannedFigureJob]:
     if single_requested_year(context) is None:
-        return _multi_year_jobs(context=context, identity=identity, summary=summary)
+        return _multi_year_jobs(
+            context=context,
+            identity=identity,
+            summary=summary,
+            cumulative_identity=cumulative_identity,
+        )
     return _single_year_jobs(context=context, identity=identity)
 
 
@@ -149,6 +160,7 @@ def _multi_year_jobs(
     context: FigureContext,
     identity: pd.DataFrame,
     summary: pd.DataFrame,
+    cumulative_identity: pd.DataFrame,
 ) -> Iterator[PlannedFigureJob]:
     active = set(context.active_sources)
     if ASOCC_INTER_METHOD_SOURCE in active:
@@ -157,29 +169,37 @@ def _multi_year_jobs(
         inter_rows = _summary_scope_rows(rows=summary_rows, scope=ACC_SUMMARY_SCOPE_INTER_METHOD)
         if _is_dynamic_rows(method_rows):
             identity_rows = prepared_identity_rows(context=context, identity=identity)
-            value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
-            method_rows = attach_dynamic_budget_values(
-                summary_rows=method_rows,
-                value_rows=value_rows,
+            cumulative_rows = _cumulative_value_rows(
                 context=context,
-                include_method_axis=True,
+                cumulative_identity=cumulative_identity,
             )
-            inter_rows = attach_dynamic_budget_values(
-                summary_rows=inter_rows,
-                value_rows=value_rows,
+            method_rows = _with_dynamic_cumulative_budget(
+                rows=method_rows,
+                identity_rows=identity_rows,
+                cumulative_rows=cumulative_rows,
+                include_method_axis=True,
                 context=context,
+            )
+            inter_rows = _with_dynamic_cumulative_budget(
+                rows=inter_rows,
+                identity_rows=identity_rows,
+                cumulative_rows=cumulative_rows,
                 include_method_axis=False,
+                context=context,
             )
     else:
         method_rows = prepared_summary_rows(context=context, summary=summary)
         if _is_dynamic_rows(method_rows):
             identity_rows = prepared_identity_rows(context=context, identity=identity)
-            value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
-            method_rows = attach_dynamic_budget_values(
-                summary_rows=method_rows,
-                value_rows=value_rows,
-                context=context,
+            method_rows = _with_dynamic_cumulative_budget(
+                rows=method_rows,
+                identity_rows=identity_rows,
+                cumulative_rows=_cumulative_value_rows(
+                    context=context,
+                    cumulative_identity=cumulative_identity,
+                ),
                 include_method_axis=True,
+                context=context,
             )
         inter_rows = method_rows.iloc[0:0].copy()
     if context.inter_method:
@@ -226,6 +246,45 @@ def _plan_per_method_jobs(
             group_legend=False,
             include_method_in_label=False,
         )
+
+
+def _cumulative_value_rows(
+    *,
+    context: FigureContext,
+    cumulative_identity: pd.DataFrame,
+) -> pd.DataFrame:
+    cumulative_identity_rows = prepared_cumulative_identity_rows(
+        context=context,
+        cumulative_identity=cumulative_identity,
+    )
+    return cumulative_value_rows_from_runs(
+        context=context,
+        cumulative_identity_rows=cumulative_identity_rows,
+    )
+
+
+def _with_dynamic_cumulative_budget(
+    *,
+    rows: pd.DataFrame,
+    identity_rows: pd.DataFrame,
+    cumulative_rows: pd.DataFrame,
+    include_method_axis: bool,
+    context: FigureContext,
+) -> pd.DataFrame:
+    with_metadata = attach_dynamic_run_metadata(
+        summary_rows=rows,
+        identity_rows=identity_rows,
+        context=context,
+        include_method_axis=include_method_axis,
+    )
+    return attach_cumulative_budget_values(
+        summary_rows=with_metadata,
+        cumulative_rows=collapsed_value_rows(
+            rows=cumulative_rows,
+            context=context,
+            include_method_axis=include_method_axis,
+        ),
+    )
 
 
 def _plan_multi_method_jobs(

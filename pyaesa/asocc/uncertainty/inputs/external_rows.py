@@ -14,6 +14,7 @@ from pyaesa.asocc.uncertainty.inputs.deterministic_rows import (
     ASOCC_VALUE_COLUMN,
     LoadedAsoccFinalRows,
 )
+from pyaesa.asocc.uncertainty.schema.public_rows import normalize_asocc_public_row_identity
 from pyaesa.external_inputs.asocc.schema.contracts import (
     iter_external_method_selections,
     validate_external_method_collisions,
@@ -315,7 +316,8 @@ def _external_lcia_methods(
 def _finalize_external_rows(*, frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
     out[ASOCC_VALUE_COLUMN] = pd.to_numeric(out.pop("value"), errors="raise")
-    return out.drop(columns=[column for column in ("level",) if column in out.columns])
+    out = out.drop(columns=[column for column in ("level",) if column in out.columns])
+    return normalize_asocc_public_row_identity(frame=out)
 
 
 def _concat_rows(frames: list[pd.DataFrame]) -> pd.DataFrame:

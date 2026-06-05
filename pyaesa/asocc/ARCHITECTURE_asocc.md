@@ -493,6 +493,8 @@ belong in shared uncertainty code. aSoCC contributes only aSoCC specific notes
 such as SSP invariant summary behavior and selected output years. Sobol method
 metadata belongs in `README_sobol.txt` and `logs/scope_manifest.json`; aSoCC
 Sobol does not write a separate method table.
+Sobol source summaries preserve LCIA impact category selectors and must not
+aggregate variance shares across impact categories.
 
 ## External Inputs
 

@@ -79,11 +79,6 @@ def write_asocc_sobol_readme(
                 "impact category, functional unit selectors, and SSP scenario where those "
                 "axes exist."
             ),
-            (
-                "- summary_level=lcia_method keeps the same selectors but aggregates over "
-                "impact categories within each LCIA method. The impact column is empty on "
-                "these rows by construction."
-            ),
         ),
         indices_notes=(),
         method_notes=method_notes,

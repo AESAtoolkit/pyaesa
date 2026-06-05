@@ -8,7 +8,10 @@ from pyaesa.acc.uncertainty.evaluation.branches import (
     build_acc_branch_plans,
     combined_acc_identity,
 )
-from pyaesa.acc.uncertainty.evaluation.summary import acc_summary_identity_groups
+from pyaesa.acc.uncertainty.evaluation.summary import (
+    acc_cumulative_identity_groups,
+    acc_summary_identity_groups,
+)
 from pyaesa.acc.uncertainty.io.source_methods import build_acc_source_methods
 from pyaesa.acc.uncertainty.runtime.models import (
     ACCAsoccInput,
@@ -62,6 +65,20 @@ def build_acc_uncertainty_plan(
         active_sources=active_sources,
         dynamic_category_uncertainty_active=dynamic_category_uncertainty_active,
     )
+    cumulative_identity, cumulative_public_row_groups = acc_cumulative_identity_groups(
+        identity=identity,
+        active_sources=active_sources,
+        dynamic_category_uncertainty_active=dynamic_category_uncertainty_active,
+    )
+    cumulative_summary_identity, cumulative_summary_public_row_groups = (
+        acc_summary_identity_groups(
+            identity=cumulative_identity,
+            active_sources=active_sources,
+            dynamic_category_uncertainty_active=dynamic_category_uncertainty_active,
+        )
+        if not cumulative_identity.empty
+        else (summary_identity.iloc[0:0].copy(), ())
+    )
     source_methods = build_acc_source_methods(
         asocc_input=asocc_input,
         dynamic_cc_input=dynamic_cc_input,
@@ -70,6 +87,10 @@ def build_acc_uncertainty_plan(
         identity=identity,
         summary_identity=summary_identity,
         summary_public_row_groups=summary_public_row_groups,
+        cumulative_identity=cumulative_identity,
+        cumulative_summary_identity=cumulative_summary_identity,
+        cumulative_public_row_groups=cumulative_public_row_groups,
+        cumulative_summary_public_row_groups=cumulative_summary_public_row_groups,
         branch_plans=branch_plans,
         asocc_input=asocc_input,
         dynamic_cc_input=dynamic_cc_input,

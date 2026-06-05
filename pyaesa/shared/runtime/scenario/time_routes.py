@@ -25,11 +25,17 @@ def asocc_time_route_from_projection_subfolder(projection_subfolder: str | None)
 
 
 def collapse_asocc_time_route(values: Iterable[object]) -> object:
-    """Return the visible aSoCC route for one collapsed public figure row."""
+    """Return one aSoCC route only when collapsed rows have a single route."""
     visible = [
         str(value).strip()
         for value in values
         if not is_display_missing(value) and str(value).strip()
     ]
-    prospective = [value for value in visible if value in ASOCC_PROSPECTIVE_TIME_ROUTE_VALUES]
-    return next(iter(prospective), next(iter(visible), pd.NA))
+    prospective = tuple(
+        dict.fromkeys(value for value in visible if value in ASOCC_PROSPECTIVE_TIME_ROUTE_VALUES)
+    )
+    if len(prospective) == 1:
+        return prospective[0]
+    if len(prospective) > 1:
+        return pd.NA
+    return next(iter(visible), pd.NA)

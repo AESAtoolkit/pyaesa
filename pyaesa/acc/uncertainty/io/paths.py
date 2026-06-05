@@ -52,6 +52,11 @@ def build_acc_uncertainty_run_paths(
         public_row_identity=run_root / "results" / f"public_row_identity{suffix}",
         public_runs=run_root / "results" / f"acc_runs{suffix}",
         summary_stats_runs=run_root / "results" / f"summary_stats_runs{suffix}",
+        cumulative_row_identity=run_root / "results" / f"cumulative_row_identity{suffix}",
+        cumulative_runs=run_root / "results" / f"cumulative_acc_runs{suffix}",
+        cumulative_summary_stats_runs=(
+            run_root / "results" / f"cumulative_summary_stats_runs{suffix}"
+        ),
         results_readme=run_root / "results" / "README.txt",
         source_methods=run_root / "logs" / "source_methods.csv",
         sobol_indices=sobol_root / f"sobol_indices{suffix}",

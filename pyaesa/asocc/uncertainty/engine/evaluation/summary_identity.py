@@ -8,7 +8,9 @@ from pyaesa.asocc.uncertainty.sources.names import (
     REFERENCE_YEAR_SOURCE,
 )
 from pyaesa.shared.runtime.scenario.columns import ASOCC_TIME_ROUTE_PUBLIC_COLUMN
-from pyaesa.shared.runtime.scenario.time_routes import collapse_asocc_time_route
+from pyaesa.shared.uncertainty_assessment.evaluation.scenario_groups import (
+    scenario_identity_groups_from_excluded_columns,
+)
 from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
     identity_groups_from_excluded_columns,
 )
@@ -47,7 +49,7 @@ def summary_identity_groups(
         )
         pieces.append(scope_identity)
         groups.extend(scope_groups)
-    scope_identity, scope_groups = _scoped_summary_groups(
+    scope_identity, scope_groups = _scenario_scoped_summary_groups(
         identity=identity,
         excluded_columns={
             *sampled_axes,
@@ -73,27 +75,21 @@ def _scoped_summary_groups(
         identity=identity,
         excluded_columns=excluded_columns,
     )
-    if (
-        ASOCC_TIME_ROUTE_PUBLIC_COLUMN in excluded_columns
-        and ASOCC_TIME_ROUTE_PUBLIC_COLUMN in identity.columns
-    ):
-        summary_identity = summary_identity.copy()
-        summary_identity[ASOCC_TIME_ROUTE_PUBLIC_COLUMN] = _collapsed_time_routes_for_groups(
-            identity=identity,
-            public_row_groups=public_row_groups,
-        )
     summary_identity = summary_identity.copy()
     summary_identity[ASOCC_SUMMARY_SCOPE_COLUMN] = scope
     return summary_identity, public_row_groups
 
 
-def _collapsed_time_routes_for_groups(
+def _scenario_scoped_summary_groups(
     *,
     identity: pd.DataFrame,
-    public_row_groups: tuple[tuple[str, ...], ...],
-) -> list[object]:
-    route_by_public_id = identity.set_index("public_row_id")[ASOCC_TIME_ROUTE_PUBLIC_COLUMN]
-    return [
-        collapse_asocc_time_route(route_by_public_id.loc[[int(value) for value in group]].tolist())
-        for group in public_row_groups
-    ]
+    excluded_columns: set[str],
+    scope: str,
+) -> tuple[pd.DataFrame, tuple[tuple[str, ...], ...]]:
+    summary_identity, public_row_groups = scenario_identity_groups_from_excluded_columns(
+        identity=identity,
+        excluded_columns=excluded_columns,
+    )
+    summary_identity = summary_identity.drop(columns=["public_row_id"], errors="ignore").copy()
+    summary_identity[ASOCC_SUMMARY_SCOPE_COLUMN] = scope
+    return summary_identity, public_row_groups

@@ -101,7 +101,9 @@ Uncertainty aCC:
    `pyaesa/shared/uncertainty_assessment/io/downstream_run_outputs.py`.
 5. Write aCC uncertainty artifacts under branch token Monte Carlo roots. aCC
    summary statistics collapse sampled upstream aSoCC axes in the same way as
-   aSoCC uncertainty summaries. `uncertainty/io/manifest_payloads.py` is the
+   aSoCC uncertainty summaries. Dynamic AR6 aCC runs also write cumulative
+   period artifacts from finalized `acc_runs`; figures use those artifacts for
+   cumulative budget axes. `uncertainty/io/manifest_payloads.py` is the
    canonical owner for aCC manifest compatibility payloads and public output
    column metadata.
 6. When requested, run aCC Sobol by reusing shared Sobol design and family
@@ -147,6 +149,9 @@ B2_acc/<source_token>/monte_carlo/<branch_token>/<run_id>/
     results/public_row_identity.<ext>
     results/acc_runs.<ext>
     results/summary_stats_runs.<ext>
+    results/cumulative_row_identity.<ext>
+    results/cumulative_acc_runs.<ext>
+    results/cumulative_summary_stats_runs.<ext>
     results/README.txt
     results/sobol/sobol_indices.<ext>
     results/sobol/sobol_source_summary.<ext>
@@ -174,8 +179,15 @@ The upstream aSoCC `asocc_time_route` column remains in aCC public identity so
 downstream ASR and figure renderers can derive retrospective to prospective
 boundaries from the same route provenance as aSoCC.
 
+`cumulative_acc_runs` is written only for dynamic AR6 aCC branches. It is a
+compact run matrix of study period sums over grouped yearly `acc_runs`.
+`cumulative_summary_stats_runs` is summarized from that cumulative matrix.
+
 Sobol files are written only when Sobol is requested and at least two source
 dimensions are active.
+Sobol source summaries preserve the full public output selector, including
+LCIA impact category, and must not aggregate variance shares across impact
+categories.
 
 ## Shared Owners
 

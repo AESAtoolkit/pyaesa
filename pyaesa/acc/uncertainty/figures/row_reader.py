@@ -27,7 +27,6 @@ from pyaesa.shared.figures.uncertainty_run_values import (
     RUN_INDEX_ARRAY_COLUMN,
     collect_selected_compact_run_values,
     collect_selected_sparse_run_indexed_values,
-    sum_values_by_run_index,
 )
 from pyaesa.shared.runtime.scenario.columns import (
     AR6_CC_SSP_SCENARIO_COLUMN,
@@ -45,9 +44,16 @@ class FigureTables:
 
     identity: pd.DataFrame
     summary: pd.DataFrame
+    cumulative_identity: pd.DataFrame
+    cumulative_summary: pd.DataFrame
 
 
-def read_figure_tables(*, context: FigureContext, include_summary: bool = True) -> FigureTables:
+def read_figure_tables(
+    *,
+    context: FigureContext,
+    include_summary: bool = True,
+    include_cumulative: bool = True,
+) -> FigureTables:
     """Read public identity and summary tables once for aCC figures."""
     identity = read_uncertainty_table(
         path=context.paths.public_row_identity,
@@ -65,7 +71,31 @@ def read_figure_tables(*, context: FigureContext, include_summary: bool = True) 
         identity[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN] = context.dynamic_cc_sampling_method
         if include_summary:
             summary[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN] = context.dynamic_cc_sampling_method
-    return FigureTables(identity=identity, summary=summary)
+    if include_cumulative and _identity_is_dynamic_cc(identity):
+        cumulative_identity = read_uncertainty_table(
+            path=context.paths.cumulative_row_identity,
+            output_format=context.output_format,
+        )
+        cumulative_summary = read_uncertainty_table(
+            path=context.paths.cumulative_summary_stats_runs,
+            output_format=context.output_format,
+        )
+        if context.dynamic_cc_sampling_method is not None:
+            cumulative_identity[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN] = (
+                context.dynamic_cc_sampling_method
+            )
+            cumulative_summary[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN] = (
+                context.dynamic_cc_sampling_method
+            )
+    else:
+        cumulative_identity = identity.iloc[0:0].copy()
+        cumulative_summary = summary.iloc[0:0].copy()
+    return FigureTables(
+        identity=identity,
+        summary=summary,
+        cumulative_identity=cumulative_identity,
+        cumulative_summary=cumulative_summary,
+    )
 
 
 def prepared_summary_rows(*, context: FigureContext, summary: pd.DataFrame) -> pd.DataFrame:
@@ -78,6 +108,17 @@ def prepared_summary_rows(*, context: FigureContext, summary: pd.DataFrame) -> p
 def prepared_identity_rows(*, context: FigureContext, identity: pd.DataFrame) -> pd.DataFrame:
     """Return public row identity with common aCC plot columns."""
     rows = _filter_requested_years(frame=identity, context=context)
+    rows["fu_code"] = context.fu_code
+    return attach_common_columns(rows)
+
+
+def prepared_cumulative_identity_rows(
+    *,
+    context: FigureContext,
+    cumulative_identity: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return cumulative public row identity with common aCC plot columns."""
+    rows = cumulative_identity.copy()
     rows["fu_code"] = context.fu_code
     return attach_common_columns(rows)
 
@@ -125,6 +166,24 @@ def value_rows_from_runs(
     return drop_empty_value_rows(rows=out)
 
 
+def cumulative_value_rows_from_runs(
+    *,
+    context: FigureContext,
+    cumulative_identity_rows: pd.DataFrame,
+) -> pd.DataFrame:
+    """Attach selected cumulative aCC run distributions to period identity rows."""
+    public_ids = _public_ids(cumulative_identity_rows)
+    values = collect_selected_compact_run_values(
+        path=context.paths.cumulative_runs,
+        output_format=context.output_format,
+        public_row_ids=public_ids,
+        stop_run_index=int(context.manifest.completed_runs),
+    )
+    out = cumulative_identity_rows.copy()
+    out[VALUE_ARRAY_COLUMN] = [values[int(public_id)] for public_id in out["public_row_id"]]
+    return out
+
+
 def collapsed_value_rows(
     *,
     rows: pd.DataFrame,
@@ -146,11 +205,8 @@ def collapsed_value_rows(
         if column
         not in {*drop_columns, "public_row_id", VALUE_ARRAY_COLUMN, RUN_INDEX_ARRAY_COLUMN}
     ]
-    has_dynamic_cc = _contains_dynamic_cc(rows)
-    only_dynamic_cc = _contains_only_dynamic_cc(rows) if has_dynamic_cc else False
-    dynamic_pair_columns = (
-        _dynamic_pair_count_columns(frame=rows, context=context) if has_dynamic_cc else []
-    )
+    only_dynamic_cc = _contains_only_dynamic_cc(rows)
+    dynamic_pair_columns = _dynamic_pair_count_columns(frame=rows, context=context)
     records = []
     for _key, group in rows.groupby(key_columns, dropna=False, sort=True):
         arrays = [np.asarray(values, dtype=np.float64) for values in group[VALUE_ARRAY_COLUMN]]
@@ -159,20 +215,20 @@ def collapsed_value_rows(
         payload = {column: first_row[column] for column in key_columns}
         if row_owned_ssp:
             payload[ASOCC_SSP_SCENARIO_COLUMN] = _collapsed_row_owned_ssp(group=group)
-        payload[ASOCC_TIME_ROUTE_PUBLIC_COLUMN] = collapse_asocc_time_route(
-            group[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].tolist()
-        )
-        if has_dynamic_cc:
-            pair_count = _dynamic_model_scenario_pair_count(
-                group=group,
-                pair_columns=dynamic_pair_columns,
-                group_is_dynamic=only_dynamic_cc,
+        if ASOCC_TIME_ROUTE_PUBLIC_COLUMN in group.columns:
+            payload[ASOCC_TIME_ROUTE_PUBLIC_COLUMN] = collapse_asocc_time_route(
+                group[ASOCC_TIME_ROUTE_PUBLIC_COLUMN].tolist()
             )
-            if pair_count is not None:
-                payload[PAIR_COUNT_COLUMN] = pair_count
-            category_scope = _dynamic_category_scope(group=group, context=context)
-            if category_scope:
-                payload[AR6_CATEGORY_SCOPE_COLUMN] = category_scope
+        pair_count = _dynamic_model_scenario_pair_count(
+            group=group,
+            pair_columns=dynamic_pair_columns,
+            group_is_dynamic=only_dynamic_cc,
+        )
+        if pair_count is not None:
+            payload[PAIR_COUNT_COLUMN] = pair_count
+        category_scope = _dynamic_category_scope(group=group, context=context)
+        if category_scope:
+            payload[AR6_CATEGORY_SCOPE_COLUMN] = category_scope
         payload[VALUE_ARRAY_COLUMN] = merged
         if RUN_INDEX_ARRAY_COLUMN in group.columns:
             payload[RUN_INDEX_ARRAY_COLUMN] = np.concatenate(
@@ -182,33 +238,49 @@ def collapsed_value_rows(
     return pd.DataFrame.from_records(records)
 
 
-def attach_dynamic_budget_values(
+def attach_dynamic_run_metadata(
     *,
     summary_rows: pd.DataFrame,
-    value_rows: pd.DataFrame,
+    identity_rows: pd.DataFrame,
     context: FigureContext,
     include_method_axis: bool,
 ) -> pd.DataFrame:
-    """Attach dynamic cumulative budget run arrays to rows with selected values."""
-    collapsed = collapsed_value_rows(
-        rows=value_rows,
+    """Attach dynamic AR6 model scenario and category metadata to summary rows."""
+    metadata = _collapsed_identity_metadata(
+        rows=identity_rows,
         context=context,
         include_method_axis=include_method_axis,
     )
-    budget_columns = _dynamic_budget_key_columns(collapsed)
-    budget_values = _dynamic_budget_values(collapsed, key_columns=budget_columns)
-    pair_counts = _dynamic_pair_counts_by_key(collapsed, key_columns=budget_columns)
+    key_columns = _dynamic_metadata_key_columns(metadata)
+    pair_counts = _dynamic_pair_counts_by_key(metadata, key_columns=key_columns)
+    category_scopes = _dynamic_category_scopes_by_key(metadata, key_columns=key_columns)
     out = _summary_rows_with_selected_values(summary_rows)
-    category_scope = _single_dynamic_category_scope(collapsed)
-    if category_scope:
-        out[AR6_CATEGORY_SCOPE_COLUMN] = category_scope
-    out[BUDGET_VALUES_COLUMN] = [
-        budget_values[_row_key(row=row, columns=budget_columns)] for _index, row in out.iterrows()
-    ]
-    out[PAIR_COUNT_COLUMN] = [
-        pair_counts[_row_key(row=row, columns=budget_columns)] for _index, row in out.iterrows()
-    ]
+    if category_scopes:
+        out[AR6_CATEGORY_SCOPE_COLUMN] = [
+            category_scopes[_row_key(row=row, columns=key_columns)]
+            for _index, row in out.iterrows()
+        ]
+    if pair_counts:
+        out[PAIR_COUNT_COLUMN] = [
+            pair_counts[_row_key(row=row, columns=key_columns)] for _index, row in out.iterrows()
+        ]
     return out
+
+
+def attach_cumulative_budget_values(
+    *,
+    summary_rows: pd.DataFrame,
+    cumulative_rows: pd.DataFrame,
+) -> pd.DataFrame:
+    """Attach cumulative aCC run arrays to yearly dynamic figure rows."""
+    key_columns = _cumulative_budget_merge_columns(
+        rows=summary_rows,
+        cumulative_rows=cumulative_rows,
+    )
+    cumulative = cumulative_rows.loc[:, [*key_columns, VALUE_ARRAY_COLUMN]].rename(
+        columns={VALUE_ARRAY_COLUMN: BUDGET_VALUES_COLUMN}
+    )
+    return summary_rows.merge(cumulative, on=key_columns, how="left")
 
 
 def _summary_rows_with_selected_values(rows: pd.DataFrame) -> pd.DataFrame:
@@ -253,9 +325,10 @@ def _public_ids(frame: pd.DataFrame) -> list[int]:
     return [int(value) for value in frame["public_row_id"].tolist()]
 
 
-def _contains_dynamic_cc(frame: pd.DataFrame) -> bool:
-    values = pd.Series(frame["cc_type"], copy=False).astype("string").str.strip()
-    return bool(values.eq(DYNAMIC_CC_TYPE).any())
+def _identity_is_dynamic_cc(frame: pd.DataFrame) -> bool:
+    values = pd.Series(frame["cc_type"], copy=False).dropna().astype(str).str.strip()
+    visible = {value for value in values.tolist() if value}
+    return visible == {DYNAMIC_CC_TYPE}
 
 
 def _contains_only_dynamic_cc(frame: pd.DataFrame) -> bool:
@@ -296,51 +369,92 @@ def _dynamic_pair_count_columns(*, frame: pd.DataFrame, context: FigureContext) 
     return [column for column in pair_columns if column in frame.columns]
 
 
-def _dynamic_budget_key_columns(frame: pd.DataFrame) -> list[str]:
+def _collapsed_identity_metadata(
+    *,
+    rows: pd.DataFrame,
+    context: FigureContext,
+    include_method_axis: bool,
+) -> pd.DataFrame:
+    drop_columns = _sampled_axis_drop_columns(
+        context=context,
+        include_method_axis=include_method_axis,
+    )
     excluded = {
-        VALUE_ARRAY_COLUMN,
-        RUN_INDEX_ARRAY_COLUMN,
-        AR6_CATEGORY_SCOPE_COLUMN,
         "year",
-        PAIR_COUNT_COLUMN,
-        MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
+        "public_row_id",
         ASOCC_SSP_SCENARIO_COLUMN,
         ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
         "reference_year",
         "l2_reuse_year",
         "asocc_ssp_start_year",
     }
-    return [column for column in frame.columns if column not in excluded]
+    key_columns = [column for column in rows.columns if column not in {*drop_columns, *excluded}]
+    only_dynamic_cc = _contains_only_dynamic_cc(rows)
+    dynamic_pair_columns = _dynamic_pair_count_columns(frame=rows, context=context)
+    records: list[dict[str, object]] = []
+    for _key, group in rows.groupby(key_columns, dropna=False, sort=True):
+        payload = {column: group.iloc[0][column] for column in key_columns}
+        pair_count = _dynamic_model_scenario_pair_count(
+            group=group,
+            pair_columns=dynamic_pair_columns,
+            group_is_dynamic=only_dynamic_cc,
+        )
+        if pair_count is not None:
+            payload[PAIR_COUNT_COLUMN] = pair_count
+        category_scope = _dynamic_category_scope(group=group, context=context)
+        if category_scope:
+            payload[AR6_CATEGORY_SCOPE_COLUMN] = category_scope
+        records.append(payload)
+    return pd.DataFrame.from_records(records)
 
 
-def _dynamic_budget_values(
-    frame: pd.DataFrame,
+def _dynamic_metadata_key_columns(frame: pd.DataFrame) -> list[str]:
+    return [
+        column
+        for column in frame.columns
+        if column
+        not in {
+            AR6_CATEGORY_SCOPE_COLUMN,
+            PAIR_COUNT_COLUMN,
+            MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
+        }
+    ]
+
+
+def _cumulative_budget_merge_columns(
     *,
-    key_columns: list[str],
-) -> dict[tuple[str, ...], np.ndarray]:
-    budgets: dict[tuple[str, ...], np.ndarray] = {}
-    for _key, group in frame.groupby(key_columns, dropna=False, sort=True):
-        ordered = group.sort_values("year", kind="stable")
-        row = pd.Series(ordered.iloc[0], copy=False)
-        budgets[_row_key(row=row, columns=key_columns)] = _sum_dynamic_budget_values(ordered)
-    return budgets
-
-
-def _sum_dynamic_budget_values(group: pd.DataFrame) -> np.ndarray:
-    if RUN_INDEX_ARRAY_COLUMN in group.columns:
-        run_indices = np.concatenate(
-            [np.asarray(values, dtype=np.int64) for values in group[RUN_INDEX_ARRAY_COLUMN]]
-        )
-        values = np.concatenate(
-            [np.asarray(values, dtype=np.float64) for values in group[VALUE_ARRAY_COLUMN]]
-        )
-        _run_indices, summed = sum_values_by_run_index(run_indices=run_indices, values=values)
-        return summed
-    total: np.ndarray | None = None
-    for values in group[VALUE_ARRAY_COLUMN].tolist():
-        numeric = np.asarray(values, dtype=np.float64)
-        total = numeric.copy() if total is None else total + numeric
-    return np.empty(0, dtype=np.float64) if total is None else total
+    rows: pd.DataFrame,
+    cumulative_rows: pd.DataFrame,
+) -> list[str]:
+    excluded = {
+        VALUE_ARRAY_COLUMN,
+        BUDGET_VALUES_COLUMN,
+        RUN_INDEX_ARRAY_COLUMN,
+        AR6_CATEGORY_SCOPE_COLUMN,
+        PAIR_COUNT_COLUMN,
+        MODEL_SCENARIO_SAMPLING_METHOD_COLUMN,
+        "public_row_id",
+        "year",
+        "mean",
+        "std",
+        "min",
+        "p5",
+        "p25",
+        "median",
+        "p75",
+        "p95",
+        "max",
+        ASOCC_SSP_SCENARIO_COLUMN,
+        ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
+        "reference_year",
+        "l2_reuse_year",
+        "asocc_ssp_start_year",
+    }
+    return [
+        column
+        for column in rows.columns
+        if column in cumulative_rows.columns and column not in excluded
+    ]
 
 
 def _dynamic_pair_counts_by_key(
@@ -354,6 +468,22 @@ def _dynamic_pair_counts_by_key(
         )
         for _key, group in frame.groupby(key_columns, dropna=False, sort=True)
         if PAIR_COUNT_COLUMN in group.columns
+    }
+
+
+def _dynamic_category_scopes_by_key(
+    frame: pd.DataFrame,
+    *,
+    key_columns: list[str],
+) -> dict[tuple[str, ...], str]:
+    if AR6_CATEGORY_SCOPE_COLUMN not in frame.columns:
+        return {}
+    return {
+        _row_key(row=pd.Series(row, copy=False), columns=key_columns): str(
+            row[AR6_CATEGORY_SCOPE_COLUMN]
+        )
+        for _index, row in frame.iterrows()
+        if not is_display_missing(row[AR6_CATEGORY_SCOPE_COLUMN])
     }
 
 
@@ -374,14 +504,3 @@ def _dynamic_category_scope(*, group: pd.DataFrame, context: FigureContext) -> s
         if not is_display_missing(value) and str(value).strip()
     ]
     return category_scope_label(values)
-
-
-def _single_dynamic_category_scope(frame: pd.DataFrame) -> str:
-    if AR6_CATEGORY_SCOPE_COLUMN not in frame.columns:
-        return ""
-    values = [
-        str(value).strip()
-        for value in frame[AR6_CATEGORY_SCOPE_COLUMN].tolist()
-        if not is_display_missing(value) and str(value).strip()
-    ]
-    return next(iter(dict.fromkeys(values)), "")

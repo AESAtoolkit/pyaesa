@@ -16,6 +16,9 @@ class ACCUncertaintyRunPaths:
     public_row_identity: Path
     public_runs: Path
     summary_stats_runs: Path
+    cumulative_row_identity: Path
+    cumulative_runs: Path
+    cumulative_summary_stats_runs: Path
     results_readme: Path
     source_methods: Path
     sobol_indices: Path
@@ -67,6 +70,10 @@ class ACCUncertaintyPlan:
     identity: pd.DataFrame
     summary_identity: pd.DataFrame
     summary_public_row_groups: tuple[tuple[str, ...], ...]
+    cumulative_identity: pd.DataFrame
+    cumulative_summary_identity: pd.DataFrame
+    cumulative_public_row_groups: tuple[tuple[str, ...], ...]
+    cumulative_summary_public_row_groups: tuple[tuple[str, ...], ...]
     branch_plans: tuple[ACCBranchPlan, ...]
     asocc_input: ACCAsoccInput
     dynamic_cc_input: ACCDynamicCCInput | None
@@ -75,3 +82,8 @@ class ACCUncertaintyPlan:
     source_method_rows: pd.DataFrame
     active_sources: tuple[str, ...]
     dynamic_category_uncertainty_active: bool = False
+
+    @property
+    def has_cumulative_outputs(self) -> bool:
+        """Return whether this plan owns dynamic period cumulative aCC outputs."""
+        return not self.cumulative_identity.empty

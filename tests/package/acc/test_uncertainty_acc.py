@@ -22,6 +22,7 @@ from pyaesa.acc.figures.common import (
 )
 from pyaesa.acc.uncertainty.figures.product_renderers import (
     _render_dynamic_budget_axis,
+    _series_groups,
     plot_band_scope,
     plot_mean_line_scope,
 )
@@ -39,12 +40,16 @@ from pyaesa.acc.uncertainty.evaluation.summary import (
     acc_summary_identity_groups,
 )
 from pyaesa.acc.uncertainty.figures.row_reader import (
-    attach_dynamic_budget_values,
+    attach_cumulative_budget_values,
+    attach_dynamic_run_metadata,
     collapsed_value_rows,
+    cumulative_value_rows_from_runs,
+    prepared_cumulative_identity_rows,
     read_figure_tables,
 )
 from pyaesa.acc.uncertainty.figures.reuse import render_reusable_acc_figures_if_requested
 from pyaesa.acc.uncertainty.figures.scope_planner import FigureContext
+from pyaesa.acc.uncertainty.io.artifacts import acc_run_paths_from_manifest
 from pyaesa.acc.uncertainty.runtime.models import (
     ACCAsoccInput,
     ACCBranchPlan,
@@ -166,6 +171,15 @@ def _read_acc_run_artifact_frame(*, path: Path, layout: str, column_count: int) 
     return _read_sparse_run_rows_frame(path=path)
 
 
+def _empty_acc_cumulative_plan_kwargs() -> dict[str, Any]:
+    return {
+        "cumulative_identity": pd.DataFrame(),
+        "cumulative_summary_identity": pd.DataFrame(),
+        "cumulative_public_row_groups": (),
+        "cumulative_summary_public_row_groups": (),
+    }
+
+
 def test_uncertainty_acc_branch_scope_keeps_full_asocc_lcia_scope(allocation_dummy_repo) -> None:
     del allocation_dummy_repo
     scope = build_acc_uncertainty_scope(
@@ -272,6 +286,9 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
         public_row_identity=tmp_path / "acc_run" / "results" / "identity.csv",
         public_runs=tmp_path / "acc_run" / "results" / "runs.csv",
         summary_stats_runs=tmp_path / "acc_run" / "results" / "summary.csv",
+        cumulative_row_identity=tmp_path / "acc_run" / "results" / "cumulative_identity.csv",
+        cumulative_runs=tmp_path / "acc_run" / "results" / "cumulative_runs.csv",
+        cumulative_summary_stats_runs=(tmp_path / "acc_run" / "results" / "cumulative_summary.csv"),
         results_readme=tmp_path / "acc_run" / "results" / "README.txt",
         source_methods=tmp_path / "acc_run" / "logs" / "source_methods.csv",
         sobol_indices=tmp_path / "acc_run" / "results" / "sobol" / "indices.csv",
@@ -285,6 +302,8 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
             mode="fixed",
             output_format="csv_compact",
             active_sources=sources,
+            status="complete",
+            completed_runs=2,
         ),
         paths=paths,
         figures_root=tmp_path / "figures",
@@ -324,7 +343,7 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
         }
     )
     rows.drop(columns=[VALUE_ARRAY_COLUMN]).to_csv(paths.public_row_identity, index=False)
-    tables = read_figure_tables(context=context, include_summary=False)
+    tables = read_figure_tables(context=context, include_summary=False, include_cumulative=False)
     assert MODEL_SCENARIO_SAMPLING_METHOD_COLUMN in tables.identity.columns
     assert MODEL_SCENARIO_SAMPLING_METHOD_COLUMN not in tables.summary.columns
 
@@ -333,15 +352,59 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
     assert collapsed[PAIR_COUNT_COLUMN].tolist() == [1, 1]
     assert collapsed[AR6_CATEGORY_SCOPE_COLUMN].tolist() == ["C1", "C2"]
 
-    attached = attach_dynamic_budget_values(
-        summary_rows=collapsed.drop(columns=[VALUE_ARRAY_COLUMN]),
-        value_rows=rows,
-        context=context,
-        include_method_axis=False,
+    with CompactRunMatrixWriter(path=paths.cumulative_runs, output_format="csv_compact") as writer:
+        writer.write_batch(
+            run_indices=np.array([0, 1], dtype=np.int64),
+            values=np.array([[9.0], [10.0]], dtype=np.float64),
+            batch_index=0,
+        )
+    cumulative_identity = pd.DataFrame(
+        {
+            "public_row_id": [0],
+            "cc_type": ["dynamic_ar6"],
+            "lcia_method": ["gwp100_lcia"],
+            "impact": ["GWP_100"],
+            "impact_unit": ["kg CO2-eq"],
+            AR6_CC_SSP_SCENARIO_COLUMN: ["SSP2"],
+        }
     )
-    assert attached[AR6_CATEGORY_SCOPE_COLUMN].tolist() == ["C1", "C1"]
-    np.testing.assert_allclose(attached[BUDGET_VALUES_COLUMN].iloc[0], [4.0, 6.0])
-    np.testing.assert_allclose(attached[BUDGET_VALUES_COLUMN].iloc[1], [4.0, 6.0])
+    cumulative_rows = cumulative_value_rows_from_runs(
+        context=context,
+        cumulative_identity_rows=prepared_cumulative_identity_rows(
+            context=context,
+            cumulative_identity=cumulative_identity,
+        ),
+    )
+    attached = attach_cumulative_budget_values(
+        summary_rows=attach_dynamic_run_metadata(
+            summary_rows=collapsed.drop(columns=[VALUE_ARRAY_COLUMN]),
+            identity_rows=rows.drop(columns=[VALUE_ARRAY_COLUMN]),
+            context=context,
+            include_method_axis=False,
+        ),
+        cumulative_rows=collapsed_value_rows(
+            rows=cumulative_rows,
+            context=context,
+            include_method_axis=False,
+        ),
+    )
+    assert attached[AR6_CATEGORY_SCOPE_COLUMN].tolist() == ["C1-C2", "C1-C2"]
+    np.testing.assert_allclose(attached[BUDGET_VALUES_COLUMN].iloc[0], [9.0, 10.0])
+    np.testing.assert_allclose(attached[BUDGET_VALUES_COLUMN].iloc[1], [9.0, 10.0])
+    metadata_probe = attached.copy()
+    metadata_probe.loc[metadata_probe.index[1], AR6_CATEGORY_SCOPE_COLUMN] = "C2"
+    series_groups = list(_series_groups(frame=metadata_probe, include_method_in_label=False))
+    assert len(series_groups) == 1
+
+    method_attached = attach_cumulative_budget_values(
+        summary_rows=collapsed.drop(columns=[VALUE_ARRAY_COLUMN]),
+        cumulative_rows=collapsed_value_rows(
+            rows=cumulative_rows.assign(__method="A"),
+            context=context,
+            include_method_axis=True,
+        ),
+    )
+    np.testing.assert_allclose(method_attached[BUDGET_VALUES_COLUMN].iloc[0], [9.0, 10.0])
 
     static_collapsed = collapsed_value_rows(
         rows=rows.assign(cc_type="static"),
@@ -377,17 +440,12 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
         np.array([1.0, 2.0], dtype=np.float64),
         np.array([3.0, 4.0], dtype=np.float64),
     ]
-    indexed_attached = attach_dynamic_budget_values(
-        summary_rows=collapsed_value_rows(
-            rows=indexed_rows,
-            context=context,
-            include_method_axis=True,
-        ).drop(columns=[VALUE_ARRAY_COLUMN, "__run_indices"]),
-        value_rows=indexed_rows,
+    indexed_collapsed = collapsed_value_rows(
+        rows=indexed_rows,
         context=context,
         include_method_axis=True,
     )
-    np.testing.assert_allclose(indexed_attached[BUDGET_VALUES_COLUMN].iloc[0], [4.0, 6.0])
+    np.testing.assert_array_equal(indexed_collapsed["__run_indices"].iloc[0], [0, 1])
 
     dynamic_without_pair_columns = collapsed_value_rows(
         rows=rows.drop(columns=["cc_model", "cc_scenario"]),
@@ -423,49 +481,48 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
     assert AR6_CATEGORY_SCOPE_COLUMN not in plain_category_scope.columns
     assert PAIR_COUNT_COLUMN not in plain_category_scope.columns
     plain_category_values = rows.drop(columns=["cc_category"])
-    plain_attached = attach_dynamic_budget_values(
+    plain_context = FigureContext(
+        manifest=context.manifest,
+        paths=context.paths,
+        figures_root=context.figures_root,
+        requested_years=context.requested_years,
+        requested_asocc_ssps=context.requested_asocc_ssps,
+        fu_code=context.fu_code,
+        output_format=context.output_format,
+        figure_output_format=context.figure_output_format,
+        figure_dpi=context.figure_dpi,
+        per_method=context.per_method,
+        multi_method=context.multi_method,
+        inter_method=context.inter_method,
+        active_sources=context.active_sources,
+        run_layout=context.run_layout,
+        dynamic_category_uncertainty_active=False,
+    )
+    plain_attached = attach_dynamic_run_metadata(
         summary_rows=collapsed_value_rows(
             rows=plain_category_values,
-            context=FigureContext(
-                manifest=context.manifest,
-                paths=context.paths,
-                figures_root=context.figures_root,
-                requested_years=context.requested_years,
-                requested_asocc_ssps=context.requested_asocc_ssps,
-                fu_code=context.fu_code,
-                output_format=context.output_format,
-                figure_output_format=context.figure_output_format,
-                figure_dpi=context.figure_dpi,
-                per_method=context.per_method,
-                multi_method=context.multi_method,
-                inter_method=context.inter_method,
-                active_sources=context.active_sources,
-                run_layout=context.run_layout,
-                dynamic_category_uncertainty_active=False,
-            ),
+            context=plain_context,
             include_method_axis=False,
         ).drop(columns=[VALUE_ARRAY_COLUMN]),
-        value_rows=plain_category_values,
-        context=FigureContext(
-            manifest=context.manifest,
-            paths=context.paths,
-            figures_root=context.figures_root,
-            requested_years=context.requested_years,
-            requested_asocc_ssps=context.requested_asocc_ssps,
-            fu_code=context.fu_code,
-            output_format=context.output_format,
-            figure_output_format=context.figure_output_format,
-            figure_dpi=context.figure_dpi,
-            per_method=context.per_method,
-            multi_method=context.multi_method,
-            inter_method=context.inter_method,
-            active_sources=context.active_sources,
-            run_layout=context.run_layout,
-            dynamic_category_uncertainty_active=False,
-        ),
+        identity_rows=plain_category_values.drop(columns=[VALUE_ARRAY_COLUMN]),
+        context=plain_context,
         include_method_axis=False,
     )
     assert AR6_CATEGORY_SCOPE_COLUMN not in plain_attached.columns
+
+    no_pair_values = rows.drop(columns=["cc_model", "cc_scenario", "cc_category"])
+    no_pair_attached = attach_dynamic_run_metadata(
+        summary_rows=collapsed_value_rows(
+            rows=no_pair_values,
+            context=plain_context,
+            include_method_axis=False,
+        ).drop(columns=[VALUE_ARRAY_COLUMN]),
+        identity_rows=no_pair_values.drop(columns=[VALUE_ARRAY_COLUMN]),
+        context=plain_context,
+        include_method_axis=False,
+    )
+    assert PAIR_COUNT_COLUMN not in no_pair_attached.columns
+    assert AR6_CATEGORY_SCOPE_COLUMN not in no_pair_attached.columns
 
 
 def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
@@ -905,6 +962,7 @@ def test_reused_acc_subfigure_plan_uses_completed_dependency_manifests(tmp_path:
         identity=pd.DataFrame({"public_row_id": [0]}),
         summary_identity=pd.DataFrame({"public_row_id": [0]}),
         summary_public_row_groups=(("0",),),
+        **_empty_acc_cumulative_plan_kwargs(),
         branch_plans=(),
         asocc_input=ACCAsoccInput(
             identity=None,
@@ -1052,6 +1110,7 @@ def test_reused_acc_final_subfigures_use_current_static_asocc_figures(tmp_path: 
         identity=pd.DataFrame({"public_row_id": [0]}),
         summary_identity=pd.DataFrame({"public_row_id": [0]}),
         summary_public_row_groups=(("0",),),
+        **_empty_acc_cumulative_plan_kwargs(),
         branch_plans=(),
         asocc_input=ACCAsoccInput(
             identity=None,
@@ -1249,9 +1308,36 @@ def test_uncertainty_acc_dynamic_fixed_outputs(
         layout=manifest.artifacts["public_output"]["acc_runs"]["layout"],
         column_count=len(identity),
     )
+    cumulative_identity = read_uncertainty_table(
+        path=Path(manifest.artifacts["cumulative_row_identity"]),
+        output_format="csv_compact",
+    )
+    cumulative_runs = _read_acc_run_artifact_frame(
+        path=Path(manifest.artifacts["cumulative_acc_runs"]),
+        layout="compact_run_matrix",
+        column_count=len(cumulative_identity),
+    )
+    cumulative_summary = read_uncertainty_table(
+        path=Path(manifest.artifacts["cumulative_summary_stats_runs"]),
+        output_format="csv_compact",
+    )
     source_methods = pd.read_csv(manifest.artifacts["source_methods"])
     readme_text = Path(manifest.artifacts["results_readme"]).read_text(encoding="utf-8")
 
+    assert manifest.artifacts["public_output"]["cumulative_acc_runs"]["layout"] == (
+        "compact_run_matrix"
+    )
+    assert manifest.artifacts["public_output"]["cumulative_acc_runs"]["metric"] == (
+        "cumulative_acc"
+    )
+    manifest_paths = acc_run_paths_from_manifest(manifest=manifest)
+    assert manifest_paths.cumulative_row_identity == Path(
+        manifest.artifacts["cumulative_row_identity"]
+    )
+    assert manifest_paths.cumulative_runs == Path(manifest.artifacts["cumulative_acc_runs"])
+    assert manifest_paths.cumulative_summary_stats_runs == Path(
+        manifest.artifacts["cumulative_summary_stats_runs"]
+    )
     assert {
         "cc_type",
         "cc_category",
@@ -1268,7 +1354,20 @@ def test_uncertainty_acc_dynamic_fixed_outputs(
     assert runs["run_index"].nunique() == 1
     assert not bool(runs[value_columns].isna().to_numpy().any())
     assert runs[value_columns].to_numpy().max() > 1e6
+    cumulative_value_columns = [
+        column for column in cumulative_runs.columns if column != "run_index"
+    ]
+    assert "year" not in cumulative_identity.columns
+    assert len(cumulative_identity) == 1
+    assert set(cumulative_value_columns) == set(cumulative_identity["public_row_id"].astype(str))
+    expected_cumulative = runs[value_columns].sum(axis=1).to_numpy()
+    np.testing.assert_allclose(
+        cumulative_runs[cumulative_value_columns[0]].to_numpy(),
+        expected_cumulative,
+    )
+    np.testing.assert_allclose(cumulative_summary["mean"].to_numpy(), expected_cumulative)
     assert "acc" in set(source_methods["source_component"])
+    assert "cumulative_acc_runs" in readme_text
     assert all(len(line) <= 100 for line in readme_text.splitlines())
 
 
@@ -1635,6 +1734,7 @@ def test_acc_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
         identity=identity,
         summary_identity=identity,
         summary_public_row_groups=(("0",),),
+        **_empty_acc_cumulative_plan_kwargs(),
         branch_plans=(
             ACCBranchPlan(
                 identity=identity,
@@ -2730,6 +2830,7 @@ def test_acc_sparse_selected_layout_iterators_cover_source_combinations(tmp_path
             identity=pd.DataFrame({"public_row_id": [0, 1, 2, 3]}),
             summary_identity=pd.DataFrame({"public_row_id": [0, 1, 2, 3]}),
             summary_public_row_groups=(("0",), ("1",), ("2",), ("3",)),
+            **_empty_acc_cumulative_plan_kwargs(),
             branch_plans=(static_branch, dynamic_branch, unmatched_dynamic_branch),
             asocc_input=ACCAsoccInput(
                 identity=None,

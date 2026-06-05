@@ -16,7 +16,15 @@ from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
     ASOCC_TIME_ROUTE_REGRESSION,
 )
+from pyaesa.shared.runtime.scenario.time_routes import collapse_asocc_time_route
 from pyaesa.shared.tabular import wide_tables as wide_tables_mod
+
+
+def test_collapse_asocc_time_route_blanks_mixed_prospective_routes() -> None:
+    assert (
+        collapse_asocc_time_route([ASOCC_TIME_ROUTE_HISTORICAL_REUSE, ASOCC_TIME_ROUTE_REGRESSION])
+        is pd.NA
+    )
 
 
 def test_group_files_by_base_normalizes_parents_and_reuse_metadata(tmp_path: Path) -> None:

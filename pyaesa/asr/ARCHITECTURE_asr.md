@@ -240,6 +240,9 @@ roots; each branch still stores its complete ASR artifacts under
   `pyaesa/acc/uncertainty/evaluation/source_unit_evaluator.py` as the
   aCC owned source unit evaluation contract. It must not import aCC runner
   internals.
+- ASR Sobol source summaries preserve the public output selector, including
+  LCIA impact category, and must not aggregate variance shares across impact
+  categories.
 - Public functions must not retain module level dataframes, arrays, or hidden
   caches after return.
 

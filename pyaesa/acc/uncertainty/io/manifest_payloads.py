@@ -16,6 +16,8 @@ from pyaesa.shared.uncertainty_assessment.run_state.compatibility import (
 from pyaesa.shared.uncertainty_assessment.monte_carlo.composite import run_role_payload
 from pyaesa.shared.uncertainty_assessment.request.core import UncertaintyRuntimeRequest
 from pyaesa.shared.uncertainty_assessment.sobol.plan import SobolPlan, sobol_plan_payload
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import public_run_artifact_contract
+from pyaesa.shared.uncertainty_assessment.io.tables import uncertainty_table_columns
 from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (
     mc_parameters_payload,
     optional_sobol_artifact_paths,
@@ -23,7 +25,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest_payloads import (
     public_run_output_payload,
 )
 
-ACC_ARTIFACT_CONTRACT = "acc_runs_preserve_upstream_layout"
+ACC_ARTIFACT_CONTRACT = "acc_runs_with_dynamic_cumulative_outputs"
 
 
 def build_acc_manifest_context(
@@ -118,16 +120,35 @@ def initial_acc_sobol_status(
     }
 
 
-def acc_outputs_payload(*, paths: ACCUncertaintyRunPaths, output_format: str) -> dict[str, Any]:
+def acc_outputs_payload(
+    *,
+    paths: ACCUncertaintyRunPaths,
+    output_format: str,
+    include_cumulative: bool,
+) -> dict[str, Any]:
     """Return persisted output paths for the completed aCC run manifest."""
-    return {
-        **public_run_artifact_paths(
-            paths=paths,
-            run_key="acc_runs",
+    payload = public_run_artifact_paths(
+        paths=paths,
+        run_key="acc_runs",
+        output_format=output_format,
+    )
+    if include_cumulative:
+        cumulative = public_run_artifact_contract(
+            path=paths.cumulative_runs,
             output_format=output_format,
-        ),
-        **optional_sobol_artifact_paths(paths=paths),
-    }
+        )
+        payload.update(
+            {
+                "cumulative_row_identity": str(paths.cumulative_row_identity),
+                "cumulative_acc_runs": str(paths.cumulative_runs),
+                "cumulative_acc_runs_artifact_kind": cumulative["artifact_kind"],
+                "cumulative_acc_runs_interval_index": cumulative["interval_index_path"],
+                "cumulative_acc_runs_interval_index_kind": cumulative["interval_index_kind"],
+                "cumulative_summary_stats_runs": str(paths.cumulative_summary_stats_runs),
+            }
+        )
+    payload.update(optional_sobol_artifact_paths(paths=paths))
+    return payload
 
 
 def acc_public_output_payload(
@@ -135,15 +156,45 @@ def acc_public_output_payload(
     paths: ACCUncertaintyRunPaths,
     output_format: str,
     run_layout: str,
+    include_cumulative: bool,
 ) -> dict[str, Any]:
     """Return public table column metadata for the completed aCC run manifest."""
-    return public_run_output_payload(
+    payload = public_run_output_payload(
         paths=paths,
         output_format=output_format,
         run_key="acc_runs",
         metric="acc",
         layout=run_layout,
     )
+    if include_cumulative:
+        cumulative_run_columns = uncertainty_table_columns(
+            path=paths.cumulative_runs,
+            output_format=output_format,
+        )
+        payload.update(
+            {
+                "cumulative_identity_columns": uncertainty_table_columns(
+                    path=paths.cumulative_row_identity,
+                    output_format=output_format,
+                ),
+                "cumulative_acc_runs": {
+                    **public_run_artifact_contract(
+                        path=paths.cumulative_runs,
+                        output_format=output_format,
+                    ),
+                    "layout": "compact_run_matrix",
+                    "metric": "cumulative_acc",
+                    "columns_preview": cumulative_run_columns[
+                        : min(5, len(cumulative_run_columns))
+                    ],
+                },
+                "cumulative_summary_columns": uncertainty_table_columns(
+                    path=paths.cumulative_summary_stats_runs,
+                    output_format=output_format,
+                ),
+            }
+        )
+    return payload
 
 
 def build_completed_acc_manifest(
@@ -173,7 +224,11 @@ def build_completed_acc_manifest(
         arguments=context["arguments"],
         deterministic_prerequisites=context["deterministic_prerequisites"],
         artifacts={
-            **acc_outputs_payload(paths=paths, output_format=runtime.output_format),
+            **acc_outputs_payload(
+                paths=paths,
+                output_format=runtime.output_format,
+                include_cumulative=plan.has_cumulative_outputs,
+            ),
             "public_output": public_output,
         },
         convergence=convergence,

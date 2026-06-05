@@ -62,6 +62,7 @@ def write_acc_results_readme(
     path: Path,
     active_sources: tuple[str, ...],
     run_layout: str,
+    include_cumulative: bool,
 ) -> None:
     """Write the public aCC uncertainty results README."""
     ensure_file_parent(path)
@@ -78,6 +79,14 @@ def write_acc_results_readme(
         *public_run_artifact_readme_lines(run_name="acc_runs"),
         f"  Layout: {run_description}.",
         "- summary_stats_runs: exact summary statistics for acc_runs.",
+        *(
+            [
+                "- cumulative_acc_runs: compact run matrix of study period dynamic aCC sums.",
+                "- cumulative_summary_stats_runs: summary statistics for cumulative_acc_runs.",
+            ]
+            if include_cumulative
+            else []
+        ),
         "- source_methods.csv: upstream and aCC formula source method metadata.",
         "  Rows prefixed with asocc:: and ar6_cc:: keep the upstream source",
         "  method details, including LCIA CoV mapping, inter-MRIO alternate",

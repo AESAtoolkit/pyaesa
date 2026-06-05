@@ -50,6 +50,7 @@ from pyaesa.shared.uncertainty_assessment.sobol.plan import (
     sobol_plan_payload,
     studied_output_years,
 )
+from pyaesa.shared.uncertainty_assessment.sobol.accumulator import SobolIndexEstimate
 from pyaesa.shared.uncertainty_assessment.sobol.design import SobolEvaluationChunk
 from pyaesa.shared.uncertainty_assessment.sobol.reporting import (
     sobol_method_payload,
@@ -59,6 +60,7 @@ from pyaesa.shared.uncertainty_assessment.sobol.runner import (
     EvaluatedSobolChunk,
     run_sobol_analysis,
 )
+from pyaesa.shared.uncertainty_assessment.sobol.summary import sobol_source_summary_by_group
 from pyaesa.shared.lcia.uncertainty_source import LCIA_SOURCE
 from pyaesa.shared.uncertainty_assessment.io.tables import write_uncertainty_table
 from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter
@@ -140,6 +142,12 @@ def run_asr_sobol(
         dimension_names=context.source_names,
         evaluate=lambda chunk: _evaluate_chunk(context=context, chunk=chunk),
         max_base_chunk_rows=asr_sobol_base_chunk_rows(context=context),
+        source_summary_builder=lambda identity, dimensions, estimates: _asr_sobol_source_summary(
+            identity=identity,
+            dimension_names=dimensions,
+            estimates=estimates,
+            confidence_level=sobol_plan.confidence_level,
+        ),
         progress_source=progress_source,
         status=status,
     )
@@ -198,6 +206,24 @@ def _asr_sobol_progress_source(*, paths: ASRUncertaintyRunPaths) -> str:
     if branch_name.startswith("static__"):
         return "asr_static"
     return "asr"
+
+
+def _asr_sobol_source_summary(
+    *,
+    identity: pd.DataFrame,
+    dimension_names: tuple[str, ...],
+    estimates: SobolIndexEstimate,
+    confidence_level: float,
+) -> pd.DataFrame:
+    """Return ASR source summaries grouped by full public output selectors."""
+    selector_columns = tuple(column for column in identity.columns if column != "public_row_id")
+    return sobol_source_summary_by_group(
+        identity=identity,
+        group_columns=selector_columns,
+        dimension_names=dimension_names,
+        estimates=estimates,
+        confidence_level=confidence_level,
+    )
 
 
 def asr_sobol_base_chunk_rows(*, context: ASRSobolEvaluationContext) -> int:
@@ -390,6 +416,9 @@ def _asr_sobol_target_scope(
             index=static.index,
         ).astype(int)
         static = static.loc[static_year.isin(target_years)]
+    if "cc_bound" in static.columns:
+        min_cc = static["cc_bound"].astype("string").str.strip().eq("min_cc")
+        static = static.loc[min_cc].copy()
     static_positions = static["public_row_id"].to_numpy(dtype=np.int64, copy=False)
     if not static.empty:
         frames.append(static.drop(columns=["public_row_id"], errors="ignore"))

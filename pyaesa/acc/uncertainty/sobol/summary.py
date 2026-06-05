@@ -21,13 +21,7 @@ def acc_sobol_source_summary(
 ) -> pd.DataFrame:
     """Return aCC selector preserving Sobol source summary rows."""
     selector_columns = tuple(column for column in identity.columns if column != "public_row_id")
-    levels = (
-        SobolSummaryLevel(summary_level="selector", group_columns=selector_columns),
-        SobolSummaryLevel(
-            summary_level="lcia_method",
-            group_columns=tuple(column for column in selector_columns if column != "impact"),
-        ),
-    )
+    levels = (SobolSummaryLevel(summary_level="selector", group_columns=selector_columns),)
     return sobol_source_summary_by_levels(
         identity=identity,
         dimension_names=dimension_names,

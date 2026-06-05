@@ -652,11 +652,18 @@ def run_uncertainty_acc_component(
         frame=plan.identity,
         output_format=runtime.output_format,
     )
+    if plan.has_cumulative_outputs:
+        write_uncertainty_table(
+            path=paths.cumulative_row_identity,
+            frame=plan.cumulative_identity,
+            output_format=runtime.output_format,
+        )
     write_acc_source_methods(path=paths.source_methods, rows=plan.source_method_rows)
     write_acc_results_readme(
         path=paths.results_readme,
         active_sources=plan.active_sources,
         run_layout=plan.acc_run_layout,
+        include_cumulative=plan.has_cumulative_outputs,
     )
     try:
         try:
@@ -740,6 +747,7 @@ def run_uncertainty_acc_component(
                 paths=paths,
                 output_format=runtime.output_format,
                 run_layout=plan.acc_run_layout,
+                include_cumulative=plan.has_cumulative_outputs,
             )
             complete = build_completed_acc_manifest(
                 paths=paths,
@@ -753,7 +761,11 @@ def run_uncertainty_acc_component(
                 public_output=public_output,
             )
         else:
-            artifacts = acc_outputs_payload(paths=paths, output_format=runtime.output_format)
+            artifacts = acc_outputs_payload(
+                paths=paths,
+                output_format=runtime.output_format,
+                include_cumulative=False,
+            )
             artifacts.pop("summary_stats_runs", None)
             artifacts["public_output"] = {"acc_runs": {"layout": plan.acc_run_layout}}
             complete = build_manifest(
