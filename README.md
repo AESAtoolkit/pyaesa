@@ -285,8 +285,6 @@ Intel Core i7 1165G7 CPU, 32 GB RAM.*
 
 ## Study objectives and recommended routes
 
-### Route Setup
-
 1. Run `set_workspace(...)` once for the workspace.
 2. Download the raw data families needed by the study endpoint.
 3. Run `process_mrio(...)` and `process_pop_gdp(...)` when the endpoint needs
@@ -294,9 +292,8 @@ Intel Core i7 1165G7 CPU, 32 GB RAM.*
    optional for dynamic AR6 CC, aCC, and ASR endpoints because those routes can
    provision the matching processed AR6 scope when it is missing.
 
-### Selecting and reaching a study objective
-
-Study objectives are study endpoints from the user perspective. A study objective corresponds to an *expected output* for the user.\
+4. Choose a study objective that fit your application. Study objectives are study endpoints from the user perspective.
+A study objective corresponds to an *expected output* for the user.
 In `pyaesa`, five study objectives are currently available:
 
 | Study objective | Corresponding output |
@@ -307,8 +304,8 @@ In `pyaesa`, five study objectives are currently available:
 | `B.2` | Assigned carrying capacities (aCC) |
 | `C` | Absolute sustainability ratio (ASR) |
 
-Choose the **study objective** (i.e., the endpoint) and call the corresponding deterministic or uncertainty function directly. `pyaesa` automatically runs upstream computations needed to produce that endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. The user hence only needs to focus on *what is the study objective of interest*, and run the relevant function.
-
+5. Once your have chosen the study objective (i.e., the endpoint), call the corresponding deterministic or uncertainty function directly. 
+**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` *automatically* runs upstream computations needed to produce the desired endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. This is illustrated via the green arrows (automatic nesting) in the figure above. Consequently, *the user must focus solely on the desired study objective*, and run the *single* relevant function.
 
 Check out [tutorials/study_objectives/0_study_objectives.md](tutorials/study_objectives/0_study_objectives.md) to understand how to select and reach study objectives in `pyaesa`.
 

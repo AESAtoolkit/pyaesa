@@ -10,24 +10,25 @@ Study objectives are study endpoints from the user perspective. A study objectiv
 | `B.2` | Allocated carrying capacities (aCC) |
 | `C` | Absolute sustainability ratio (ASR) |
 
+The figure below provides a simplified high-level overview of the package architecture. This includes (i) the mandatory prerequisites for all uses, and (ii) study objectives for which the user must focus solely on the desired objective. 
+
 ![High-level overview of pyaesa with main functions, study objectives, and prerequisites.](https://raw.githubusercontent.com/AESAtoolkit/pyaesa/main/images/fig-pyaesa-high-level.svg)
 
-## `pyaesa` automatically orchestrates functions to reach study objectives
+## `pyaesa` automatically calls necessary functions to reach the desired study objective
 
-**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` automatically *orchestrates* the call of relevant functions to reach the desired endpoint.
-This means that `pyaesa` automatically runs upstream computations needed to produce that endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. The user hence only needs to focus on *what is the study objective of interest*, and run the relevant function.
+**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` *automatically* runs upstream computations needed to produce the desired endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. This is illustrated via the green arrows (automatic nesting) in the figure above. Consequently, *the user must focus solely on the desired study objective*, and run the *single* relevant function.
 
 For instance:
 - For B.2 study objectives (i.e., aCC endpoints), the final entry function can auto run `pyaesa` owned
 deterministic aSoCC and dynamic AR6 CC outputs when needed.
 - For C study objectives (i.e., ASR endpoints)
 with `pyaesa` owned IO-LCA, the final entry function can auto run `pyaesa` owned
-aCC and IO-LCA outputs when needed.
+aCC and IO-LCA outputs when needed. All results for A and B.x study objectives will therefore be automatically generated and available after completion.
 - For ASR with external aSoCC or external LCA,
 `prepare_external_inputs(...)` creates the external input folders, and users
 must stage the external files before the ASR call.
 
-Choose the **study objective** (i.e., the endpoint) and call the corresponding deterministic or uncertainty function directly.\
+Choose the **study objective** (i.e., the endpoint) and call the corresponding deterministic or uncertainty function directly.
 
 ```{list-table}
 :header-rows: 1

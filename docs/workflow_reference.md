@@ -147,23 +147,6 @@ Core i7 1165G7 CPU, 32 GB RAM.
 
 ## Study Objectives And Routes
 
-Study objectives are study endpoints from the user perspective. A study
-objective corresponds to an expected output.
-
-Choose the study objective, i.e. the endpoint, and call the corresponding
-deterministic or uncertainty function directly. `pyaesa` automatically runs
-upstream computations needed to produce that endpoint, i.e. to ensure that all
-previous outputs are available before running the downstream function providing
-the endpoint.
-
-| Study objective | Corresponding output |
-| --- | --- |
-| `A` | Life-cycle assessment (LCA/IO-LCA) |
-| `B.0` | Dynamic carrying capacity (CC) |
-| `B.1` | Assigned share of carrying capacities (aSoCC) |
-| `B.2` | Assigned carrying capacities (aCC) |
-| `C` | Absolute sustainability ratio (ASR) |
-
 Route setup:
 
 1. Run {func}`~pyaesa.set_workspace` once for the workspace.
@@ -173,6 +156,21 @@ Route setup:
    Direct {func}`~pyaesa.process_ar6` runs are optional for dynamic AR6 CC, aCC, and ASR
    endpoints because those routes can provision the matching processed AR6
    scope when it is missing.
+
+4. Choose a study objective that fit your application. Study objectives are study endpoints from the user perspective.
+A study objective corresponds to an *expected output* for the user.
+In `pyaesa`, five study objectives are currently available:
+
+| Study objective | Corresponding output |
+| --- | --- |
+| `A` | Life-cycle assessment (LCA/IO-LCA) |
+| `B.0` | Dynamic carrying capacity (CC) |
+| `B.1` | Assigned share of carrying capacities (aSoCC) |
+| `B.2` | Assigned carrying capacities (aCC) |
+| `C` | Absolute sustainability ratio (ASR) |
+
+5. Once your have chosen the study objective (i.e., the endpoint), call the corresponding deterministic or uncertainty function directly. 
+**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` *automatically* runs upstream computations needed to produce the desired endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. Consequently, *the user must focus solely on the desired study objective*, and run the *single* relevant function.
 
 ## Set Of Tutorials
 

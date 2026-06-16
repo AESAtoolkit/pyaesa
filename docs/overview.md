@@ -20,6 +20,8 @@ uncertainty results. The package follows three calculation phases:
 The figure below summarizes the main package data sources, public workflow
 functions, study objectives, and output families.
 
+**It is very important for the user to understand that to reach a desired study objective**, `pyaesa` *automatically* runs upstream computations needed to produce the desired endpoint, i.e., to ensure that all previous outputs are available before running the downstream function providing the endpoint. This is illustrated via the green arrows (automatic nesting) in the figure below. Consequently, *the user must focus solely on the desired study objective*, and run the *single* relevant function.
+
 ![High level pyaesa package map](https://raw.githubusercontent.com/AESAtoolkit/pyaesa/main/images/fig-pyaesa-high-level.svg)
 
 ## Example Output Figures
