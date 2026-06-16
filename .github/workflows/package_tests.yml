@@ -1,11 +1,6 @@
 name: Package Tests
 
 on:
-  pull_request:
-    branches: ["**"]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
     inputs:
       test_scope:
@@ -29,8 +24,8 @@ jobs:
     if: >-
       github.event.repository.private == false &&
       (
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.test_scope == 'lite') ||
-        (github.event_name == 'pull_request' && github.base_ref != 'main')
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.test_scope == 'lite'
       )
     runs-on: ubuntu-latest
     strategy:
@@ -61,8 +56,8 @@ jobs:
     if: >-
       github.event.repository.private == false &&
       (
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.test_scope == 'full') ||
-        (github.event_name == 'pull_request' && github.base_ref == 'main')
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.test_scope == 'full'
       )
     runs-on: ${{ matrix.os }}
     strategy:

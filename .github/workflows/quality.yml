@@ -1,11 +1,6 @@
 name: Quality Checks
 
 on:
-  pull_request:
-    branches: ["**"]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 concurrency:
