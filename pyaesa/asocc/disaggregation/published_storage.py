@@ -71,7 +71,7 @@ def _matching_table_paths(*, root: Path, stem_prefix: str) -> list[Path]:
         for path in root.rglob("*")
         if path.is_file()
         and path.suffix.lower() in TABULAR_SUFFIX_SET
-        and path.stem.split("__", 1)[0] == stem_prefix
+        and (path.stem == stem_prefix or path.stem.startswith(f"{stem_prefix}_"))
     ]
     return sorted(matches)
 

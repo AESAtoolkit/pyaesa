@@ -245,7 +245,7 @@ def test_l2_output_spec_builders_and_subfolder() -> None:
     )
     assert spec_l2_vs.file_stem == "UT(FD)"
     assert spec_l2_vs.persisted_stem == "UT(FD)"
-    assert spec_l2_vs.file_name == "UT(FD)__ssp2__x.csv"
+    assert spec_l2_vs.file_name == "UT(FD)_ssp2_x.csv"
 
     spec_pair = outputs_mod._build_l2_output_spec(
         spec=outputs_mod._L2KeySpec(
@@ -316,10 +316,10 @@ def test_l2_write_cover_real_scenario_routing_and_intermediate_flags() -> None:
     stored_specs = list(run.state.l2_results_by_ssp_scenario["SSP2"])
     assert any(spec.route.bucket == "l2_vs_global" for spec in stored_specs)
     assert any(spec.route.bucket == "utility_propagation_contrib" for spec in stored_specs)
-    assert any(spec.route.projection_subfolder == "historical_reuse" for spec in stored_specs)
+    assert any(spec.route.projection_subfolder == "hist_reuse" for spec in stored_specs)
     assert all("l2_reuse_year" in spec.identifier_columns for spec in stored_specs)
     assert all("__l2_reuse_year_2020" not in spec.file_name for spec in stored_specs)
-    assert any(spec.file_name.endswith("__per_rf.csv") for spec in stored_specs)
+    assert any(spec.file_name.endswith("_per_rf.csv") for spec in stored_specs)
 
     support_run = _run(
         fu_code="L2.a.b",

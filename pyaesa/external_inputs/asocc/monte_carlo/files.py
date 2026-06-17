@@ -207,7 +207,7 @@ def _file_selection_manifest_payload(
             "path": str(file_selection.path),
             "layout": "compact_run_matrix",
             "public_row_identity": file_identity_payload(
-                path=file_selection.path / "public_row_identity.csv"
+                path=file_selection.path / "row_identity.csv"
             ),
             "asocc_runs": file_identity_payload(path=file_selection.path / "asocc_runs.csv"),
             "lcia_method": file_selection.lcia_method,

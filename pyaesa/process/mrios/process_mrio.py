@@ -36,8 +36,8 @@ def process_mrio(
             MRIO year folders inside the resolved source and classification
             output scope. The output scope is
             ``data_processed/mrio/<source>/<version_tag>``, where
-            ``version_tag`` is ``original_classification`` for native source
-            classification or ``custom_classification_<agg_version>`` for
+            ``version_tag`` is ``original_class`` for native source
+            classification or ``custom_class_<agg_version>`` for
             custom MRIO aggregation and disaggregation processing. For each requested
             year, the corresponding processed year folder and metadata year
             entry are removed before recomputation. Raw downloads and project

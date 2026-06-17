@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import cast
 
 import pandas as pd
@@ -12,7 +13,6 @@ from pyaesa.asocc.runtime.paths.external import (
     get_asocc_external_method_level_dir,
 )
 from pyaesa.shared.tabular.empty_rows import drop_fully_empty_rows
-from pyaesa.shared.lcia.availability import discover_static_cc_methods
 from pyaesa.shared.lcia.contracts import bundled_cc_expected_impacts
 from pyaesa.shared.runtime.scenario.file_routing import (
     ScenarioTaggedFileSpec,
@@ -32,6 +32,8 @@ from pyaesa.external_inputs.shared.scenario_tokens import (
     external_row_ssp_token,
 )
 from pyaesa.external_inputs.shared.tabular import year_columns_from_schema
+
+_LCIA_SCENARIO_SUFFIX_RE = re.compile(r"_(ssp\d+)$", re.IGNORECASE)
 
 
 def external_asocc_runtime_file_stem(
@@ -53,7 +55,7 @@ def external_asocc_runtime_file_stem(
     if lcia_method is not None:
         stem = f"{stem}__{lcia_method}"
     if scenario is not None:
-        stem = f"{stem}__{external_file_ssp_token(scenario, family_label='External aSoCC')}"
+        stem = f"{stem}_{external_file_ssp_token(scenario, family_label='External aSoCC')}"
     return stem
 
 
@@ -155,35 +157,38 @@ def _file_years(*, path: Path, storage_mode: str) -> tuple[int, ...]:
 def _parse_suffix(
     *,
     suffix: str,
-    requested_methods: tuple[str, ...],
 ) -> tuple[str | None, str | None]:
     text = str(suffix).strip()
     if not text:
         return None, None
-    tokens = [token.strip() for token in text[2:].split("__") if token.strip()]
-    if not tokens:
+    if text == "_" or text == "__":
         return None, None
-    candidate_methods = sorted(
-        {*(discover_static_cc_methods()), *requested_methods},
-        key=len,
-        reverse=True,
-    )
-    first = tokens[0]
-    if first in candidate_methods:
-        scenario = (
-            external_row_ssp_token(tokens[1], family_label="External aSoCC")
-            if len(tokens) > 1
-            else None
+    if text.startswith("__"):
+        body = text[2:].strip()
+        scenario_suffix = None
+        scenario_match = _LCIA_SCENARIO_SUFFIX_RE.search(body)
+        if scenario_match is not None:
+            scenario_suffix = str(scenario_match.group(1)).strip()
+            body = body[: scenario_match.start()].strip()
+        if "__" in body:
+            raise ValueError(
+                f"Invalid external aSoCC filename suffix '{suffix}'. "
+                "Use a single '__' before the LCIA method token."
+            )
+        return body or None, (
+            None
+            if scenario_suffix is None
+            else external_row_ssp_token(scenario_suffix, family_label="External aSoCC")
         )
-        return first, scenario
-    return None, external_row_ssp_token(first, family_label="External aSoCC")
+    if text.startswith("_"):
+        return None, external_row_ssp_token(text[1:].strip(), family_label="External aSoCC")
+    return None, external_row_ssp_token(text, family_label="External aSoCC")
 
 
 def _parse_candidate_file(
     *,
     path: Path,
     selection: ExternalMethodSelection,
-    requested_methods: tuple[str, ...],
     storage_mode: str = "deterministic",
 ) -> ExternalAsoCCFileSpec | None:
     base_stem = external_asocc_runtime_file_stem(
@@ -198,14 +203,17 @@ def _parse_candidate_file(
         suffix = ""
     elif stem.startswith(f"{base_stem}__"):
         suffix = stem[len(base_stem) :]
+    elif stem.startswith(f"{base_stem}_"):
+        suffix = stem[len(base_stem) :]
     else:
         return None
     if storage_mode == "monte_carlo" and suffix:
-        tokens = [token.strip() for token in suffix[2:].split("__") if token.strip()]
-        candidate_methods = {*(discover_static_cc_methods()), *requested_methods}
-        if len(tokens) != 1 or tokens[0] not in candidate_methods:
+        if not suffix.startswith("__"):
             return None
-    lcia_method, scenario = _parse_suffix(suffix=suffix, requested_methods=requested_methods)
+        lcia_method, scenario = _parse_suffix(suffix=suffix)
+        if lcia_method is None or scenario is not None:
+            return None
+    lcia_method, scenario = _parse_suffix(suffix=suffix)
     return ExternalAsoCCFileSpec(
         path=path,
         scenario=scenario,
@@ -229,7 +237,6 @@ def candidate_files(
     )
     if not directory.exists():
         return tuple()
-    requested_methods = requested_lcia_methods(lcia_methods)
     out: list[ExternalAsoCCFileSpec] = []
     candidates = [
         item
@@ -244,7 +251,6 @@ def candidate_files(
         spec = _parse_candidate_file(
             path=path,
             selection=selection,
-            requested_methods=requested_methods,
             storage_mode=storage_mode,
         )
         if spec is not None:

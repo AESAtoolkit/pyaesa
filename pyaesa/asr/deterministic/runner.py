@@ -53,8 +53,8 @@ from pyaesa.external_inputs.lca.figures import (
 from pyaesa.external_inputs.lca.paths import external_lca_root
 
 from ..deterministic.figures.component_diagnostics import (
+    DeterministicComponentRows,
     component_rows_from_runtime_frame,
-    write_component_rows_artifact,
 )
 from ..deterministic.figures.render import render_asr_figures
 from ..deterministic.runtime.dynamic import process_dynamic_asr
@@ -63,7 +63,6 @@ from ..deterministic.runtime.static import process_static_asr
 from ..shared.runtime.paths import (
     build_asr_path_context,
     build_asr_scope_label,
-    get_asr_dynamic_component_rows_path,
     get_asr_meta_path,
     get_asr_figure_metadata_path,
 )
@@ -93,7 +92,6 @@ def _build_run_metadata_payload(
     output_dirs: list[Path],
     output_files: list[Path],
     figure_paths: list[Path],
-    dynamic_component_rows_path: Path | None,
     external_lca_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the canonical deterministic ASR scope-manifest payload."""
@@ -113,11 +111,6 @@ def _build_run_metadata_payload(
             "output_dirs": path_list(output_dirs),
             "output_files": path_list(output_files),
             "figure_paths": path_list(figure_paths),
-            "dynamic_component_rows": (
-                path_list([dynamic_component_rows_path])
-                if dynamic_component_rows_path is not None
-                else []
-            ),
         },
         "provenance": {
             "scope_label": scope_label,
@@ -351,7 +344,7 @@ def run_single_asr(
         cleanup_branch_outputs_for_refresh(
             existing_metadata=existing,
             meta_path=meta_path,
-            artifact_keys=("output_files", "figure_paths", "dynamic_component_rows"),
+            artifact_keys=("output_files", "figure_paths"),
             scope_targets=(get_asr_figure_metadata_path(context=path_context),),
         )
         existing = None
@@ -520,9 +513,31 @@ def run_single_asr(
         delete_persisted_figure_paths(
             raw_paths=figure_metadata.get(_FIGURE_STATE_KEY, {}).get("paths")
         )
-        cached_component_rows = cached_path_list(
-            existing_metadata=matched_metadata,
-            field_name="dynamic_component_rows",
+        cached_share_transition_meta = cast(
+            dict[str, dict[str, object]],
+            cached_manifest_value(
+                existing_metadata=matched_metadata,
+                field_name="share_transition_meta",
+            ),
+        )
+        component_rows = (
+            _rebuild_dynamic_component_rows_for_figures(
+                proj_base=proj_base,
+                fu_code=fu_code,
+                source_label=source_label,
+                base_allocate_args=base_allocate_args,
+                years=normalized_years,
+                cc_source=cc_source,
+                output_format=output_format,
+                lca_type=lca_type,
+                lca_version_name=lca_version_name,
+                acc_output_files=acc_output_files,
+                allowed_l1_l2_methods=allowed_l1_l2_methods,
+                share_transition_meta=cached_share_transition_meta,
+                status=status,
+            )
+            if cc_type != "static"
+            else None
         )
         figure_paths = render_asr_figures(
             path_context=path_context,
@@ -530,13 +545,7 @@ def run_single_asr(
             cc_source=cc_source,
             cc_type=cc_type,
             requested_years=normalized_years,
-            share_transition_meta=cast(
-                dict[str, dict[str, object]],
-                cached_manifest_value(
-                    existing_metadata=matched_metadata,
-                    field_name="share_transition_meta",
-                ),
-            ),
+            share_transition_meta=cached_share_transition_meta,
             emissions_mode=emissions_mode,
             dpi=figure_dpi,
             output_format=figure_output_format,
@@ -547,7 +556,7 @@ def run_single_asr(
                 field_name="output_files",
             ),
             acc_output_files=acc_output_files,
-            component_rows_path=cached_component_rows[0] if cached_component_rows else None,
+            component_rows=component_rows,
             coverage=requested_coverage,
             status=status,
         )
@@ -646,21 +655,15 @@ def run_single_asr(
             status=status,
             return_lca_rows=figures or lca_type == "external",
         )
-    dynamic_component_rows_path = None
-    if cc_type != "static":
-        component_rows_path = get_asr_dynamic_component_rows_path(
-            context=path_context,
-            fmt=output_format,
+    component_rows = (
+        component_rows_from_runtime_frame(
+            component_frame=cast(pd.DataFrame, process_result.dynamic_component_frame),
+            lca_rows=lca_rows,
+            acc_output_files=acc_output_files,
         )
-        write_component_rows_artifact(
-            path=component_rows_path,
-            rows=component_rows_from_runtime_frame(
-                component_frame=cast(pd.DataFrame, process_result.dynamic_component_frame),
-                lca_rows=lca_rows,
-                acc_output_files=acc_output_files,
-            ),
-        )
-        dynamic_component_rows_path = component_rows_path
+        if cc_type != "static"
+        else None
+    )
     figure_paths = (
         render_asr_figures(
             path_context=path_context,
@@ -677,7 +680,7 @@ def run_single_asr(
             status=status,
             output_paths=process_result.output_files,
             acc_output_files=acc_output_files,
-            component_rows_path=dynamic_component_rows_path,
+            component_rows=component_rows,
             coverage=requested_coverage,
         )
         if figures
@@ -726,7 +729,6 @@ def run_single_asr(
         output_dirs=process_result.output_dirs,
         output_files=process_result.output_files,
         figure_paths=figure_paths,
-        dynamic_component_rows_path=dynamic_component_rows_path,
         external_lca_summary=_external_lca_summary_payload(
             proj_base=proj_base,
             lca_type=lca_type,
@@ -786,6 +788,58 @@ def _render_external_lca_subfigures(
         output_format=figure_output_format,
         dpi=figure_dpi,
         status=status,
+    )
+
+
+def _rebuild_dynamic_component_rows_for_figures(
+    *,
+    proj_base: Path,
+    fu_code: str,
+    source_label: str,
+    base_allocate_args: dict[str, Any],
+    years: list[int],
+    cc_source: str,
+    output_format: str,
+    lca_type: str,
+    lca_version_name: str | None,
+    acc_output_files: list[Path],
+    allowed_l1_l2_methods: set[str],
+    share_transition_meta: dict[str, dict[str, object]],
+    status: PhasePrinter | NullPhasePrinter,
+) -> DeterministicComponentRows:
+    """Rebuild dynamic ASR component figure rows without persisting support files."""
+    lca_rows = _load_lca_rows_for_branch(
+        proj_base=proj_base,
+        source_label=source_label,
+        lca_type=lca_type,
+        lcia_method=cc_source,
+        lca_version_name=lca_version_name,
+        base_allocate_args=base_allocate_args,
+        years=years,
+        status=status,
+        complete_phase=False,
+    )
+    process_result = process_dynamic_asr(
+        proj_base=proj_base,
+        fu_code=fu_code,
+        cc_source=cc_source,
+        source_label=source_label,
+        base_allocate_args=base_allocate_args,
+        years=years,
+        fmt=output_format,
+        lca_type=lca_type,
+        lca_version_name=lca_version_name,
+        acc_output_files=acc_output_files,
+        allowed_l1_l2_methods=allowed_l1_l2_methods,
+        share_transition_meta=share_transition_meta,
+        lca_rows=lca_rows,
+        status=status,
+        write_outputs=False,
+    )
+    return component_rows_from_runtime_frame(
+        component_frame=cast(pd.DataFrame, process_result.dynamic_component_frame),
+        lca_rows=lca_rows,
+        acc_output_files=acc_output_files,
     )
 
 

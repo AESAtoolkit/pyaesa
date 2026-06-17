@@ -98,9 +98,9 @@ class AllocationDummyRepo:
         )
         payload = {
             "source": source,
-            "version_tag": "original_classification"
+            "version_tag": "original_class"
             if matrix_version is None
-            else f"custom_classification_{matrix_version}",
+            else f"custom_class_{matrix_version}",
             "labels": {
                 "sectors_used": list(sectors_used),
                 "regions_used": list(regions_used),
@@ -824,7 +824,7 @@ def clone_allocation_dummy_repo(
 ) -> AllocationDummyRepo:
     """Clone one prepared allocation dummy repo into a fresh active workspace."""
     target_top_path = Path(top_path)
-    target_repo_root = target_top_path / "pyaesa"
+    target_repo_root = target_top_path
     if target_repo_root.exists():
         shutil.rmtree(target_repo_root)
     shutil.copytree(template_repo.repo_root, target_repo_root)

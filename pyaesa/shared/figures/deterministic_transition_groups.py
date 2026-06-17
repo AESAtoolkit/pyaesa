@@ -19,9 +19,7 @@ from pyaesa.shared.tabular.table_io import read_table
 from pyaesa.shared.tabular.wide_tables import melt_requested_year_value_rows
 from .lcia_metadata import ensure_frame_lcia_method_metadata
 
-_OUTPUT_SUFFIX_RE = re.compile(
-    r"__(?:min_cc|max_cc|[A-Za-z0-9_.-]+__min_cc|[A-Za-z0-9_.-]+__max_cc|.+__.+)$"
-)
+_OUTPUT_SUFFIX_RE = re.compile(r"_(?:min_cc|max_cc)(?:_ssp[0-9]+)?$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -189,21 +187,21 @@ def normalize_companion_relative_parent(relative_parent: Path) -> Path:
     index = 0
     while index < len(parts):
         part = parts[index]
-        if part in {"results", "level_1", "level_2", "l2_vs_global"}:
+        if part in {"results", "l1", "l2", "l2_vs_global"}:
             index += 1
             continue
         if part == "l2_in_l1":
             normalized.append("l2_in_l1")
             index += 1
             continue
-        if part == "utility_propagation_contrib":
-            normalized.append("utility_propagation_contrib")
+        if part == "ut_propag_contrib":
+            normalized.append("ut_propag_contrib")
             index += 1
             continue
-        if part == "regression_proj":
+        if part == "regr_proj":
             index += 1
             continue
-        if part == "historical_reuse":
+        if part == "hist_reuse":
             index += 1
             continue
         normalized.append(part)
@@ -226,7 +224,7 @@ def origin_share_stem_from_output_stem(
         key
         for key in share_transition_meta
         if str(key).strip()
-        and (stem == str(key).strip() or stem.startswith(f"{str(key).strip()}__"))
+        and (stem == str(key).strip() or stem.startswith(f"{str(key).strip()}_"))
     ]
     if candidates:
         return max(candidates, key=len)
@@ -237,7 +235,7 @@ def origin_share_stem_from_output_stem(
         if str(key).strip()
         and (
             normalized_stem == _normalized_transition_stem(str(key).strip())
-            or normalized_stem.startswith(f"{_normalized_transition_stem(str(key).strip())}__")
+            or normalized_stem.startswith(f"{_normalized_transition_stem(str(key).strip())}_")
         )
     ]
     if normalized_candidates:
@@ -311,12 +309,11 @@ def _candidate_output_share_stem(output_stem: str) -> str:
 def _raw_candidate_output_share_stem(output_stem: str) -> str:
     """Return the likely originating share stem before reuse normalization."""
     stem = str(output_stem).strip()
-    if "__" not in stem:
-        return stem
-    head, _sep, _tail = stem.rpartition("__")
-    while "__" in head and _OUTPUT_SUFFIX_RE.search(head):
-        head, _sep, _tail = head.rpartition("__")
-    return head
+    previous = ""
+    while stem != previous:
+        previous = stem
+        stem = _OUTPUT_SUFFIX_RE.sub("", stem)
+    return stem
 
 
 def _with_l2_reuse_year(*, frame: pd.DataFrame, l2_reuse_year: int) -> pd.DataFrame:

@@ -629,7 +629,7 @@ def test_deterministic_acc_static_figures_are_public_for_single_and_multi_year(
     assert single_paths
     assert all(path.exists() for path in single_paths)
     assert any("multi_method" in path.parts for path in single_paths)
-    assert any(path.name.endswith("__2005.svg") for path in single_paths)
+    assert any(path.name.endswith("_2005.svg") for path in single_paths)
 
     reused = deterministic_acc(years=[2005], refresh=False, **base_kwargs)
     reused_branch = reused.branches[0]
@@ -877,7 +877,7 @@ def test_deterministic_acc_static_figures_cover_public_variants_and_transitions(
     variant_paths = [path for branch in variants.branches for path in branch.figure_paths]
 
     assert any("SSP2" in path.stem for path in transition_paths)
-    assert any(path.name.endswith("__2030.svg") for path in variant_paths)
+    assert any(path.name.endswith("_2030.svg") for path in variant_paths)
     assert all(path.exists() for path in [*transition_paths, *variant_paths])
 
 
@@ -953,7 +953,7 @@ def test_deterministic_acc_dynamic_end_to_end_and_reuse(
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert all("__gwp100_lcia__dynamic_ar6.csv" in path.name for path in output_paths)
+    assert all("__gwp100_lcia_dynamic_ar6.csv" in path.name for path in output_paths)
 
     first_output = pd.read_csv(output_paths[0])
     assert {
@@ -1142,7 +1142,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
             cc_source="gwp100 lcia",
             cc_type="static",
         )
-        == "oecd_v2025__static__gwp100_lcia"
+        == "oecd_v2025_static_gwp100_lcia"
     )
     assert (
         build_acc_scope_label(
@@ -1151,18 +1151,14 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
             cc_source="!!!",
             cc_type="dynamic_ar6",
         )
-        == "oecd_v2025__dynamic_ar6__item"
+        == "oecd_v2025_dynamic_ar6_item"
     )
-    assert get_acc_output_dir(context=context).name == "static__gwp100_lcia"
+    assert get_acc_output_dir(context=context).name == "static_gwp100_lcia"
     assert get_acc_meta_path(context=context).name == "scope_manifest.json"
     assert acc_output_relative_dir(upstream_relative_dir=Path()) == Path(".")
-    assert acc_output_relative_dir(upstream_relative_dir=Path("level_2/results/demo")) == Path(
-        "demo"
-    )
-    assert acc_output_relative_dir(
-        upstream_relative_dir=Path("level_1/level_2/results/demo")
-    ) == Path("demo")
-    assert acc_output_relative_dir(upstream_relative_dir=Path("level_1/l2_vs_global")) == Path(".")
+    assert acc_output_relative_dir(upstream_relative_dir=Path("l2/results/demo")) == Path("demo")
+    assert acc_output_relative_dir(upstream_relative_dir=Path("l1/l2/results/demo")) == Path("demo")
+    assert acc_output_relative_dir(upstream_relative_dir=Path("l1/l2_vs_global")) == Path(".")
     assert acc_output_relative_dir(upstream_relative_dir=Path("results/nested")) == Path("nested")
 
 
@@ -1498,7 +1494,9 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
 
 def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
     tmp_path: Path,
+    project_repo: Path,
 ) -> None:
+    del project_repo
     table = pd.DataFrame(
         {
             "cc_model": ["M1", "M2", "M3"],
@@ -1537,7 +1535,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
         .equals(table)
     )
     assert _resolved_dynamic_cc_ssp_tokens(cc_table=table) == ["SSP1", "SSP2"]
-    assert sanitize_token("C1__ssp1__IMAGE/MODEL__A:B?C") == "C1__ssp1__IMAGE_MODEL__A_B_C"
+    assert sanitize_token("C1_ssp1__IMAGE/MODEL__A:B?C") == "C1_ssp1_IMAGE_MODEL_A_B_C"
 
     unchanged = _filter_dynamic_cc_subset(
         cc_table=table,
@@ -1607,7 +1605,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
         )
 
     scenario_stem_share = _prepared_asocc_share(
-        file_stem="external_share__ssp1",
+        file_stem="external_share_ssp1",
         frame=pd.DataFrame({ASOCC_SSP_SCENARIO_COLUMN: ["SSP1"], "2019": [1.0]}),
     )
     scoped_asocc_shares, has_scenario_dependent_shares = _filter_dynamic_share_ssp_scope(
@@ -1622,7 +1620,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
     assert [asocc_share.file_stem for asocc_share, _frame in scoped_asocc_shares] == [
         "native_share",
         "external_share_ssp1",
-        "external_share__ssp1",
+        "external_share_ssp1",
     ]
     scoped_without_matching_ssp, has_scenario_dependent_shares = _filter_dynamic_share_ssp_scope(
         prepared_asocc_shares=[asocc_share_no_scenario, scenario_stem_share],
@@ -1780,14 +1778,14 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
         _asocc_share_ssp_start_year(
             asocc_share=load_asocc_share(
                 AsoccShare(
-                    file_stem="demo__ssp2",
+                    file_stem="demo_ssp2",
                     relative_dir=Path("."),
                     impacts=tuple(),
                     source_label="demo",
                     frame_wide=pd.DataFrame({"2030": [1.0]}),
                 )
             ),
-            share_transition_meta={"demo__ssp2": {"ssp_start_year": "2030"}},
+            share_transition_meta={"demo_ssp2": {"ssp_start_year": "2030"}},
         )
         == 2030
     )
@@ -1809,7 +1807,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
 
     matching_static = static_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="matching_static__gwp100_lcia",
+            file_stem="matching_static_gwp100_lcia",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="matching-static",
@@ -1822,7 +1820,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
     assert (
         static_compatible_share_frame(
             asocc_share=AsoccShare(
-                file_stem="other_static__pb_lcia",
+                file_stem="other_static_pb_lcia",
                 relative_dir=Path("."),
                 impacts=tuple(),
                 source_label="other-static",
@@ -1849,7 +1847,9 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
 
 def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
     tmp_path: Path,
+    project_repo: Path,
 ) -> None:
+    del project_repo
     cc_table = pd.DataFrame(
         {
             "cc_model": ["M1", "M2"],
@@ -1900,7 +1900,7 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
     )
     stem_ssp_share = load_asocc_share(
         AsoccShare(
-            file_stem="stem_share__ssp1",
+            file_stem="stem_share_ssp1",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="external",
@@ -1948,9 +1948,9 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
     assert n_written == 3
     assert impacts == [GROSS_ALT_KYOTO_WO_AFOLU]
     outputs = {path.stem: pd.read_csv(path) for path in output_files}
-    assert len(outputs["row_ssp_share__gwp100_lcia__dynamic_ar6"]) == 4
-    assert len(outputs["invariant_share__gwp100_lcia__dynamic_ar6"]) == 2
-    assert len(outputs["stem_share__ssp1__gwp100_lcia__dynamic_ar6"]) == 1
+    assert len(outputs["row_ssp_share__gwp100_lcia_dynamic_ar6"]) == 4
+    assert len(outputs["invariant_share__gwp100_lcia_dynamic_ar6"]) == 2
+    assert len(outputs["stem_share_ssp1__gwp100_lcia_dynamic_ar6"]) == 1
 
 
 def test_deterministic_acc_budget_axis_and_static_min_max_legend_branches(

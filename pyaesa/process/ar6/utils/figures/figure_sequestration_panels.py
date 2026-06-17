@@ -17,11 +17,7 @@ def _sequestration_contributions_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-sequestration-contributions-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-studyperiod={int(study_period[0])}"
-        f"to{int(study_period[1])}.{ext}"
-    )
+    return f"sequestration_contributions.{ext}"
 
 
 def write_sequestration_contributions_figure(

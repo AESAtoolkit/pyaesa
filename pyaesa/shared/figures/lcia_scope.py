@@ -250,4 +250,4 @@ def combined_lcia_impact_slices(
 
 def suffix_path(base: Path, token: str) -> Path:
     """Return a path with one stable token appended to the base stem."""
-    return base.parent / f"{base.name}__{sanitize_token(token)}"
+    return base.parent / f"{base.name}_{sanitize_token(token)}"

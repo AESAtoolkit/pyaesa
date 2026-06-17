@@ -36,9 +36,9 @@ def exact_single_year_output_base(
     impact_token: object | None = None,
 ) -> Path:
     """Return the canonical exact-year deterministic figure output base path."""
-    stem = f"{output_base.name}__{int(year)}"
+    stem = f"{output_base.name}_{int(year)}"
     if impact_token is not None:
-        stem = f"{output_base.name}__{sanitize_token(impact_token)}__{int(year)}"
+        stem = f"{output_base.name}_{sanitize_token(impact_token)}_{int(year)}"
     return output_base.parent / stem
 
 

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 _TOKEN_RE = re.compile(r"[^A-Za-z0-9._-]+")
+_UNDERSCORE_RE = re.compile(r"_+")
 
 
 def canonical_scalar_text(value: Any) -> str:
@@ -50,4 +51,5 @@ def display_scalar(value: Any) -> str | None:
 
 def sanitize_token(value: Any) -> str:
     """Return one filesystem-safe token."""
-    return _TOKEN_RE.sub("_", canonical_scalar_text(value)).strip("._-") or "item"
+    token = _TOKEN_RE.sub("_", canonical_scalar_text(value))
+    return _UNDERSCORE_RE.sub("_", token).strip("._-") or "item"

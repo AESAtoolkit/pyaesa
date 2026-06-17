@@ -55,7 +55,7 @@ def plan_multi_method_jobs(
                         context.figures_root
                         / "multi_method"
                         / scoped_stem(
-                            "multi_method",
+                            "mm",
                             impact_rows,
                             include_impact=include_impact,
                             selector_token=selector_token,
@@ -125,7 +125,7 @@ def plan_inter_method_jobs(
                     context.figures_root
                     / "inter_method"
                     / scoped_stem(
-                        "inter_method",
+                        "im",
                         selector_rows,
                         include_impact=False,
                         selector_token=selector_token,

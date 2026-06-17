@@ -143,7 +143,7 @@ def process_ar6(
         AR6 inputs. Methodological details on AR6 scenario filtering,
         harmonization, and dynamic carrying capacity construction are provided
         in
-        ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``.
+        ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``.
 
     Example:
         Process the AR6 study period used by dynamic carrying capacities::

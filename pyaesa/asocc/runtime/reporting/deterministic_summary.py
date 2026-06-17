@@ -65,18 +65,19 @@ def deterministic_asocc_phase_inventory_lines(
     output_paths = tuple(_as_list(artifacts.get("outputs")))
     items = []
     if selected.get("l1"):
-        items.append(inventory_item(folder="results/level_1", content="Level 1 shares"))
+        folder = "results/l1" if str(arguments.get("fu_code", "")).startswith("L2.") else "results"
+        items.append(inventory_item(folder=folder, content="Level 1 shares"))
     if selected.get("l2_in_l1"):
         items.append(
             inventory_item(
-                folder="results/level_2/l2_in_l1",
+                folder="results/l2/l2_in_l1",
                 content="conditional L2 in L1 weights used by two step routes",
             )
         )
     if selected.get("l2_in_l1") or selected.get("l2_vs_global"):
         items.append(
             inventory_item(
-                folder="results/level_2/l2_vs_global",
+                folder="results/l2/l2_vs_global",
                 content=(
                     "final L2 vs global shares, with direct one step outputs "
                     "and two step L1 * L2 in L1 products as selected"
@@ -84,37 +85,38 @@ def deterministic_asocc_phase_inventory_lines(
             )
         )
     if bool(arguments.get("intermediate_outputs")):
-        items.append(
-            inventory_item(
-                folder="enacting_metrics",
-                content="intermediate enacting metric inputs",
-            )
+        enacting_metric_folders = (
+            ("results/l1/enacting_metrics", "results/l2/enacting_metrics")
+            if str(arguments.get("fu_code", "")).startswith("L2.")
+            else ("results/enacting_metrics",)
+        )
+        items.extend(
+            inventory_item(folder=folder, content="intermediate enacting metric inputs")
+            for folder in enacting_metric_folders
         )
         if _has_utility_route(selected=selected):
             items.append(
                 inventory_item(
-                    folder="results/level_2/utility_propagation_contrib",
+                    folder="results/l2/ut_propag_contrib",
                     content="utility propagation contributions",
                 )
             )
-    if any("historical_reuse" in path for path in output_paths):
+    if any("hist_reuse" in path for path in output_paths):
         items.append(
             inventory_item(
-                folder="results/level_2/historical_reuse",
+                folder="results/l2/hist_reuse",
                 content="historical reuse L2 route outputs",
             )
         )
-    if any("regression_proj" in path for path in output_paths):
+    if any("regr_proj" in path for path in output_paths):
         items.append(
             inventory_item(
-                folder="results/level_2/regression_proj",
+                folder="results/l2/regr_proj",
                 content="regression projected L2 route outputs",
             )
         )
     if artifacts.get("regression_stats_paths"):
-        items.append(
-            inventory_item(folder="logs/regression_proj", content="regression diagnostics")
-        )
+        items.append(inventory_item(folder="logs/regr_proj", content="regression diagnostics"))
     summary_log = root / "logs" / "summary.log"
     if summary_log.exists() and summary_log.stat().st_size > 0:
         items.append(inventory_item(folder="logs", content="summary log"))

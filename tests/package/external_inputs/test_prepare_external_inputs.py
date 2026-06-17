@@ -26,17 +26,17 @@ def _assert_template_scaffold(report) -> None:
     assert report.external_asocc_templates_dir.exists()
     assert report.external_lca_root.exists()
     assert report.external_lca_templates_dir.exists()
-    asocc_readme = report.external_asocc_templates_dir / "README_external_asocc_templates.txt"
-    lca_readme = report.external_lca_templates_dir / "README_external_lca_templates.txt"
+    asocc_readme = report.external_asocc_templates_dir / "README_ext_asocc_templates.txt"
+    lca_readme = report.external_lca_templates_dir / "README_ext_lca_templates.txt"
     asocc_readme_text = asocc_readme.read_text(encoding="utf-8")
     lca_readme_text = lca_readme.read_text(encoding="utf-8")
     assert "AR(E)::UT(S)" in asocc_readme_text
     assert "dummy demonstration values" in asocc_readme_text
-    assert "template__ef_3.1__ssp2.csv" in lca_readme_text
+    assert "template__ef_3.1_ssp2.csv" in lca_readme_text
     assert "dummy demonstration values" in lca_readme_text
 
     assert (report.external_asocc_root / "deterministic" / "CO(S).csv").exists()
-    assert (report.external_asocc_root / "deterministic" / "CO(S)__ssp2.csv").exists()
+    assert (report.external_asocc_root / "deterministic" / "CO(S)_ssp2.csv").exists()
     assert (report.external_asocc_root / "deterministic" / "l1_AR(E)_l2_UT(S)__ef_3.1.csv").exists()
     assert (report.external_asocc_root / "monte_carlo" / "CO(S).csv").exists()
     assert (report.external_asocc_root / "monte_carlo" / "CO(S)" / "asocc_runs.csv").exists()
@@ -45,7 +45,7 @@ def _assert_template_scaffold(report) -> None:
     ).exists()
 
     assert (report.external_lca_root / "deterministic" / "template__ef_3.1.csv").exists()
-    assert (report.external_lca_root / "deterministic" / "template__ef_3.1__ssp2.csv").exists()
+    assert (report.external_lca_root / "deterministic" / "template__ef_3.1_ssp2.csv").exists()
     assert (report.external_lca_root / "monte_carlo" / "template__ef_3.1.csv").exists()
     assert (report.external_lca_root / "monte_carlo" / "template__ef_3.1" / "lca_runs.csv").exists()
 
@@ -58,10 +58,10 @@ def test_prepare_external_inputs_project_scaffold(
     report = prepare_external_inputs(project_name="external_inputs_public")
     assert str(report)
     assert report.metadata_path.exists()
-    assert report.metadata_path == report.project_root / "prepare_external_inputs_log" / (
+    assert report.metadata_path == report.project_root / "prep_ext_inputs_log" / (
         "scope_manifest.json"
     )
-    assert report.summary_log == report.project_root / "prepare_external_inputs_log" / "summary.log"
+    assert report.summary_log == report.project_root / "prep_ext_inputs_log" / "summary.log"
     assert report.summary_log.read_text(encoding="utf-8").strip()
     metadata = json.loads(report.metadata_path.read_text(encoding="utf-8"))
     assert metadata["function"] == "prepare_external_inputs"
@@ -75,7 +75,7 @@ def test_prepare_external_inputs_project_scaffold(
     assert str(report.external_lca_root) in output
     assert "runnable examples" in output
 
-    preserved_readme = report.external_asocc_templates_dir / "README_external_asocc_templates.txt"
+    preserved_readme = report.external_asocc_templates_dir / "README_ext_asocc_templates.txt"
     preserved_readme.write_text("local edits\n", encoding="utf-8")
     preserved_example = report.external_asocc_root / "deterministic" / "CO(S).csv"
     preserved_example.write_text("s_p,r_c,2019\nPaper,FR,1\n", encoding="utf-8")
@@ -99,10 +99,10 @@ def test_prepare_external_inputs_runnable_example_shapes(project_repo: Path) -> 
     report = prepare_external_inputs(project_name="external_inputs_examples")
 
     ef_lca_base = report.external_lca_root / "deterministic" / "template__ef_3.1.csv"
-    ef_lca_ssp = report.external_lca_root / "deterministic" / "template__ef_3.1__ssp2.csv"
+    ef_lca_ssp = report.external_lca_root / "deterministic" / "template__ef_3.1_ssp2.csv"
     ef_lca_runs = report.external_lca_root / "monte_carlo" / "template__ef_3.1" / "lca_runs.csv"
     asocc_base = report.external_asocc_root / "deterministic" / "CO(S).csv"
-    asocc_ssp = report.external_asocc_root / "deterministic" / "CO(S)__ssp2.csv"
+    asocc_ssp = report.external_asocc_root / "deterministic" / "CO(S)_ssp2.csv"
     asocc_runs = report.external_asocc_root / "monte_carlo" / "CO(S)" / "asocc_runs.csv"
 
     assert ef_lca_base.read_text(encoding="utf-8").splitlines()[0].split(",") == [
@@ -159,7 +159,7 @@ def test_prepare_external_inputs_runnable_examples_load_through_contracts(
     assert ef_lca_rows.shape[0] == 192
     assert [path.name for path in ef_lca_paths] == [
         "template__ef_3.1.csv",
-        "template__ef_3.1__ssp2.csv",
+        "template__ef_3.1_ssp2.csv",
     ]
 
     ef_lca_monte_carlo = load_external_lca_monte_carlo_source(

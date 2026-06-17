@@ -516,7 +516,7 @@ def _render_multi_year_panels(
             paths.extend(
                 save_figure(
                     fig,
-                    output_base.parent / f"{output_base.name}__{sanitize_token(panel_label)}",
+                    output_base.parent / f"{output_base.name}_{sanitize_token(panel_label)}",
                     dpi=dpi,
                     output_format=output_format,
                 )

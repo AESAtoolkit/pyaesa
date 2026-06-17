@@ -5,13 +5,13 @@ This folder contains the external allocated shares of carrying capacities
 input folders:
 
 - deterministic/CO(S).csv
-- deterministic/CO(S)__ssp2.csv
+- deterministic/CO(S)_ssp2.csv
 - deterministic/l1_AR(E)_l2_UT(S)__ef_3.1.csv
 - monte_carlo/CO(S).csv
-- monte_carlo/CO(S)/public_row_identity.csv
+- monte_carlo/CO(S)/row_identity.csv
 - monte_carlo/CO(S)/asocc_runs.csv
 - monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1.csv
-- monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1/public_row_identity.csv
+- monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1/row_identity.csv
 - monte_carlo/l1_AR(E)_l2_UT(S)__ef_3.1/asocc_runs.csv
 
 The runnable examples use fu_code="L2.c.b", s_p="Paper", r_c="FR", years
@@ -54,8 +54,8 @@ Deterministic accepted filename patterns
 
 - <base_stem>.csv
 - <base_stem>__<lcia_method>.csv
-- <base_stem>__<ssp_token>.csv
-- <base_stem>__<lcia_method>__<ssp_token>.csv
+- <base_stem>_<ssp_token>.csv
+- <base_stem>__<lcia_method>_<ssp_token>.csv
 
 Monte Carlo accepted long row filename patterns
 ===============================================
@@ -66,9 +66,9 @@ Monte Carlo accepted long row filename patterns
 Monte Carlo compact folder patterns
 ===================================
 
-- <base_stem>/public_row_identity.csv
+- <base_stem>/row_identity.csv
 - <base_stem>/asocc_runs.csv
-- <base_stem>__<lcia_method>/public_row_identity.csv
+- <base_stem>__<lcia_method>/row_identity.csv
 - <base_stem>__<lcia_method>/asocc_runs.csv
 
 Non LCIA deterministic schema
@@ -112,7 +112,7 @@ LCIA Monte Carlo long row schema
 Compact CSV layout
 ==================
 
-public_row_identity.csv stores one row identity per public row:
+row_identity.csv stores one row identity per public row:
 
 public_row_id,year,asocc_ssp_scenario,s_p,r_c
 0,2019,,Paper,FR

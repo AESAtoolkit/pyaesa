@@ -399,7 +399,7 @@ def _raise_missing_external_rows(*, context: _ExternalRowsContext, selection) ->
         storage_mode="monte_carlo",
         level=str(selection.level),
     )
-    monte_carlo_files = [f"{stem}.csv" for stem in monte_carlo_stems if "__ssp" not in stem]
+    monte_carlo_files = [f"{stem}.csv" for stem in monte_carlo_stems if "_ssp" not in stem]
     raise ValueError(
         "Missing external aSoCC files for uncertainty_asocc. "
         f"Selection='{selection.asocc_method_label}'. "

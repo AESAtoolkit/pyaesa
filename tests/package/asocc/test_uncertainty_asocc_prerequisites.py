@@ -157,7 +157,7 @@ def _uncertainty_run_root(
 
 
 def _read_asocc_runs(run_root: Path) -> pd.DataFrame:
-    identity = _read_result_table(run_root=run_root, stem="public_row_identity")
+    identity = _read_result_table(run_root=run_root, stem="row_identity")
     matrix = _read_result_table(run_root=run_root, stem="asocc_runs")
     runs = matrix.melt(id_vars="run_index", var_name="public_row_id", value_name="asocc")
     runs["public_row_id"] = runs["public_row_id"].astype(int)
@@ -267,7 +267,7 @@ def _write_external_compact_monte_carlo_rows(*, repo_root: Path, project_name: s
             "r_p": ["FR"],
             "s_p": ["D"],
         }
-    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    ).to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame({"run_index": [0, 1], "0": [0.72, 0.73]}).to_csv(
         compact_dir / "asocc_runs.csv",
         index=False,
@@ -512,7 +512,7 @@ def test_uncertainty_asocc_recomputes_persisted_scope_without_requested_row_axes
         project_name=project_name,
         run_id=report.manifest.run_id,
     )
-    identity = _read_result_table(run_root=run_root, stem="public_row_identity")
+    identity = _read_result_table(run_root=run_root, stem="row_identity")
 
     assert report.reuse_status == "computed"
     assert report.manifest.completed_runs == 1
@@ -728,7 +728,7 @@ def test_uncertainty_asocc_without_active_source_repeats_deterministic_rows(
     assert (run_root / "logs" / "source_methods.csv").exists()
     readme = (run_root / "results" / "README.txt").read_text(encoding="utf-8")
     assert readme.strip()
-    assert "public_row_identity" in readme
+    assert "row_identity" in readme
     assert "asocc_runs" in readme
     assert all(len(line) <= 100 for line in readme.splitlines())
 
@@ -1481,8 +1481,8 @@ def test_uncertainty_asocc_inter_method_writes_tree_artifacts(allocation_dummy_r
         run_id=manifest.run_id,
         source="exiobase_396_ixi",
     )
-    tree_csv = run_root / "figures" / "inter_method_tree" / "equal_weights.csv"
-    tree_figure = run_root / "figures" / "inter_method_tree" / "probability_tree__equal_weights.svg"
+    tree_csv = run_root / "figs" / "inter_method_tree" / "equal_weights.csv"
+    tree_figure = run_root / "figs" / "inter_method_tree" / "equal_weights.svg"
 
     assert tree_csv.exists()
     assert tree_figure.exists()
@@ -1503,8 +1503,8 @@ def test_uncertainty_asocc_inter_method_tree_paths_use_custom_version_name(
         inter_method_parameters={"mode": "custom", "version_name": "custom_v1"},
     )
 
-    assert paths.inter_method_tree_csv.name == "weights__custom_v1.csv"
-    assert paths.inter_method_tree_figure_base.name == "probability_tree__custom_v1"
+    assert paths.inter_method_tree_csv.name == "custom_v1.csv"
+    assert paths.inter_method_tree_figure_base.name == "custom_v1"
 
 
 def test_uncertainty_asocc_inter_method_larger_fixed_run_writes_sparse_rows(

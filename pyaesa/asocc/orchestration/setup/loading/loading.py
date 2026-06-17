@@ -234,7 +234,7 @@ def _validate_sector_filter_labels(
         return
 
     metadata_path = _get_metadata_path(source, matrix_version=agg_version)
-    domain_label = f"source='{source}', matrix_version='{agg_version or 'original_classification'}'"
+    domain_label = f"source='{source}', matrix_version='{agg_version or 'original_class'}'"
     metadata = _read_metadata(source, matrix_version=agg_version)
     sectors_used = metadata["labels"]["sectors_used"]
     allowed = {str(value).strip() for value in sectors_used if str(value).strip()}

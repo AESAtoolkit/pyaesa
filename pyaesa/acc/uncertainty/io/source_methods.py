@@ -75,7 +75,7 @@ def write_acc_results_readme(
         "aCC uncertainty results",
         "",
         "Files",
-        "- public_row_identity: public aCC row identity table.",
+        "- row_identity: public aCC row identity table.",
         *public_run_artifact_readme_lines(run_name="acc_runs"),
         f"  Layout: {run_description}.",
         "- summary_stats_runs: exact summary statistics for acc_runs.",

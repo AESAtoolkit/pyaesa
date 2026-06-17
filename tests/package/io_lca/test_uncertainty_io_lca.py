@@ -487,7 +487,7 @@ def test_uncertainty_io_lca_generates_single_year_figures_when_requested(io_lca_
     paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
     assert paths
     assert all(path.exists() for path in paths)
-    assert all(path.name.endswith(f"__{io_lca_dummy_repo.available_year}.png") for path in paths)
+    assert all(path.name.endswith(f"_{io_lca_dummy_repo.available_year}.png") for path in paths)
 
 
 def test_uncertainty_io_lca_public_figures_cover_odd_impact_panels(

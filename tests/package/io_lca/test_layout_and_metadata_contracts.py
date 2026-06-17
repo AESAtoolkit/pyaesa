@@ -305,7 +305,7 @@ def test_io_lca_deterministic_path_probes_do_not_create_optional_directories(
     paths = paths_mod.IOLCAPaths(
         project_base=tmp_path / "proj",
         lca_root=tmp_path / "proj" / "A_lca" / "io_lca",
-        source_version_token="original_version",
+        source_version_token="original_class",
     )
     source = "exiobase_396_ixi"
 

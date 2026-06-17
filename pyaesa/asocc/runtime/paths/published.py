@@ -49,16 +49,16 @@ def _get_asocc_results_root(
         )
         / "results"
     )
-    return base if level_token == "level_1" else base / "level_1"
+    return base if level_token == "level_1" else base / "l1"
 
 
 def _canonical_l2_results_relative_dir(*, bucket: str) -> Path:
     """Return the canonical deterministic L2 results relative directory."""
     bucket_clean = str(bucket).strip() or "l2_vs_global"
     relative_dirs = {
-        "l2_vs_global": Path("results") / "level_2" / "l2_vs_global",
-        "l2_in_l1": Path("results") / "level_2" / "l2_in_l1",
-        "utility_propagation_contrib": Path("results") / "level_2" / "utility_propagation_contrib",
+        "l2_vs_global": Path("results") / "l2" / "l2_vs_global",
+        "l2_in_l1": Path("results") / "l2" / "l2_in_l1",
+        "utility_propagation_contrib": Path("results") / "l2" / "ut_propag_contrib",
     }
     return relative_dirs[bucket_clean]
 
@@ -139,7 +139,7 @@ def _get_enacting_metric_dir(
                 agg_version=agg_version,
             )
             / "results"
-            / "level_2"
+            / "l2"
         )
     out = base / "enacting_metrics"
     return out / lcia_sub if lcia_sub else out
@@ -186,9 +186,9 @@ def _get_asocc_figures_root(
 ) -> Path:
     """Return the deterministic aSoCC figures root for one FU scope."""
     if level == "level_1":
-        dirname = "figures"
+        dirname = "figs"
     else:
-        dirname = "figures_l2_vs_global"
+        dirname = "figs_l2_vs_global"
     return (
         _asocc_deterministic_scope_root(
             proj_base=proj_base,

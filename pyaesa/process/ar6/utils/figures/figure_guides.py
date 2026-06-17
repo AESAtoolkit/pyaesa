@@ -6,10 +6,10 @@ from pyaesa.shared.runtime.text import join_user_text_lines
 
 
 def _remaining_budget_drop_csv_map(figures_dir: Path) -> dict[str, list[str]]:
-    suffix = "-remaining-budget-panel-dropped_rows.csv"
+    suffix = "_remaining_budget_dropped_rows.csv"
     mapping: dict[str, list[str]] = {}
     for csv_path in sorted(figures_dir.glob(f"*{suffix}")):
-        figure_stem = csv_path.stem.removesuffix("-remaining-budget-panel-dropped_rows")
+        figure_stem = csv_path.stem.removesuffix("_remaining_budget_dropped_rows")
         mapping.setdefault(figure_stem, []).append(csv_path.name)
     return mapping
 
@@ -22,7 +22,7 @@ def _figure_explanation_block(
 ) -> list[str]:
     lines = [f"Figure file: {figure_name}"]
     figure_stem = Path(figure_name).stem
-    if figure_name.startswith("fig-processed-historical-emissions"):
+    if figure_name.startswith("hist_emissions"):
         return lines + [
             (
                 "What it shows: the historical baseline used for harmonization, "
@@ -48,7 +48,7 @@ def _figure_explanation_block(
             ),
             "Rows dropped: none at figure level.",
         ]
-    if figure_name.startswith("fig-harmonization-pathways"):
+    if figure_name.startswith("harmonization_pathways"):
         return lines + [
             (
                 "What it shows: top row = retained AR6 pathways after preprocessing, "
@@ -71,7 +71,7 @@ def _figure_explanation_block(
                 "line stops at its last available year; no display extrapolation is added."
             ),
         ]
-    if figure_name.startswith("fig-harmonization-stats-delta-tconv"):
+    if figure_name.startswith("harmonization_delta_tconv"):
         return lines + [
             (
                 "What it shows: the absolute difference between each pathway's "
@@ -88,7 +88,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-harmonization-stats-"):
+    if figure_name.startswith("harmonization_stats"):
         return lines + [
             "What it shows: harmonization diagnostics by variable.",
             (
@@ -107,7 +107,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-sequestration-contributions"):
+    if figure_name.startswith("sequestration_contributions"):
         return lines + [
             (
                 "What it shows: AR6 carbon sequestration component pathways "
@@ -128,7 +128,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-sequestration-budgets-for"):
+    if figure_name.startswith("sequestration_budgets"):
         lines.extend(
             [
                 (
@@ -169,7 +169,7 @@ def _figure_explanation_block(
             + (", ".join(extra_csvs) + "." if extra_csvs else "none.")
         )
         return lines
-    if figure_name.startswith("fig-budgets-"):
+    if figure_name.startswith("budget_"):
         lines.extend(
             [
                 (
@@ -214,7 +214,7 @@ def _figure_explanation_block(
             + (", ".join(extra_csvs) + "." if extra_csvs else "none.")
         )
         return lines
-    if figure_name.startswith("fig-median-warming"):
+    if figure_name.startswith("median_warming"):
         return lines + [
             (
                 "What it shows: distributions of the metadata field 'Median "
@@ -238,7 +238,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-LHSSRS-ratioproba"):
+    if figure_name.startswith("LHSSRS_ratioproba"):
         return lines + [
             (
                 "What it shows: for each processed emissions variable in the "
@@ -266,7 +266,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-LHSSRS-ratiomedian"):
+    if figure_name.startswith("LHSSRS_ratiomedian"):
         return lines + [
             (
                 "What it shows: for each processed emissions variable in the "
@@ -285,9 +285,7 @@ def _figure_explanation_block(
             "Rows dropped before this figure: see the global dropped rows file below.",
             "Rows dropped at figure level: none.",
         ]
-    if figure_name.startswith("fig-LHSSRS-budgets-GHG") or figure_name.startswith(
-        "fig-LHSSRS-budgets-CO2"
-    ):
+    if figure_name.startswith("LHSSRS_budgets_GHG") or figure_name.startswith("LHSSRS_budgets_CO2"):
         lines.extend(
             [
                 "What it shows: combined SRS versus LHS-labelled sampling "
@@ -401,7 +399,7 @@ def write_figures_guide(
     global_drop_csv_file: Path,
 ) -> Path:
     """Write the figure explanation TXT and return its path."""
-    guide_file = figures_dir / "figures_explanation.txt"
+    guide_file = figures_dir / "figs_explanation.txt"
     guide_file.write_text(
         figures_explanation_text(figure_files, study_period, figures_dir, global_drop_csv_file),
         encoding="utf-8",
@@ -418,7 +416,7 @@ def ensure_figures_guide(
     rewrite: bool,
 ) -> tuple[Path | None, bool]:
     """Write or reuse the figure explanation TXT and report whether it changed."""
-    guide_file = figures_dir / "figures_explanation.txt"
+    guide_file = figures_dir / "figs_explanation.txt"
     if (not figure_files) and (not guide_file.exists()):
         return None, False
     if rewrite or (not guide_file.exists()):

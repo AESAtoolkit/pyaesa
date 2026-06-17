@@ -29,8 +29,8 @@ It does:
 
 - resolve the project scoped external input scaffold reused by downstream
   deterministic calls
-- write the preparation `prepare_external_inputs_log/scope_manifest.json` and
-  `prepare_external_inputs_log/summary.log` for the public scaffold scope
+- write the preparation `prep_ext_inputs_log/scope_manifest.json` and
+  `prep_ext_inputs_log/summary.log` for the public scaffold scope
 - define the exact external file contracts for aSoCC and LCA inputs
 - load staged deterministic external inputs
 - load staged external aSoCC Monte Carlo rows for uncertainty consumers

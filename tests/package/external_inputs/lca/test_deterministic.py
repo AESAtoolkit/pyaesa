@@ -56,10 +56,10 @@ def test_load_external_lca_deterministic_rows_handles_empty_and_year_routing(
     assert empty_rows is None
     assert empty_paths == tuple()
 
-    deterministic_dir = project_repo / "A_lca" / "external_lca" / "deterministic"
+    deterministic_dir = project_repo / "A_lca" / "ext_lca" / "deterministic"
     deterministic_dir.mkdir(parents=True, exist_ok=True)
     historical_path = deterministic_dir / f"{version_name}__{lcia_method}.csv"
-    scenario_path = deterministic_dir / f"{version_name}__{lcia_method}__ssp2.csv"
+    scenario_path = deterministic_dir / f"{version_name}__{lcia_method}_ssp2.csv"
     unrelated_path = deterministic_dir / f"{version_name}__ignored_method.csv"
     _wide_frame(lcia_method=lcia_method, year=2019).to_csv(historical_path, index=False)
     _wide_frame(lcia_method=lcia_method, year=2020).to_csv(scenario_path, index=False)
@@ -101,8 +101,8 @@ def test_load_external_lca_deterministic_rows_handles_empty_and_year_routing(
 
     scenario_version = "supplier_scenarios"
     scenario_paths = (
-        deterministic_dir / f"{scenario_version}__{lcia_method}__ssp1.csv",
-        deterministic_dir / f"{scenario_version}__{lcia_method}__ssp2.csv",
+        deterministic_dir / f"{scenario_version}__{lcia_method}_ssp1.csv",
+        deterministic_dir / f"{scenario_version}__{lcia_method}_ssp2.csv",
     )
     for path in scenario_paths:
         _wide_frame(lcia_method=lcia_method, year=2030).to_csv(path, index=False)
@@ -135,7 +135,7 @@ def test_load_external_lca_deterministic_rows_requires_matching_files(
 ) -> None:
     lcia_method = "pb_lcia"
     version_name = "supplier_v1"
-    deterministic_dir = project_repo / "A_lca" / "external_lca" / "deterministic"
+    deterministic_dir = project_repo / "A_lca" / "ext_lca" / "deterministic"
     deterministic_dir.mkdir(parents=True, exist_ok=True)
     (deterministic_dir / f"{version_name}__{lcia_method}.csv").write_text(
         "r_p,s_p,impact,impact_unit,2019\nFR,D,AAL,kg,1.0\n",
@@ -158,10 +158,10 @@ def test_external_lca_deterministic_loading_filters_unselected_specs_and_methods
     lcia_method = "pb_lcia"
     version_name = "supplier_v1"
     other_lcia_method = "gwp100_lcia"
-    deterministic_dir = project_repo / "A_lca" / "external_lca" / "deterministic"
+    deterministic_dir = project_repo / "A_lca" / "ext_lca" / "deterministic"
     deterministic_dir.mkdir(parents=True, exist_ok=True)
     historical_path = deterministic_dir / f"{version_name}__{lcia_method}.csv"
-    future_scenario_path = deterministic_dir / f"{version_name}__{lcia_method}__ssp2.csv"
+    future_scenario_path = deterministic_dir / f"{version_name}__{lcia_method}_ssp2.csv"
     _wide_frame(lcia_method=lcia_method, year=2019).to_csv(historical_path, index=False)
     _wide_frame(lcia_method=lcia_method, year=2030).to_csv(future_scenario_path, index=False)
     _wide_frame(lcia_method=other_lcia_method, year=2019).to_csv(

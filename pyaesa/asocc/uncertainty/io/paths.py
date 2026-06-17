@@ -48,17 +48,17 @@ def build_asocc_uncertainty_run_paths(
     inter_method_version_name = _inter_method_version_name(parameters=inter_method_parameters)
     return AsoccUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / f"public_row_identity{suffix}",
+        public_row_identity=run_root / "results" / f"row_identity{suffix}",
         public_runs=run_root / "results" / f"asocc_runs{suffix}",
         summary_stats_runs=run_root / "results" / f"summary_stats_runs{suffix}",
         results_readme=run_root / "results" / "README.txt",
         source_methods=run_root / "logs" / "source_methods.csv",
         inter_method_tree_csv=run_root
-        / "figures"
+        / "figs"
         / "inter_method_tree"
         / inter_method_tree_csv_name(version_name=inter_method_version_name),
         inter_method_tree_figure_base=run_root
-        / "figures"
+        / "figs"
         / "inter_method_tree"
         / inter_method_tree_figure_stem(version_name=inter_method_version_name),
         sobol_indices=sobol_root / f"sobol_indices{suffix}",
@@ -76,7 +76,7 @@ def asocc_monte_carlo_root(*, deterministic_manifest_path: Path) -> Path:
 
 def asocc_uncertainty_figures_root(*, paths: AsoccUncertaintyRunPaths) -> Path:
     """Return the pyaesa owned uncertainty figure root for one aSoCC run."""
-    return Path(paths.run_root) / "figures"
+    return Path(paths.run_root) / "figs"
 
 
 def _inter_method_version_name(*, parameters: dict[str, Any] | None) -> str:

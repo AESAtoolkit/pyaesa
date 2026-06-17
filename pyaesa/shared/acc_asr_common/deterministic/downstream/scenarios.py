@@ -134,7 +134,7 @@ def share_transition_payload_for_output_stem(
         key
         for key in share_transition_meta
         if str(key).strip()
-        and (stem == str(key).strip() or stem.startswith(f"{str(key).strip()}__"))
+        and (stem == str(key).strip() or stem.startswith(f"{str(key).strip()}_"))
     ]
     if not candidates:
         normalized_stem = _normalized_transition_stem(stem)
@@ -144,7 +144,7 @@ def share_transition_payload_for_output_stem(
             if str(key).strip()
             and (
                 normalized_stem == _normalized_transition_stem(str(key).strip())
-                or normalized_stem.startswith(f"{_normalized_transition_stem(str(key).strip())}__")
+                or normalized_stem.startswith(f"{_normalized_transition_stem(str(key).strip())}_")
             )
         ]
     if not candidates:

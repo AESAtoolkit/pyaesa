@@ -117,7 +117,7 @@ def _asocc_shares_for_frame(
             lcia_method=lcia_method,
             scenario=scenario,
         )
-        base_stem = f"external__{base_stem}"
+        base_stem = f"external_{base_stem}"
         for impact in impact_values:
             subset = scenario_subset.copy()
             if impact:

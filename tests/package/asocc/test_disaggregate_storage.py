@@ -36,10 +36,11 @@ def _write_table(path: Path, frame: pd.DataFrame) -> Path:
 
 
 def _fixture_ssp_from_stem(stem: str) -> str | None:
-    for token in str(stem).split("__"):
-        lowered = token.lower()
-        if lowered.startswith("ssp") and lowered[3:].isdigit():
-            return f"SSP{int(lowered[3:])}"
+    lowered = str(stem).lower()
+    if "_ssp" in lowered:
+        suffix = lowered.rsplit("_ssp", maxsplit=1)[1]
+        if suffix.isdigit():
+            return f"SSP{int(suffix)}"
     return None
 
 
@@ -250,7 +251,7 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
     ref_aggregated_root = tmp_path / "ref_aggregated"
     ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
-    target_path = target_root / "regression_proj" / "UT(FD)__ssp2.csv"
+    target_path = target_root / "regr_proj" / "UT(FD)_ssp2.csv"
     ref_aggregated_path = ref_aggregated_root / "UT(FD).csv"
     ref_disaggregate_path = ref_disaggregate_root / "UT(FD).csv"
 
@@ -334,7 +335,7 @@ def test_published_storage_disaggregates_transition_rows_and_keeps_target_regres
     assert audit["year"].tolist() == [2021, 2021, 2021, 2021]
     assert audit[ASOCC_SSP_SCENARIO_COLUMN].tolist() == ["SSP2"] * 4
     assert bool(audit["l2_reuse_year"].isna().all())
-    assert written == [output_root / "regression_proj" / "UT(FD)__ssp2.csv"]
+    assert written == [output_root / "regr_proj" / "UT(FD)_ssp2.csv"]
     expected = pd.DataFrame(
         {
             "l1_l2_method": ["UT(FD)"] * 4,
@@ -364,10 +365,10 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
     ref_aggregated_root = tmp_path / "ref_aggregated"
     ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
-    stem = "EG(Pop)_UT(FDa)__ssp2"
-    target_path = target_root / "historical_reuse" / f"{stem}.csv"
-    ref_aggregated_path = ref_aggregated_root / "historical_reuse" / f"{stem}.csv"
-    ref_disaggregate_path = ref_disaggregate_root / "historical_reuse" / f"{stem}.csv"
+    stem = "EG(Pop)_UT(FDa)_ssp2"
+    target_path = target_root / "hist_reuse" / f"{stem}.csv"
+    ref_aggregated_path = ref_aggregated_root / "hist_reuse" / f"{stem}.csv"
+    ref_disaggregate_path = ref_disaggregate_root / "hist_reuse" / f"{stem}.csv"
 
     _write_table(
         target_path,
@@ -470,7 +471,7 @@ def test_published_storage_preserves_target_l2_reuse_year_identity_with_referenc
         }
     )
     pdt.assert_frame_equal(actual, _with_fixture_scenario(expected, "SSP2"), check_dtype=False)
-    assert written == [output_root / "historical_reuse" / f"{stem}.csv"]
+    assert written == [output_root / "hist_reuse" / f"{stem}.csv"]
 
 
 def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) -> None:
@@ -479,16 +480,16 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
     ref_disaggregate_root = tmp_path / "ref_disaggregate"
     output_root = tmp_path / "output"
     target_paths = [
-        target_root / "regression_proj" / "UT(TD)__ssp1.csv",
-        target_root / "regression_proj" / "UT(TD)__ssp2.csv",
+        target_root / "regr_proj" / "UT(TD)_ssp1.csv",
+        target_root / "regr_proj" / "UT(TD)_ssp2.csv",
     ]
     ref_aggregated_paths = [
-        ref_aggregated_root / "regression_proj" / "UT(TD)__ssp1.csv",
-        ref_aggregated_root / "regression_proj" / "UT(TD)__ssp2.csv",
+        ref_aggregated_root / "regr_proj" / "UT(TD)_ssp1.csv",
+        ref_aggregated_root / "regr_proj" / "UT(TD)_ssp2.csv",
     ]
     ref_disaggregate_paths = [
-        ref_disaggregate_root / "regression_proj" / "UT(TD)__ssp1.csv",
-        ref_disaggregate_root / "regression_proj" / "UT(TD)__ssp2.csv",
+        ref_disaggregate_root / "regr_proj" / "UT(TD)_ssp1.csv",
+        ref_disaggregate_root / "regr_proj" / "UT(TD)_ssp2.csv",
     ]
     for path, target_value in [
         (target_paths[0], 12.0),
@@ -576,12 +577,12 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
 
     assert written == sorted(
         [
-            output_root / "regression_proj" / "UT(TD)__ssp1.csv",
-            output_root / "regression_proj" / "UT(TD)__ssp2.csv",
+            output_root / "regr_proj" / "UT(TD)_ssp1.csv",
+            output_root / "regr_proj" / "UT(TD)_ssp2.csv",
         ]
     )
     expected_frames = {
-        "UT(TD)__ssp1.csv": pd.DataFrame(
+        "UT(TD)_ssp1.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["UT(TD)", "UT(TD)"],
                 "l2_method": ["UT(TD)", "UT(TD)"],
@@ -590,7 +591,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario(tmp_path: Path) 
                 "2026": [4.8, 7.2],
             }
         ),
-        "UT(TD)__ssp2.csv": pd.DataFrame(
+        "UT(TD)_ssp2.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["UT(TD)", "UT(TD)"],
                 "l2_method": ["UT(TD)", "UT(TD)"],
@@ -625,7 +626,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
         ("ssp2", [30.0, 40.0], [15.0, 20.0], [(3.0, 12.0), (4.0, 16.0)]),
     ]:
         _write_table(
-            target_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            target_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -639,7 +640,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
             ),
         )
         _write_table(
-            ref_aggregated_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_aggregated_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -653,7 +654,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
             ),
         )
         _write_table(
-            ref_disaggregate_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_disaggregate_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
@@ -714,12 +715,12 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
 
     assert written == sorted(
         [
-            output_root / "historical_reuse" / "EG(Pop)_UT(FDa)__ssp1.csv",
-            output_root / "historical_reuse" / "EG(Pop)_UT(FDa)__ssp2.csv",
+            output_root / "hist_reuse" / "EG(Pop)_UT(FDa)_ssp1.csv",
+            output_root / "hist_reuse" / "EG(Pop)_UT(FDa)_ssp2.csv",
         ]
     )
     expected_frames = {
-        "EG(Pop)_UT(FDa)__ssp1.csv": pd.DataFrame(
+        "EG(Pop)_UT(FDa)_ssp1.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
                 "l1_method": ["EG(Pop)"] * 4,
@@ -735,7 +736,7 @@ def test_published_storage_matches_future_rows_per_ssp_scenario_and_l2_reuse_yea
                 "2030": [4.0, 6.0, 5.0, 15.0],
             }
         ),
-        "EG(Pop)_UT(FDa)__ssp2.csv": pd.DataFrame(
+        "EG(Pop)_UT(FDa)_ssp2.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
                 "l1_method": ["EG(Pop)"] * 4,
@@ -777,7 +778,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
         ("ssp2", [30.0, 40.0], [30.0, 40.0]),
     ]:
         _write_table(
-            target_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            target_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -822,7 +823,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
         ("ssp2", [15.0, 20.0], [(3.0, 12.0), (4.0, 16.0)]),
     ]:
         _write_table(
-            ref_aggregated_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_aggregated_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)", "EG(Pop)_UT(FDa)"],
@@ -836,7 +837,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
             ),
         )
         _write_table(
-            ref_disaggregate_root / "historical_reuse" / f"EG(Pop)_UT(FDa)__{scenario}.csv",
+            ref_disaggregate_root / "hist_reuse" / f"EG(Pop)_UT(FDa)_{scenario}.csv",
             pd.DataFrame(
                 {
                     "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
@@ -897,12 +898,12 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
 
     assert written == sorted(
         [
-            output_root / "historical_reuse" / "EG(Pop)_UT(FDa)__ssp1.csv",
-            output_root / "historical_reuse" / "EG(Pop)_UT(FDa)__ssp2.csv",
+            output_root / "hist_reuse" / "EG(Pop)_UT(FDa)_ssp1.csv",
+            output_root / "hist_reuse" / "EG(Pop)_UT(FDa)_ssp2.csv",
         ]
     )
     expected_frames = {
-        "EG(Pop)_UT(FDa)__ssp1.csv": pd.DataFrame(
+        "EG(Pop)_UT(FDa)_ssp1.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
                 "l1_method": ["EG(Pop)"] * 4,
@@ -919,7 +920,7 @@ def test_published_storage_broadcasts_historical_reference_rows_during_reuse_tra
                 "2030": [4.0, 6.0, 5.0, 15.0],
             }
         ),
-        "EG(Pop)_UT(FDa)__ssp2.csv": pd.DataFrame(
+        "EG(Pop)_UT(FDa)_ssp2.csv": pd.DataFrame(
             {
                 "l1_l2_method": ["EG(Pop)_UT(FDa)"] * 4,
                 "l1_method": ["EG(Pop)"] * 4,
@@ -957,7 +958,7 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
     ref_aggregated_root = tmp_path / "ref_aggregated"
     ref_disaggregate_root = tmp_path / "ref_disaggregate"
     _write_table(
-        target_root / "regression_proj" / "UT(FD)__ssp2.csv",
+        target_root / "regr_proj" / "UT(FD)_ssp2.csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)"],
@@ -981,7 +982,7 @@ def test_published_storage_rejects_incompatible_multi_variant_reference_rows(
         ),
     )
     _write_table(
-        ref_disaggregate_root / "historical_reuse" / "UT(FD)__ssp2.csv",
+        ref_disaggregate_root / "hist_reuse" / "UT(FD)_ssp2.csv",
         pd.DataFrame(
             {
                 "l1_l2_method": ["UT(FD)", "UT(FD)"],
@@ -1182,7 +1183,7 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
     assert float(zero_audit.loc[0, "ratio"]) == 0.0
 
     schema = PartitionSchema(
-        relative_parent=Path("historical_reuse"),
+        relative_parent=Path("hist_reuse"),
         file_stem="UT(FD)",
         id_columns=["r_p", "s_p", "relative_parent", "file_stem"],
         year_columns=["2030"],
@@ -1190,7 +1191,7 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
     assert (
         write_partitioned_rows(
             rows=pd.DataFrame(),
-            schemas={("historical_reuse", "UT(FD)"): schema},
+            schemas={("hist_reuse", "UT(FD)"): schema},
             output_root=tmp_path / "empty_write",
             output_format="csv",
         )
@@ -1208,7 +1209,7 @@ def test_published_storage_covers_direct_error_and_skip_paths(tmp_path: Path) ->
                     "value": [1.0],
                 }
             ),
-            schemas={("historical_reuse", "UT(FD)"): schema},
+            schemas={("hist_reuse", "UT(FD)"): schema},
             output_root=tmp_path / "skip_write",
             output_format="csv",
         )

@@ -32,9 +32,7 @@ class CompactRunMatrixSource:
 def is_compact_run_matrix_dir(path: Path, *, run_file_name: str) -> bool:
     """Return whether a directory exposes the compact run matrix contract."""
     return (
-        path.is_dir()
-        and (path / "public_row_identity.csv").is_file()
-        and (path / run_file_name).is_file()
+        path.is_dir() and (path / "row_identity.csv").is_file() and (path / run_file_name).is_file()
     )
 
 
@@ -65,7 +63,7 @@ def load_compact_run_matrix_source(
     context: str,
 ) -> CompactRunMatrixSource:
     """Load compact external Monte Carlo identity and bounded value access."""
-    identity_path = directory / "public_row_identity.csv"
+    identity_path = directory / "row_identity.csv"
     runs_path = directory / run_file_name
     identity = pd.read_csv(identity_path)
     _validate_identity(identity=identity, context=context)
@@ -146,7 +144,7 @@ def compact_run_matrix_values_for_runs(
 
 def _validate_identity(*, identity: pd.DataFrame, context: str) -> None:
     if "public_row_id" not in identity.columns:
-        raise ValueError(f"{context} compact public_row_identity.csv must include public_row_id.")
+        raise ValueError(f"{context} compact row_identity.csv must include public_row_id.")
     public_ids = identity["public_row_id"].to_numpy(dtype=np.int64)
     expected = np.arange(len(public_ids), dtype=np.int64)
     if not np.array_equal(public_ids, expected):

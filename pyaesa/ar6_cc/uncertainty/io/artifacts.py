@@ -15,11 +15,11 @@ def ar6_cc_run_paths_from_manifest(*, manifest: UncertaintyManifest) -> AR6CCUnc
     suffix = suffix_for_uncertainty_output(str(manifest.output_format))
     return AR6CCUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / f"public_row_identity{suffix}",
+        public_row_identity=run_root / "results" / f"row_identity{suffix}",
         public_runs=run_root / "results" / f"cc_runs{suffix}",
         summary_stats_runs=run_root / "results" / f"summary_stats_runs{suffix}",
         post_study_public_row_identity=(
-            run_root / "results" / f"post_study_period_public_row_identity{suffix}"
+            run_root / "results" / f"post_study_period_row_identity{suffix}"
         ),
         post_study_public_runs=run_root / "results" / f"post_study_period_cc_runs{suffix}",
         post_study_summary_stats_runs=(

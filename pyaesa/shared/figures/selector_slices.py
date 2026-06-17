@@ -62,7 +62,7 @@ def selector_slices(
             value_token = value_token_maps[column][selector_value_text(value)]
             token_parts.append(f"{selector_axis_token(column)}_{value_token}")
         yield (
-            "__".join(token_parts) if token_parts else "all",
+            "_".join(token_parts) if token_parts else "all",
             resolve_selector_scope(
                 frame=subset,
                 reference_frame=reference_frame,

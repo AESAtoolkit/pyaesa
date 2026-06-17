@@ -6,7 +6,7 @@ import pandas as pd
 
 from pyaesa.shared.selectors.scenarios import ssp_partition_token
 
-_FILE_TOKEN_DELIMITER = "__"
+_FILE_TOKEN_DELIMITER = "_"
 
 
 @dataclass(frozen=True)

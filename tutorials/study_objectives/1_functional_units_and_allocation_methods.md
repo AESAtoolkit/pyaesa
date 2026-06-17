@@ -9,7 +9,7 @@ method selectors used by:
 - Only FU code: `deterministic_io_lca(...)` and `uncertainty_io_lca(...)`
 
 The functional unit (FU) and allocation method tables of this file summarize
-<a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
+<a href="../../methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf</a>.
 That appendix provides the definitions and mathematical expressions for each
 allocation method available in `pyaesa`.
 
@@ -94,7 +94,7 @@ with `process_mrio(...)` arguments: `agg_reg`, `agg_sec`, and `agg_version`.
 
 The definitions and mathematical expressions for each allocation method are
 provided in
-<a href="../../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf</a>.
+<a href="../../methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf">methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf</a>.
 The allocation method labels below use the syntax accepted by `pyaesa`.
 
 ### Allocation paths overview

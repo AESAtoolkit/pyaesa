@@ -205,7 +205,7 @@ def test_process_ar6_path_contracts_and_metadata(project_repo: Path) -> None:
     assert logs_dir.parent.name == "C1-C4"
     assert logs_dir.parent.parent.name == "process_ar6"
     assert logs_dir.parent.parent.parent.name.endswith("no_harmonization")
-    assert figures_dir.name == "figures"
+    assert figures_dir.name == "figs"
     assert figures_dir.parent.name == "C1-C4"
     assert figures_dir.parent.parent.name == "process_ar6"
     assert figures_dir.parent.parent.parent.name.endswith("harmonization_reduced_offset")
@@ -851,7 +851,7 @@ def test_process_ar6_text_outputs_writers_and_reports(
         harmonization_year=2023,
         harmonization_year_message="Warning: requested study period starts in 2025.",
         figure_files=["one.png"],
-        figure_guide_file=tmp_path / "figures_explanation.txt",
+        figure_guide_file=tmp_path / "figs_explanation.txt",
     )
     assert isinstance(report, ProcessReportAR6)
     assert "Warning: requested study period starts in 2025." in str(report)
@@ -899,7 +899,7 @@ def test_process_ar6_text_outputs_writers_and_reports(
         dropped_rows_csv_file=tmp_path / "dropped.csv",
         process_meta_file=tmp_path / "process_meta.json",
         figures_meta_file=tmp_path / "figures_meta.json",
-        template_csv_path=tmp_path / "processed" / "model_scenario_subset__template.csv",
+        template_csv_path=tmp_path / "processed" / "model_scenario_subset_template.csv",
     )
     assert str(report_with_template)
     empty_report = ProcessReportAR6(

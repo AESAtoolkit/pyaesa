@@ -129,7 +129,7 @@ def selector_scope_token_from_values(
         axis = selector_axis_token(str(column))
         value = selector_value_token(selector_values[column])
         parts.append(f"{axis}_{value}")
-    return "__".join(parts)
+    return "_".join(parts)
 
 
 def selector_scope_token_from_frame(
@@ -141,7 +141,7 @@ def selector_scope_token_from_frame(
     """Return one collision-safe selector token for one grouped figure frame."""
     present = [column for column in selector_columns if column in group_frame.columns]
     if not present:
-        return "all_selectors"
+        return "all"
     reference = group_frame if reference_frame is None else reference_frame
     values_by_column: dict[str, Any] = {}
     token_maps: dict[str, dict[str, str]] = {}
@@ -161,13 +161,13 @@ def selector_scope_token_from_frame(
         else:
             value_token = token_maps[column][selector_value_text(value)]
         parts.append(f"{axis}_{value_token}")
-    return "__".join(parts) if parts else "all_selectors"
+    return "_".join(parts) if parts else "all"
 
 
 def selector_scope_request_axes_token(
     axes: Sequence[tuple[str, Sequence[str] | None]],
     *,
-    empty_token: str = "all_selectors",
+    empty_token: str = "all",
 ) -> str:
     """Return one filename token for an explicit selector scope request."""
     if not axes:
@@ -180,7 +180,7 @@ def selector_scope_request_axes_token(
             continue
         values_token = selector_axis_values_token(tuple(values))
         parts.append(f"{axis}_{values_token}")
-    return "__".join(parts) if parts else empty_token
+    return "_".join(parts) if parts else empty_token
 
 
 def build_selector_filter_segment(

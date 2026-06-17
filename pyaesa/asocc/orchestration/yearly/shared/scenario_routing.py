@@ -220,13 +220,13 @@ def l2_projection_subfolder(
     route = projection_context.route_for_l2_method(l2_method)
     if route is None:
         return None
-    regression_subfolder = "regression_proj"
+    regression_subfolder = "regr_proj"
     if bucket == "l2_vs_global":
-        return regression_subfolder if route == "regression" else "historical_reuse"
+        return regression_subfolder if route == "regression" else "hist_reuse"
     if bucket == "utility_propagation_contrib":
         if route == "regression":
             return regression_subfolder
-        return "historical_reuse" if route == "historical_reuse" else None
+        return "hist_reuse" if route == "historical_reuse" else None
     if bucket == "l2_in_l1":
         return regression_subfolder if route == "regression" else None
     return None
@@ -246,4 +246,4 @@ def regression_projection_subfolder_for_context(*, context) -> str:
     """Return regression projection subfolder name for active context."""
     projection_context = context.projection_context
     del projection_context
-    return "regression_proj"
+    return "regr_proj"

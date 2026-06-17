@@ -142,8 +142,8 @@ External LCA inputs are owned by `pyaesa/external_inputs/lca/`.
 
 | Input type | Location | Filename contract | Row contract |
 | --- | --- | --- | --- |
-| deterministic | `A_lca/external_lca/deterministic/` | `<version_name>__<lcia_method>` or `<version_name>__<lcia_method>__<ssp_token>` | Wide year columns, `impact`, `impact_unit`, and the ASR selector columns. |
-| Monte Carlo | `A_lca/external_lca/monte_carlo/` | `<version_name>__<lcia_method>` | Long rows with `run_index`, `year`, `lca_ssp_scenario`, `impact`, `impact_unit`, `value`, and the ASR selector columns. |
+| deterministic | `A_lca/ext_lca/deterministic/` | `<version_name>__<lcia_method>` or `<version_name>__<lcia_method>_<ssp_token>` | Wide year columns, `impact`, `impact_unit`, and the ASR selector columns. |
+| Monte Carlo | `A_lca/ext_lca/monte_carlo/` | `<version_name>__<lcia_method>` | Long rows with `run_index`, `year`, `lca_ssp_scenario`, `impact`, `impact_unit`, `value`, and the ASR selector columns. |
 
 The LCIA method is filename owned. External LCA row tables must not provide a
 `lcia_method` column.
@@ -163,7 +163,7 @@ branch token:
 
 ```text
 C_asr/<source_token>/<lca_route>/monte_carlo/<branch_token>/<run_id>/
-    results/public_row_identity.<ext>
+    results/row_identity.<ext>
     results/asr_runs.<ext>
     results/summary_stats_runs.<ext>
     results/cumulative_row_identity.<ext>
@@ -173,8 +173,8 @@ C_asr/<source_token>/<lca_route>/monte_carlo/<branch_token>/<run_id>/
     logs/scope_manifest.json
 ```
 
-The branch token is `static__<lcia_method>` or
-`dynamic_ar6__<lcia_method>`. A mixed public request that includes several
+The branch token is `static_<lcia_method>` or
+`dynamic_ar6_<lcia_method>`. A mixed public request that includes several
 static or dynamic carrying capacity branches writes a branch set manifest at
 `C_asr/<source_token>/<lca_route>/monte_carlo/<run_id>/logs/scope_manifest.json`.
 The branch set manifest records the branch scope manifests and branch run
@@ -224,7 +224,7 @@ roots; each branch still stores its complete ASR artifacts under
 - Dynamic ASR Global AR6 CC figure rows consume existing deterministic or
   uncertainty AR6 CC prerequisite artifacts through ASR metadata. These rows are
   diagnostic figure products and do not add AR6 CC data to ASR output tables.
-  Dynamic ASR figures write paired `__incl_post` and `__excl_post` products so
+  Dynamic ASR figures write paired `_incl_post` and `_excl_post` products so
   users can inspect either the post study AR6 CC extension or only the requested
   study window.
 - ASR figure scale is resolved once per deterministic output scope or Monte

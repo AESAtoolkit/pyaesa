@@ -64,13 +64,13 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "  -> fig-asocc-paths.svg",
         "Detailed methodological guide with scientific references for functional units "
         "and allocation methods:",
-        "  -> methodological_note__asocc_fus_allocation_methods.pdf",
+        "  -> methodological_note_asocc_fus_allocation_methods.pdf",
         "Prospective allocation:",
-        "  -> methodological_note__acc_prospective.pdf",
+        "  -> methodological_note_acc_prospective.pdf",
         "Uncertainty sources:",
-        "  -> methodological_note__acc_uncertainty_sources.pdf",
+        "  -> methodological_note_acc_uncertainty_sources.pdf",
         "Definition of steady state and dynamic carrying capacities:",
-        "  -> methodological_note__steady_state__dynamic_cc.pdf",
+        "  -> methodological_note_steady_state_dynamic_cc.pdf",
         "Recommended citations:",
         "  -> recommended_citations.txt",
         "",
@@ -220,8 +220,8 @@ def set_workspace(
 ) -> None:
     """Set the active workspace repository and ensure prerequisites exist.
 
-    The function resolves ``<top_path>/pyaesa``, creates that workspace
-    repository root when missing, imports prerequisite files according to
+    The function resolves ``top_path`` as the workspace repository root,
+    creates that root when missing, imports prerequisite files according to
     ``refresh``, and records the resolved path as the active workspace
     repository root. Later public functions read inputs and write outputs
     relative to this active workspace. Omit arguments to use their default.
@@ -239,9 +239,10 @@ def set_workspace(
     from installed package resources.
 
     Args:
-        top_path: Parent directory where the workspace repository root
-            ``pyaesa/`` is created or reused. Accepts a string path or
-            ``pathlib.Path``.
+        top_path: Workspace repository root created or reused by this call.
+            Accepts a string path or ``pathlib.Path``.
+            Prefer a short workspace root path. Deeply nested paths can exceed
+            operating system path length limits.
         refresh: If ``True``, overwrite the prerequisite files copied by
             ``set_workspace(...)`` under the resolved workspace ``data_raw``
             tree and rewrite the setup summary log. The scope is limited to

@@ -84,13 +84,13 @@ def inter_method_tree_version_name(*, parameters: dict[str, Any] | None) -> str:
 
 def inter_method_tree_path(*, proj_base: Path, version_name: str) -> Path:
     """Return the editable inter-method tree CSV path for one version."""
-    root = _get_asocc_root(proj_base=proj_base) / "preview_inter_method_weights"
+    root = _get_asocc_root(proj_base=proj_base) / "preview_im_weights"
     return root / inter_method_tree_csv_name(version_name=version_name)
 
 
 def inter_method_preview_figure_base(*, proj_base: Path, version_name: str) -> Path:
     """Return the preview figure base path for one inter-method tree version."""
-    root = _get_asocc_root(proj_base=proj_base) / "preview_inter_method_weights"
+    root = _get_asocc_root(proj_base=proj_base) / "preview_im_weights"
     return root / inter_method_tree_figure_stem(version_name=version_name)
 
 
@@ -99,15 +99,15 @@ def inter_method_tree_csv_name(*, version_name: str) -> str:
     version = _validate_tree_version_name(version_name)
     if version == DEFAULT_INTER_METHOD_TREE_VERSION:
         return DEFAULT_INTER_METHOD_TREE_CSV_NAME
-    return f"weights__{version}.csv"
+    return f"{version}.csv"
 
 
 def inter_method_tree_figure_stem(*, version_name: str) -> str:
     """Return the canonical inter-method tree figure stem for one version."""
     version = _validate_tree_version_name(version_name)
     if version == DEFAULT_INTER_METHOD_TREE_VERSION:
-        return "probability_tree__equal_weights"
-    return f"probability_tree__{version}"
+        return "equal_weights"
+    return version
 
 
 def candidates_from_scope(

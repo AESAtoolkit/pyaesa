@@ -50,9 +50,9 @@ _FILE_OWNED_OR_INTERNAL_COLUMNS = frozenset(
     {"lcia_method", "ssp_scenario", EXT_LCA_SSP_SCENARIO_COLUMN}
 )
 _DETERMINISTIC_LCA_FILENAME_RE = re.compile(
-    r"^(?P<version>.+?)__(?P<method>.+?)(?:__(?P<scenario>ssp\d+))?$",
+    r"^(?P<version>.+?)__(?P<method>.+?)(?:_(?P<scenario>ssp\d+))?$",
 )
-_SSP_SUFFIX_CANDIDATE_RE = re.compile(r"__(?P<scenario>ssp\d+)$", re.IGNORECASE)
+_SSP_SUFFIX_CANDIDATE_RE = re.compile(r"_(?P<scenario>ssp\d+)$", re.IGNORECASE)
 
 
 def _ordered_external_lca_columns(*, frame: pd.DataFrame) -> list[str]:
@@ -128,7 +128,7 @@ def external_lca_expected_stems(
             if value is not None
         }
     )
-    stems.update({f"{version}__{lcia_method}__{scenario}" for scenario in scenarios})
+    stems.update({f"{version}__{lcia_method}_{scenario}" for scenario in scenarios})
     return sorted(stems)
 
 
@@ -160,11 +160,11 @@ def parse_external_lca_filename(*, path: Path) -> ExternalLCAFileSpec:
     """Parse one external LCA filename into its exact runtime contract."""
     stem = path.stem
     match = _DETERMINISTIC_LCA_FILENAME_RE.match(stem)
-    if match is None or stem.lower().startswith("runs__"):
+    if match is None or stem.lower().startswith("runs_"):
         raise ValueError(
             f"External LCA deterministic file '{path.name}' must use "
             "'<version_name>__<lcia_method>' or "
-            "'<version_name>__<lcia_method>__<ssp_scenario>' stems."
+            "'<version_name>__<lcia_method>_<ssp_scenario>' stems."
         )
     ssp_suffix_match = _SSP_SUFFIX_CANDIDATE_RE.search(stem)
     if ssp_suffix_match is not None and match.group("scenario") is None:

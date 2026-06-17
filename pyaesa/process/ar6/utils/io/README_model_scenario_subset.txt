@@ -1,14 +1,14 @@
 Model-scenario subset guide for deterministic_ar6_cc(...)
 
 Files written by process_ar6(...) in this folder:
-- model_scenario_subset__template.csv
+- model_scenario_subset_template.csv
 - README_model_scenario_subset.txt
 
 How to create a subset file:
-1. Open model_scenario_subset__template.csv.
+1. Open model_scenario_subset_template.csv.
 2. Keep only the rows you want to retain.
 3. Save the filtered file in this same folder as:
-   model_scenario_subset__<your_version_name>.csv
+   model_scenario_subset_<your_version_name>.csv
 4. Pass subset_version="<your_version_name>" into deterministic_ar6_cc(...).
 
 Required columns in the subset CSV:

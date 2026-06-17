@@ -249,12 +249,12 @@ def test_ar6_figure_metadata_and_guide_contracts(
             figure_convergence_max_runs=10000,
         )
 
-    guide_drop_csv = figures_dir / "fig-budgets-CO2-test-remaining-budget-panel-dropped_rows.csv"
+    guide_drop_csv = figures_dir / "budget_CO2_test_remaining_budget_dropped_rows.csv"
     guide_drop_csv.write_text("header\n", encoding="utf-8")
     mapping = _remaining_budget_drop_csv_map(figures_dir)
-    assert mapping["fig-budgets-CO2-test"] == [guide_drop_csv.name]
+    assert mapping["budget_CO2_test"] == [guide_drop_csv.name]
     block = _figure_explanation_block(
-        "fig-budgets-CO2-test.png",
+        "budget_CO2_test.png",
         [2019, 2060],
         tmp_path / "global.csv",
         mapping,
@@ -269,7 +269,7 @@ def test_ar6_figure_metadata_and_guide_contracts(
     assert fallback_block
 
     explanation_text = figures_explanation_text(
-        ["fig-budgets-CO2-test.png"],
+        ["budget_CO2_test.png"],
         [2019, 2060],
         figures_dir,
         tmp_path / "global.csv",
@@ -277,7 +277,7 @@ def test_ar6_figure_metadata_and_guide_contracts(
     assert explanation_text.strip()
     guide_file, written = ensure_figures_guide(
         figures_dir=figures_dir,
-        figure_files=["fig-budgets-CO2-test.png"],
+        figure_files=["budget_CO2_test.png"],
         study_period=[2019, 2060],
         global_drop_csv_file=tmp_path / "global.csv",
         rewrite=True,
@@ -285,7 +285,7 @@ def test_ar6_figure_metadata_and_guide_contracts(
     assert written is True and guide_file is not None
     reused_guide_file, reused_written = ensure_figures_guide(
         figures_dir=figures_dir,
-        figure_files=["fig-budgets-CO2-test.png"],
+        figure_files=["budget_CO2_test.png"],
         study_period=[2019, 2060],
         global_drop_csv_file=tmp_path / "global.csv",
         rewrite=False,

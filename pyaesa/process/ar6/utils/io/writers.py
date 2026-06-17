@@ -59,7 +59,7 @@ def write_harmonization_log_workbook(log_file: Path, harmonization_log_all: pd.D
 _TEMPLATE_HEADER_COMMENT = (
     "# Model-scenario template for deterministic_ar6_cc subset selection.\n"
     "# To use a subset: copy this file, remove unwanted rows, and rename it to\n"
-    "# model_scenario_subset__{your_version_name}.csv (keep the double-underscore prefix).\n"
+    "# model_scenario_subset_{your_version_name}.csv.\n"
     "# The version name is then passed as subset_version='your_version_name'.\n"
 )
 _TEMPLATE_README_FILE = "README_model_scenario_subset.txt"
@@ -108,7 +108,7 @@ def write_model_scenario_template(
     template = template.sort_values(["category", "ssp_scenario", "model", "scenario"]).reset_index(
         drop=True
     )
-    template_path = processed_dir / "model_scenario_subset__template.csv"
+    template_path = processed_dir / "model_scenario_subset_template.csv"
     template_path = ensure_file_parent(template_path)
     with open(template_path, "w", encoding="utf-8", newline="") as fh:
         fh.write(_TEMPLATE_HEADER_COMMENT)

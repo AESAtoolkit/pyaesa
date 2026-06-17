@@ -526,7 +526,7 @@ def clone_ar6_dummy_repo(
 ) -> AR6DummyRepo:
     """Clone one prepared AR6 dummy repo into a fresh active workspace."""
     target_top_path = Path(top_path)
-    target_repo_root = target_top_path / "pyaesa"
+    target_repo_root = target_top_path
     if target_repo_root.exists():
         shutil.rmtree(target_repo_root)
     shutil.copytree(template_repo.repo_root, target_repo_root)

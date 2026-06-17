@@ -239,7 +239,7 @@ def test_deterministic_ar6_cc_selector_scopes_are_isolated(
 
     assert ssp1_report is not None
     assert ssp1_report.cc_dir is not None
-    assert ssp1_report.cc_dir.parent.name == "C1__SSP1"
+    assert ssp1_report.cc_dir.parent.name == "C1_SSP1"
 
     ssp2_report = deterministic_ar6_cc(
         years=range(2019, 2022),
@@ -249,7 +249,7 @@ def test_deterministic_ar6_cc_selector_scopes_are_isolated(
         refresh=False,
     )
     assert ssp2_report.cc_dir is not None
-    assert ssp2_report.cc_dir.parent.name == "C2__SSP2"
+    assert ssp2_report.cc_dir.parent.name == "C2_SSP2"
     assert ssp2_report.cc_dir != ssp1_report.cc_dir
 
     non_consecutive_report = deterministic_ar6_cc(
@@ -263,7 +263,7 @@ def test_deterministic_ar6_cc_selector_scopes_are_isolated(
 
     assert non_consecutive_report is not None
     assert non_consecutive_report.cc_dir is not None
-    assert non_consecutive_report.cc_dir.parent.name == "C1-C3__SSP1-SSP3"
+    assert non_consecutive_report.cc_dir.parent.name == "C1-C3_SSP1-SSP3"
     assert non_consecutive_report.figure_paths
 
     ssp1_output_path = get_cc_output_path(cc_dir=ssp1_report.cc_dir, output_format="csv")
@@ -880,7 +880,7 @@ def test_deterministic_ar6_cc_modules_cover_io_render_and_report_edges(
 
     assert report.cc_dir is not None
     assert get_cc_metadata_path(cc_dir=report.cc_dir).name == "scope_manifest.json"
-    assert bad_subset_path.name == "model_scenario_subset__broken.csv"
+    assert bad_subset_path.name == "model_scenario_subset_broken.csv"
     assert ar6_dummy_repo.repo_root.exists()
 
 

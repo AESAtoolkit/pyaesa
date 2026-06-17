@@ -67,7 +67,7 @@ def render_dynamic_category_overlay(
             selector_output = (
                 lcia_output
                 if selector_token == "all"
-                else lcia_output.parent / f"{lcia_output.name}__{selector_token}"
+                else lcia_output.parent / f"{lcia_output.name}_{selector_token}"
             )
             for scenario_token, scenario_title, scenario_frame in prospective_scope_slices(
                 selector_frame
@@ -75,7 +75,7 @@ def render_dynamic_category_overlay(
                 scoped_output = (
                     selector_output
                     if scenario_token == "all"
-                    else selector_output.parent / f"{selector_output.name}__{scenario_token}"
+                    else selector_output.parent / f"{selector_output.name}_{scenario_token}"
                 )
                 paths.extend(
                     _render_selector_overlay(
@@ -256,7 +256,7 @@ def _render_selector_overlay(
                 fig,
                 output_base
                 if not panel_title
-                else output_base.parent / f"{output_base.name}__{sanitize_token(panel_title)}",
+                else output_base.parent / f"{output_base.name}_{sanitize_token(panel_title)}",
                 dpi=dpi,
                 output_format=output_format,
             )

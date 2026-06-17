@@ -141,7 +141,7 @@ def ar6_cc_outputs_payload(
         )
         payload.update(
             {
-                "post_study_period_public_row_identity": str(paths.post_study_public_row_identity),
+                "post_study_period_row_identity": str(paths.post_study_public_row_identity),
                 "post_study_period_cc_runs": str(paths.post_study_public_runs),
                 "post_study_period_cc_runs_artifact_kind": post_study["artifact_kind"],
                 "post_study_period_cc_runs_interval_index": post_study["interval_index_path"],

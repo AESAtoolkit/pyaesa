@@ -34,8 +34,8 @@ def cc_branch_token(*, cc_source: str, cc_type: str) -> str:
     """Return the filesystem safe carrying capacity branch token."""
     source_token = _SAFE_TOKEN_RE.sub("_", str(cc_source).strip()).strip("._-") or "item"
     if str(cc_type).strip().lower() == "static":
-        return f"static__{source_token}"
-    return f"dynamic_ar6__{source_token}"
+        return f"static_{source_token}"
+    return f"dynamic_ar6_{source_token}"
 
 
 def _require_mapping(value: Any, *, name: str) -> dict[str, Any]:

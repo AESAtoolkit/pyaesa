@@ -84,7 +84,7 @@ def _fake_ensure_figures(**kwargs) -> tuple[list[str], bool]:
 
 
 def _fake_ensure_figures_guide(**kwargs) -> tuple[Path, bool]:
-    guide_path = Path(kwargs["figures_dir"]) / "figures_explanation.txt"
+    guide_path = Path(kwargs["figures_dir"]) / "figs_explanation.txt"
     guide_path.write_text("guide", encoding="utf-8")
     return guide_path, bool(kwargs["rewrite"])
 
@@ -131,7 +131,7 @@ def test_process_ar6_runner_reuse_and_refresh_branches(
 
     figure_path = figures_dir / "cached.png"
     figure_path.write_text("png", encoding="utf-8")
-    cached_guide = figures_dir / "figures_explanation.txt"
+    cached_guide = figures_dir / "figs_explanation.txt"
 
     reused_report = run_process_ar6_workflow(
         study_period=study_period,

@@ -7,7 +7,6 @@ import pandas as pd
 
 from ...common_frame import coalesce_unique_non_null
 from ....runtime.paths.published import reuse_output_path_for
-from ....runtime.output.contracts import join_file_owned_tokens
 from pyaesa.shared.tabular.wide_tables import METHOD_IDENTITY_COLUMNS
 
 
@@ -34,7 +33,7 @@ def _reuse_file_stem(
 ) -> str:
     """Return the canonical deterministic published stem for one reuse source."""
     method_token = f"l2_{l2_method}" if str(bucket).strip() == "l2_in_l1" else l2_method
-    return join_file_owned_tokens(method_token, lcia_key)
+    return f"{method_token}__{lcia_key}" if lcia_key is not None else method_token
 
 
 def _is_historical_year(*, context, year: int) -> bool:

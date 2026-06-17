@@ -8,7 +8,11 @@ from pyaesa import deterministic_asocc
 from pyaesa.asocc.figures.file_stems import asocc_scope_stem
 from pyaesa.asocc.figures.per_method_renderer import scope_title as asocc_scope_title
 from pyaesa.asocc.figures.row_reader import normalize_ssp_rows
-from pyaesa.asocc.figures.scope_planner import requested_ssp_scenarios
+from pyaesa.asocc.figures.scope_planner import (
+    RunScope,
+    requested_ssp_scenarios,
+    scoped_output_paths,
+)
 from pyaesa.asocc.runtime.paths.external import external_asocc_relative_dir
 from pyaesa.asocc.uncertainty.figures.scope_planner import scope_title as uncertainty_scope_title
 from pyaesa.asocc.runtime.paths.external import get_asocc_external_method_level_dir
@@ -51,14 +55,14 @@ def test_deterministic_asocc_figure_scope_helpers_cover_selectors_and_empty_ssps
             "multi_method",
             frame,
             include_impact=True,
-            selector_token="rp_FR__sp_D",
+            selector_token="rp_FR_sp_D",
             studied_year=2030,
         )
-        == "multi_method__rp_FR__sp_D__gwp100_lcia__GWP_100__SSP2__2030"
+        == "multi_method_rp_FR_sp_D__gwp100_lcia_GWP_100_SSP2_2030"
     )
     assert (
         asocc_scope_stem("multi_method", frame, include_impact=False)
-        == "multi_method__gwp100_lcia__SSP2"
+        == "multi_method__gwp100_lcia_SSP2"
     )
     assert "France electricity" in asocc_scope_title(
         "aSoCC deterministic",
@@ -139,13 +143,13 @@ def test_deterministic_asocc_end_to_end_reuse_and_refresh(allocation_dummy_repo)
     assert bool(output_frame["2005"].gt(0).all())
 
     external_root = allocation_dummy_repo.repo_root / "asocc_public" / "B1_asocc"
-    assert (external_root / "external_asocc" / "deterministic" / "CO(S).csv").exists()
-    assert (external_root / "external_asocc" / "deterministic" / "CO(S)__ssp2.csv").exists()
+    assert (external_root / "ext_asocc" / "deterministic" / "CO(S).csv").exists()
+    assert (external_root / "ext_asocc" / "deterministic" / "CO(S)_ssp2.csv").exists()
     assert (
         allocation_dummy_repo.repo_root
         / "asocc_public"
         / "A_lca"
-        / "external_lca"
+        / "ext_lca"
         / "deterministic"
         / "template__ef_3.1.csv"
     ).exists()
@@ -292,6 +296,33 @@ def test_deterministic_asocc_figures_reject_public_scope_without_outputs(
             figure_format={"format": "svg", "dpi": 1},
             refresh=True,
         )
+
+
+def test_deterministic_asocc_figure_scope_excludes_enacting_metric_artifacts(
+    tmp_path: Path,
+) -> None:
+    branch_root = tmp_path / "B1_asocc" / "exiobase_3102_ixi_elec" / "deterministic" / "results"
+    l1_output = branch_root / "l1" / "l1_EG(Pop).csv"
+    l1_metric = branch_root / "l1" / "enacting_metrics" / "population.csv"
+    l2_output = branch_root / "l2" / "l2_vs_global" / "UT(TD).csv"
+    for path in (l1_output, l1_metric, l2_output):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("year,value\n2020,1\n", encoding="utf-8")
+
+    paths = scoped_output_paths(
+        scope=RunScope(
+            proj_base=tmp_path,
+            source="exiobase_3102_ixi",
+            agg_version="elec",
+            agg_reg=False,
+            group_indices=False,
+            l1_reg_aggreg="post",
+        ),
+        fu_code="L2.c.b",
+        output_paths=[str(l1_output), str(l1_metric), str(l2_output)],
+    )
+
+    assert paths == [l1_output, l2_output]
 
 
 def test_deterministic_asocc_figures_include_public_external_method(

@@ -245,7 +245,7 @@ def test_title_contract_builders_and_request_contracts_cover_remaining_branches(
         )
         == "missing_all"
     )
-    assert token_mod.selector_scope_request_axes_token(()) == "all_selectors"
+    assert token_mod.selector_scope_request_axes_token(()) == "all"
     assert token_mod.selector_axis_values_token(()) == "all"
     assert token_mod.selector_axis_values_token(
         [f"very long selector value {index}" for index in range(12)],
@@ -256,14 +256,14 @@ def test_title_contract_builders_and_request_contracts_cover_remaining_branches(
             {"r_p": "FR", "s_p": "Electricity"},
             selector_columns=("r_p", "s_p", "r_c"),
         )
-        == "rp_FR__sp_Electricity"
+        == "rp_FR_sp_Electricity"
     )
     assert (
         token_mod.selector_scope_token_from_frame(
             group_frame=pd.DataFrame({"value": [1.0]}),
             selector_columns=("r_p",),
         )
-        == "all_selectors"
+        == "all"
     )
     assert (
         token_mod.selector_scope_token_from_frame(
@@ -322,9 +322,9 @@ def test_selector_slices_cover_grouping_and_matching_masks() -> None:
     scope_request = title_mod.SelectorScopeRequest(axes=(("r_p", None),))
     slices = list(slices_mod.selector_slices(frame, selector_scope_request=scope_request))
     assert [(token, scope) for token, scope, _ in slices] == [
-        ("rp_FR__sp_A", "r_p=FR | s_p=A"),
-        ("rp_FR__sp_B", "r_p=FR | s_p=B"),
-        ("rp_all__sp_A", "s_p=A"),
+        ("rp_FR_sp_A", "r_p=FR | s_p=A"),
+        ("rp_FR_sp_B", "r_p=FR | s_p=B"),
+        ("rp_all_sp_A", "s_p=A"),
     ]
     collision_frame = pd.DataFrame(
         {
@@ -347,7 +347,7 @@ def test_selector_slices_cover_grouping_and_matching_masks() -> None:
         }
     )
     assert [(token, scope) for token, scope, _frame in slices_mod.selector_slices(fu_frame)] == [
-        ("sp_Electricity__rc_FR", "s_p=Electricity | r_c=FR")
+        ("sp_Electricity_rc_FR", "s_p=Electricity | r_c=FR")
     ]
     unsliced = list(slices_mod.selector_slices(pd.DataFrame({"value": [1.0]})))
     assert len(unsliced) == 1
@@ -512,7 +512,7 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     assert impact_title == pb_metadata.labels[first_impact]
     with pytest.raises(ValueError):
         metadata_mod.resolve_impact_title(lcia_method="pb_lcia", impact="not_a_real_impact")
-    assert lcia_path_tokens.infer_lcia_method_from_path(Path("demo_pb_lcia.csv")) == "pb_lcia"
+    assert lcia_path_tokens.infer_lcia_method_from_path(Path("demo__pb_lcia.csv")) == "pb_lcia"
     assert lcia_path_tokens.infer_lcia_method_from_path(Path("demo.csv")) is None
 
     assert (
@@ -547,7 +547,7 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     )
 
     inferred_frame = pd.DataFrame({"impact": [first_impact], "value": [1.0]})
-    inferred_frame.attrs["source_path"] = str(Path("demo_pb_lcia.csv"))
+    inferred_frame.attrs["source_path"] = str(Path("demo__pb_lcia.csv"))
     ensured = metadata_mod.ensure_frame_lcia_method_metadata(inferred_frame)
     assert ensured["lcia_method"].tolist() == ["pb_lcia"]
     assert metadata_mod.resolve_frame_impact_title(ensured) == impact_title
@@ -795,7 +795,7 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     assert len(whitespace_lcia_combined) == 1
     assert whitespace_lcia_combined[0][0:2] == ("all", "")
     assert scope_mod.suffix_path(Path("plots/demo.png"), "impact co2") == Path(
-        "plots/demo.png__impact_co2"
+        "plots/demo.png_impact_co2"
     )
     with pytest.raises(ValueError):
         list(scope_mod.combined_impact_slices(pd.DataFrame({"impact": [first_impact]})))

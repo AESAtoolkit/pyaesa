@@ -134,15 +134,15 @@ def load_external_lca_monte_carlo_source_from_path(
         identity = compact.identity.copy()
         validate_external_lca_required_columns(
             columns=identity.columns,
-            path=source_path / "public_row_identity.csv",
+            path=source_path / "row_identity.csv",
             required_columns=_COMPACT_IDENTITY_REQUIRED_COLUMNS,
-            file_label="External LCA compact public_row_identity.csv",
+            file_label="External LCA compact row_identity.csv",
         )
         validate_external_lca_reserved_columns(
             columns=identity.columns,
-            path=source_path / "public_row_identity.csv",
+            path=source_path / "row_identity.csv",
             forbidden_columns=_FILE_OWNED_COLUMNS,
-            file_label="External LCA compact public_row_identity.csv",
+            file_label="External LCA compact row_identity.csv",
         )
         validate_external_lca_contract(frame=identity, path=source_path, lcia_method=lcia_method)
         validate_external_lca_selector_columns(

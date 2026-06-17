@@ -124,7 +124,7 @@ def _run_root(*, repo_root: Path, project_name: str, run_id: str, source: str) -
         / "B2_acc"
         / source
         / "monte_carlo"
-        / "static__gwp100_lcia"
+        / "static_gwp100_lcia"
         / run_id
     )
 
@@ -560,9 +560,9 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
     assert acc_scope_stem(
         "multi_method",
         frame,
-        selector_token="rp_FR__sp_D",
+        selector_token="rp_FR_sp_D",
         studied_year=2030,
-    ).startswith("multi_method__rp_FR__sp_D__pb_lcia")
+    ).startswith("multi_method_rp_FR_sp_D__pb_lcia")
     assert "France electricity" in scope_title(
         "aCC uncertainty",
         "demo",
@@ -580,6 +580,7 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
     assert acc_scope_stem("multi_method", frame, include_impact=False).startswith(
         "multi_method__pb_lcia"
     )
+    assert acc_scope_stem("multi_method", pd.DataFrame({"value": [1.0]})) == "multi_method"
     gwp_frame = frame.loc[frame["impact"].eq("SOD")].copy()
     gwp_frame["lcia_method"] = "gwp100_lcia"
     gwp_frame["impact"] = "GWP_100"
@@ -1689,7 +1690,7 @@ def test_uncertainty_acc_convergence_reports_reuse_and_reached_modes(
 def test_acc_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> None:
     asocc_root = tmp_path / "asocc_run" / "results"
     asocc_root.mkdir(parents=True)
-    asocc_identity_path = asocc_root / "public_row_identity.csv"
+    asocc_identity_path = asocc_root / "row_identity.csv"
     asocc_runs_path = asocc_root / "asocc_runs.csv"
     asocc_identity_path.write_text("public_row_id,year\n0,2030\n", encoding="utf-8")
     with SparseRunRowsWriter(path=asocc_runs_path, output_format="csv_compact") as writer:
@@ -2116,7 +2117,7 @@ def test_uncertainty_acc_static_figures_are_public_for_single_and_multi_year(
     assert all(path.exists() for path in single_paths)
     assert any("inter_method" in path.parts for path in single_paths)
     assert any("per_method" in path.parts for path in single_paths)
-    assert any(path.name.endswith("__2005.svg") for path in single_paths)
+    assert any(path.name.endswith("_2005.svg") for path in single_paths)
     no_product_single = uncertainty_acc(
         years=[2005],
         refresh=False,

@@ -90,7 +90,7 @@ def test_deterministic_io_lca_end_to_end_reuse_and_refresh(
     assert report.metadata_path.exists()
     summary_log = report.metadata_path.parent / "summary.log"
     assert summary_log.read_text(encoding="utf-8").strip()
-    assert not (report.metadata_path.parent.parent / "figures").exists()
+    assert not (report.metadata_path.parent.parent / "figs").exists()
     assert len(report.main_result_paths) == 1
     assert len(report.origin_paths) == 2
     assert len(report.stage_paths) == 1
@@ -336,7 +336,7 @@ def test_deterministic_io_lca_generates_single_year_figures_when_requested(
     assert report.figure_paths
     assert all(path.exists() for path in report.figure_paths)
     assert all(
-        path.name.endswith(f"__{io_lca_dummy_repo.available_year}.png")
+        path.name.endswith(f"_{io_lca_dummy_repo.available_year}.png")
         for path in report.figure_paths
     )
 
@@ -369,7 +369,7 @@ def test_deterministic_io_lca_public_figures_cover_odd_multi_impact_multi_year(
 
     assert single.figure_paths
     assert all(path.exists() for path in single.figure_paths)
-    assert all(path.name.endswith(f"__{repo.available_year}.png") for path in single.figure_paths)
+    assert all(path.name.endswith(f"_{repo.available_year}.png") for path in single.figure_paths)
 
     report = deterministic_io_lca(
         project_name="io_lca_public_multi_year_odd_impacts",
@@ -388,7 +388,7 @@ def test_deterministic_io_lca_public_figures_cover_odd_multi_impact_multi_year(
 
     assert report.figure_paths
     assert all(path.exists() for path in report.figure_paths)
-    assert all(not path.stem.endswith("__2020") for path in report.figure_paths)
+    assert all(not path.stem.endswith("_2020") for path in report.figure_paths)
 
 
 def test_deterministic_io_lca_public_figures_cover_single_impact_layout(

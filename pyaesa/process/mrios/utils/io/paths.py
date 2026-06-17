@@ -1,7 +1,6 @@
 """Path ownership for processed MRIO saves."""
 
 from pathlib import Path
-import re
 from typing import Literal, Optional
 
 from pyaesa.download.mrios.utils.source_registry import (
@@ -26,15 +25,15 @@ def _resolve_version_tag(matrix_version: Optional[str]) -> str:
         matrix_version (str | None): Optional version name.
 
     Returns:
-        str: ``"original_classification"`` when ``matrix_version`` is None/empty,
-            otherwise ``"custom_classification_{matrix_version}"``.
+        str: ``"original_class"`` when ``matrix_version`` is None/empty,
+            otherwise ``"custom_class_{matrix_version}"``.
     """
     if matrix_version is None:
-        return "original_classification"
+        return "original_class"
     matrix_version = str(matrix_version).strip()
     if not matrix_version:
-        return "original_classification"
-    return f"custom_classification_{matrix_version}"
+        return "original_class"
+    return f"custom_class_{matrix_version}"
 
 
 def _year_saved_folder_name(source_key: str, year: int) -> str:
@@ -142,20 +141,15 @@ def _get_mrio_clipping_log_path(
     Args:
         source_key: MRIO source identifier.
         matrix_version: Optional aggregation version. ``None`` or blank maps to
-            ``"original_classification"``.
+            ``"original_class"``.
 
     Returns:
         Absolute path to the clipping diagnostics CSV under the source owned
         processed log directory.
     """
-    source_clean = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(source_key).strip())
-    version_label = "original_classification"
-    if matrix_version is not None and str(matrix_version).strip():
-        version_label = str(matrix_version).strip()
-    version_clean = re.sub(r"[^A-Za-z0-9_.-]+", "_", version_label)
     return ensure_file_parent(
         _get_mrio_calc_log_path(
-            f"{source_clean}_{version_clean}_clipping_log.csv",
+            "clipping_log.csv",
             source_key=source_key,
             matrix_version=matrix_version,
         )
@@ -168,14 +162,9 @@ def _get_mrio_raw_corrected_values_log_path(
     matrix_version: Optional[str] = None,
 ) -> Path:
     """Return the shared raw corrected values log CSV path for one MRIO lane."""
-    source_clean = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(source_key).strip())
-    version_label = "original_classification"
-    if matrix_version is not None and str(matrix_version).strip():
-        version_label = str(matrix_version).strip()
-    version_clean = re.sub(r"[^A-Za-z0-9_.-]+", "_", version_label)
     return ensure_file_parent(
         _get_mrio_calc_log_path(
-            f"{source_clean}_{version_clean}_raw_corrected_values_log.csv",
+            "raw_corrected_values_log.csv",
             source_key=source_key,
             matrix_version=matrix_version,
         )

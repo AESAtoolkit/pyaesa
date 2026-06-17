@@ -49,7 +49,7 @@ def build_acc_uncertainty_run_paths(
     sobol_root = run_root / "results" / "sobol"
     return ACCUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / f"public_row_identity{suffix}",
+        public_row_identity=run_root / "results" / f"row_identity{suffix}",
         public_runs=run_root / "results" / f"acc_runs{suffix}",
         summary_stats_runs=run_root / "results" / f"summary_stats_runs{suffix}",
         cumulative_row_identity=run_root / "results" / f"cumulative_row_identity{suffix}",
@@ -68,4 +68,4 @@ def build_acc_uncertainty_run_paths(
 
 def acc_uncertainty_figures_root(*, paths: ACCUncertaintyRunPaths) -> Path:
     """Return the figure root for one aCC uncertainty run."""
-    return Path(paths.run_root) / "figures"
+    return Path(paths.run_root) / "figs"

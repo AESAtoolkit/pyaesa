@@ -275,7 +275,7 @@ def plot_band_scope(
         paths.extend(
             _plot_impact_panel_frequency_scope(
                 frame=frame,
-                output_stem=output_stem.parent / f"{output_stem.name}__frequency_of_transgression",
+                output_stem=output_stem.parent / f"{output_stem.name}_ft",
                 title=f"{title} | frequency of transgression",
                 dpi=dpi,
                 output_format=output_format,
@@ -396,7 +396,7 @@ def plot_mean_line_scope(
                 plot_mean_line_scope(
                     frame=scoped,
                     requested_years=requested_years,
-                    output_stem=output_stem.parent / f"{output_stem.name}__{impact}",
+                    output_stem=output_stem.parent / f"{output_stem.name}_{impact}",
                     title=f"{title} | {impact_panel_title(scoped, impact=str(impact))}",
                     dpi=dpi,
                     output_format=output_format,
@@ -535,7 +535,7 @@ def _plot_dynamic_band_scope(
         include_method_in_label=include_method_in_label,
     )
     paths: list[Path] = []
-    for include_post, suffix in ((True, "__incl_post"), (False, "__excl_post")):
+    for include_post, suffix in ((True, "_incl_post"), (False, "_excl_post")):
         post_years = global_ar6.post_years if include_post else []
         transition_shade_right = _post_study_transition_right(post_years)
         fig, axes = plt.subplots(
@@ -810,7 +810,7 @@ def _plot_dynamic_mean_scope(
         include_method_in_label=include_method_in_label,
     )
     paths: list[Path] = []
-    for include_post, suffix in ((True, "__incl_post"), (False, "__excl_post")):
+    for include_post, suffix in ((True, "_incl_post"), (False, "_excl_post")):
         post_years = global_ar6.post_years if include_post else []
         transition_shade_right = _post_study_transition_right(post_years)
         fig, axes = plt.subplots(

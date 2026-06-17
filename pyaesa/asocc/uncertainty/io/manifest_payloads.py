@@ -185,11 +185,13 @@ def outputs_payload(*, paths: AsoccUncertaintyRunPaths, output_format: str) -> d
     if paths.inter_method_tree_csv.exists():
         payload["inter_method_tree_csv"] = str(paths.inter_method_tree_csv)
         payload["inter_method_tree_figure"] = str(
-            sorted(
-                paths.inter_method_tree_figure_base.parent.glob(
+            next(
+                path
+                for path in paths.inter_method_tree_figure_base.parent.glob(
                     f"{paths.inter_method_tree_figure_base.name}.*"
                 )
-            )[0]
+                if path != paths.inter_method_tree_csv
+            )
         )
     payload.update(optional_sobol_artifact_paths(paths=paths))
     return payload

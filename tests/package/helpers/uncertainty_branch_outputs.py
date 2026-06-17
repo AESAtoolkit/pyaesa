@@ -7,7 +7,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
 )
 
 MIXED_STATIC_DYNAMIC_CC_TOKENS = frozenset(
-    {"static__pb_lcia", "static__gwp100_lcia", "dynamic_ar6__gwp100_lcia"}
+    {"static_pb_lcia", "static_gwp100_lcia", "dynamic_ar6_gwp100_lcia"}
 )
 
 
@@ -35,5 +35,6 @@ def assert_mixed_static_dynamic_cc_outputs(
         )
         branch_token = Path(item.artifacts["scope_manifest"]).parents[2].name
         by_branch[branch_token] = item
-        assert set(identity["cc_type"]) == {branch_token.rsplit("__", maxsplit=1)[0]}
+        expected_cc_type = "dynamic_ar6" if branch_token.startswith("dynamic_ar6_") else "static"
+        assert set(identity["cc_type"]) == {expected_cc_type}
     return by_branch

@@ -160,7 +160,7 @@ def _read_subset_csv(processed_dir: Path, subset_version: str) -> pd.DataFrame:
             "The subset must be staged under the processed AR6 scope that matches the "
             "current study period and harmonization settings. Generate a template with "
             "process_ar6() for that scope and rename it to "
-            f"model_scenario_subset__{subset_version}.csv."
+            f"model_scenario_subset_{subset_version}.csv."
         )
     subset_df = pd.read_csv(
         subset_path, comment="#", dtype={"model": "string", "scenario": "string"}

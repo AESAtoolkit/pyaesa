@@ -45,8 +45,7 @@ def clipping_log_columns_explanation_text() -> str:
             "MRIO clipping and normalization log columns explanation",
             "",
             "source: MRIO source identifier used by process_mrio(...).",
-            "matrix_version: MRIO version lane. 'original_classification' means no "
-            "aggregation version.",
+            "matrix_version: MRIO version lane. 'original_class' means no aggregation version.",
             "matrix: Matrix or derived object that triggered the log row.",
             "event_type: Diagnostic event kind such as 'clip_negative_value' or "
             "'normalize_distribution'.",
@@ -110,7 +109,7 @@ def _resolve_clip_log_context(
         source_key=source_key,
         matrix_version=matrix_version,
     )
-    version_label = "original_classification"
+    version_label = "original_class"
     if matrix_version is not None and str(matrix_version).strip():
         version_label = str(matrix_version).strip()
     log_path = _get_mrio_clipping_log_path(source_key, matrix_version=matrix_version)

@@ -133,7 +133,7 @@ def _compact_selection_rows_and_positions(
     public_rows = filtered.drop(columns=["public_row_id"]).reset_index(drop=True)
     validate_impact_contract(
         frame=public_rows,
-        path=file_selection.path / "public_row_identity.csv",
+        path=file_selection.path / "row_identity.csv",
         lcia_method=file_selection.lcia_method,
     )
     return public_rows, positions

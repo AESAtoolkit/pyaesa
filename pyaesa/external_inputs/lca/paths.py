@@ -23,9 +23,9 @@ def external_lca_monte_carlo_dir(*, project_base: Path) -> Path:
 
 def external_lca_deterministic_figures_dir(*, project_base: Path) -> Path:
     """Return the deterministic external LCA figure root."""
-    return external_lca_deterministic_dir(project_base=project_base) / "figures"
+    return external_lca_deterministic_dir(project_base=project_base) / "figs"
 
 
 def external_lca_monte_carlo_figures_dir(*, project_base: Path) -> Path:
     """Return the Monte Carlo external LCA figure root."""
-    return external_lca_monte_carlo_dir(project_base=project_base) / "figures"
+    return external_lca_monte_carlo_dir(project_base=project_base) / "figs"

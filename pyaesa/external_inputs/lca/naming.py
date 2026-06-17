@@ -15,6 +15,6 @@ def normalize_external_lca_version_name(value: object, *, argument_name: str) ->
     if "__" in text or _VERSION_NAME_RE.fullmatch(text) is None:
         raise ValueError(
             f"{argument_name} must be a filename token using letters, numbers, '.', '_', "
-            "or '-', and must not contain '__'."
+            "or '-', and must not contain repeated underscores."
         )
     return text

@@ -5,7 +5,7 @@ import re
 
 from pyaesa.shared.lcia.availability import discover_static_cc_methods
 
-_LCIA_SUFFIX_RE_TEMPLATE = r"(?:_|__){lcia_method_token}(?:(?:_|__)[^_]+)?$"
+_LCIA_SUFFIX_RE_TEMPLATE = r"__{lcia_method_token}(?:_[^_]+)?$"
 
 
 def known_lcia_methods() -> tuple[str, ...]:
@@ -21,10 +21,8 @@ def infer_lcia_method_from_path(path: Path) -> str | None:
     matches = [
         lcia_method_token
         for lcia_method_token in known_lcia_methods()
-        if stem.endswith(f"_{lcia_method_token}")
-        or stem.endswith(f"__{lcia_method_token}")
-        or f"__{lcia_method_token}__" in stem
-        or f"_{lcia_method_token}__" in stem
+        if stem.endswith(f"__{lcia_method_token}")
+        or f"__{lcia_method_token}_" in stem
         or str(lcia_method_token).strip() in path_parts
         or f"\\{str(lcia_method_token).strip()}\\" in path_text
         or f"/{str(lcia_method_token).strip()}/" in path_text

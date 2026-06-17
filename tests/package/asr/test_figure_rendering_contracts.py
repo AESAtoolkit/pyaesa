@@ -81,14 +81,11 @@ from pyaesa.asr.figures.transitions import (
 from pyaesa.shared.figures.multi_year_transitions import TransitionMarker, render_transition_markers
 from pyaesa.asr.deterministic.figures.component_diagnostics import (
     DeterministicComponentRows,
-    load_component_rows_artifact as load_deterministic_component_rows_artifact,
-    write_component_rows_artifact as write_deterministic_component_rows_artifact,
 )
 from pyaesa.asr.deterministic.figures.render import (
     _common_asr_limits,
     _component_colors_for_asr_scope,
     _dynamic_branch_slices,
-    _dynamic_component_rows,
     _dynamic_cumulative_label_order,
     _min_variant_note,
     _ordered_labeled_entries,
@@ -254,7 +251,7 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
             pd.DataFrame({"lcia_method": ["gwp100_lcia"], "impact": ["GWP_100"]}),
             include_impact=False,
         )
-        == "mean__gwp100_lcia"
+        == "mean"
     )
     positive, zero_count = positive_asr_values(np.array([0.0, 0.2, 1.0]), context="demo")
     np.testing.assert_allclose(positive, [0.2, 1.0])
@@ -432,21 +429,6 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
         )
     finally:
         plt.close(fig)
-    artifact_path = tmp_path / "deterministic_component_rows.csv"
-    component_rows = DeterministicComponentRows(
-        acc=pd.DataFrame({"year": [2020], "value": [4.0], "empty": [pd.NA]}),
-        lca=pd.DataFrame({"year": [2020], "value": [2.0], "empty": [pd.NA]}),
-        acc_output_files=(tmp_path / "acc.csv",),
-    )
-    write_deterministic_component_rows_artifact(path=artifact_path, rows=component_rows)
-    restored = load_deterministic_component_rows_artifact(
-        path=artifact_path,
-        acc_output_files=[tmp_path / "acc.csv"],
-    )
-    assert restored.acc_output_files == (tmp_path / "acc.csv",)
-    assert "empty" not in restored.acc.columns
-    assert "empty" not in restored.lca.columns
-
     np.testing.assert_allclose(normal_asr_ticks(lower=1.0, upper=1.0), [1.0])
     np.testing.assert_allclose(
         normal_asr_ticks(lower=0.94, upper=1.06),
@@ -547,16 +529,13 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
     stem = asr_scope_stem(
         "multi_method",
         frame,
-        product="frequency_of_transgression",
-        selector_token="rp_FR__sp_D",
+        product="ft",
+        selector_token="rp_FR_sp_D",
         include_impact=True,
         studied_year=2030,
     )
 
-    expected = (
-        "multi_method__frequency_of_transgression__rp_FR__sp_D__"
-        "pb_lcia__AAL__SSP2__C1__min_cc__2030"
-    )
+    expected = "multi_method_ft_rp_FR_sp_D_AAL_SSP2_C1_min_cc_2030"
     assert stem == expected
 
     dynamic_frame = pd.DataFrame(
@@ -575,7 +554,7 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
             dynamic_frame,
             include_impact=True,
         )
-        == "multi_method__gwp100_lcia__GWP_100__SSP2__C2__REMIND_1_Low_Energy_Demand"
+        == "multi_method_GWP_100_SSP2_C2_REMIND_1_Low_Energy_Demand"
     )
     assert asr_scope_title("ASR", None, dynamic_frame, include_impact=False) == (
         "ASR | Climate change (GWP_100) | SSP2\n"
@@ -1491,7 +1470,7 @@ def _write_dynamic_ar6_prerequisite(tmp_path: Path) -> tuple[Path, Path]:
             "provenance": {"process_ar6": _dynamic_process_ar6_payload(tmp_path)},
         },
     )
-    acc_output_file = acc_results / "UT_FD__gwp100_lcia__dynamic_ar6.csv"
+    acc_output_file = acc_results / "UT_FD__gwp100_lcia_dynamic_ar6.csv"
     acc_output_file.write_text("placeholder\n", encoding="utf-8")
     write_json_dict(
         acc_logs / "scope_manifest.json",
@@ -1590,9 +1569,9 @@ def _write_uncertainty_dynamic_ar6_prerequisite(tmp_path: Path) -> Path:
             value_column="value",
         )
 
-    public_identity_path = results / "public_row_identity.csv"
+    public_identity_path = results / "row_identity.csv"
     public_runs_path = results / "cc_runs.csv"
-    post_identity_path = results / "post_study_period_public_row_identity.csv"
+    post_identity_path = results / "post_study_period_row_identity.csv"
     post_runs_path = results / "post_study_period_cc_runs.csv"
     summary_path = results / "summary_stats_runs.csv"
     post_summary_path = results / "post_study_period_summary_stats_runs.csv"
@@ -1796,13 +1775,13 @@ def test_asr_uncertainty_mean_lines_split_multi_impact_products(
     assert single_no_method_paths[0].exists()
     assert sorted(path.name for path in band_paths) == [
         "bands.svg",
-        "bands__frequency_of_transgression.svg",
+        "bands_ft.svg",
     ]
     assert sorted(path.name for path in no_transition_paths) == [
         "bands_no_transition.svg",
-        "bands_no_transition__frequency_of_transgression.svg",
+        "bands_no_transition_ft.svg",
     ]
-    assert sorted(path.name for path in paths) == ["mean_lines__AAL.svg", "mean_lines__SOD.svg"]
+    assert sorted(path.name for path in paths) == ["mean_lines_AAL.svg", "mean_lines_SOD.svg"]
     assert all(path.exists() for path in [*band_paths, *no_transition_paths, *paths])
 
 
@@ -1883,8 +1862,8 @@ def test_asr_dynamic_uncertainty_renderers_cover_component_and_transition_produc
     no_sampling_frame[MODEL_SCENARIO_SAMPLING_METHOD_COLUMN] = pd.NA
     assert _dynamic_pair_note(no_sampling_frame) == "2 AR6 CC model-scenario pairs."
     assert band_paths == [
-        tmp_path / "dynamic_band__incl_post.png",
-        tmp_path / "dynamic_band__excl_post.png",
+        tmp_path / "dynamic_band_incl_post.png",
+        tmp_path / "dynamic_band_excl_post.png",
     ]
     assert all(path.exists() for path in band_paths)
     mean_paths = plot_mean_line_scope(
@@ -1901,8 +1880,8 @@ def test_asr_dynamic_uncertainty_renderers_cover_component_and_transition_produc
         global_ar6_source=uncertainty_global_ar6,
     )
     assert mean_paths == [
-        tmp_path / "dynamic_mean__incl_post.png",
-        tmp_path / "dynamic_mean__excl_post.png",
+        tmp_path / "dynamic_mean_incl_post.png",
+        tmp_path / "dynamic_mean_excl_post.png",
     ]
     assert all(path.exists() for path in mean_paths)
     deterministic_global_ar6 = uncertainty_global_ar6_source(manifest=components.manifest)
@@ -1920,8 +1899,8 @@ def test_asr_dynamic_uncertainty_renderers_cover_component_and_transition_produc
         global_ar6_source=deterministic_global_ar6,
     )
     assert deterministic_mean_paths == [
-        tmp_path / "dynamic_mean_deterministic_global__incl_post.png",
-        tmp_path / "dynamic_mean_deterministic_global__excl_post.png",
+        tmp_path / "dynamic_mean_deterministic_global_incl_post.png",
+        tmp_path / "dynamic_mean_deterministic_global_excl_post.png",
     ]
     assert all(path.exists() for path in deterministic_mean_paths)
     fig, axis = plt.subplots()
@@ -2296,7 +2275,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
         [1.0, 1.1, 1.2],
         [1.5, 1.6, 1.7],
     ]
-    acc_identity_path = tmp_path / "acc" / "results" / "public_row_identity.csv"
+    acc_identity_path = tmp_path / "acc" / "results" / "row_identity.csv"
     write_uncertainty_table(
         path=acc_identity_path,
         frame=identity,
@@ -2344,7 +2323,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
     assert sparse[RUN_INDEX_ARRAY_COLUMN].iloc[0].tolist() == [0, 1]
     assert sparse[VALUE_ARRAY_COLUMN].iloc[0].tolist() == [3.0, 3.5]
 
-    io_identity_path = tmp_path / "io_lca" / "results" / "public_row_identity.csv"
+    io_identity_path = tmp_path / "io_lca" / "results" / "row_identity.csv"
     write_uncertainty_table(
         path=io_identity_path,
         frame=identity.head(2),
@@ -3048,9 +3027,9 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             cc_source="gwp100_lcia",
             cc_type="dynamic_ar6",
             include_impact=True,
-            selector_token="rp_FR__sp_D",
+            selector_token="rp_FR_sp_D",
         )
-        == "multi_method__rp_FR__sp_D__GWP_100__SSP2__C1__M1_S1"
+        == "multi_method_rp_FR_sp_D_GWP_100_SSP2_C1_M1_S1"
     )
     dynamic_without_pair = dynamic.drop(columns=["cc_model", "cc_scenario"])
     assert (
@@ -3061,7 +3040,7 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             cc_source="gwp100_lcia",
             cc_type="dynamic_ar6",
         )
-        == "multi_method__SSP2__C1"
+        == "multi_method_SSP2_C1"
     )
     assert (
         _scope_stem(
@@ -3071,9 +3050,9 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             cc_source="pb_lcia",
             cc_type="static",
             include_impact=True,
-            selector_token="rp_FR__sp_D",
+            selector_token="rp_FR_sp_D",
         )
-        == "multi_method__pb_lcia__rp_FR__sp_D__AAL__SSP2"
+        == "multi_method_rp_FR_sp_D_AAL_SSP2"
     )
     assert (
         _scope_stem(
@@ -3083,13 +3062,13 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             cc_source="pb_lcia",
             cc_type="static",
         )
-        == "multi_method__pb_lcia__SSP2"
+        == "multi_method_SSP2"
     )
     assert single_paths == [tmp_path / "deterministic_single.svg"]
-    assert polar_paths == [tmp_path / "polar_deterministic_polar.svg"]
+    assert polar_paths == [tmp_path / "pol_deterministic_polar.svg"]
     assert dynamic_paths == [
-        tmp_path / "deterministic_dynamic__incl_post.svg",
-        tmp_path / "deterministic_dynamic__excl_post.svg",
+        tmp_path / "deterministic_dynamic_incl_post.svg",
+        tmp_path / "deterministic_dynamic_excl_post.svg",
     ]
     min_note = _min_variant_note(
         pd.DataFrame(
@@ -3201,8 +3180,6 @@ def test_asr_deterministic_render_asr_figures_uses_dynamic_multi_method_jobs(
         ).to_csv(path, index=False)
         output_paths.append(path)
     components = _asr_deterministic_component_rows(tmp_path)
-    component_path = tmp_path / "component_rows.csv"
-    write_deterministic_component_rows_artifact(path=component_path, rows=components)
 
     paths = render_asr_figures(
         path_context=path_context,
@@ -3221,7 +3198,7 @@ def test_asr_deterministic_render_asr_figures_uses_dynamic_multi_method_jobs(
         },
         output_paths=output_paths,
         acc_output_files=list(components.acc_output_files),
-        component_rows_path=component_path,
+        component_rows=components,
     )
 
     assert len(paths) == 2
@@ -3346,13 +3323,6 @@ def test_asr_deterministic_component_axes_and_external_lca_summary_helpers(
     tmp_path: Path,
 ) -> None:
     components = _asr_deterministic_component_rows(tmp_path)
-    component_path = tmp_path / "component_rows.csv"
-    write_deterministic_component_rows_artifact(path=component_path, rows=components)
-    restored_components = _dynamic_component_rows(
-        acc_output_files=list(components.acc_output_files),
-        component_rows_path=component_path,
-    )
-    assert len(restored_components.acc) == len(components.acc)
     color_map = {"UT(FD)": "#1f77b4", "AR(E^{CBA_FD})": "#ff7f0e"}
     fig, axis = plt.subplots()
     try:

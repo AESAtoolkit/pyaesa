@@ -23,11 +23,11 @@ _EXTERNAL_ASOCC_INPUTS = (
     ("monte_carlo/", "runnable Monte Carlo examples and project external aSoCC runs"),
 )
 _EXTERNAL_ASOCC_GUIDANCE = (
-    ("README_external_asocc_templates.txt", "method syntax, filenames, schemas, and staging rules"),
+    ("README_ext_asocc_templates.txt", "method syntax, filenames, schemas, and staging rules"),
 )
 _EXTERNAL_ASOCC_EXAMPLES = (
     ("deterministic/CO(S).csv", "deterministic one step example for base years"),
-    ("deterministic/CO(S)__ssp2.csv", "deterministic one step SSP2 example"),
+    ("deterministic/CO(S)_ssp2.csv", "deterministic one step SSP2 example"),
     (
         "deterministic/l1_AR(E)_l2_UT(S)__ef_3.1.csv",
         "deterministic two step EF 3.1 example",
@@ -48,11 +48,11 @@ _EXTERNAL_LCA_INPUTS = (
     ("monte_carlo/", "runnable Monte Carlo examples and project external LCA runs"),
 )
 _EXTERNAL_LCA_GUIDANCE = (
-    ("README_external_lca_templates.txt", "version syntax, filenames, schemas, and staging rules"),
+    ("README_ext_lca_templates.txt", "version syntax, filenames, schemas, and staging rules"),
 )
 _EXTERNAL_LCA_EXAMPLES = (
     ("deterministic/template__ef_3.1.csv", "deterministic EF 3.1 external LCA example"),
-    ("deterministic/template__ef_3.1__ssp2.csv", "deterministic EF 3.1 SSP2 example"),
+    ("deterministic/template__ef_3.1_ssp2.csv", "deterministic EF 3.1 SSP2 example"),
     ("monte_carlo/template__ef_3.1.csv", "normal CSV Monte Carlo EF 3.1 example"),
     ("monte_carlo/template__ef_3.1/", "compact CSV Monte Carlo EF 3.1 example"),
 )
@@ -81,7 +81,7 @@ class ExternalInputPreparationReport:
                         PHASE_A_LCA,
                         children=(
                             section(
-                                "external_lca",
+                                "ext_lca",
                                 lines=(
                                     f"Input folder: {self.external_lca_root}",
                                     *inventory_lines(
@@ -108,7 +108,7 @@ class ExternalInputPreparationReport:
                         PHASE_B1_ASOCC,
                         children=(
                             section(
-                                "external_asocc",
+                                "ext_asocc",
                                 lines=(
                                     f"Input folder: {self.external_asocc_root}",
                                     *inventory_lines(
@@ -228,7 +228,7 @@ def _build_preparation_report(
 
 def _preparation_logs_dir(*, project_root: Path) -> Path:
     """Return the logs folder for one external input preparation scope."""
-    return Path(project_root) / "prepare_external_inputs_log"
+    return Path(project_root) / "prep_ext_inputs_log"
 
 
 def _preparation_manifest_path(*, logs_dir: Path) -> Path:

@@ -248,7 +248,7 @@ def _write_validation_mismatch_log(
 
     source_token = _safe_filename_token(source_key)
     method_token = _safe_filename_token(lcia_method)
-    filename = f"{source_token}_{int(year)}_{method_token}_characterization_validation_mismatch.csv"
+    filename = f"{source_token}_{int(year)}_{method_token}_char_mismatch.csv"
     log_path = _get_mrio_calc_log_path(
         filename,
         source_key=source_key,

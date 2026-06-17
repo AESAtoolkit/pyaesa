@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-_REPOSITORY_DIRNAME = "pyaesa"
 _ACTIVE_REPO_ROOT: dict[str, Path | None] = {"repo_root": None}
 
 
@@ -15,7 +14,7 @@ def resolve_repo_root(top_path: str | Path) -> Path:
     """Return the canonical repository root resolved from one user top path.
 
     Args:
-        top_path: Parent directory where the package workspace root is created.
+        top_path: Workspace repository root path.
 
     Returns:
         Absolute repository root path.
@@ -25,7 +24,7 @@ def resolve_repo_root(top_path: str | Path) -> Path:
     """
     if isinstance(top_path, str) and not top_path.strip():
         raise ValueError("top_path must be a non-empty path string.")
-    return Path(top_path).expanduser().resolve() / _REPOSITORY_DIRNAME
+    return Path(top_path).expanduser().resolve()
 
 
 def set_default_repo_root(repo_root: str | Path) -> None:

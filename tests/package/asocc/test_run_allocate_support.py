@@ -542,8 +542,8 @@ def test_metadata_and_summary_cover_validation_and_false_branches(
         closure_audit_exists=False,
         has_recorded_outputs=True,
     )
-    assert any(item.folder == "results/level_2/utility_propagation_contrib" for item in inventory)
-    assert any(item.folder == "results/level_2/l2_vs_global" for item in inventory)
+    assert any(item.folder == "results/l2/ut_propag_contrib" for item in inventory)
+    assert any(item.folder == "results/l2/l2_vs_global" for item in inventory)
     two_step_inventory_context = _context(proj_base=tmp_path, projection_context=None)
     two_step_inventory_context.intermediate_outputs = False
     two_step_inventory_context.combined = [("UT(FD)", "EG(Pop)")]
@@ -557,8 +557,8 @@ def test_metadata_and_summary_cover_validation_and_false_branches(
         closure_audit_exists=False,
         has_recorded_outputs=True,
     )
-    assert any(item.folder == "results/level_2/l2_in_l1" for item in two_step_inventory)
-    assert any(item.folder == "results/level_2/l2_vs_global" for item in two_step_inventory)
+    assert any(item.folder == "results/l2/l2_in_l1" for item in two_step_inventory)
+    assert any(item.folder == "results/l2/l2_vs_global" for item in two_step_inventory)
     no_utility_context = _context(proj_base=tmp_path, projection_context=None)
     no_utility_context.intermediate_outputs = True
     no_utility_context.selected_l2_one_step = ["AR(E^{CBA_FD})"]
@@ -571,10 +571,7 @@ def test_metadata_and_summary_cover_validation_and_false_branches(
         closure_audit_exists=False,
         has_recorded_outputs=True,
     )
-    assert not any(
-        item.folder == "results/level_2/utility_propagation_contrib"
-        for item in no_utility_inventory
-    )
+    assert not any(item.folder == "results/l2/ut_propag_contrib" for item in no_utility_inventory)
 
     metadata_path = _get_allocate_run_metadata_path(
         tmp_path,

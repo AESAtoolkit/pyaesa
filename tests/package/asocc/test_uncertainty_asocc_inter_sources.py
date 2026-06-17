@@ -244,13 +244,13 @@ def _source_method_row() -> SourceMethodRow:
 def _uncertainty_paths(*, run_root: Path) -> AsoccUncertaintyRunPaths:
     return AsoccUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / "public_row_identity.csv",
+        public_row_identity=run_root / "results" / "row_identity.csv",
         public_runs=run_root / "results" / "asocc_runs.csv",
         summary_stats_runs=run_root / "results" / "summary_stats_runs.csv",
         results_readme=run_root / "results" / "README.txt",
         source_methods=run_root / "logs" / "source_methods.csv",
-        inter_method_tree_csv=run_root / "figures" / "inter_method_tree.csv",
-        inter_method_tree_figure_base=run_root / "figures" / "inter_method_tree",
+        inter_method_tree_csv=run_root / "figs" / "inter_method_tree.csv",
+        inter_method_tree_figure_base=run_root / "figs" / "inter_method_tree",
         sobol_indices=run_root / "results" / "sobol" / "sobol_indices.csv",
         sobol_source_summary=run_root / "results" / "sobol" / "sobol_source_summary.csv",
         sobol_readme=run_root / "results" / "sobol" / "README_sobol.txt",
@@ -691,10 +691,10 @@ def test_external_method_monte_carlo_discovery_uses_persisted_files(tmp_path: Pa
             external_method=external_method,
         )
 
-    matrix_dir = tmp_path / "B1_asocc" / "external_asocc" / "monte_carlo" / "UT(TD)"
+    matrix_dir = tmp_path / "B1_asocc" / "ext_asocc" / "monte_carlo" / "UT(TD)"
     matrix_dir.mkdir(parents=True)
     pd.DataFrame({"public_row_id": [0], "year": [2030]}).to_csv(
-        matrix_dir / "public_row_identity.csv",
+        matrix_dir / "row_identity.csv",
         index=False,
     )
     pd.DataFrame({"run_index": [0], "0": [0.2]}).to_csv(
@@ -2136,7 +2136,7 @@ def test_inter_method_public_weights_feed_custom_probabilities(allocation_dummy_
         "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
     }
     report = write_asocc_weight_template(base_asocc_args=base_args)
-    custom_path = report.tree_csv_path.parent / "weights__custom_v1.csv"
+    custom_path = report.tree_csv_path.parent / "custom_v1.csv"
     guide_text = report.guide_path.read_text(encoding="utf-8")
     candidates = candidates_from_scope(base_asocc_args=base_args)
     custom_probabilities = np.array([1.0, *([0.0] * (len(candidates) - 1))])
@@ -2186,13 +2186,13 @@ def test_inter_method_public_weights_feed_custom_probabilities(allocation_dummy_
     assert inter_method_tree_version_name(parameters=None) == "equal_weight_default"
     assert report.probabilities == (0.5, 0.5)
     assert report.tree_csv_path.name == "equal_weights.csv"
-    assert report.tree_csv_path.parent.name == "preview_inter_method_weights"
+    assert report.tree_csv_path.parent.name == "preview_im_weights"
     assert report.guide_path.parent == report.tree_csv_path.parent
     assert preview.tree_csv_path == custom_path
     assert report.figure_paths[0].parent == report.tree_csv_path.parent
-    assert report.figure_paths[0].stem == "probability_tree__equal_weights"
+    assert report.figure_paths[0].stem == "equal_weights"
     assert preview.figure_paths[0].parent == report.tree_csv_path.parent
-    assert preview.figure_paths[0].stem == "probability_tree__custom_v1"
+    assert preview.figure_paths[0].stem == "custom_v1"
     assert guide_text.strip()
     assert "PR-HR(Ecap,cum^{PBA})" in guide_text
     assert "CO(S)" in guide_text

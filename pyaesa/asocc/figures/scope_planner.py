@@ -45,8 +45,8 @@ class RunScope:
 
 def figure_state_key(*, fu_code: str) -> str:
     """Return the persisted figure state key for one functional unit level."""
-    level = "level_1" if str(fu_code).startswith("L1.") else "level_2"
-    return f"current_figure_state__{level}"
+    level = "l1" if str(fu_code).startswith("L1.") else "l2"
+    return f"current_figure_state_{level}"
 
 
 def figure_signature(
@@ -140,6 +140,8 @@ def _paths_within_root(*, root: Path, output_paths: list[Path]) -> list[Path]:
         try:
             Path(path).resolve().relative_to(root_resolved)
         except ValueError:
+            continue
+        if "enacting_metrics" in Path(path).parts:
             continue
         scoped.append(path)
     return scoped

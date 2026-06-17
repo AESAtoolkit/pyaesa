@@ -233,7 +233,7 @@ def test_uncertainty_ar6_cc_public_fixed_csv_reuse_and_artifacts(ar6_dummy_repo)
     identity_path = Path(manifest.artifacts["public_row_identity"])
     runs_path = Path(manifest.artifacts["cc_runs"])
     summary_path = Path(manifest.artifacts["summary_stats_runs"])
-    post_identity_path = Path(manifest.artifacts["post_study_period_public_row_identity"])
+    post_identity_path = Path(manifest.artifacts["post_study_period_row_identity"])
     post_runs_path = Path(manifest.artifacts["post_study_period_cc_runs"])
     post_summary_path = Path(manifest.artifacts["post_study_period_summary_stats_runs"])
     budget_identity_path = Path(
@@ -371,8 +371,8 @@ def test_uncertainty_ar6_cc_selector_scopes_and_source_settings_are_isolated(
 
     ssp1_root = _manifest_run_root(ssp1)
     ssp2_root = _manifest_run_root(ssp2)
-    assert ssp1_root.parent.parent.name == "C1__SSP1"
-    assert ssp2_root.parent.parent.name == "C1__SSP2"
+    assert ssp1_root.parent.parent.name == "C1_SSP1"
+    assert ssp2_root.parent.parent.name == "C1_SSP2"
     assert ssp1_root != ssp2_root
 
     categories = ["C1", "C2"]
@@ -413,7 +413,7 @@ def test_uncertainty_ar6_cc_selector_scopes_and_source_settings_are_isolated(
 
     false_root = _manifest_run_root(without_category_uncertainty)
     true_root = _manifest_run_root(with_category_uncertainty)
-    assert false_root.parent.parent.name == "C1-C2__SSP1-SSP2"
+    assert false_root.parent.parent.name == "C1-C2_SSP1-SSP2"
     assert true_root.parent.parent == false_root.parent.parent
     assert with_category_uncertainty.run_id != without_category_uncertainty.run_id
     assert reused_without_category_uncertainty.run_id == without_category_uncertainty.run_id
@@ -556,7 +556,7 @@ def test_uncertainty_ar6_cc_ending_in_2100_has_no_post_study_artifacts(
     ).manifest
 
     assert manifest.artifacts is not None
-    assert "post_study_period_public_row_identity" not in manifest.artifacts
+    assert "post_study_period_row_identity" not in manifest.artifacts
     assert "post_study_period_cc_runs" not in manifest.artifacts
     assert "post_study_period_summary_stats_runs" not in manifest.artifacts
     assert "figure_paths" in manifest.artifacts
@@ -857,11 +857,11 @@ def test_uncertainty_ar6_cc_convergence_batches_can_cross_checkpoints(
     run_root = tmp_path / "mc_ar6_crossing"
     paths = AR6CCUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / "public_row_identity.csv",
+        public_row_identity=run_root / "results" / "row_identity.csv",
         public_runs=run_root / "results" / "cc_runs.csv",
         summary_stats_runs=run_root / "results" / "summary_stats_runs.csv",
         post_study_public_row_identity=(
-            run_root / "results" / "post_study_period_public_row_identity.csv"
+            run_root / "results" / "post_study_period_row_identity.csv"
         ),
         post_study_public_runs=run_root / "results" / "post_study_period_cc_runs.csv",
         post_study_summary_stats_runs=(
@@ -1408,11 +1408,11 @@ def test_uncertainty_ar6_cc_figure_helpers_cover_flow_scopes(tmp_path: Path) -> 
     run_root = tmp_path / "mc_figure"
     paths = AR6CCUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / "public_row_identity.csv",
+        public_row_identity=run_root / "results" / "row_identity.csv",
         public_runs=run_root / "results" / "cc_runs.csv",
         summary_stats_runs=run_root / "results" / "summary_stats_runs.csv",
         post_study_public_row_identity=(
-            run_root / "results" / "post_study_period_public_row_identity.csv"
+            run_root / "results" / "post_study_period_row_identity.csv"
         ),
         post_study_public_runs=run_root / "results" / "post_study_period_cc_runs.csv",
         post_study_summary_stats_runs=(
@@ -1492,7 +1492,7 @@ def test_uncertainty_ar6_cc_figure_helpers_cover_flow_scopes(tmp_path: Path) -> 
             ssp_scenario="SSP1",
             category="C1",
         )
-        == "ssp1__cat_C1"
+        == "ssp1_cat_C1"
     )
     assert ar6_cc_run_paths_from_manifest(manifest=manifest).run_root == paths.run_root
     assert ar6_cc_run_layout_from_manifest(manifest=manifest) == "sparse"

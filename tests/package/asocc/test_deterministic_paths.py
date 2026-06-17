@@ -66,7 +66,7 @@ def test_allocate_scope_paths_cover_public_diagnostics_contracts(tmp_path: Path)
         source="oecd_v2025",
         agg_version=None,
     )
-    assert regression_dir == logs_dir / "regression_proj"
+    assert regression_dir == logs_dir / "regr_proj"
     assert (
         paths_mod._get_allocate_regression_stats_path(  # noqa: SLF001
             output_format="csv",
@@ -90,8 +90,8 @@ def test_allocate_scope_paths_cover_public_diagnostics_contracts(tmp_path: Path)
         output_format="csv",
         **common,
     )
-    assert stats_path == logs_dir / "regression_proj" / "regression_stats.parquet"
-    assert fit_inputs_path == logs_dir / "regression_proj" / "regression_fit_inputs.csv"
+    assert stats_path == logs_dir / "regr_proj" / "regression_stats.parquet"
+    assert fit_inputs_path == logs_dir / "regr_proj" / "regression_fit_inputs.csv"
     assert paths_mod.columns_defs_path_for_stats(stats_path=stats_path) == (
         stats_path.parent / "regression_stats_columns_defs.txt"
     )

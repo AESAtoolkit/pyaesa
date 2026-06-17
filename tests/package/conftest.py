@@ -103,7 +103,7 @@ def allocation_dummy_repo_factory(
 
     def factory(*, name: str = "allocation_dummy") -> "AllocationDummyRepo":
         clone_top_path = tmp_path / name
-        clone_repo_root = clone_top_path / "pyaesa"
+        clone_repo_root = clone_top_path
         if clone_repo_root.exists():
             shutil.rmtree(clone_repo_root)
         return clone_allocation_dummy_repo(

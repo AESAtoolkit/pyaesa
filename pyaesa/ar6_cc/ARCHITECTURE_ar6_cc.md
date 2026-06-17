@@ -63,12 +63,12 @@ the AR6 processing owner for the same study period and harmonization scope.
 The deterministic study period table is the canonical trajectory inventory for
 downstream consumers. It is written as:
 
-`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>__<ssp_tokens>/deterministic/results/ar6_cc.<format>`
+`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>_<ssp_tokens>/deterministic/results/ar6_cc.<format>`
 
 When the requested study period ends before 2100, the same deterministic run
 also writes:
 
-`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>__<ssp_tokens>/deterministic/results/ar6_cc_post_study_period.<format>`
+`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>_<ssp_tokens>/deterministic/results/ar6_cc_post_study_period.<format>`
 
 The post study table uses the same row identity and contains years after the
 study period through 2100. It supports AR6 CC reporting and figures only. aCC
@@ -103,7 +103,7 @@ negative sequestration rows into their formulas.
 
 Category and SSP selectors are part of the deterministic filesystem scope. The
 selector folder uses the exact normalized requested token sets, for example
-`C1-C3__SSP1-SSP5`; non-consecutive tokens are not compressed into implied
+`C1-C3_SSP1-SSP5`; non-consecutive tokens are not compressed into implied
 ranges. Repeating the same selector reuses the same deterministic table.
 
 ## Uncertainty Data Flow
@@ -136,7 +136,7 @@ Uncertainty public row identity is:
 - `year`
 
 `cc_model` and `cc_scenario` are sampled source state columns. They stay in
-`public_row_identity` so run rows can be joined back to the selected AR6
+`row_identity` so run rows can be joined back to the selected AR6
 trajectory. Exact summaries group them out because public summaries report the
 sampled carrying capacity distribution rather than one distribution per
 candidate trajectory.
@@ -166,8 +166,8 @@ Supported source parameters:
 | `category_uncertainty` | When true, run one category and group out `cc_category`. |
 
 `cc_runs` uses sparse selected rows with `run_index`, `public_row_id`, and
-`cc`. `public_row_identity` is trajectory resolved, so joining `cc_runs` to
-`public_row_identity` exposes the selected `cc_category`, `cc_model`,
+`cc`. `row_identity` is trajectory resolved, so joining `cc_runs` to
+`row_identity` exposes the selected `cc_category`, `cc_model`,
 `cc_scenario`, `ssp_scenario`, `cc_flow`, `cc_variable`, `impact_unit`, and year
 for each run row. Post study run artifacts use the same layout and the same
 run indices when a post study period exists.
@@ -178,16 +178,16 @@ the integrated category uncertainty distribution by `ssp_scenario`,
 
 The Monte Carlo run folder is:
 
-`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>__<ssp_tokens>/monte_carlo/<run_id>/`
+`data_processed/ar6/<processed_scope>/ar6_cc/<emission_variable_scope>/<category_tokens>_<ssp_tokens>/monte_carlo/<run_id>/`
 
 Required artifacts:
 
 | Artifact | Path |
 | --- | --- |
-| Public row identity | `results/public_row_identity.<suffix>` |
+| Public row identity | `results/row_identity.<suffix>` |
 | Run values | `results/cc_runs.<suffix>` |
 | Exact summary | `results/summary_stats_runs.<suffix>` |
-| Post study public row identity | `results/post_study_period_public_row_identity.<suffix>` when the deterministic scope has post study years |
+| Post study public row identity | `results/post_study_period_row_identity.<suffix>` when the deterministic scope has post study years |
 | Post study run values | `results/post_study_period_cc_runs.<suffix>` when the deterministic scope has post study years |
 | Post study exact summary | `results/post_study_period_summary_stats_runs.<suffix>` when the deterministic scope has post study years |
 | Period budget row identity | `results/study_and_post_study_period_budget_row_identity.<suffix>` |
@@ -196,7 +196,7 @@ Required artifacts:
 | Result guide | `results/README.txt` |
 | Source methods | `logs/source_methods.csv` |
 | Run manifest | `logs/scope_manifest.json` |
-| Figures | `figures/` when `figures=True` |
+| Figures | `figs/` when `figures=True` |
 
 Deterministic and uncertainty AR6 CC manifests use the package manifest
 contract: `function`, normalized public `arguments`, `execution`, `reuse`,

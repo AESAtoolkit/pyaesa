@@ -465,13 +465,13 @@ The inter-method tree is owned by `inter_method_tools/` and used by
 `uncertainty_asocc(...)`. The tree classifies package and external methods from
 the scientific method labels, assigns equal weights by branch hierarchy, and
 stores editable sibling edge weights in
-`B1_asocc/preview_inter_method_weights/`. The default export writes
-`equal_weights.csv`, `README_inter_method_weights.txt`, and a
-`probability_tree__equal_weights` figure directly in that folder. Custom
-versions use `weights__<version_name>.csv` and
-`probability_tree__<version_name>` directly in the same folder. The
+`B1_asocc/preview_im_weights/`. The default export writes
+`equal_weights.csv`, `README_im_weights.txt`, and an
+`equal_weights` figure directly in that folder. Custom
+versions use `<version_name>.csv` and
+`<version_name>` directly in the same folder. The
 `uncertainty_asocc(...)` run local tree under
-`figures/inter_method_tree/` uses the same CSV and figure naming policy, with
+`figs/inter_method_tree/` uses the same CSV and figure naming policy, with
 the active uncertainty figure format and DPI. For L2 scopes, a sharing
 principle with both multi step and one step candidates uses `m_s` and `o_s`
 branches before splitting weights within each path.

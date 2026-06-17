@@ -3,7 +3,7 @@
 from pathlib import Path
 import re
 
-_SCENARIO_FILE_PREFIX = "__"
+_SCENARIO_FILE_PREFIX = "_"
 _SCENARIO_PARTITION_TOKEN_RE = re.compile(r"^ssp\d+$")
 
 

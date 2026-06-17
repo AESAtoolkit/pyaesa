@@ -96,7 +96,7 @@ def write_asocc_weight_template(
               source and ``agg_version`` are used.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for all available functional unit codes and the system
               boundaries each represents.
             - ``s_p``: Producing sector filter(s), single string or list. If
@@ -141,7 +141,7 @@ def write_asocc_weight_template(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -343,7 +343,7 @@ def preview_asocc_weight_tree(
               source and ``agg_version`` are used.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for all available functional unit codes and the system
               boundaries each represents.
             - ``s_p``: Producing sector filter(s), single string or list. If
@@ -388,7 +388,7 @@ def preview_asocc_weight_tree(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -446,7 +446,7 @@ def preview_asocc_weight_tree(
               require regression on full MRIO). If omitted, defaults to
               ``reg_window`` when required.
         version_name: Required custom version token. The function reads
-            ``preview_inter_method_weights/weights__<version_name>.csv``.
+            ``preview_im_weights/<version_name>.csv``.
             The token must be non empty, contain only letters, digits, and
             underscores. The reserved token ``"equal_weight_default"`` is
             excluded.

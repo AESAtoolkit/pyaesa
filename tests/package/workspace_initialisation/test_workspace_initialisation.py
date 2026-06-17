@@ -36,15 +36,16 @@ def test_set_workspace_imports_prerequisites(tmp_path: Path, capsys) -> None:
     cc_notes_dir = data_raw / "carrying_capacities"
     methodological_notes_dir = data_raw / "methodological_notes"
     assert repo_root == resolve_repo_root(tmp_path)
+    assert repo_root == tmp_path.resolve()
     assert (cc_notes_dir / "pb_lcia_cc_steady_state.csv").exists()
     assert (methodological_notes_dir / "1_functional_units_and_allocation_methods.md").exists()
     assert (methodological_notes_dir / "fig-asocc-paths.svg").exists()
-    assert (methodological_notes_dir / "methodological_note__acc_prospective.pdf").exists()
+    assert (methodological_notes_dir / "methodological_note_acc_prospective.pdf").exists()
     assert (
-        methodological_notes_dir / "methodological_note__asocc_fus_allocation_methods.pdf"
+        methodological_notes_dir / "methodological_note_asocc_fus_allocation_methods.pdf"
     ).exists()
-    assert (methodological_notes_dir / "methodological_note__acc_uncertainty_sources.pdf").exists()
-    assert (methodological_notes_dir / "methodological_note__steady_state__dynamic_cc.pdf").exists()
+    assert (methodological_notes_dir / "methodological_note_acc_uncertainty_sources.pdf").exists()
+    assert (methodological_notes_dir / "methodological_note_steady_state_dynamic_cc.pdf").exists()
     assert (methodological_notes_dir / "recommended_citations.txt").exists()
     assert (exiobase_aggregation_dir / "agg_reg_template.csv").exists()
     assert (exiobase_aggregation_dir / "agg_reg_eu27.csv").exists()

@@ -64,18 +64,18 @@ def test_table_io_and_scenario_partitions_cover_supported_formats(tmp_path: Path
     with pytest.raises(ValueError):
         write_table(path=tmp_path / "bad.xlsx", frame=frame)
 
-    assert scenario_partition_glob_pattern(base_path=csv_path) == "table__ssp*.csv"
-    assert scenario_partition_path(base_path=csv_path, token="SSP 2").name == "table__ssp2.csv"
-    assert scenario_partition_path(base_path=csv_path, token="2").name == "table__ssp2.csv"
-    assert scenario_partition_path(base_path=csv_path, token="<n>").name == "table__ssp<n>.csv"
+    assert scenario_partition_glob_pattern(base_path=csv_path) == "table_ssp*.csv"
+    assert scenario_partition_path(base_path=csv_path, token="SSP 2").name == "table_ssp2.csv"
+    assert scenario_partition_path(base_path=csv_path, token="2").name == "table_ssp2.csv"
+    assert scenario_partition_path(base_path=csv_path, token="<n>").name == "table_ssp<n>.csv"
     with pytest.raises(ValueError):
         scenario_partition_path(base_path=csv_path, token="scenario2")
 
-    valid_partition = tmp_path / "table__ssp2.csv"
-    invalid_partition = tmp_path / "table__ssp_bad.csv"
+    valid_partition = tmp_path / "table_ssp2.csv"
+    invalid_partition = tmp_path / "table_ssp_bad.csv"
     missing_base = tmp_path / "missing_table.csv"
-    missing_partition = tmp_path / "missing_table__ssp2.csv"
-    unrelated = tmp_path / "unrelated__ssp2.csv"
+    missing_partition = tmp_path / "missing_table_ssp2.csv"
+    unrelated = tmp_path / "unrelated_ssp2.csv"
     write_table(path=valid_partition, frame=frame)
     write_table(path=invalid_partition, frame=frame)
     write_table(path=missing_partition, frame=frame)
@@ -96,8 +96,8 @@ def test_lcia_file_owned_table_paths_cover_method_and_scenario_partitions(
 ) -> None:
     base_path = tmp_path / "lca.csv"
     method_path = tmp_path / "lca__pb_lcia.csv"
-    method_scenario_path = tmp_path / "lca__pb_lcia__ssp2.csv"
-    base_scenario_path = tmp_path / "lca__ssp2.csv"
+    method_scenario_path = tmp_path / "lca__pb_lcia_ssp2.csv"
+    base_scenario_path = tmp_path / "lca_ssp2.csv"
     blank_method_path = tmp_path / "lca__.csv"
     unrelated_path = tmp_path / "lca_extra.csv"
     frame = pd.DataFrame({"value": [1.0]})

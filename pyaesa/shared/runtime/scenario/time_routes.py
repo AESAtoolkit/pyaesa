@@ -21,6 +21,8 @@ def asocc_time_route_from_projection_subfolder(projection_subfolder: str | None)
     return {
         ASOCC_TIME_ROUTE_HISTORICAL_REUSE: ASOCC_TIME_ROUTE_HISTORICAL_REUSE,
         ASOCC_TIME_ROUTE_REGRESSION: ASOCC_TIME_ROUTE_REGRESSION,
+        "hist_reuse": ASOCC_TIME_ROUTE_HISTORICAL_REUSE,
+        "regr_proj": ASOCC_TIME_ROUTE_REGRESSION,
     }[text]
 
 

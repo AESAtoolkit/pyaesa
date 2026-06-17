@@ -122,7 +122,7 @@ def uncertainty_asocc(
               source and ``agg_version`` are used.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for all available functional unit codes and the system
               boundaries each represents.
             - ``s_p``: Producing sector filter(s), single string or list. If
@@ -168,7 +168,7 @@ def uncertainty_asocc(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -237,7 +237,7 @@ def uncertainty_asocc(
             an alternate published disaggregated aSoCC source. Source blocks
             use an ``active`` boolean; write ``active=False`` to disable a
             default active source. See
-            ``data_raw/methodological_notes/methodological_note__acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -345,12 +345,12 @@ def uncertainty_asocc(
               Each Monte Carlo run samples one method leaf among the selected
               deterministic and external methods. Equal weight mode writes the
               tree CSV, README, and rendered probability tree under the
-              run folder ``figures/inter_method_tree/``. To prepare custom
+              run folder ``figs/inter_method_tree/``. To prepare custom
               weights before running uncertainty, use
               ``write_asocc_weight_template(...)``; it writes
-              ``equal_weights.csv``, ``README_inter_method_weights.txt``, and
-              ``probability_tree__equal_weights.<ext>`` under
-              ``B1_asocc/preview_inter_method_weights/``. Use
+              ``equal_weights.csv``, ``README_im_weights.txt``, and
+              ``equal_weights.<ext>`` under
+              ``B1_asocc/preview_im_weights/``. Use
               ``preview_asocc_weight_tree(...)`` to validate and render a
               custom probability tree before using
               ``{"mode": "custom", "version_name": "..."}``.
@@ -445,9 +445,9 @@ def uncertainty_asocc(
             ``monte_carlo`` root. For example, for ``project_name="demo"``,
             ``source="exiobase_3102_ixi"``, and ``agg_version="elec"``, the
             refreshed deterministic path is
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi__elec/deterministic`` and
+            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/deterministic`` and
             matching Monte Carlo run folders are under
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi__elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
             External aSoCC inputs, processed MRIO inputs, processed population
             and GDP, raw downloads, and downstream aCC or ASR outputs are not
             refreshed. Defaults to ``False``.

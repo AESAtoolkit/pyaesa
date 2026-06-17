@@ -69,7 +69,7 @@ def render_acc_deterministic_figures(
         family_label="deterministic aCC",
     )
     clear_deterministic_figure_scope(metadata_path=metadata_path)
-    figures_root = metadata_path.parent.parent / "figures"
+    figures_root = metadata_path.parent.parent / "figs"
     figure_paths = render_products(
         rows=rows,
         figures_root=figures_root,

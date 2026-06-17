@@ -462,8 +462,8 @@ def test_path_resolution_cover_validation_and_paths(allocation_dummy_repo) -> No
     roots = branch_mod.collect_asocc_roots(scope=scope, fu_code="L2.a.a")
     assert len(roots) == 4
     assert all("B1_asocc" in path for path in roots)
-    assert any(Path(path).parts[-2:] == ("results", "level_1") for path in roots)
-    assert any(Path(path).parts[-3:] == ("results", "level_2", "l2_vs_global") for path in roots)
+    assert any(Path(path).parts[-2:] == ("results", "l1") for path in roots)
+    assert any(Path(path).parts[-3:] == ("results", "l2", "l2_vs_global") for path in roots)
     assert branch_mod.allocate_run_metadata_path(scope=scope).name.endswith(".json")
 
     disagg_scope_expected = branch_mod.build_asocc_deterministic_path_scope(

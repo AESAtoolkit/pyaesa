@@ -347,10 +347,10 @@ notebooks, and optional workflow notebooks.
 
 | Location | Notes |
 | --- | --- |
-| [`methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf`](methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf) | Functional units and allocation methods. |
-| [`methodological_notes/methodological_note__acc_prospective.pdf`](methodological_notes/methodological_note__acc_prospective.pdf) | Prospective allocation. |
-| [`methodological_notes/methodological_note__acc_uncertainty_sources.pdf`](methodological_notes/methodological_note__acc_uncertainty_sources.pdf) | Uncertainty sources. |
-| [`methodological_notes/methodological_note__steady_state__dynamic_cc.pdf`](methodological_notes/methodological_note__steady_state__dynamic_cc.pdf) | Definition of steady state and dynamic carrying capacities. |
+| [`methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf`](methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf) | Functional units and allocation methods. |
+| [`methodological_notes/methodological_note_acc_prospective.pdf`](methodological_notes/methodological_note_acc_prospective.pdf) | Prospective allocation. |
+| [`methodological_notes/methodological_note_acc_uncertainty_sources.pdf`](methodological_notes/methodological_note_acc_uncertainty_sources.pdf) | Uncertainty sources. |
+| [`methodological_notes/methodological_note_steady_state_dynamic_cc.pdf`](methodological_notes/methodological_note_steady_state_dynamic_cc.pdf) | Definition of steady state and dynamic carrying capacities. |
 
 `set_workspace(...)` copies these methodological references into the active
 workspace under `data_raw/methodological_notes/`.

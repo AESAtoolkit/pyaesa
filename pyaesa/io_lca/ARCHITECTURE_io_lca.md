@@ -101,9 +101,9 @@ Processed MRIO prerequisites are read and are not refreshed by IO-LCA.
 ## Output And Reuse
 
 Deterministic outputs are written under
-`A_lca/io_lca/<source>__<version>/deterministic/`. IO-LCA Monte Carlo outputs
+`A_lca/io_lca/<source>_<version>/deterministic/`. IO-LCA Monte Carlo outputs
 are written under
-`A_lca/io_lca/<source>__<version>/monte_carlo/<run_id>/`.
+`A_lca/io_lca/<source>_<version>/monte_carlo/<run_id>/`.
 
 Deterministic IO-LCA writes `logs/scope_manifest.json` as the discovery point
 for completed public call scopes. The manifest owns `function`, `arguments`,
@@ -115,7 +115,7 @@ Required IO-LCA uncertainty artifacts are:
 
 | Artifact | Path owner |
 | --- | --- |
-| `results/public_row_identity.<ext>` | `uncertainty/io/paths.py` |
+| `results/row_identity.<ext>` | `uncertainty/io/paths.py` |
 | `results/lca_runs.<ext>` | `uncertainty/io/paths.py` |
 | `results/summary_stats_runs.<ext>` | `uncertainty/io/paths.py` |
 | `results/README.txt` | `uncertainty/io/source_methods.py` |
@@ -123,7 +123,7 @@ Required IO-LCA uncertainty artifacts are:
 | `logs/scope_manifest.json` | shared manifest owner plus IO-LCA path owner |
 
 When `figures=True`, IO-LCA uncertainty figures are written directly under
-`figures/` for exact one year and multi year requests. Single year uncertainty
+`figs/` for exact one year and multi year requests. Single year uncertainty
 figures read `lca_runs` with chunked compact run matrix selection and attach
 run vectors only for the planned public row ids. Multi year uncertainty
 figures read `summary_stats_runs` and do not read run matrices. IO-LCA figure

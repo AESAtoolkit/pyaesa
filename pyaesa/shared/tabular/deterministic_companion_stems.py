@@ -42,33 +42,33 @@ def _split_companion_scenario_suffix(
     scenario_tokens: Sequence[str] | None,
 ) -> tuple[str, str | None]:
     normalized = str(stem).strip()
-    pieces = [piece for piece in normalized.split("__") if piece]
     normalized_tokens = normalize_ssp_tokens(
         list(scenario_tokens) if scenario_tokens is not None else None
     )
-    if len(pieces) <= 1:
-        return normalized, None
     explicit_tokens = {token.lower() for token in normalized_tokens}
-    scenario_positions = [
-        index
-        for index, piece in enumerate(pieces)
-        if (
-            piece.lower() in explicit_tokens
-            if explicit_tokens
-            else bool(_CANONICAL_STEM_SSP_RE.fullmatch(piece.strip()))
-        )
-    ]
-    if not scenario_positions:
+    base_stem, separator, suffix = normalized.rpartition("_")
+    if not separator or not base_stem:
         return normalized, None
-    if len(scenario_positions) > 1:
+    suffix_is_scenario = (
+        suffix.lower() in explicit_tokens
+        if explicit_tokens
+        else bool(_CANONICAL_STEM_SSP_RE.fullmatch(suffix.strip()))
+    )
+    if not suffix_is_scenario:
+        return normalized, None
+    _base_prefix, base_separator, base_suffix = base_stem.rpartition("_")
+    base_suffix_is_scenario = (
+        base_suffix.lower() in explicit_tokens
+        if explicit_tokens
+        else bool(_CANONICAL_STEM_SSP_RE.fullmatch(base_suffix.strip()))
+    )
+    if base_separator and base_suffix_is_scenario:
         raise ValueError(
             "Deterministic companion stems must contain at most one SSP filename token. "
             f"Got stem='{normalized}'."
         )
-    scenario_position = scenario_positions[0]
     scenario_token = partition_token_to_ssp_token(
-        pieces[scenario_position],
+        suffix,
         context=f"Deterministic companion stem '{normalized}'",
     )
-    base_tokens = [piece for index, piece in enumerate(pieces) if index != scenario_position]
-    return "__".join(base_tokens), scenario_token
+    return base_stem, scenario_token

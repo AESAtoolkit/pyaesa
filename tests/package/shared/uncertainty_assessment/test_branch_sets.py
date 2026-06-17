@@ -83,12 +83,12 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
     assert "Run status:" in report_text
     assert "branch set" in report_text
     assert "Sobol:" in report_text
-    assert "static__gwp100_lcia" in report_text
-    assert "static__pb_lcia" in report_text
+    assert "static_gwp100_lcia" in report_text
+    assert "static_pb_lcia" in report_text
     assert "completed fixed runs 5" in report_text
     live_output = capsys.readouterr().out
-    assert "static__gwp100_lcia" in live_output
-    assert "static__pb_lcia" in live_output
+    assert "static_gwp100_lcia" in live_output
+    assert "static_pb_lcia" in live_output
     assert not (tmp_path / "mc_reuse").exists()
     assert (
         branch_set_run_id_for_request(

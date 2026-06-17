@@ -26,7 +26,13 @@ def _utility_log_name(saved_dir: Path) -> str:
     source_label = saved_dir.parent.parent.name
     version_label = saved_dir.parent.name
     year_label = saved_dir.name
-    return f"{source_label}__{version_label}__{year_label}_utility_propag_uncasext_error.log"
+    return f"{source_label}_{version_label}_{year_label}_utility_propag_uncasext_error.log"
+
+
+def _matrix_version_from_saved_dir(saved_dir: Path) -> str | None:
+    """Return the matrix version argument represented by a processed save folder."""
+    version = saved_dir.parent.name
+    return None if version == "original_class" else version.removeprefix("custom_class_")
 
 
 def _write_error_log(
@@ -39,7 +45,9 @@ def _write_error_log(
     """Append exception details to the MRIO calc log directory."""
     log_name = _utility_log_name(saved_dir)
     resolved_source_key = saved_dir.parent.parent.name if source_key is None else source_key
-    resolved_matrix_version = saved_dir.parent.name if matrix_version is None else matrix_version
+    resolved_matrix_version = (
+        _matrix_version_from_saved_dir(saved_dir) if matrix_version is None else matrix_version
+    )
     log_path = _get_mrio_calc_log_path(
         log_name,
         source_key=resolved_source_key,
@@ -62,7 +70,9 @@ def _write_diagnostic_log(
     """Append a diagnostic message to the utility propagation log."""
     log_name = _utility_log_name(saved_dir)
     resolved_source_key = saved_dir.parent.parent.name if source_key is None else source_key
-    resolved_matrix_version = saved_dir.parent.name if matrix_version is None else matrix_version
+    resolved_matrix_version = (
+        _matrix_version_from_saved_dir(saved_dir) if matrix_version is None else matrix_version
+    )
     log_path = _get_mrio_calc_log_path(
         log_name,
         source_key=resolved_source_key,

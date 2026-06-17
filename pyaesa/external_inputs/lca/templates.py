@@ -7,7 +7,7 @@ from pyaesa.shared.runtime.io.filesystem import ensure_dir
 
 _EXAMPLES_ROOT = Path(__file__).resolve().parents[1] / "examples" / "lca"
 _GUIDANCE_FILE = (
-    Path(__file__).resolve().parents[1] / "example_guidance" / "lca" / "external_lca_guidance.txt"
+    Path(__file__).resolve().parents[1] / "example_guidance" / "lca" / "ext_lca_guidance.txt"
 )
 
 
@@ -18,6 +18,6 @@ def ensure_external_lca_templates(*, external_dir: Path) -> Path:
     templates_dir = ensure_dir(external_dir / "templates")
     copy_packaged_file(
         source_file=_GUIDANCE_FILE,
-        target_file=templates_dir / "README_external_lca_templates.txt",
+        target_file=templates_dir / "README_ext_lca_templates.txt",
     )
     return templates_dir

@@ -288,7 +288,7 @@ def _job(
     selector_title: str | None = None,
 ) -> PlannedFigureJob:
     output_base = figures_root / acc_scope_stem(
-        label,
+        "mm" if label == "multi_method" else label,
         frame,
         include_impact=include_impact,
         selector_token=selector_token,

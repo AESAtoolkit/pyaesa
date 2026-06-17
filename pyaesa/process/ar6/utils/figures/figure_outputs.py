@@ -206,9 +206,9 @@ def ensure_figures(
         status_callback=status_callback,
         metadata_callback=persist_partial_metadata,
     )
-    sampling_log_csv_file = logs_dir / "figure_sampling_convergence_log.csv"
+    sampling_log_csv_file = logs_dir / "fig_sampling_convergence_log.csv"
     sampling_log_columns_txt_file = (
-        logs_dir / "figure_sampling_convergence_log_columns_explanation.txt"
+        logs_dir / "fig_sampling_convergence_log_columns_explanation.txt"
     )
     convergence_log_df.to_csv(sampling_log_csv_file, index=False)
     sampling_log_columns_txt_file.write_text(

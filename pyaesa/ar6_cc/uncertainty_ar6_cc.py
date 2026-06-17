@@ -95,7 +95,7 @@ def uncertainty_ar6_cc(
               positive emissions rows and signed negative sequestration
               companion rows; downstream aCC and ASR consume only the positive
               emissions rows. See
-              ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
+              ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
               for the methodological explanation.
             - ``subset_version``: Optional selector for a subset of AR6
               model-scenario pairs. Follow
@@ -106,7 +106,7 @@ def uncertainty_ar6_cc(
             uncertainty is inactive by default. Source blocks use an
             ``active`` boolean; write ``active=False`` to disable dynamic AR6
             CC uncertainty. See
-            ``data_raw/methodological_notes/methodological_note__acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -187,7 +187,7 @@ def uncertainty_ar6_cc(
             ``monte_carlo`` root of that deterministic output scope. For
             example, matching AR6 CC Monte Carlo run folders are refreshed
             under
-            ``<repo>/data_processed/ar6/2019-2060_harmonization_offset/ar6_cc/gross_alt_kyoto_gases_wo_afolu/C1__SSP1/monte_carlo/mc_<generated_id>``.
+            ``<repo>/data_processed/ar6/2019-2060_harmonization_offset/ar6_cc/gross_alt_kyoto_gases_wo_afolu/C1_SSP1/monte_carlo/mc_<generated_id>``.
             Raw downloads and downstream aCC or ASR outputs are not refreshed.
             Defaults to ``False``.
 
@@ -207,7 +207,7 @@ def uncertainty_ar6_cc(
         AR6 inputs through its deterministic AR6 CC prerequisite.
         Methodological details on AR6 scenario filtering, harmonization, and
         dynamic carrying capacity construction are provided in
-        ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``.
+        ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``.
 
     Example:
         Run dynamic AR6 CC with category uncertainty added, using defaults

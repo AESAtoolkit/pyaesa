@@ -5,7 +5,7 @@ import re
 
 from pyaesa.shared.tabular.table_io import partitioned_output_paths
 
-_SCENARIO_SUFFIX_RE = re.compile(r"__ssp\d+$")
+_SCENARIO_SUFFIX_RE = re.compile(r"_ssp\d+$")
 
 
 def lcia_method_partition_path(*, base_path: Path, lcia_method: str | None) -> Path:

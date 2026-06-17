@@ -74,7 +74,7 @@ def _run_root(repo_root: Path, *, project_name: str, run_id: str) -> Path:
 
 
 def _read_asocc_runs(run_root: Path) -> pd.DataFrame:
-    identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
+    identity = pd.read_csv(run_root / "results" / "row_identity.csv")
     matrix = _read_asocc_run_matrix(run_root=run_root, column_count=len(identity))
     runs = matrix.melt(id_vars="run_index", var_name="public_row_id", value_name="asocc")
     runs["public_row_id"] = runs["public_row_id"].astype(int)
@@ -757,7 +757,7 @@ def test_uncertainty_asocc_job_planner_covers_compact_single_year_multi_method(
 ) -> None:
     paths = AsoccUncertaintyRunPaths(
         run_root=tmp_path / "run",
-        public_row_identity=tmp_path / "run" / "results" / "public_row_identity.csv",
+        public_row_identity=tmp_path / "run" / "results" / "row_identity.csv",
         public_runs=tmp_path / "run" / "results" / "asocc_runs.csv",
         summary_stats_runs=tmp_path / "run" / "results" / "summary_stats_runs.csv",
         results_readme=tmp_path / "run" / "results" / "README.txt",
@@ -839,7 +839,7 @@ def test_uncertainty_asocc_job_planner_covers_compact_single_year_multi_method(
 
     sparse_paths = AsoccUncertaintyRunPaths(
         run_root=tmp_path / "sparse_run",
-        public_row_identity=tmp_path / "sparse_run" / "results" / "public_row_identity.csv",
+        public_row_identity=tmp_path / "sparse_run" / "results" / "row_identity.csv",
         public_runs=tmp_path / "sparse_run" / "results" / "asocc_runs.csv",
         summary_stats_runs=tmp_path / "sparse_run" / "results" / "summary_stats_runs.csv",
         results_readme=tmp_path / "sparse_run" / "results" / "README.txt",
@@ -1250,7 +1250,7 @@ def test_uncertainty_asocc_lcia_aggregated_indices_use_full_cov_label(
         project_name=project_name,
         run_id=manifest.run_id,
     )
-    identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
+    identity = pd.read_csv(run_root / "results" / "row_identity.csv")
     source_methods = pd.read_csv(run_root / "logs" / "source_methods.csv")
 
     assert aggregate_label in set(identity["r_p"].dropna().astype(str))
@@ -1389,7 +1389,7 @@ def test_uncertainty_asocc_lcia_and_reference_year_use_compact_outputs(
         project_name=project_name,
         run_id=manifest.run_id,
     )
-    identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
+    identity = pd.read_csv(run_root / "results" / "row_identity.csv")
     matrix = _read_asocc_run_matrix(run_root=run_root, column_count=len(identity))
     runs = _read_asocc_runs(run_root)
 
@@ -1579,7 +1579,7 @@ def test_uncertainty_asocc_projection_uncertainty_samples_l2_reuse_year_axis(
         run_id=manifest.run_id,
     )
     runs = _read_asocc_runs(run_root)
-    identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
+    identity = pd.read_csv(run_root / "results" / "row_identity.csv")
     source_methods = pd.read_csv(run_root / "logs" / "source_methods.csv")
     summary = pd.read_csv(run_root / "results" / "summary_stats_runs.csv")
 
@@ -1752,7 +1752,7 @@ def test_uncertainty_asocc_lcia_plus_projection_collapses_reuse_axis(
         project_name=project_name,
         run_id=manifest.run_id,
     )
-    identity = pd.read_csv(run_root / "results" / "public_row_identity.csv")
+    identity = pd.read_csv(run_root / "results" / "row_identity.csv")
     runs = _read_asocc_runs(run_root)
 
     assert manifest.active_sources == ("lcia_uncertainty", "projection_uncertainty")
@@ -1763,7 +1763,7 @@ def test_uncertainty_asocc_lcia_plus_projection_collapses_reuse_axis(
 def test_uncertainty_asocc_deterministic_row_loader_preserves_ssp_path_identity(
     tmp_path: Path,
 ) -> None:
-    path = tmp_path / "UT(TD)__ssp2.csv"
+    path = tmp_path / "UT(TD)_ssp2.csv"
     pd.DataFrame(
         {
             "l1_l2_method": ["UT(TD)"],

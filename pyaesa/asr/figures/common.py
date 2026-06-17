@@ -68,12 +68,12 @@ def asr_scope_stem(
     selector_token: str = "all",
 ) -> str:
     """Return one ASR figure file stem."""
-    parts = [label]
+    prefix = [label]
     if product is not None:
-        parts.append(product)
+        prefix.append(product)
     if str(selector_token).strip() and selector_token != "all":
-        parts.append(str(selector_token).strip())
-    parts.extend(visible_values(frame, "lcia_method")[:1])
+        prefix.append(str(selector_token).strip())
+    parts = []
     if include_impact:
         parts.extend(visible_values(frame, "impact")[:1])
     parts.extend(_scope_scenario_values(frame)[:1])
@@ -84,7 +84,9 @@ def asr_scope_stem(
     model_pair = _dynamic_model_scenario_token(frame)
     if model_pair is not None:
         parts.append(model_pair)
-    return "__".join(sanitize_token(part) for part in parts if str(part).strip())
+    stem = "_".join(sanitize_token(part) for part in prefix if str(part).strip())
+    suffix = [sanitize_token(part) for part in parts if str(part).strip()]
+    return "_".join([stem, *suffix] if stem else suffix)
 
 
 def asr_scope_title(

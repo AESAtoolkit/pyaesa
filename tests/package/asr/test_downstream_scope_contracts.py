@@ -46,7 +46,7 @@ def _loaded_asocc_share(
     *,
     file_stem: str,
     frame_wide: pd.DataFrame,
-    relative_dir: Path = Path("level_2"),
+    relative_dir: Path = Path("l2"),
 ) -> inputs_mod.LoadedAsoccShare:
     return inputs_mod.load_asocc_share(
         inputs_mod.AsoccShare(
@@ -166,7 +166,7 @@ def test_downstream_input_covers_file_loading_and_path_routing(
     wide_frame = pd.DataFrame({"value": [1.0]})
     asocc_share = inputs_mod.AsoccShare(
         file_stem="demo",
-        relative_dir=Path("level_1"),
+        relative_dir=Path("l1"),
         impacts=tuple(),
         source_label="native",
         frame_wide=wide_frame,
@@ -179,7 +179,7 @@ def test_downstream_input_covers_file_loading_and_path_routing(
     assert (
         inputs_mod.AsoccShare(
             file_stem="demo",
-            relative_dir=Path("level_1"),
+            relative_dir=Path("l1"),
             impacts=tuple(),
             source_label="native",
             path=csv_path,
@@ -190,18 +190,18 @@ def test_downstream_input_covers_file_loading_and_path_routing(
     assert wide_out is not None
     assert float(wide_out.loc[0, "value"]) == 1.0
     assert inputs_mod._relative_share_path(
-        tmp_path / "results" / "level_1" / "nested" / "share.csv"
+        tmp_path / "results" / "l1" / "nested" / "share.csv"
     ) == Path("nested")  # noqa: SLF001
     assert inputs_mod._relative_share_path(
-        tmp_path / "results" / "level_2" / "l2_vs_global" / "bucket" / "share.csv"
+        tmp_path / "results" / "l2" / "l2_vs_global" / "bucket" / "share.csv"
     ) == Path("bucket")  # noqa: SLF001
     assert inputs_mod._relative_share_path(
-        tmp_path / "results" / "level_2" / "bucket" / "share.csv"
+        tmp_path / "results" / "l2" / "bucket" / "share.csv"
     ) == Path("bucket")  # noqa: SLF001
     assert inputs_mod._relative_share_path(tmp_path / "other" / "share.csv") == Path(".")  # noqa: SLF001
     path_only_share = inputs_mod.AsoccShare(
         file_stem="demo",
-        relative_dir=Path("level_1"),
+        relative_dir=Path("l1"),
         impacts=tuple(),
         source_label="native",
         path=csv_path,
@@ -235,7 +235,7 @@ def test_downstream_asocc_shares_validate_canonical_method_identity() -> None:
         selection_mod.asocc_share_declared_lcia_method(
             asocc_share=inputs_mod.AsoccShare(
                 file_stem="demo__gwp100_lcia",
-                relative_dir=Path("level_1"),
+                relative_dir=Path("l1"),
                 impacts=tuple(),
                 source_label="native",
                 frame_wide=pd.DataFrame({"lcia_method": ["pb_lcia"]}),
@@ -338,7 +338,7 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
         }
     )
     asocc_share = _loaded_asocc_share(
-        file_stem="demo__ssp1",
+        file_stem="demo_ssp1",
         frame_wide=frame_wide,
     )
     assert downstream_scenarios_mod.asocc_share_ssp_scenario_labels(
@@ -348,7 +348,7 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
         downstream_scenarios_mod.asocc_share_ssp_scenario_labels(
             _loaded_asocc_share(
                 file_stem="demo",
-                relative_dir=Path("level_1"),
+                relative_dir=Path("l1"),
                 frame_wide=pd.DataFrame({"2005": [1.0]}),
             ),
         )
@@ -369,10 +369,10 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
         ],
         scenario_tokens=["SSP2"],
     )
-    assert metadata["demo__ssp1"]["base_stem"] == "demo"
-    assert metadata["demo__ssp1"][ASOCC_SSP_SCENARIO_COLUMN] == "SSP1"
-    assert metadata["demo__ssp1"]["asocc_ssp_scenario_labels"] == ["SSP1"]
-    assert metadata["demo__ssp1"]["ssp_start_year"] == 2010
+    assert metadata["demo_ssp1"]["base_stem"] == "demo"
+    assert metadata["demo_ssp1"][ASOCC_SSP_SCENARIO_COLUMN] == "SSP1"
+    assert metadata["demo_ssp1"]["asocc_ssp_scenario_labels"] == ["SSP1"]
+    assert metadata["demo_ssp1"]["ssp_start_year"] == 2010
     assert metadata["demo__l2_reuse_year_2030"]["base_stem"] == "demo__l2_reuse_year_2030"
     assert metadata["demo__l2_reuse_year_2030"][ASOCC_SSP_SCENARIO_COLUMN] is None
     assert metadata["demo__l2_reuse_year_2030"]["asocc_ssp_scenario_labels"] == []
@@ -392,14 +392,14 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
     metadata_with_scenario = downstream_scenarios_mod.share_transition_metadata(
         asocc_shares=[
             _loaded_asocc_share(
-                file_stem="demo__ssp2",
+                file_stem="demo_ssp2",
                 frame_wide=pd.DataFrame({ASOCC_SSP_SCENARIO_COLUMN: ["SSP2"], "2005": [1.0]}),
             )
         ],
         scenario_tokens=["SSP2"],
     )
-    assert metadata_with_scenario["demo__ssp2"][ASOCC_SSP_SCENARIO_COLUMN] == "SSP2"
-    assert metadata_with_scenario["demo__ssp2"]["ssp_start_year"] == 2005
+    assert metadata_with_scenario["demo_ssp2"][ASOCC_SSP_SCENARIO_COLUMN] == "SSP2"
+    assert metadata_with_scenario["demo_ssp2"]["ssp_start_year"] == 2005
 
     no_scenario_column = downstream_scenarios_mod.share_transition_metadata(
         asocc_shares=[
@@ -440,14 +440,14 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
     suffix_without_requested_years = downstream_scenarios_mod.share_transition_metadata(
         asocc_shares=[
             _loaded_asocc_share(
-                file_stem="suffix__ssp1",
+                file_stem="suffix_ssp1",
                 frame_wide=pd.DataFrame({"2005": [1.0]}),
             )
         ],
         scenario_tokens=["SSP1"],
     )
-    assert suffix_without_requested_years["suffix__ssp1"][ASOCC_SSP_SCENARIO_COLUMN] is None
-    assert suffix_without_requested_years["suffix__ssp1"]["ssp_start_year"] is None
+    assert suffix_without_requested_years["suffix_ssp1"][ASOCC_SSP_SCENARIO_COLUMN] is None
+    assert suffix_without_requested_years["suffix_ssp1"]["ssp_start_year"] is None
     assert (
         downstream_scenarios_mod.share_transition_payload_for_output_stem(
             output_stem="",
@@ -457,19 +457,19 @@ def test_downstream_scenarios_cover_transition_and_suffix_logic() -> None:
     )
     assert (
         downstream_scenarios_mod.share_transition_payload_for_output_stem(
-            output_stem="suffix__ssp1",
+            output_stem="suffix_ssp1",
             share_transition_meta=suffix_without_requested_years,
         )
-        == suffix_without_requested_years["suffix__ssp1"]
+        == suffix_without_requested_years["suffix_ssp1"]
     )
 
     assert (
         shared_groups_mod.normalize_companion_base_stem("demo__l2_reuse_year_2020")
         == "demo__l2_reuse_year_2020"
     )
-    assert shared_groups_mod.normalize_companion_base_stem("demo__ssp1") == "demo"
+    assert shared_groups_mod.normalize_companion_base_stem("demo_ssp1") == "demo"
     assert (
-        shared_groups_mod.normalize_companion_base_stem("demo__l2_reuse_year_2020__ssp1")
+        shared_groups_mod.normalize_companion_base_stem("demo__l2_reuse_year_2020_ssp1")
         == "demo__l2_reuse_year_2020"
     )
 
@@ -745,7 +745,7 @@ def test_downstream_year_selector_and_groups_cover_edge_contracts(tmp_path: Path
         == {}
     )
     assert downstream_scenarios_mod.share_transition_payload_for_output_stem(
-        output_stem="alpha__beta__extra",
+        output_stem="alpha__beta_extra",
         share_transition_meta={
             "alpha": {"id": 1},
             "alpha__beta": {"id": 2},

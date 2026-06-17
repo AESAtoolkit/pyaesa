@@ -335,7 +335,7 @@ def test_render_multi_year_panels_routes_overlay_split_grid_and_empty_groups(
         footer_note=footer_note,
         force_zero_ymin=True,
     )
-    assert {path.name for path in split_paths} == {"split__AAL.png", "split__OA.png"}
+    assert {path.name for path in split_paths} == {"split_AAL.png", "split_OA.png"}
     assert all(path.is_file() for path in split_paths)
 
     grid_paths = products_mod._render_multi_year_panels(  # noqa: SLF001
@@ -447,8 +447,8 @@ def test_render_multi_year_panels_covers_variant_specs_marker_defaults_and_hidde
         force_zero_ymin=False,
     )
     assert {path.name for path in split_paths} == {
-        "variant_split__AAL.png",
-        "variant_split__SOD.png",
+        "variant_split_AAL.png",
+        "variant_split_SOD.png",
     }
 
     grid_groups, _combined, _footer_note, _single_year_note = products_mod._panel_variant_entries(  # noqa: SLF001
@@ -526,7 +526,7 @@ def test_render_multi_year_split_skips_legend_for_empty_payloads(tmp_path: Path)
         footer_note=None,
         force_zero_ymin=False,
     )
-    assert paths == [tmp_path / "empty_split__AAL.png"]
+    assert paths == [tmp_path / "empty_split_AAL.png"]
     assert paths[0].is_file()
 
 
@@ -538,7 +538,7 @@ def test_render_transition_products_routes_multi_year_and_checkpoint_products(
     def single_year_renderer(**kwargs) -> list[Path]:
         output_base = kwargs["output_base"]
         checkpoint_calls.append((list(kwargs["years"]), output_base))
-        path = output_base.parent / f"{output_base.name}__checkpoint.png"
+        path = output_base.parent / f"{output_base.name}_checkpoint.png"
         path.write_text("checkpoint", encoding="utf-8")
         return [path]
 
@@ -568,11 +568,11 @@ def test_render_transition_products_routes_multi_year_and_checkpoint_products(
     )
 
     assert len(paths) == 2
-    assert any(path.name == "transition__prospective_SSP1.png" for path in paths)
-    assert any(path.name == "transition__prospective_SSP1__checkpoint.png" for path in paths)
+    assert any(path.name == "transition_prospective_SSP1.png" for path in paths)
+    assert any(path.name == "transition_prospective_SSP1_checkpoint.png" for path in paths)
     assert all(path.is_file() for path in paths)
     assert len(checkpoint_calls) == 1
-    assert checkpoint_calls[0][1] == tmp_path / "transition__prospective_SSP1"
+    assert checkpoint_calls[0][1] == tmp_path / "transition_prospective_SSP1"
 
 
 def test_render_transition_products_with_series_labels_uses_user_facing_override_label_columns(
@@ -604,7 +604,7 @@ def test_render_transition_products_with_series_labels_uses_user_facing_override
         force_zero_ymin=True,
     )
 
-    assert paths == [tmp_path / "series_labels__prospective_SSP1.png"]
+    assert paths == [tmp_path / "series_labels_prospective_SSP1.png"]
     assert paths[0].is_file()
 
 
@@ -640,7 +640,7 @@ def test_render_transition_products_with_series_labels_repeats_history_into_dyna
         transition_grouping_skip_columns={"cc_model", "cc_scenario"},
     )
 
-    assert paths == [tmp_path / "dynamic_series_labels__prospective_SSP2.png"]
+    assert paths == [tmp_path / "dynamic_series_labels_prospective_SSP2.png"]
     assert paths[0].is_file()
 
 
@@ -652,7 +652,7 @@ def test_render_transition_products_exact_single_year_scope_skips_multi_year_ren
     def single_year_renderer(**kwargs) -> list[Path]:
         output_base = kwargs["output_base"]
         checkpoint_calls.append((list(kwargs["years"]), output_base))
-        path = output_base.parent / f"{output_base.name}__checkpoint.png"
+        path = output_base.parent / f"{output_base.name}_checkpoint.png"
         path.write_text("checkpoint", encoding="utf-8")
         return [path]
 
@@ -677,7 +677,7 @@ def test_render_transition_products_exact_single_year_scope_skips_multi_year_ren
         include_single_year_products=False,
     )
 
-    assert paths == [tmp_path / "single_year_only__checkpoint.png"]
+    assert paths == [tmp_path / "single_year_only_checkpoint.png"]
     assert checkpoint_calls == [([2030], tmp_path / "single_year_only")]
 
 
@@ -692,7 +692,7 @@ def test_default_scoped_output_base_suffixes_selector_scenario_and_impact_tokens
         impact_token="impact_GWP_100",
     )
 
-    assert scoped.name == "base__gwp100_lcia__r_p_FR__prospective_SSP2__impact_GWP_100"
+    assert scoped.name == "base__gwp100_lcia_r_p_FR_prospective_SSP2_impact_GWP_100"
 
 
 def test_render_transition_products_groups_combined_impacts_by_lcia_selector_and_scenario(
@@ -736,9 +736,9 @@ def test_render_transition_products_groups_combined_impacts_by_lcia_selector_and
     )
 
     assert {path.name for path in paths} == {
-        "combined__pb_lcia__rp_DE__prospective_SSP1__AAL.png",
-        "combined__pb_lcia__rp_DE__prospective_SSP1__SOD.png",
-        "combined__pb_lcia__rp_FR__prospective_SSP1__AAL.png",
-        "combined__pb_lcia__rp_FR__prospective_SSP1__SOD.png",
+        "combined__pb_lcia_rp_DE_prospective_SSP1_AAL.png",
+        "combined__pb_lcia_rp_DE_prospective_SSP1_SOD.png",
+        "combined__pb_lcia_rp_FR_prospective_SSP1_AAL.png",
+        "combined__pb_lcia_rp_FR_prospective_SSP1_SOD.png",
     }
     assert all(path.is_file() for path in paths)

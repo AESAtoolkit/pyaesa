@@ -22,7 +22,7 @@ def _lca_route_token(*, lca_type: str, lca_version_name: str | None) -> str:
         lca_version_name,
         argument_name="lca_args.external_lca.version_name",
     )
-    return f"external_lca__{version}"
+    return f"ext_lca_{version}"
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def build_asr_scope_label(
     """Return the deterministic ASR metadata scope label."""
     source_token = asocc_source_version_token(source=source_label, agg_version=agg_version)
     lca_token = _lca_route_token(lca_type=lca_type, lca_version_name=lca_version_name)
-    return f"{source_token}__{lca_token}__{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
+    return f"{source_token}_{lca_token}_{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
 
 
 def get_asr_root(*, proj_base: Path) -> Path:
@@ -154,18 +154,4 @@ def get_asr_figure_metadata_path(*, context: ASRDeterministicPathContext) -> Pat
 
 def get_asr_figures_dir(*, context: ASRDeterministicPathContext) -> Path:
     """Return the deterministic ASR figures root."""
-    return _public_surface_root(context=context, family="figures", create=False)
-
-
-def get_asr_figure_inputs_dir(*, context: ASRDeterministicPathContext) -> Path:
-    """Return the deterministic ASR figure input root."""
-    return _public_surface_root(context=context, family="figure_inputs", create=True)
-
-
-def get_asr_dynamic_component_rows_path(
-    *,
-    context: ASRDeterministicPathContext,
-    fmt: str,
-) -> Path:
-    """Return the dynamic ASR component figure input table path."""
-    return get_asr_figure_inputs_dir(context=context) / f"dynamic_component_rows.{fmt}"
+    return _public_surface_root(context=context, family="figs", create=False)

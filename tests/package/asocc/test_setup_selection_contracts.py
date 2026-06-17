@@ -23,7 +23,7 @@ def test_sanitize_and_encode_cover_edge_tokens() -> None:
         "Manufacture of basic metals": "Manufacture_of_b",
         "Manufacture of basic plastics": "Manufacture_of_b_2",
     }
-    assert selector_scope_request_axes_token((("r_p", ("FR",)), ("s_p", None))) == ("rp_FR__sp_all")
+    assert selector_scope_request_axes_token((("r_p", ("FR",)), ("s_p", None))) == "rp_FR_sp_all"
 
 
 def test_build_filter_segment_and_normalize_filter_paths() -> None:

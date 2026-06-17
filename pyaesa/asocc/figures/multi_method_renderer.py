@@ -73,7 +73,7 @@ def _multi_method_job(
         Path(figures_root)
         / "multi_method"
         / scoped_stem(
-            "multi_method",
+            "mm",
             impact_rows,
             include_impact=include_impact,
             selector_token=selector_token,

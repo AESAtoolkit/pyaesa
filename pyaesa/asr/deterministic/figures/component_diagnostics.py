@@ -20,7 +20,6 @@ from pyaesa.shared.runtime.scenario.columns import (
     EXT_LCA_SSP_SCENARIO_COLUMN,
 )
 from pyaesa.shared.tabular.scalars import is_display_missing
-from pyaesa.shared.tabular.table_io import read_table, write_table
 
 
 @dataclass(frozen=True)
@@ -30,9 +29,6 @@ class DeterministicComponentRows:
     acc: pd.DataFrame
     lca: pd.DataFrame
     acc_output_files: tuple[Path, ...]
-
-
-_COMPONENT_COLUMN = "__component"
 
 
 def component_rows_from_runtime_frame(
@@ -57,44 +53,6 @@ def component_rows_from_runtime_frame(
         acc=acc.reset_index(drop=True),
         lca=lca.reset_index(drop=True),
         acc_output_files=tuple(acc_output_files),
-    )
-
-
-def write_component_rows_artifact(
-    *,
-    path: Path,
-    rows: DeterministicComponentRows,
-) -> None:
-    """Write dynamic deterministic ASR component figure inputs."""
-    acc = rows.acc.copy()
-    acc[_COMPONENT_COLUMN] = "acc"
-    lca = rows.lca.copy()
-    lca[_COMPONENT_COLUMN] = "lca"
-    write_table(path=path, frame=pd.concat([acc, lca], ignore_index=True, sort=False))
-
-
-def load_component_rows_artifact(
-    *,
-    path: Path,
-    acc_output_files: list[Path],
-) -> DeterministicComponentRows:
-    """Read dynamic deterministic ASR component figure inputs."""
-    rows = read_table(path=path)
-    acc = _component_rows_from_artifact(rows=rows, component="acc")
-    lca = _component_rows_from_artifact(rows=rows, component="lca")
-    return DeterministicComponentRows(
-        acc=acc,
-        lca=lca,
-        acc_output_files=tuple(acc_output_files),
-    )
-
-
-def _component_rows_from_artifact(*, rows: pd.DataFrame, component: str) -> pd.DataFrame:
-    scoped = rows.loc[rows[_COMPONENT_COLUMN].astype(str).eq(component)].copy()
-    return (
-        scoped.drop(columns=[_COMPONENT_COLUMN])
-        .dropna(axis="columns", how="all")
-        .reset_index(drop=True)
     )
 
 

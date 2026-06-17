@@ -31,14 +31,16 @@ def write_dynamic_asr_outputs(
     *,
     outputs: list[PendingDynamicAsrOutput],
     fmt: str,
+    write_outputs: bool = True,
 ) -> pd.DataFrame | None:
     """Write dynamic ASR outputs with full period cumulative metrics."""
     component_frames: list[pd.DataFrame] = []
     for group in _dynamic_output_groups(outputs):
         components = _attach_group_cumulative_metrics(group)
         component_frames.append(components)
-    for output in outputs:
-        write_asr_output(_public_dynamic_frame(output.frame), output.path, fmt)
+    if write_outputs:
+        for output in outputs:
+            write_asr_output(_public_dynamic_frame(output.frame), output.path, fmt)
     return pd.concat(component_frames, ignore_index=True) if component_frames else None
 
 
@@ -47,7 +49,7 @@ def dynamic_group_parent(relative_output_dir: Path) -> Path:
     parts = [
         part
         for part in relative_output_dir.parts
-        if part not in {"", ".", "historical_reuse", "regression_proj"}
+        if part not in {"", ".", "hist_reuse", "regr_proj"}
     ]
     return Path(*parts) if parts else Path(".")
 

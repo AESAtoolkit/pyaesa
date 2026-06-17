@@ -19,14 +19,14 @@ def _sanitize_piece(value: str) -> str:
 def ar6_variable_tag(*, emission_type: str, include_afolu: bool, emissions_mode: str) -> str:
     """Return the compact AR6 variable folder token for one CC family."""
     emission_type_token = _sanitize_piece(emission_type)
-    afolu = "with_afolu" if include_afolu else "wo_afolu"
+    afolu = "w_afolu" if include_afolu else "wo_afolu"
     mode = _sanitize_piece(emissions_mode)
     return f"{mode}_{emission_type_token}_{afolu}"
 
 
 def afolu_tag(*, include_afolu: bool) -> str:
     """Return the AFOLU selection tag."""
-    return "with_afolu" if include_afolu else "wo_afolu"
+    return "w_afolu" if include_afolu else "wo_afolu"
 
 
 def cc_scope_dir_name(
@@ -44,7 +44,7 @@ def cc_scope_dir_name(
     )
     if subset_version is None:
         return base
-    return f"{base}__sub_{_sanitize_piece(subset_version)}"
+    return f"{base}_sub_{_sanitize_piece(subset_version)}"
 
 
 def cc_selector_dir_name(
@@ -55,7 +55,7 @@ def cc_selector_dir_name(
     """Return the category and SSP selector folder token for one AR6 CC scope."""
     categories = "-".join(_sanitize_piece(value) for value in normalize_cc_category(category))
     ssps = "-".join(_sanitize_piece(value) for value in normalize_cc_ssp_scenario(ssp_scenario))
-    return f"{categories}__{ssps}"
+    return f"{categories}_{ssps}"
 
 
 def get_cc_family_dir(

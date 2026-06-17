@@ -201,9 +201,9 @@ def run_asr_sobol(
 def _asr_sobol_progress_source(*, paths: ASRUncertaintyRunPaths) -> str:
     """Return a short ASR Sobol source label for static and dynamic branch runs."""
     branch_name = paths.run_root.parent.name
-    if branch_name.startswith("dynamic_ar6__"):
+    if branch_name.startswith("dynamic_ar6_"):
         return "asr_dynamic_ar6"
-    if branch_name.startswith("static__"):
+    if branch_name.startswith("static_"):
         return "asr_static"
     return "asr"
 

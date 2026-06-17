@@ -127,7 +127,7 @@ def _write_processed_mrio_metadata(
         }
     metadata = {
         "source": source,
-        "version_tag": "original_classification",
+        "version_tag": "original_class",
         "labels": {"sectors_used": ["A", "B"]},
         "years": years,
     }

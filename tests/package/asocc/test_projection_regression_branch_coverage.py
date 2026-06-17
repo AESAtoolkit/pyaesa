@@ -344,7 +344,7 @@ def test_projection_clipping_log_early_return_on_no_negatives(tmp_path: Path) ->
         fit_end_year=2021,
         state=_state(runtime_proj_base=tmp_path),
     )
-    path = tmp_path / "logs" / "compute_asocc" / "regression_proj" / "projection_clipping_log.csv"
+    path = tmp_path / "logs" / "compute_asocc" / "regr_proj" / "projection_clipping_log.csv"
     assert not path.exists()
 
 

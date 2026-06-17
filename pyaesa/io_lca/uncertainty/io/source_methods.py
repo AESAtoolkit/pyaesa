@@ -52,7 +52,7 @@ def _readme_text(*, request: IOLCAUncertaintyRequest) -> str:
         "This run evaluates IO-LCA LCIA value uncertainty.",
         "",
         "Artifacts",
-        "- public_row_identity: public IO-LCA rows, one row per matrix column.",
+        "- row_identity: public IO-LCA rows, one row per matrix column.",
         *public_run_artifact_readme_lines(run_name="lca_runs"),
         "  Layout: compact run by public row numeric matrix.",
         "- summary_stats_runs: exact summary statistics computed from all runs.",

@@ -79,7 +79,7 @@ def test_render_selector_overlay_writes_grouped_panel_outputs_and_uses_hooks(
 
     assert len(paths) == 4
     assert all(path.is_file() for path in paths)
-    assert all(path.name.startswith("overlay__Atmospheric_aerosol_loading_AAL") for path in paths)
+    assert all(path.name.startswith("overlay_Atmospheric_aerosol_loading_AAL") for path in paths)
     assert styled_regions == ["EU", "EU", "NA", "NA"]
     assert ylabel_regions == ["EU", "EU", "NA", "NA"]
 
@@ -117,7 +117,7 @@ def test_render_dynamic_category_overlay_routes_lcia_selector_and_prospective_sc
     assert all(path.is_file() for path in paths)
     assert any("prospective_SSP1" in str(path) for path in paths)
     assert any("prospective_SSP2" in str(path) for path in paths)
-    assert all("__pb_lcia__" in str(path) for path in paths)
+    assert all("__pb_lcia_" in str(path) for path in paths)
     assert all("Atmospheric_aerosol_loading_AAL" in str(path) for path in paths)
 
 

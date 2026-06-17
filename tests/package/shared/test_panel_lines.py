@@ -124,7 +124,7 @@ def test_render_panel_series_covers_empty_overlay_split_and_grid(tmp_path: Path)
     )
     assert len(split_paths) == 2
     assert all(path.is_file() for path in split_paths)
-    assert {path.name for path in split_paths} == {"split__Climate.png", "split__Land.png"}
+    assert {path.name for path in split_paths} == {"split_Climate.png", "split_Land.png"}
 
     split_percent_paths = lines_mod.render_panel_series(
         panel_series=_panel_series(),
@@ -151,8 +151,8 @@ def test_render_panel_series_covers_empty_overlay_split_and_grid(tmp_path: Path)
     assert len(split_plain_paths) == 2
     assert all(path.is_file() for path in split_plain_paths)
     assert {path.name for path in split_plain_paths} == {
-        "split_plain__Climate.png",
-        "split_plain__Land.png",
+        "split_plain_Climate.png",
+        "split_plain_Land.png",
     }
 
     grid_paths = lines_mod.render_panel_series(
@@ -223,7 +223,7 @@ def test_render_panel_series_single_panel_title_and_missing_labels(tmp_path: Pat
         split_panels=True,
         force_zero_ymin=True,
     )
-    assert single_paths == [tmp_path / "single__Climate.png"]
+    assert single_paths == [tmp_path / "single_Climate.png"]
     assert single_paths[0].is_file()
 
     no_label_grid = lines_mod.render_panel_series(

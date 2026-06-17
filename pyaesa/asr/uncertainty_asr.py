@@ -172,7 +172,7 @@ def uncertainty_asr(
             exist.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         group_indices: Whether multiple selected region or sector filter values
@@ -245,7 +245,7 @@ def uncertainty_asr(
                 modes write positive emissions rows and signed negative
                 sequestration companion rows; downstream aCC and ASR consume
                 only the positive emissions rows. See
-                ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
+                ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
                 for the methodological explanation.
               - ``subset_version``: Optional selector for a subset of AR6
                 model-scenario pairs. Follow
@@ -288,7 +288,7 @@ def uncertainty_asr(
             default active source. For external LCA Monte Carlo inputs, use
             ``prepare_external_inputs(...)`` and follow the imported external
             LCA README guidance and runnable examples. See
-            ``data_raw/methodological_notes/methodological_note__acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -407,12 +407,12 @@ def uncertainty_asr(
                 Each Monte Carlo run samples one method leaf among the
                 selected deterministic and external methods. Equal weight
                 mode writes the tree CSV, README, and rendered probability
-                tree under the run folder ``figures/inter_method_tree/``. To
+                tree under the run folder ``figs/inter_method_tree/``. To
                 prepare custom weights before running uncertainty, use
                 ``write_asocc_weight_template(...)``; it writes
-                ``equal_weights.csv``, ``README_inter_method_weights.txt``,
-                and ``probability_tree__equal_weights.<ext>`` under
-                ``B1_asocc/preview_inter_method_weights/``. Use
+                ``equal_weights.csv``, ``README_im_weights.txt``,
+                and ``equal_weights.<ext>`` under
+                ``B1_asocc/preview_im_weights/``. Use
                 ``preview_asocc_weight_tree(...)`` to validate and render a
                 custom probability tree before using
                 ``{"mode": "custom", "version_name": "..."}``.
@@ -533,7 +533,7 @@ def uncertainty_asr(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -690,7 +690,7 @@ def uncertainty_asr(
             ``deterministic_io_lca(...)`` and ``uncertainty_io_lca(...)``
             output scopes can also be refreshed. For example, matching ASR
             Monte Carlo run folders are refreshed under
-            ``<repo>/demo/C_asr/exiobase_3102_ixi__elec/external_lca__test_v1/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/monte_carlo/mc_<generated_id>``.
             External LCA staged inputs, processed MRIO inputs, processed
             population and GDP, raw downloads, and deterministic ASR outputs
             are not refreshed. Defaults to ``False``.

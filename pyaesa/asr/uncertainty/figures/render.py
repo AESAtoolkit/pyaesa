@@ -346,7 +346,7 @@ def _multi_year_jobs(
             rows=inter_polar_rows,
             context=context,
             role="inter_method",
-            label="inter_method",
+            label="im",
             title_label="inter-method",
             family_label="ASR uncertainty",
         )
@@ -513,7 +513,7 @@ def _plan_multi_method_jobs(
         rows=rows,
         context=context,
         role="multi_method",
-        label="multi_method",
+        label="mm",
         title_label=None,
         plotter=plotter,
         kind=kind,
@@ -546,7 +546,7 @@ def _plan_inter_method_jobs(
         rows=rows,
         context=context,
         role="inter_method",
-        label="inter_method",
+        label="im",
         title_label="inter-method",
         plotter=plotter,
         kind=kind,
@@ -771,11 +771,12 @@ def _polar_scope_jobs(
         selector_title=selector_title,
     )
     for style in _polar_output_styles(context.polar_style):
+        style_token = {"violin": "pol_vio", "whisker": "pol_whi"}[style]
         output_base = (
             context.figures_root
             / role
             / asr_scope_stem(
-                f"polar_{style}_{label}",
+                f"{style_token}_{label}",
                 scope,
                 studied_year=studied_year,
                 selector_token=selector_token,

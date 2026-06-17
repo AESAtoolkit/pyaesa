@@ -110,7 +110,7 @@ def deterministic_asocc(
             years for the selected source and ``agg_version`` are used.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         s_p: Producing sector filter(s), single string or list. If this is a
@@ -151,7 +151,7 @@ def deterministic_asocc(
             ``"default"``, ``"one_step"``, ``"two_steps"``, ``"pairs"``, or
             ``"one_step_pairs"``. When omitted, all pyaesa allocation methods
             available for the selected ``fu_code`` are applied. See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for the allocation methods available per functional unit,
             including definitions and mathematical expressions.
         l1_methods: Optional L1 subset. Omit it to keep all L1 methods allowed
@@ -218,7 +218,7 @@ def deterministic_asocc(
             are not used by downstream package functions.
 
             - ``False`` (default): skip writing enacting metrics and
-              ``utility_propagation_contrib`` (L2*b for FUs) outputs.
+              ``ut_propag_contrib`` (L2*b for FUs) outputs.
             - ``True``: write all output families.
         figures: Whether to render figures.
             Default is ``True``.
@@ -253,11 +253,11 @@ def deterministic_asocc(
             aSoCC source and version output scope for this project, source
             label, and aggregate version. The cleared scope is the source and
             version ``deterministic`` folder under
-            ``<project>/B1_asocc/<source_or_source__agg_version>``. For
+            ``<project>/B1_asocc/<source_or_source_agg_version>``. For
             example, for ``project_name="demo"``,
             ``source="exiobase_3102_ixi"``, and ``agg_version="elec"``, the
             refreshed path is
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi__elec/deterministic``.
+            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/deterministic``.
             Processed MRIO inputs, processed population and GDP, raw
             downloads, and downstream aCC or ASR outputs are not refreshed.
             Defaults to ``False``.

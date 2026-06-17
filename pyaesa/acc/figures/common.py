@@ -182,10 +182,11 @@ def acc_scope_stem(
     studied_year: int | None = None,
 ) -> str:
     """Return one aCC figure file stem."""
-    parts = [label]
+    prefix = [label]
     if str(selector_token).strip() and selector_token != "all":
-        parts.append(str(selector_token).strip())
-    parts.extend(visible_values(frame, "lcia_method")[:1])
+        prefix.append(str(selector_token).strip())
+    lcia_method = visible_values(frame, "lcia_method")[:1]
+    parts = []
     if include_impact:
         parts.extend(visible_values(frame, "impact")[:1])
     parts.extend(_scope_scenario_values(frame)[:1])
@@ -198,7 +199,12 @@ def acc_scope_stem(
     model_pair = dynamic_model_scenario_token(frame)
     if model_pair is not None:
         parts.append(model_pair)
-    return "__".join(sanitize_token(part) for part in parts if str(part).strip())
+    stem = "_".join(sanitize_token(part) for part in prefix if str(part).strip())
+    if lcia_method:
+        lcia_token = sanitize_token(lcia_method[0])
+        stem = f"{stem}__{lcia_token}" if stem else lcia_token
+    suffix = [sanitize_token(part) for part in parts if str(part).strip()]
+    return "_".join([stem, *suffix] if stem else suffix)
 
 
 def dynamic_model_scenario_token(frame: pd.DataFrame) -> str | None:

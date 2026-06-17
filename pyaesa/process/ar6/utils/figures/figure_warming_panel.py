@@ -29,10 +29,7 @@ def _median_warming_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-median-warming-{database}-MOD={FIGURE_MODEL_LABEL}-CAT={categories_repr}"
-        f"-studyperiod={int(study_period[0])}to{int(study_period[1])}.{ext}"
-    )
+    return f"median_warming.{ext}"
 
 
 def write_median_warming_figure(

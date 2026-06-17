@@ -26,7 +26,6 @@ def cached_manifest_value(
         "output_dirs",
         "output_files",
         "figure_paths",
-        "dynamic_component_rows",
     }:
         return existing_metadata["artifacts"][field_name]
     if field_name in {"n_acc_files_matched", "n_asr_files_written"}:

@@ -24,7 +24,7 @@ def test_pickle_env_cover_metadata_inference(project_repo: Path) -> None:
     assert mod._infer_saved_env_for_mrio_pickle(orphan_path) is None
 
     payload = {
-        "version_tag": "custom_classification_demo",
+        "version_tag": "custom_class_demo",
         "aggregation": {},
         "labels": {},
         "years": {},
@@ -51,19 +51,14 @@ def test_pickle_env_cover_metadata_inference(project_repo: Path) -> None:
     }
 
     no_year_dir = (
-        project_repo
-        / "data_processed"
-        / "mrio"
-        / "oecd_v2025"
-        / "custom_classification_demo"
-        / "saved"
+        project_repo / "data_processed" / "mrio" / "oecd_v2025" / "custom_class_demo" / "saved"
     )
     no_year_dir.mkdir(parents=True, exist_ok=True)
     no_year_dir.parent.joinpath("metadata.json").write_text("{}", encoding="utf-8")
     assert mod._infer_saved_env_for_mrio_pickle(no_year_dir / "artifact.pickle") is None
 
     invalid_runtime_payload = {
-        "version_tag": "original_classification",
+        "version_tag": "original_class",
         "aggregation": {},
         "labels": {},
         "years": {},
@@ -88,7 +83,7 @@ def test_pickle_env_cover_metadata_inference(project_repo: Path) -> None:
         / "data_processed"
         / "mrio"
         / "unknown_source"
-        / "original_classification"
+        / "original_class"
         / "saved_2019"
     )
     unknown_dir.mkdir(parents=True, exist_ok=True)
@@ -111,7 +106,7 @@ def test_pickle_reader_and_compat_unpickler_cover_success_and_error_paths(
     assert mod.read_pickle(ok_path) == {"answer": 42}
 
     payload = {
-        "version_tag": "original_classification",
+        "version_tag": "original_class",
         "aggregation": {},
         "labels": {},
         "years": {},

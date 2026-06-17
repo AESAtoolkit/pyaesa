@@ -109,7 +109,7 @@ def get_figures_dir(
         harmonization=harmonization,
         harmonization_method=harmonization_method,
         category=category,
-    ).joinpath("figures")
+    ).joinpath("figs")
 
 
 def get_scope_dirs(

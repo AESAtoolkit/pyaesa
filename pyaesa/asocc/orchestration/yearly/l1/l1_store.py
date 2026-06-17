@@ -4,7 +4,6 @@ from ....runtime.output.contracts import (
     OutputRoute,
     OutputSpec,
     identifier_columns_from_frame,
-    join_file_owned_tokens,
 )
 from ..shared.output_spec_cache import (
     get_cached_output_spec,
@@ -54,7 +53,9 @@ def _build_l1_output_spec(
         l1_l2_method=l1_method,
         l2_method=None,
         l1_method=l1_method,
-        file_stem=join_file_owned_tokens(f"l1_{l1_method}", lcia_method),
+        file_stem=(
+            f"l1_{l1_method}__{lcia_method}" if lcia_method is not None else f"l1_{l1_method}"
+        ),
         route=route,
         scenario_dependent=scenario_dependent,
         identifier_columns=tuple(identifier_columns),

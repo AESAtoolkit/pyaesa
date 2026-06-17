@@ -309,7 +309,11 @@ def render_io_lca_figures(
     rendered = render_figure_jobs(source="deterministic_io_lca", jobs=jobs, status=status)
     for lcia_method in methods:
         method_token = sanitize_token(lcia_method)
-        lcia_method_paths = [path for path in rendered if path.name.startswith(f"{method_token}__")]
+        lcia_method_paths = [
+            path
+            for path in rendered
+            if path.stem == method_token or path.name.startswith(f"{method_token}_")
+        ]
         set_figure_paths(
             scope=scope,
             lcia_method=lcia_method,

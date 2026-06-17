@@ -144,7 +144,7 @@ def test_prepared_uncasext_inputs_and_clipping_logs_cover_success_and_failures(
         / "data_processed"
         / "mrio"
         / "oecd_v2025"
-        / "original_classification"
+        / "original_class"
         / "ICIO2025_2019_calc"
     )
     saved_dir.mkdir(parents=True, exist_ok=True)
@@ -209,7 +209,7 @@ def test_enacting_metric_clip_log_contracts_cover_context_and_append_paths(
         matrix_version="demo version",
         saved_dir=saved_dir,
     )
-    assert log_path.name == "oecd_v2025_demo_version_clipping_log.csv"
+    assert log_path.name == "clipping_log.csv"
     assert version_label == "demo version"
     assert log_year == 2020
 
@@ -396,7 +396,7 @@ def test_utility_propagation_contracts_cover_logging_short_circuit_and_failure_p
         / "data_processed"
         / "mrio"
         / "oecd_v2025"
-        / "original_classification"
+        / "original_class"
         / "ICIO2025_2019_calc"
     )
     saved_dir.mkdir(parents=True, exist_ok=True)
@@ -404,7 +404,7 @@ def test_utility_propagation_contracts_cover_logging_short_circuit_and_failure_p
 
     assert (
         _utility_log_name(saved_dir)
-        == "oecd_v2025__original_classification__ICIO2025_2019_calc_utility_propag_"
+        == "oecd_v2025_original_class_ICIO2025_2019_calc_utility_propag_"
         "uncasext_error.log"
     )
     _write_diagnostic_log(saved_dir, "hello")
@@ -412,7 +412,7 @@ def test_utility_propagation_contracts_cover_logging_short_circuit_and_failure_p
     utility_log = _get_mrio_calc_log_path(
         _utility_log_name(saved_dir),
         source_key="oecd_v2025",
-        matrix_version="original_classification",
+        matrix_version=None,
     )
     log_text = utility_log.read_text(encoding="utf-8")
     assert "hello" in log_text
@@ -513,7 +513,7 @@ def test_enacting_metric_contracts_cover_units_and_output_persistence(project_re
         / "data_processed"
         / "mrio"
         / "oecd_v2025"
-        / "original_classification"
+        / "original_class"
         / "ICIO2025_2019_calc"
     )
     non_exio_saved.mkdir(parents=True, exist_ok=True)
@@ -546,7 +546,7 @@ def test_enacting_metric_contracts_cover_units_and_output_persistence(project_re
         / "data_processed"
         / "mrio"
         / "exiobase_396_ixi"
-        / "original_classification"
+        / "original_class"
         / "IOT_2019_ixi_calc"
     )
     exio_saved.mkdir(parents=True, exist_ok=True)

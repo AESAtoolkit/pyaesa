@@ -10,7 +10,7 @@ from pyaesa.shared.figures.deterministic_variant_compressor import (
     compress_variants,
 )
 
-VARIANT_COMPRESSION_METHOD_FILENAME = "variant_compression_method.txt"
+VARIANT_COMPRESSION_METHOD_FILENAME = "variant_compr_note.txt"
 
 VARIANT_COMPRESSION_METHOD_TEXT = """Deterministic variant compression method
 

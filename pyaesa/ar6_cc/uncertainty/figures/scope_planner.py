@@ -101,7 +101,7 @@ def category_scope_stem(
     """Return a deterministic file stem for one category band figure."""
     parts = [ssp_partition_token(ssp_scenario)]
     parts.append(f"cat_{sanitize_token(category)}")
-    return "__".join(parts)
+    return "_".join(parts)
 
 
 def _base_ar6_cc_args(*, manifest: UncertaintyManifest) -> dict[str, Any]:

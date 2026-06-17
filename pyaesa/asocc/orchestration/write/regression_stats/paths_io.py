@@ -67,7 +67,7 @@ def existing_scoped_stats_paths(
     )
     if not logs_dir.exists():
         return []
-    path = logs_dir / "regression_proj" / f"regression_stats{suffix}"
+    path = logs_dir / "regr_proj" / f"regression_stats{suffix}"
     return [path] if path.exists() else []
 
 

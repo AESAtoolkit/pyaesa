@@ -30,7 +30,7 @@ def test_existing_scoped_paths_cover_missing_logs_and_sorted_matches(tmp_path: P
         == []
     )
     logs_dir = _logs_dir(tmp_path)
-    regression_dir = logs_dir / "regression_proj"
+    regression_dir = logs_dir / "regr_proj"
     regression_dir.mkdir(parents=True, exist_ok=True)
 
     stats_path = regression_dir / "regression_stats.csv"

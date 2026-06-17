@@ -53,7 +53,7 @@ def selector_scope_token(
 ) -> str:
     """Return one deterministic selector scope token from a grouped figure frame."""
     if not selector_cols:
-        return "all_selectors"
+        return "all"
     return selector_scope_token_from_frame(
         group_frame=group_frame,
         selector_columns=selector_cols,
@@ -70,17 +70,17 @@ def figure_stem(
     stem_prefix: str | None = None,
 ) -> str:
     """Return a deterministic IO-LCA figure stem."""
-    parts = [
-        str(stem_prefix).strip() if stem_prefix is not None else "",
-        str(lcia_method).strip(),
-        str(selector_scope_token).strip(),
-    ]
+    prefix = [str(stem_prefix).strip()] if stem_prefix is not None else []
+    lcia = str(lcia_method).strip()
+    parts = [str(selector_scope_token).strip()]
     if scenario_token is not None and str(scenario_token).strip() not in {"", "all"}:
         parts.append(str(scenario_token).strip())
     if year is not None:
         parts.append(str(int(year)))
-    stem = "__".join(part for part in parts if part)
-    return stem or "figure"
+    stem = "_".join(part for part in prefix if part)
+    stem = f"{stem}__{lcia}" if stem else lcia
+    suffix = [part for part in parts if part]
+    return "_".join([stem, *suffix] if stem else suffix) or "figure"
 
 
 def normalize_plot_years(*, frame: pd.DataFrame) -> pd.DataFrame:

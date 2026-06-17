@@ -71,7 +71,7 @@ roots.
 
 `set_workspace(...)` follows one canonical sequence:
 
-1. Resolve the user supplied `top_path` to `<top_path>/pyaesa`.
+1. Resolve the user supplied `top_path` as the workspace repository root.
 2. Create the repository root when missing.
 3. Copy package resource prerequisites into `<repo_root>/data_raw/`.
 4. Write `<repo_root>/data_raw/summary.log` with setup guidance information
@@ -96,7 +96,7 @@ When `refresh=False` and all prerequisite files already exist,
 
 | Function | Contract |
 | --- | --- |
-| `resolve_repo_root(top_path)` | Return the absolute `<top_path>/pyaesa` repository root and reject blank string paths. |
+| `resolve_repo_root(top_path)` | Return the absolute workspace repository root and reject blank string paths. |
 | `set_default_repo_root(repo_root)` | Store the active workspace repository root for the session. |
 | `get_default_repo_root()` | Return the active workspace repository root or fail before setup. |
 | `clear_default_repo_root()` | Clear the active workspace repository root for tests. |
@@ -153,7 +153,7 @@ Path ownership is intentionally narrow:
 
 | Path responsibility | Owner |
 | --- | --- |
-| `<top_path>/pyaesa` repository root | `workspace_initialisation/workspace.py` |
+| `<top_path>` repository root | `workspace_initialisation/workspace.py` |
 | `<repo_root>/data_raw/` prerequisite import target | `workspace_initialisation/packaged_prerequisites.py` |
 | `<repo_root>/data_raw/summary.log` setup guidance log | `workspace_initialisation/set_workspace.py` |
 | `<repo_root>/<project_name>/` root | `workspace_initialisation/workspace.py` |

@@ -34,7 +34,7 @@ def build_indices_tag(filters: dict[str, list[str] | None]) -> str:
         segment = build_selector_filter_segment(key=key, values=values)
         if segment:
             parts.append(segment)
-    return "__".join(parts) if parts else "all_indices"
+    return "_".join(parts) if parts else "all_indices"
 
 
 def apply_filter_messages(
@@ -98,7 +98,7 @@ def _validate_td_grouped_output(*, fu_code: str, group_indices: bool) -> None:
             "allocation outputs. Run MRIO processing with MRIO aggregation "
             "and disaggregation enabled "
             "(agg_reg/agg_sec with agg_version) so aggregated matrices are "
-            "saved under the aggregated MRIO version (custom_classification_<agg_version>), then "
+            "saved under the aggregated MRIO version (custom_class_<agg_version>), then "
             "run deterministic_asocc on that aggregated version."
         )
 
@@ -288,8 +288,8 @@ def _resolve_output_domain_tag(
     """Resolve output domain folder tag for MRIO runs.
 
     Mirrors processed MRIO matrix version tagging:
-    - MRIO source + no agg_version -> ``original_classification``
-    - MRIO source + agg_version -> ``custom_classification_<agg_version>``
+    - MRIO source + no agg_version -> ``original_class``
+    - MRIO source + agg_version -> ``custom_class_<agg_version>``
     - ISO3 source -> no domain tag
     """
     if source == ISO3_SOURCE_KEY:

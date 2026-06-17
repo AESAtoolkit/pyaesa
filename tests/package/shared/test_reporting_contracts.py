@@ -192,7 +192,7 @@ def test_uncertainty_report_writes_summary_log(tmp_path: Path) -> None:
         "scope_manifest": str(
             tmp_path / "report_demo" / "monte_carlo" / "run_1" / "logs" / "scope.json"
         ),
-        "public_row_identity": str(tmp_path / "public_row_identity.csv"),
+        "public_row_identity": str(tmp_path / "row_identity.csv"),
         "run_values": str(tmp_path / "asocc_runs.csv"),
         "asocc_runs": str(tmp_path / "asocc_runs.csv"),
         "summary_stats_runs": str(tmp_path / "summary.csv"),
@@ -419,7 +419,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
     reached_text = str(uncertainty_report(manifest=reached_sobol, reuse_status="computed"))
     assert "maximum base samples 16" in reached_text
 
-    branch_path = tmp_path / "branches" / "static__pb_lcia" / "mc_1" / "logs" / "scope.json"
+    branch_path = tmp_path / "branches" / "static_pb_lcia" / "mc_1" / "logs" / "scope.json"
     branch = build_manifest(
         family="asr",
         mode="fixed",
@@ -454,7 +454,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
     assert "Monte Carlo: branch set" in branch_set_text
     assert "Sobol: branch set" in branch_set_text
     no_sobol_branch_path = (
-        tmp_path / "branches" / "dynamic_ar6__gwp100_lcia" / "mc_1" / "logs" / "scope.json"
+        tmp_path / "branches" / "dynamic_ar6_gwp100_lcia" / "mc_1" / "logs" / "scope.json"
     )
     no_sobol_branch = build_manifest(
         family="asr",

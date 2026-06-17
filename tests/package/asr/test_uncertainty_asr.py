@@ -251,10 +251,10 @@ def test_uncertainty_asr_sobol_helpers_cover_generic_progress_and_yearless_stati
             scope_manifest=run_root / "logs" / "scope_manifest.json",
         )
 
-    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "dynamic_ar6__gross" / "mc")) == (
+    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "dynamic_ar6_gross" / "mc")) == (
         "asr_dynamic_ar6"
     )
-    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "static__pb_lcia" / "mc")) == (
+    assert _asr_sobol_progress_source(paths=_paths(tmp_path / "static_pb_lcia" / "mc")) == (
         "asr_static"
     )
     assert _asr_sobol_progress_source(paths=_paths(tmp_path / "custom" / "mc")) == "asr"
@@ -1373,16 +1373,11 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
     figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
     assert all(path.exists() for path in figure_paths)
     figure_names = {path.name for path in figure_paths}
-    assert any(
-        name.startswith("inter_method__") and name.endswith("__pb_lcia.svg")
-        for name in figure_names
-    )
-    assert any(name.endswith("__pb_lcia__frequency_of_transgression.svg") for name in figure_names)
-    assert any(
-        name.startswith("polar_whisker_inter_method__") and "__pb_lcia__" in name
-        for name in figure_names
-    )
-    assert any(name.startswith("multi_method__") for name in figure_names)
+    assert "im_rp_FR_sp_D.svg" in figure_names
+    assert "im_rp_FR_sp_D_ft.svg" in figure_names
+    assert "pol_whi_im_rp_FR_sp_D_2005.svg" in figure_names
+    assert "mm_rp_FR_sp_D_AAL.svg" in figure_names
+    assert "mm_rp_FR_sp_D_BI FD.svg" in figure_names
 
 
 def test_uncertainty_asr_static_pb_lcia_single_year_public_figures_cover_violin_products(
@@ -1438,10 +1433,9 @@ def test_uncertainty_asr_static_pb_lcia_single_year_public_figures_cover_violin_
     figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]
     assert all(path.exists() for path in figure_paths)
     figure_names = {path.name for path in figure_paths}
-    assert any(name.startswith("polar_violin_inter_method__") for name in figure_names)
+    assert any(name.startswith("pol_vio_im_") for name in figure_names)
     assert any(
-        name.startswith("polar_violin_") and not name.startswith("polar_violin_inter_method__")
-        for name in figure_names
+        name.startswith("pol_vio_") and not name.startswith("pol_vio_im_") for name in figure_names
     )
 
 
@@ -1650,8 +1644,8 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_r
         manifest=manifest,
         output_format="csv_compact",
     )
-    static_manifest = by_branch["static__gwp100_lcia"]
-    dynamic_manifest = by_branch["dynamic_ar6__gwp100_lcia"]
+    static_manifest = by_branch["static_gwp100_lcia"]
+    dynamic_manifest = by_branch["dynamic_ar6_gwp100_lcia"]
     assert "cumulative_asr_runs" not in static_manifest.artifacts
     assert static_manifest.compatibility_context is not None
     assert bool(static_manifest.compatibility_context["has_cumulative_outputs"]) is False
@@ -1702,7 +1696,7 @@ def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
         }
-    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    ).to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame(
         {
             "run_index": list(range(4)),
@@ -2167,7 +2161,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
     )
     phase.finish()
 
-    figure_dir = external_lca_deterministic_dir(project_base=project_root) / "figures"
+    figure_dir = external_lca_deterministic_dir(project_base=project_root) / "figs"
     assert any(path.suffix == ".svg" for path in figure_dir.iterdir())
     output = capsys.readouterr().out
     assert "Phase A: LCA" in output
@@ -2494,7 +2488,7 @@ def _compact_acc_manifest(*, tmp_path: Path, acc_values: pd.DataFrame):
             "year": [2005 + index for index in range(len(row_columns))],
         }
     )
-    identity_path = results / "public_row_identity.csv"
+    identity_path = results / "row_identity.csv"
     runs_path = results / "acc_runs.csv"
     summary_path = results / "summary_stats_runs.csv"
     readme_path = results / "README.txt"
@@ -2540,7 +2534,7 @@ def _sparse_acc_manifest(
     logs = acc_root / "logs"
     results.mkdir(parents=True)
     logs.mkdir(parents=True)
-    identity_path = results / "public_row_identity.csv"
+    identity_path = results / "row_identity.csv"
     runs_path = results / "acc_runs.csv"
     empty = results / "empty.csv"
     source_methods = logs / "source_methods.csv"
@@ -2747,7 +2741,7 @@ def test_reused_asr_subfigure_plan_uses_completed_dependency_manifest(tmp_path: 
 def _asr_run_paths(root: Path) -> ASRUncertaintyRunPaths:
     return ASRUncertaintyRunPaths(
         run_root=root,
-        public_row_identity=root / "results" / "public_row_identity.csv",
+        public_row_identity=root / "results" / "row_identity.csv",
         public_runs=root / "results" / "asr_runs.csv",
         summary_stats_runs=root / "results" / "summary_stats_runs.csv",
         cumulative_row_identity=root / "results" / "cumulative_identity.csv",
@@ -3120,7 +3114,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
         }
-    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    ).to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame({"run_index": [0, 1], "0": [1.0, 2.0], "1": [3.0, 4.0]}).to_csv(
         compact_dir / "lca_runs.csv",
         index=False,
@@ -3170,7 +3164,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
 
     compact_error_root = tmp_path / "compact_lca_errors"
     compact_error_base = external_lca_monte_carlo_dir(project_base=compact_error_root)
-    compact_identity = pd.read_csv(compact_dir / "public_row_identity.csv")
+    compact_identity = pd.read_csv(compact_dir / "row_identity.csv")
     compact_runs = pd.read_csv(compact_dir / "lca_runs.csv")
     compact_error_cases = {
         "missing_public_id": (
@@ -3193,7 +3187,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     for stem, (identity_frame, runs_frame) in compact_error_cases.items():
         case_dir = compact_error_base / f"supplier_v1__gwp100_lcia_{stem}"
         case_dir.mkdir(parents=True)
-        identity_frame.to_csv(case_dir / "public_row_identity.csv", index=False)
+        identity_frame.to_csv(case_dir / "row_identity.csv", index=False)
         runs_frame.to_csv(case_dir / "lca_runs.csv", index=False)
         set_default_repo_root(repo_root)
         try:
@@ -3406,7 +3400,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     ssp_root = tmp_path / "ssp_lca"
     ssp_dir = external_lca_monte_carlo_dir(project_base=ssp_root)
     ssp_dir.mkdir(parents=True, exist_ok=True)
-    ssp_path = ssp_dir / "supplier_v1__gwp100_lcia__ssp2.csv"
+    ssp_path = ssp_dir / "supplier_v1__gwp100_lcia_ssp2.csv"
     valid_rows.to_csv(ssp_path, index=False)
     with pytest.raises(ValueError):
         load_external_lca_monte_carlo_source(
@@ -3468,7 +3462,7 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
     acc_logs = tmp_path / "acc_run" / "logs"
     acc_results.mkdir(parents=True)
     acc_logs.mkdir(parents=True)
-    acc_identity_path = acc_results / "public_row_identity.csv"
+    acc_identity_path = acc_results / "row_identity.csv"
     acc_runs_path = acc_results / "acc_runs.csv"
     acc_identity_path.write_text("public_row_id,year\n0,2005\n", encoding="utf-8")
     with SparseRunRowsWriter(path=acc_runs_path, output_format="csv_compact") as writer:
@@ -3544,7 +3538,7 @@ def test_asr_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> Non
     )
     paths = ASRUncertaintyRunPaths(
         run_root=tmp_path / "asr_run",
-        public_row_identity=tmp_path / "asr_run" / "results" / "public_row_identity.csv",
+        public_row_identity=tmp_path / "asr_run" / "results" / "row_identity.csv",
         public_runs=tmp_path / "asr_run" / "results" / "asr_runs.csv",
         summary_stats_runs=tmp_path / "asr_run" / "results" / "summary_stats_runs.csv",
         cumulative_row_identity=tmp_path / "asr_run" / "results" / "cumulative_identity.csv",
@@ -3688,7 +3682,7 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
     acc_logs = tmp_path / "acc_compact" / "logs"
     acc_results.mkdir(parents=True)
     acc_logs.mkdir(parents=True)
-    acc_identity_path = acc_results / "public_row_identity.csv"
+    acc_identity_path = acc_results / "row_identity.csv"
     acc_runs_path = acc_results / "acc_runs.csv"
     identity = pd.DataFrame({"public_row_id": [0, 1, 2], "year": [2024, 2030, 2030]})
     write_uncertainty_table(path=acc_identity_path, output_format="csv_compact", frame=identity)
@@ -3799,7 +3793,7 @@ def test_asr_compact_cumulative_reuses_invariant_row_in_each_ssp_period(
     )
     paths = ASRUncertaintyRunPaths(
         run_root=tmp_path / "asr_run_compact",
-        public_row_identity=tmp_path / "asr_run_compact" / "results" / "public_row_identity.csv",
+        public_row_identity=tmp_path / "asr_run_compact" / "results" / "row_identity.csv",
         public_runs=tmp_path / "asr_run_compact" / "results" / "asr_runs.csv",
         summary_stats_runs=tmp_path / "asr_run_compact" / "results" / "summary_stats_runs.csv",
         cumulative_row_identity=tmp_path

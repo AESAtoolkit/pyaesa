@@ -420,18 +420,20 @@ def _asocc_inventory_items(
     inventory = []
     if has_recorded_outputs:
         if getattr(context, "selected_l1", []):
-            inventory.append(inventory_item(folder="results/level_1", content="Level 1 shares"))
+            is_l2_scope = str(getattr(context, "fu_code", "")).startswith("L2.")
+            folder = "results/l1" if is_l2_scope else "results"
+            inventory.append(inventory_item(folder=folder, content="Level 1 shares"))
         if getattr(context, "combined", []):
             inventory.append(
                 inventory_item(
-                    folder="results/level_2/l2_in_l1",
+                    folder="results/l2/l2_in_l1",
                     content="conditional L2 in L1 weights used by two step routes",
                 )
             )
         if getattr(context, "combined", []) or getattr(context, "selected_l2_one_step", []):
             inventory.append(
                 inventory_item(
-                    folder="results/level_2/l2_vs_global",
+                    folder="results/l2/l2_vs_global",
                     content=(
                         "final L2 vs global shares, with direct one step outputs "
                         "and two step L1 * L2 in L1 products as selected"
@@ -439,16 +441,19 @@ def _asocc_inventory_items(
                 )
             )
         if bool(getattr(context, "intermediate_outputs", False)):
-            inventory.append(
-                inventory_item(
-                    folder="enacting_metrics",
-                    content="intermediate enacting metric inputs",
-                )
+            enacting_metric_folders = (
+                ("results/l1/enacting_metrics", "results/l2/enacting_metrics")
+                if str(getattr(context, "fu_code", "")).startswith("L2.")
+                else ("results/enacting_metrics",)
+            )
+            inventory.extend(
+                inventory_item(folder=folder, content="intermediate enacting metric inputs")
+                for folder in enacting_metric_folders
             )
             if _has_utility_route(context=context):
                 inventory.append(
                     inventory_item(
-                        folder="results/level_2/utility_propagation_contrib",
+                        folder="results/l2/ut_propag_contrib",
                         content="utility propagation contributions",
                     )
                 )
@@ -460,7 +465,7 @@ def _asocc_inventory_items(
             ):
                 inventory.append(
                     inventory_item(
-                        folder="results/level_2/historical_reuse",
+                        folder="results/l2/hist_reuse",
                         content="historical reuse L2 route outputs",
                     )
                 )
@@ -470,7 +475,7 @@ def _asocc_inventory_items(
             ):
                 inventory.append(
                     inventory_item(
-                        folder="results/level_2/regression_proj",
+                        folder="results/l2/regr_proj",
                         content="regression projected L2 route outputs",
                     )
                 )
@@ -484,13 +489,13 @@ def _asocc_inventory_items(
         )
         if stats_path.exists():
             inventory.append(
-                inventory_item(folder="logs/regression_proj", content="regression diagnostics")
+                inventory_item(folder="logs/regr_proj", content="regression diagnostics")
             )
             columns_path = columns_defs_path_for_stats(stats_path=stats_path)
             if columns_path.exists():
                 inventory.append(
                     inventory_item(
-                        folder="logs/regression_proj",
+                        folder="logs/regr_proj",
                         content="regression column definitions",
                     )
                 )
@@ -502,7 +507,7 @@ def _asocc_inventory_items(
         )
         if fit_inputs_path.exists():
             inventory.append(
-                inventory_item(folder="logs/regression_proj", content="regression fit inputs")
+                inventory_item(folder="logs/regr_proj", content="regression fit inputs")
             )
     if closure_audit_exists:
         inventory.append(inventory_item(folder="logs", content="UT(GVAa) identity closure audit"))

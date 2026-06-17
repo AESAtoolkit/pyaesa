@@ -160,7 +160,7 @@ def uncertainty_acc(
             and pass the custom method file stem there.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         group_indices: Whether multiple selected region or sector filter values
@@ -237,7 +237,7 @@ def uncertainty_acc(
                 modes write positive emissions rows and signed negative
                 sequestration companion rows; downstream aCC and ASR consume
                 only the positive emissions rows. See
-                ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
+                ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
                 for the methodological explanation.
 
               - ``subset_version``: Optional selector for a subset of AR6
@@ -254,7 +254,7 @@ def uncertainty_acc(
             alternate published disaggregated aSoCC source. Source blocks use
             an ``active`` boolean; write ``active=False`` to disable a default
             active source. See
-            ``data_raw/methodological_notes/methodological_note__acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -362,12 +362,12 @@ def uncertainty_acc(
               Each Monte Carlo run samples one method leaf among the selected
               deterministic and external methods. Equal weight mode writes the
               tree CSV, README, and rendered probability tree under the
-              run folder ``figures/inter_method_tree/``. To prepare custom
+              run folder ``figs/inter_method_tree/``. To prepare custom
               weights before running uncertainty, use
               ``write_asocc_weight_template(...)``; it writes
-              ``equal_weights.csv``, ``README_inter_method_weights.txt``, and
-              ``probability_tree__equal_weights.<ext>`` under
-              ``B1_asocc/preview_inter_method_weights/``. Use
+              ``equal_weights.csv``, ``README_im_weights.txt``, and
+              ``equal_weights.<ext>`` under
+              ``B1_asocc/preview_im_weights/``. Use
               ``preview_asocc_weight_tree(...)`` to validate and render a
               custom probability tree before using
               ``{"mode": "custom", "version_name": "..."}``.
@@ -441,7 +441,7 @@ def uncertainty_acc(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -583,7 +583,7 @@ def uncertainty_acc(
             uncertainty is active, this can also refresh the matching
             ``uncertainty_ar6_cc(...)`` output scope. For example, matching
             aCC Monte Carlo run folders are refreshed under
-            ``<repo>/demo/B2_acc/exiobase_3102_ixi__elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/B2_acc/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
             External aSoCC inputs, static carrying capacity files, processed
             MRIO inputs, processed population and GDP, raw downloads, and
             downstream ASR outputs are not refreshed. Defaults to ``False``.

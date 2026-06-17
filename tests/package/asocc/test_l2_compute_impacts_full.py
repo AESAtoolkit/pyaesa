@@ -365,7 +365,7 @@ def test_l2_compute_impacts_historical_reuse_batch_ut_writes_per_l2_reuse_year()
     assert len(specs) == 2
     assert sum(spec.route.bucket == "l2_vs_global" for spec in specs) == 1
     assert sum(spec.route.bucket == "utility_propagation_contrib" for spec in specs) == 1
-    assert all(spec.route.projection_subfolder == "historical_reuse" for spec in specs)
+    assert all(spec.route.projection_subfolder == "hist_reuse" for spec in specs)
     assert all("l2_reuse_year" in spec.identifier_columns for spec in specs)
 
     run_no_hist_contrib = _run(

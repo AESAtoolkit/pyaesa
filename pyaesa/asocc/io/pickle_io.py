@@ -74,10 +74,10 @@ def _infer_saved_env_for_mrio_pickle(path: Path) -> dict[str, str] | None:
     version_tag = str(version_dir.name).strip()
     matrix_version = (
         None
-        if version_tag == "original_classification"
+        if version_tag == "original_class"
         else (
-            version_tag[len("custom_classification_") :]
-            if version_tag.startswith("custom_classification_")
+            version_tag[len("custom_class_") :]
+            if version_tag.startswith("custom_class_")
             else version_tag
         )
     )

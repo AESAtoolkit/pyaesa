@@ -36,10 +36,10 @@ def test_output_spec_file_name_and_format_variants() -> None:
         identifier_columns=("r_p",),
     )
 
-    assert spec.file_name == "table_l2_asocc__ssp2.csv"
-    assert spec.file_name_for_format("csv") == "table_l2_asocc__ssp2.csv"
-    assert spec.file_name_for_format("pickle") == "table_l2_asocc__ssp2.pickle"
-    assert spec.file_name_for_format("parquet") == "table_l2_asocc__ssp2.parquet"
+    assert spec.file_name == "table_l2_asocc_ssp2.csv"
+    assert spec.file_name_for_format("csv") == "table_l2_asocc_ssp2.csv"
+    assert spec.file_name_for_format("pickle") == "table_l2_asocc_ssp2.pickle"
+    assert spec.file_name_for_format("parquet") == "table_l2_asocc_ssp2.parquet"
 
 
 def test_output_spec_file_name_for_format_covers_suffix_variants() -> None:
@@ -86,7 +86,7 @@ def test_output_spec_file_name_for_format_covers_suffix_variants() -> None:
         terminal_suffix="per_rf",
     )
     assert suffixed_spec.persisted_stem == "table_l2_asocc"
-    assert suffixed_spec.file_name == "table_l2_asocc__ssp2__per_rf.csv"
+    assert suffixed_spec.file_name == "table_l2_asocc_ssp2_per_rf.csv"
 
 
 def test_identifier_columns_from_frame_supports_multiindex() -> None:

@@ -5,7 +5,6 @@ from pathlib import Path
 from pyaesa.asocc.runtime.paths.family_roots import (
     asocc_source_version_token,
 )
-from pyaesa.asocc.runtime.output.contracts import join_file_owned_tokens
 from pyaesa.shared.runtime.io.family_root_names import ACC_ROOT_DIRNAME
 
 
@@ -23,15 +22,15 @@ def build_acc_output_stem(
     """Return one deterministic or uncertainty aCC file stem."""
     normalized_base = str(base_stem).strip()
     normalized_cc_source = str(cc_source).strip()
-    base_pieces = [piece.strip() for piece in normalized_base.split("__") if piece.strip()]
     cc_type_norm = str(cc_type).strip().lower()
-    source_present = normalized_cc_source in base_pieces
-    stem = list(base_pieces)
-    if not source_present:
-        stem.append(normalized_cc_source)
+    stem = normalized_base
+    if normalized_base != normalized_cc_source and not normalized_base.endswith(
+        f"__{normalized_cc_source}"
+    ):
+        stem = f"{stem}__{normalized_cc_source}"
     if cc_type_norm == "dynamic_ar6":
-        stem.append("dynamic_ar6")
-    return join_file_owned_tokens(*stem)
+        stem = f"{stem}_dynamic_ar6"
+    return stem
 
 
 def get_acc_root(

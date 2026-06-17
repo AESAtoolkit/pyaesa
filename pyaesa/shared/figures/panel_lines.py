@@ -153,7 +153,7 @@ def render_panel_series(
                     fig,
                     output_path
                     if not panel_text
-                    else output_path.parent / f"{output_path.name}__{sanitize_token(panel_label)}",
+                    else output_path.parent / f"{output_path.name}_{sanitize_token(panel_label)}",
                     dpi=dpi,
                     output_format=output_format,
                 )

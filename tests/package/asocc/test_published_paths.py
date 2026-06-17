@@ -39,20 +39,20 @@ def test_published_path_cover_scope_and_level_validation(tmp_path) -> None:
             bucket="l2_vs_global",
             **common,
         )
-        == scope_root / "results" / "level_2" / "l2_vs_global"
+        == scope_root / "results" / "l2" / "l2_vs_global"
     )
     assert (
         paths_mod._canonical_l2_results_relative_dir(  # noqa: SLF001
             bucket="l2_in_l1",
         )
-        == Path("results") / "level_2" / "l2_in_l1"
+        == Path("results") / "l2" / "l2_in_l1"
     )
     assert paths_mod._get_asocc_figures_root(level="level_1", **common) == (  # noqa: SLF001
-        scope_root / "figures"
+        scope_root / "figs"
     )
     assert (
         paths_mod._canonical_l2_results_relative_dir(bucket="")  # noqa: SLF001
-        == Path("results") / "level_2" / "l2_vs_global"
+        == Path("results") / "l2" / "l2_vs_global"
     )
 
     disagg_scope_root = paths_mod._asocc_deterministic_scope_root(  # noqa: SLF001
@@ -74,23 +74,23 @@ def test_share_and_enacting_metric_path_cover_suffix_and_stem_contracts(tmp_path
         lcia_sub=None,
         owning_fu_level="level_2",
         **common,
-    ) == (deterministic_root / "results" / "level_1")
+    ) == (deterministic_root / "results" / "l1")
     assert paths_mod._get_asocc_l2_dir(  # noqa: SLF001
         bucket="l2_vs_global",
-        lcia_sub="regression_proj",
+        lcia_sub="regr_proj",
         **common,
-    ) == (deterministic_root / "results" / "level_2" / "l2_vs_global" / "regression_proj")
+    ) == (deterministic_root / "results" / "l2" / "l2_vs_global" / "regr_proj")
     assert paths_mod._get_asocc_l2_dir(  # noqa: SLF001
         bucket="l2_in_l1",
         lcia_sub=None,
         **common,
-    ) == (deterministic_root / "results" / "level_2" / "l2_in_l1")
+    ) == (deterministic_root / "results" / "l2" / "l2_in_l1")
 
     assert paths_mod._get_enacting_metric_dir(  # noqa: SLF001
         level="level_2",
-        lcia_sub="regression_proj",
+        lcia_sub="regr_proj",
         **common,
-    ) == (deterministic_root / "results" / "level_2" / "enacting_metrics" / "regression_proj")
+    ) == (deterministic_root / "results" / "l2" / "enacting_metrics" / "regr_proj")
 
     assert paths_mod._get_enacting_metric_output_path(  # noqa: SLF001
         level="level_1",
@@ -115,7 +115,7 @@ def test_share_and_enacting_metric_path_cover_suffix_and_stem_contracts(tmp_path
     ) == (
         deterministic_root
         / "results"
-        / "level_1"
+        / "l1"
         / "enacting_metrics"
         / "e_pba_reg_cap_SSP2_gwp100_lcia.csv"
     )
@@ -125,14 +125,14 @@ def test_share_and_enacting_metric_path_cover_suffix_and_stem_contracts(tmp_path
         key_method=None,
         key_scenario=None,
         output_format="pickle",
-        lcia_sub="regression_proj",
+        lcia_sub="regr_proj",
         **common,
     ) == (
         deterministic_root
         / "results"
-        / "level_2"
+        / "l2"
         / "enacting_metrics"
-        / "regression_proj"
+        / "regr_proj"
         / "population.pickle"
     )
 
@@ -141,7 +141,7 @@ def test_figure_and_reuse_paths_cover_deterministic_root_contract(tmp_path) -> N
     common = _common(tmp_path)
     deterministic_root = paths_mod._asocc_deterministic_scope_root(**_scope_root_args(common))  # noqa: SLF001
     assert paths_mod._get_asocc_figures_root(level="level_2", **common) == (  # noqa: SLF001
-        deterministic_root / "figures_l2_vs_global"
+        deterministic_root / "figs_l2_vs_global"
     )
 
     context = SimpleNamespace(output_format="parquet", **common)
@@ -149,4 +149,4 @@ def test_figure_and_reuse_paths_cover_deterministic_root_contract(tmp_path) -> N
         context=context,
         bucket="l2_vs_global",
         file_stem="demo_output",
-    ) == (deterministic_root / "results" / "level_2" / "l2_vs_global" / "demo_output.parquet")
+    ) == (deterministic_root / "results" / "l2" / "l2_vs_global" / "demo_output.parquet")

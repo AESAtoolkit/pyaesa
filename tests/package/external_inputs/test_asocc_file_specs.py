@@ -136,7 +136,7 @@ def test_runtime_stems_expected_stems_and_descriptions_cover_deterministic_modes
             lcia_method="pb_lcia",
             scenario="SSP2",
         )
-        == "UT(FD)__pb_lcia__ssp2"
+        == "UT(FD)__pb_lcia_ssp2"
     )
     assert (
         file_specs.external_asocc_runtime_file_stem(
@@ -160,11 +160,11 @@ def test_runtime_stems_expected_stems_and_descriptions_cover_deterministic_modes
     assert deterministic_stems == sorted(
         {
             "l1_CO(S)_l2_UT(FD)",
-            "l1_CO(S)_l2_UT(FD)__ssp2",
-            "l1_CO(S)_l2_UT(FD)__ssp3",
+            "l1_CO(S)_l2_UT(FD)_ssp2",
+            "l1_CO(S)_l2_UT(FD)_ssp3",
             "l1_CO(S)_l2_UT(FD)__pb_lcia",
-            "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp2",
-            "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp3",
+            "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2",
+            "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp3",
         }
     )
 
@@ -191,14 +191,14 @@ def test_read_parse_and_candidate_file_discovery_cover_all_supported_suffixes(
         proj_base=project_repo,
         storage_mode="monte_carlo",
         level=selection.level,
-    ) == (project_repo / "B1_asocc" / "external_asocc" / "monte_carlo")
+    ) == (project_repo / "B1_asocc" / "ext_asocc" / "monte_carlo")
 
     csv_frame = pd.DataFrame({"year": [2019], "value": [1.0]})
     pickle_frame = pd.DataFrame({"2019": [2.0]})
     parquet_frame = pd.DataFrame({"year": [2020], "value": [3.0]})
     _write_table(directory / "l1_CO(S)_l2_UT(FD).csv", csv_frame)
     _write_table(directory / "l1_CO(S)_l2_UT(FD)__pb_lcia.pickle", pickle_frame)
-    _write_table(directory / "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp2.parquet", parquet_frame)
+    _write_table(directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2.parquet", parquet_frame)
     _write_table(directory / "nonmatching.csv", csv_frame)
     (directory / "ignore.txt").write_text("x", encoding="utf-8")
 
@@ -209,7 +209,7 @@ def test_read_parse_and_candidate_file_discovery_cover_all_supported_suffixes(
         directory / "l1_CO(S)_l2_UT(FD)__pb_lcia.pickle"
     ).equals(pickle_frame)
     assert file_specs.read_external_asocc_table(
-        directory / "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp2.parquet"
+        directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2.parquet"
     ).equals(parquet_frame)
 
     with pytest.raises(ValueError):
@@ -224,36 +224,27 @@ def test_read_parse_and_candidate_file_discovery_cover_all_supported_suffixes(
     ):
         file_specs.frame_years(pd.DataFrame({"2018": [1.0], "2019": [pd.NA]}))
 
-    assert file_specs._parse_suffix(suffix="", requested_methods=("pb_lcia",)) == (None, None)
-    assert file_specs._parse_suffix(suffix="__pb_lcia", requested_methods=("pb_lcia",)) == (
+    assert file_specs._parse_suffix(suffix="") == (None, None)
+    assert file_specs._parse_suffix(suffix="__pb_lcia") == (
         "pb_lcia",
         None,
     )
-    assert file_specs._parse_suffix(
-        suffix="__pb_lcia__ssp2",
-        requested_methods=("pb_lcia",),
-    ) == ("pb_lcia", "SSP2")
-    assert file_specs._parse_suffix(
-        suffix="__ssp2",
-        requested_methods=("pb_lcia",),
-    ) == (None, "SSP2")
-    assert file_specs._parse_suffix(suffix="__", requested_methods=("pb_lcia",)) == (None, None)
+    assert file_specs._parse_suffix(suffix="__pb_lcia_ssp2") == ("pb_lcia", "SSP2")
+    assert file_specs._parse_suffix(suffix="_ssp2") == (None, "SSP2")
+    assert file_specs._parse_suffix(suffix="ssp2") == (None, "SSP2")
+    assert file_specs._parse_suffix(suffix="__") == (None, None)
+    assert file_specs._parse_suffix(suffix="__scenario_only") == ("scenario_only", None)
     with pytest.raises(ValueError):
-        file_specs._parse_suffix(
-            suffix="__scenario_only",
-            requested_methods=("pb_lcia",),
-        )
+        file_specs._parse_suffix(suffix="__pb_lcia__SSP2")
     with pytest.raises(ValueError):
-        file_specs._parse_suffix(
-            suffix="__pb_lcia__SSP2",
-            requested_methods=("pb_lcia",),
-        )
+        file_specs._parse_suffix(suffix="__pb__lcia")
+    with pytest.raises(ValueError):
+        file_specs._parse_suffix(suffix="_bad")
 
     assert (
         file_specs._parse_candidate_file(
-            path=directory / "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp2.parquet",
+            path=directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2.parquet",
             selection=selection,
-            requested_methods=("pb_lcia",),
         )
         is not None
     )
@@ -261,7 +252,14 @@ def test_read_parse_and_candidate_file_discovery_cover_all_supported_suffixes(
         file_specs._parse_candidate_file(
             path=directory / "different.parquet",
             selection=selection,
-            requested_methods=("pb_lcia",),
+        )
+        is None
+    )
+    assert (
+        file_specs._parse_candidate_file(
+            path=directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2.csv",
+            selection=selection,
+            storage_mode="monte_carlo",
         )
         is None
     )
@@ -359,7 +357,7 @@ def test_external_monte_carlo_loader_covers_render_file_contracts(project_repo: 
         )
     ] == ["l1_CO(S)_l2_UT(FD).csv", "l1_CO(S)_l2_UT(FD)__pb_lcia.csv"]
     _write_table(
-        directory / "l1_CO(S)_l2_UT(FD)__ssp2.csv",
+        directory / "l1_CO(S)_l2_UT(FD)_ssp2.csv",
         pd.DataFrame(
             {
                 "run_index": [0, 1],
@@ -681,7 +679,7 @@ def test_external_monte_carlo_compact_matrix_reports_empty_requested_year(
             ASOCC_SSP_SCENARIO_COLUMN: [None],
             **_selectors(),
         }
-    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    ).to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame({"run_index": [0, 1], "0": [0.42, 0.52]}).to_csv(
         compact_dir / "asocc_runs.csv",
         index=False,
@@ -716,7 +714,7 @@ def test_external_monte_carlo_compact_matrix_materializes_selected_rows(
             ASOCC_SSP_SCENARIO_COLUMN: [None, None],
             **_selectors(2),
         }
-    ).to_csv(compact_dir / "public_row_identity.csv", index=False)
+    ).to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame(
         {
             "run_index": [0, 1],
@@ -2031,7 +2029,7 @@ def test_external_row_schema_and_deterministic_loader_cover_empty_and_edge_paths
 
     _write_table(table_path, pd.DataFrame({**_selectors(), "2019": [1.0]}))
     _write_table(
-        directory / "l1_CO(S)_l2_UT(FD)__ssp2.csv",
+        directory / "l1_CO(S)_l2_UT(FD)_ssp2.csv",
         pd.DataFrame({**_selectors(), "2030": [2.0]}),
     )
     loaded = deterministic_mod.load_external_deterministic_rows(
@@ -2171,7 +2169,7 @@ def test_external_downstream_asocc_shares(
         ("Water stress",),
     ]
     assert {item.file_stem for item in impact_asocc_shares} == {
-        "external__l1_CO(S)_l2_UT(FD)__pb_lcia"
+        "external_l1_CO(S)_l2_UT(FD)__pb_lcia"
     }
 
     scenario_partition_asocc_shares = downstream_mod._asocc_shares_for_frame(
@@ -2193,8 +2191,8 @@ def test_external_downstream_asocc_shares(
         l1_method="CO(S)",
     )
     assert [item.file_stem for item in scenario_partition_asocc_shares] == [
-        "external__l1_CO(S)_l2_UT(FD)",
-        "external__l1_CO(S)_l2_UT(FD)__ssp2",
+        "external_l1_CO(S)_l2_UT(FD)",
+        "external_l1_CO(S)_l2_UT(FD)_ssp2",
     ]
     assert all(
         ASOCC_SSP_SCENARIO_COLUMN not in item.frame_wide.columns
@@ -2220,7 +2218,7 @@ def test_external_downstream_asocc_shares(
         l1_method="CO(S)",
     )
     assert [item.file_stem for item in scenario_only_asocc_shares] == [
-        "external__l1_CO(S)_l2_UT(FD)__ssp2"
+        "external_l1_CO(S)_l2_UT(FD)_ssp2"
     ]
     assert scenario_only_asocc_shares[0].frame_wide.loc[0, "2005"] == 1.0
 
@@ -2402,7 +2400,7 @@ def test_uncertainty_external_rows_use_downstream_lcia_scope_for_compact_inputs(
             "impact": impacts,
         }
     )
-    identity.to_csv(compact_dir / "public_row_identity.csv", index=False)
+    identity.to_csv(compact_dir / "row_identity.csv", index=False)
     pd.DataFrame(
         {
             "run_index": [0],
@@ -2439,7 +2437,7 @@ def test_resolve_year_assignments_and_candidate_files_cover_scenario_routing(
         level=selection.level,
     )
     base_path = directory / "l1_CO(S)_l2_UT(FD)__pb_lcia.csv"
-    scenario_path = directory / "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp2.csv"
+    scenario_path = directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp2.csv"
     _write_table(base_path, pd.DataFrame({"2019": [1.0], "2020": [2.0]}))
     _write_table(scenario_path, pd.DataFrame({"2021": [3.0]}))
 
@@ -2458,7 +2456,7 @@ def test_resolve_year_assignments_and_candidate_files_cover_scenario_routing(
     assert year_map[base_path] == [2019, 2020]
     assert year_map[scenario_path] == [2021]
 
-    scenario_path_ssp1 = directory / "l1_CO(S)_l2_UT(FD)__pb_lcia__ssp1.csv"
+    scenario_path_ssp1 = directory / "l1_CO(S)_l2_UT(FD)__pb_lcia_ssp1.csv"
     _write_table(scenario_path_ssp1, pd.DataFrame({"2021": [4.0], "2022": [4.5]}))
     _write_table(scenario_path, pd.DataFrame({"2021": [3.0], "2022": [5.0]}))
     specs = file_specs.candidate_files(

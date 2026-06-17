@@ -13,7 +13,7 @@ Recommended Citations
 Functional Units And Allocation Methods
 ---------------------------------------
 
-* :download:`Functional units and allocation methods <../methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf>`
+* :download:`Functional units and allocation methods <../methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf>`
 * :doc:`tutorials/study_objectives/1_functional_units_and_allocation_methods.md <tutorials/study_objectives/1_functional_units_and_allocation_methods>`:
   quick guide for selecting pyaesa function arguments for functional units and
   aSoCC allocation methods.
@@ -21,10 +21,10 @@ Functional Units And Allocation Methods
 Allocated Carrying Capacities
 -----------------------------
 
-* :download:`Prospective allocation <../methodological_notes/methodological_note__acc_prospective.pdf>`
-* :download:`Uncertainty sources <../methodological_notes/methodological_note__acc_uncertainty_sources.pdf>`
+* :download:`Prospective allocation <../methodological_notes/methodological_note_acc_prospective.pdf>`
+* :download:`Uncertainty sources <../methodological_notes/methodological_note_acc_uncertainty_sources.pdf>`
 
 Carrying Capacities
 -------------------
 
-* :download:`Steady state and dynamic carrying capacities <../methodological_notes/methodological_note__steady_state__dynamic_cc.pdf>`
+* :download:`Steady state and dynamic carrying capacities <../methodological_notes/methodological_note_steady_state_dynamic_cc.pdf>`

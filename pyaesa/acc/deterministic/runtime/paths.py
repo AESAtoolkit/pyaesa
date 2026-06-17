@@ -56,7 +56,7 @@ def build_acc_scope_label(
 ) -> str:
     """Return the deterministic aCC metadata scope label."""
     source_token = asocc_source_version_token(source=source_label, agg_version=agg_version)
-    return f"{source_token}__{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
+    return f"{source_token}_{cc_branch_token(cc_source=cc_source, cc_type=cc_type)}"
 
 
 def get_acc_branch_root(*, context: ACCDeterministicPathContext) -> Path:
@@ -105,7 +105,7 @@ def acc_output_relative_dir(*, upstream_relative_dir: Path) -> Path:
     if not parts:
         return Path(".")
     rel_parts = parts
-    while rel_parts and rel_parts[0] in {"level_1", "level_2"}:
+    while rel_parts and rel_parts[0] in {"l1", "l2"}:
         rel_parts = rel_parts[1:]
         if rel_parts and rel_parts[0] in {"results", "l2_vs_global"}:
             rel_parts = rel_parts[1:]

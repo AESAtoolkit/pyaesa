@@ -53,24 +53,24 @@ def test_processed_mrio_paths_cover_supported_layouts(project_repo: Path) -> Non
     assert is_exio_mrio_source("EXIOBASE_396_PXP") is True
     assert is_exio_mrio_source("oecd_v2025") is False
 
-    assert _resolve_version_tag(None) == "original_classification"
-    assert _resolve_version_tag(" ") == "original_classification"
-    assert _resolve_version_tag("demo") == "custom_classification_demo"
+    assert _resolve_version_tag(None) == "original_class"
+    assert _resolve_version_tag(" ") == "original_class"
+    assert _resolve_version_tag("demo") == "custom_class_demo"
 
     assert (
         _get_saved_dir("oecd_v2025")
-        == project_repo / "data_processed" / "mrio" / "oecd_v2025" / "original_classification"
+        == project_repo / "data_processed" / "mrio" / "oecd_v2025" / "original_class"
     )
     assert _get_year_saved_dir("oecd_v2025", 2019).name == "ICIO2025_2019_calc"
     assert _get_year_saved_dir("exiobase_396_ixi", 2018).name == "IOT_2018_ixi_calc"
     assert (
         _get_year_saved_dir("exiobase_396_pxp", 2018, matrix_version="demo").parent.name
-        == "custom_classification_demo"
+        == "custom_class_demo"
     )
 
     assert _get_metadata_path("oecd_v2025").name == "processed_metadata.json"
     assert _get_mrio_calc_logs_dir(source_key="oecd_v2025") == (
-        project_repo / "data_processed" / "mrio" / "oecd_v2025" / "original_classification" / "logs"
+        project_repo / "data_processed" / "mrio" / "oecd_v2025" / "original_class" / "logs"
     )
     assert _get_mrio_calc_log_path("x.log", source_key="oecd_v2025") == (
         _get_mrio_calc_logs_dir(source_key="oecd_v2025") / "x.log"
@@ -80,7 +80,7 @@ def test_processed_mrio_paths_cover_supported_layouts(project_repo: Path) -> Non
             "oecd_v2025",
             matrix_version="custom version",
         ).name
-        == "oecd_v2025_custom_version_raw_corrected_values_log.csv"
+        == "raw_corrected_values_log.csv"
     )
 
     assert get_mrio_entry("exiobase_396_ixi").system == "ixi"
@@ -234,7 +234,7 @@ def test_processed_mrio_metadata_contracts_fail_fast_on_invalid_shapes(project_r
     }
 
     payload = {
-        "version_tag": "original_classification",
+        "version_tag": "original_class",
         "aggregation": {"agg_reg": False},
         "labels": {"regions_used": ["R1"], "sectors_used": ["S1"]},
         "years": {},
@@ -354,7 +354,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     sec_df = read_agg_map(sec_path)
 
     metadata = {
-        "version_tag": "custom_classification_demo",
+        "version_tag": "custom_class_demo",
         "aggregation": {
             "agg_reg": True,
             "agg_sec": True,
@@ -381,7 +381,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
 
     validate_metadata_aggregation(
         metadata=metadata,
-        version_tag="custom_classification_demo",
+        version_tag="custom_class_demo",
         aggregation_payload=aggregation_payload,
         agg_reg=True,
         agg_sec=True,
@@ -394,7 +394,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     with pytest.raises(ValueError):
         validate_metadata_aggregation(
             metadata=metadata,
-            version_tag="custom_classification_other",
+            version_tag="custom_class_other",
             aggregation_payload=aggregation_payload,
             agg_reg=True,
             agg_sec=True,
@@ -406,7 +406,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     with pytest.raises(ValueError):
         validate_metadata_aggregation(
             metadata=metadata,
-            version_tag="custom_classification_demo",
+            version_tag="custom_class_demo",
             aggregation_payload={**aggregation_payload, "agg_version": "other"},
             agg_reg=True,
             agg_sec=True,
@@ -418,7 +418,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     with pytest.raises(ValueError):
         validate_metadata_aggregation(
             metadata=metadata,
-            version_tag="custom_classification_demo",
+            version_tag="custom_class_demo",
             aggregation_payload={**aggregation_payload, "agg_sec_fingerprint": "changed"},
             agg_reg=True,
             agg_sec=True,
@@ -430,7 +430,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     with pytest.raises(ValueError):
         validate_metadata_aggregation(
             metadata={"years": {"2019": {"core": ["A"], "extensions": {}}}, "labels": {}},
-            version_tag="custom_classification_demo",
+            version_tag="custom_class_demo",
             aggregation_payload=aggregation_payload,
             agg_reg=True,
             agg_sec=False,
@@ -445,7 +445,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
                 **metadata,
                 "labels": {**metadata["labels"], "regions_used": ["EU"]},
             },
-            version_tag="custom_classification_demo",
+            version_tag="custom_class_demo",
             aggregation_payload=aggregation_payload,
             agg_reg=True,
             agg_sec=False,
@@ -460,7 +460,7 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
                 **metadata,
                 "labels": {**metadata["labels"], "sectors_used": ["Energy"]},
             },
-            version_tag="custom_classification_demo",
+            version_tag="custom_class_demo",
             aggregation_payload=aggregation_payload,
             agg_reg=False,
             agg_sec=True,

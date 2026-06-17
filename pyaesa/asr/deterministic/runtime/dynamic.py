@@ -55,6 +55,7 @@ def process_dynamic_asr(
     lca_rows: pd.DataFrame,
     status: StatusSink,
     return_lca_rows: bool = False,
+    write_outputs: bool = True,
 ) -> ASRProcessResult:
     """Build ASR outputs for dynamic aCC branches."""
     acc_path_context = build_acc_path_context(
@@ -138,6 +139,7 @@ def process_dynamic_asr(
     dynamic_component_frame = write_dynamic_asr_outputs(
         outputs=pending_outputs,
         fmt=fmt,
+        write_outputs=write_outputs,
     )
     return ASRProcessResult(
         n_matched=n_matched,

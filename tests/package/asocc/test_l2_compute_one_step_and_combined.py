@@ -435,7 +435,7 @@ def test_one_step_runtime_paths_cover_default_and_historical_reuse() -> None:
     one_step_mod._compute_one_step_methods(run_reuse)
     reuse_spec = next(iter(run_reuse.state.l2_results_by_ssp_scenario[None]))
     reuse_result = run_reuse.state.l2_results_by_ssp_scenario[None][reuse_spec][0]
-    assert reuse_spec.route.projection_subfolder == "historical_reuse"
+    assert reuse_spec.route.projection_subfolder == "hist_reuse"
     assert "l2_reuse_year" in reuse_spec.identifier_columns
     assert list(reuse_result.columns) == [2030]
 

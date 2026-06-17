@@ -235,7 +235,7 @@ def deterministic_asr(
             exist.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         s_p: Producing sector filter(s), single string or list. If this is a
@@ -284,7 +284,7 @@ def deterministic_asr(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -392,7 +392,7 @@ def deterministic_asr(
                 modes write positive emissions rows and signed negative
                 sequestration companion rows; downstream aCC and ASR consume
                 only the positive emissions rows. See
-                ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
+                ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
                 for the methodological explanation.
               - ``subset_version``: Optional selector for a subset of AR6
                 model-scenario pairs. Follow
@@ -410,7 +410,7 @@ def deterministic_asr(
               Nested keys:
 
               - ``active``: Whether staged external LCA files under
-                ``A_lca/external_lca/`` are used.
+                ``A_lca/ext_lca/`` are used.
               - ``version_name``: External LCA version selected from staged
                 files. Use ``prepare_external_inputs(...)`` to import the
                 external LCA real input folders, README guidance, and runnable CSV
@@ -484,7 +484,7 @@ def deterministic_asr(
             ``project_name="demo"``, ``source="exiobase_3102_ixi"``,
             ``agg_version="elec"``, external LCA version ``"test_v1"``, and
             static ``cc_source="gwp100_lcia"``, the refreshed scope is
-            ``<repo>/demo/C_asr/exiobase_3102_ixi__elec/external_lca__test_v1/deterministic/static__gwp100_lcia``.
+            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/deterministic/static_gwp100_lcia``.
             External LCA staged inputs, processed MRIO inputs, processed
             population and GDP, and raw downloads are not refreshed. Defaults
             to ``False``.

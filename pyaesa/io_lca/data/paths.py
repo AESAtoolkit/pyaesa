@@ -51,7 +51,7 @@ def resolve_io_lca_paths(
     source_version_token = (
         _sanitize_piece(str(agg_version))
         if aggregated and str(agg_version).strip()
-        else "original_version"
+        else "original_class"
     )
     return IOLCAPaths(
         project_base=project_base,
@@ -72,7 +72,7 @@ def _source_tag(source: str) -> str:
 
 def _source_scope_root(*, paths: IOLCAPaths, source: str) -> Path:
     """Return source scoped IO-LCA root under ``io_lca``."""
-    return paths.lca_root / f"{_source_tag(source)}__{paths.source_version_token}"
+    return paths.lca_root / f"{_source_tag(source)}_{paths.source_version_token}"
 
 
 def source_scope_root_for_source(*, paths: IOLCAPaths, source: str) -> Path:
@@ -118,7 +118,7 @@ def log_dir_for_source(*, paths: IOLCAPaths, source: str) -> Path:
 
 def figures_dir_for_source(*, paths: IOLCAPaths, source: str) -> Path:
     """Return source scoped IO-LCA figures folder."""
-    return _deterministic_scope_root(paths=paths, source=source) / "figures"
+    return _deterministic_scope_root(paths=paths, source=source) / "figs"
 
 
 def origin_columns_defs_path(*, paths: IOLCAPaths, source: str) -> Path:
@@ -189,7 +189,7 @@ def stage_results_path(
         paths=paths,
         source=source,
     )
-    return out_dir / f"stages__{_lcia_method_tag(lcia_method)}__{int(year)}.{extension}"
+    return out_dir / f"stages__{_lcia_method_tag(lcia_method)}_{int(year)}.{extension}"
 
 
 def io_metadata_path_for_source(*, paths: IOLCAPaths, source: str) -> Path:

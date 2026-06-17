@@ -34,7 +34,7 @@ def collect_share_files(root: Path) -> list[Path]:
 
 def _l1_share_files(root: Path) -> list[Path]:
     """Collect deterministic L1 share files without descending into nested L2 routes."""
-    return [path for path in collect_share_files(root) if "level_2" not in path.parts]
+    return [path for path in collect_share_files(root) if "l2" not in path.parts]
 
 
 @dataclass(frozen=True)
@@ -200,12 +200,12 @@ def asocc_share_reference_path(asocc_share: AsoccShare) -> Path:
 def _relative_share_path(share_path: Path) -> Path:
     """Return the canonical downstream public relative path for one aSoCC table."""
     parts = list(share_path.parts)
-    if "level_1" in parts:
-        idx = parts.index("level_1")
+    if "l1" in parts:
+        idx = parts.index("l1")
         rel_parts = parts[idx + 1 : -1]
         return Path(*rel_parts) if rel_parts else Path(".")
-    if "level_2" in parts:
-        idx = parts.index("level_2")
+    if "l2" in parts:
+        idx = parts.index("l2")
         rel_parts = parts[idx + 1 : -1]
         if rel_parts[:1] == ["l2_vs_global"]:
             rel_parts = rel_parts[1:]

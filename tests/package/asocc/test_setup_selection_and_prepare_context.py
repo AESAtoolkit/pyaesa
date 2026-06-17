@@ -143,11 +143,11 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
     assert selection_mod._resolve_output_domain_tag(source="iso3", agg_version=None) is None
     assert (
         selection_mod._resolve_output_domain_tag(source="oecd_v2025", agg_version=None)
-        == "original_classification"
+        == "original_class"
     )
     assert (
         selection_mod._resolve_output_domain_tag(source="oecd_v2025", agg_version="demo")
-        == "custom_classification_demo"
+        == "custom_class_demo"
     )
     assert selection_mod._l1_methods_in_scope(selection) == {"EG(Pop)"}
     assert not selection_mod._uses_l1_post_original_domain(

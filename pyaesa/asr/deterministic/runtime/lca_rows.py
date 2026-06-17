@@ -111,7 +111,7 @@ def _load_contextual_external_rows(
             f"README guidance under '{templates}' and runnable examples under "
             "'deterministic/'. Provide a deterministic file named "
             f"'{version_name}__{lcia_method}.csv' or "
-            f"'{version_name}__{lcia_method}__<ssp_scenario>.csv'."
+            f"'{version_name}__{lcia_method}_<ssp_scenario>.csv'."
         )
     out = out.rename(columns={"value": "lca_value"})
     return _finalize_lca_rows(out)

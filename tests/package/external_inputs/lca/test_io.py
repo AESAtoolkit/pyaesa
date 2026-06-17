@@ -158,7 +158,7 @@ def test_external_lca_io_covers_discovery_parsing_normalization_and_reading(
 
     mc_path = work_dir / f"runs__{version_name}__{lcia_method}.csv"
     frame.assign(run_index=0).to_csv(mc_path, index=False)
-    scenario_path = work_dir / f"{version_name}__{lcia_method}__ssp2.csv"
+    scenario_path = work_dir / f"{version_name}__{lcia_method}_ssp2.csv"
     frame.assign(run_index=0).to_csv(scenario_path, index=False)
     parsed_scenario = io_mod.parse_external_lca_filename(path=scenario_path)
     assert parsed_scenario.scenario == "SSP2"
@@ -407,11 +407,11 @@ def test_external_lca_path_owners_are_pure(
     figures_dir = path_mod.external_lca_deterministic_figures_dir(project_base=project_repo)
     mc_figures_dir = path_mod.external_lca_monte_carlo_figures_dir(project_base=project_repo)
 
-    assert root == project_repo / "A_lca" / "external_lca"
-    assert deterministic_dir == project_repo / "A_lca" / "external_lca" / "deterministic"
-    assert monte_carlo_dir == project_repo / "A_lca" / "external_lca" / "monte_carlo"
-    assert figures_dir == project_repo / "A_lca" / "external_lca" / "deterministic" / "figures"
-    assert mc_figures_dir == project_repo / "A_lca" / "external_lca" / "monte_carlo" / "figures"
+    assert root == project_repo / "A_lca" / "ext_lca"
+    assert deterministic_dir == project_repo / "A_lca" / "ext_lca" / "deterministic"
+    assert monte_carlo_dir == project_repo / "A_lca" / "ext_lca" / "monte_carlo"
+    assert figures_dir == project_repo / "A_lca" / "ext_lca" / "deterministic" / "figs"
+    assert mc_figures_dir == project_repo / "A_lca" / "ext_lca" / "monte_carlo" / "figs"
     assert not deterministic_dir.exists()
     assert not monte_carlo_dir.exists()
     assert not figures_dir.exists()
@@ -538,7 +538,7 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     ssp_year.drop(columns=["2019", "2020"]).loc[
         :, ["r_p", "s_p", "impact", "impact_unit", "2006"]
     ].to_csv(
-        deterministic_dir / "supplier_v1__gwp100_lcia__ssp2.csv",
+        deterministic_dir / "supplier_v1__gwp100_lcia_ssp2.csv",
         index=False,
     )
     rows, _paths = load_external_lca_deterministic_rows(
@@ -560,9 +560,9 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     )
     assert paths
     assert all(path.exists() for path in paths)
-    assert all(path.parent == deterministic_dir / "figures" for path in paths)
-    assert all(path.name.startswith("supplier_v1__gwp100_lcia__") for path in paths)
-    assert all("__SSP2" in path.stem for path in paths)
+    assert all(path.parent == deterministic_dir / "figs" for path in paths)
+    assert all(path.name.startswith("supplier_v1__gwp100_lcia_") for path in paths)
+    assert all("_SSP2" in path.stem for path in paths)
     assert all("rf_all" not in path.name and "rc_all" not in path.name for path in paths)
     deterministic_status = _StatusRecorder()
     assert figures_mod.render_external_lca_deterministic_figures_from_rows(
@@ -766,7 +766,7 @@ def test_external_compact_run_matrix_reports_inventory_and_corrupt_rows(
     matrix_dir.mkdir()
     runs_path = matrix_dir / "lca_runs.csv"
     pd.DataFrame({"public_row_id": [0, 1]}).to_csv(
-        matrix_dir / "public_row_identity.csv",
+        matrix_dir / "row_identity.csv",
         index=False,
     )
     pd.DataFrame({"run_index": [0, 1], "0": [1.0, 2.0], "1": [3.0, 4.0]}).to_csv(

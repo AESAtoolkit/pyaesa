@@ -102,7 +102,7 @@ def uncertainty_io_lca(
               and pass the custom method file stem here.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
-              ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
               for all available functional unit codes and the system
               boundaries each represents.
             - ``s_p``: Producing sector filter(s), single string or list. If
@@ -149,7 +149,7 @@ def uncertainty_io_lca(
             because L2 LCIA rows require ``sector_cov_mapping``: keys are
             output ``s_p`` labels and values are sector CoV codes from
             ``sec_cbca_covs.csv``. Source blocks use an ``active`` boolean. See
-            ``data_raw/methodological_notes/methodological_note__acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -236,7 +236,7 @@ def uncertainty_io_lca(
             matching run folders for the current request under the adjacent
             ``monte_carlo`` root. For example, matching IO-LCA Monte Carlo run
             folders are refreshed under
-            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi__elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
             Processed MRIO inputs, processed population and GDP, raw downloads,
             and downstream ASR outputs are not refreshed. Defaults to
             ``False``.

@@ -83,7 +83,7 @@ def _pathway_frame() -> pd.DataFrame:
 def test_dynamic_cc_contracts_and_report_summary(tmp_path: Path) -> None:
     assert normalize_emission_type(" CO2 ") == "co2"
     assert afolu_tag(include_afolu=False) == "wo_afolu"
-    assert afolu_tag(include_afolu=True) == "with_afolu"
+    assert afolu_tag(include_afolu=True) == "w_afolu"
     assert emission_type_tag(emission_type="kyoto_gases") == "kyoto_gases"
     assert normalize_emissions_mode(" Gross_Alt ") == "gross_alt"
     assert emissions_mode_tag(emissions_mode=" gross ") == "gross"
@@ -558,14 +558,14 @@ def test_dynamic_cc_paths_and_metadata_runtime(project_repo: Path) -> None:
         ssp_scenario=["SSP1", "SSP5"],
     )
     assert not scope_dir.exists()
-    assert scope_dir.parent.name == "C1-C3__SSP1-SSP5"
+    assert scope_dir.parent.name == "C1-C3_SSP1-SSP5"
     assert cc_selector_dir_name(category=["C3", "C1"], ssp_scenario=["SSP5", "SSP1"]) == (
-        "C1-C3__SSP1-SSP5"
+        "C1-C3_SSP1-SSP5"
     )
     output_path = get_cc_output_path(cc_dir=scope_dir, output_format="csv")
     assert output_path.name == "ar6_cc.csv"
     assert output_path.parent.name == "results"
     assert get_cc_metadata_path(cc_dir=scope_dir).name == "scope_manifest.json"
     assert get_subset_csv_path(scope_dir.parents[3], "core").name == (
-        "model_scenario_subset__core.csv"
+        "model_scenario_subset_core.csv"
     )

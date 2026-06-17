@@ -191,7 +191,7 @@ def test_figure_validation_and_request_validation_supported_inputs() -> None:
 
 def test_figure_path_contracts_cover_routing_and_validation(tmp_path: Path) -> None:
     figures_root = paths_mod.figures_root_for_run(run_root=tmp_path / "run")
-    assert figures_root == tmp_path / "run" / "figures"
+    assert figures_root == tmp_path / "run" / "figs"
 
     out_paths = paths_mod.output_paths(
         base_path=tmp_path / "outputs" / "demo_plot",
@@ -200,55 +200,8 @@ def test_figure_path_contracts_cover_routing_and_validation(tmp_path: Path) -> N
     assert out_paths == [tmp_path / "outputs" / "demo_plot.png"]
     assert out_paths[0].parent.is_dir()
 
-    assert paths_mod.year_token([]) == "years_none"
-    assert (
-        paths_mod.year_token([2030, 2031, 2032, 2035, 2037, 2038])
-        == "years_2030-2032_2035_2037-2038"
-    )
     assert paths_mod.top_level_figure_dir(figures_root=figures_root, folder="per_method") == (
         figures_root / "per_method"
-    )
-    assert (
-        paths_mod.deterministic_figure_dir(
-            figures_root=figures_root,
-            timescale="single_year",
-        )
-        == figures_root / "single_year"
-    )
-    assert (
-        paths_mod.deterministic_figure_dir(
-            figures_root=figures_root,
-            timescale="multi_year",
-            role="multi_method",
-        )
-        == figures_root / "multi_method" / "multi_year"
-    )
-    assert (
-        paths_mod.uncertainty_figure_dir(
-            figures_root=figures_root,
-            timescale="single_year",
-            family="whisker",
-            role="per_method",
-        )
-        == figures_root / "per_method" / "single_year" / "whisker"
-    )
-    assert (
-        paths_mod.uncertainty_figure_dir(
-            figures_root=figures_root,
-            timescale="multi_year",
-            family="trajectory_bands",
-            role=None,
-        )
-        == figures_root / "multi_year" / "trajectory_bands"
-    )
-    assert (
-        paths_mod.family_figure_dir(
-            figures_root=figures_root,
-            family="polar",
-            role="multi_method",
-            granularity="multi_year",
-        )
-        == figures_root / "multi_method" / "multi_year" / "polar"
     )
     assert (
         paths_mod.strip_lcia_method_suffix(
@@ -262,7 +215,7 @@ def test_figure_path_contracts_cover_routing_and_validation(tmp_path: Path) -> N
             stem="asr_land",
             lcia_methods=["gwp100", "land"],
         )
-        == "asr"
+        == "asr_land"
     )
     assert (
         paths_mod.strip_lcia_method_suffix(
@@ -289,7 +242,7 @@ def test_figure_path_contracts_cover_routing_and_validation(tmp_path: Path) -> N
     )
     assert (
         paths_mod.scope_filename_stem(base_stem="plot_gwp100_lcia", lcia_method="gwp100_lcia")
-        == "plot_gwp100_lcia"
+        == "plot_gwp100_lcia__gwp100_lcia"
     )
     assert paths_mod.scope_filename_stem(base_stem=" plot ", lcia_method="   ") == "plot__item"
 

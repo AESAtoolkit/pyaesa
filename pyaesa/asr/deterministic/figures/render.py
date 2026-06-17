@@ -143,7 +143,6 @@ from .component_diagnostics import (
     _float_series,
     _integer_series,
     _scope_component_rows,
-    load_component_rows_artifact,
 )
 from .groups import resolve_grouped_figure_inputs
 from .row_reader import (
@@ -261,7 +260,7 @@ def render_asr_figures(
     status: StatusSink | None = None,
     output_paths: list[Path],
     acc_output_files: list[Path],
-    component_rows_path: Path | None = None,
+    component_rows: DeterministicComponentRows | None = None,
     coverage: dict[str, list[Any]] | None = None,
 ) -> list[Path]:
     """Render deterministic ASR figures from persisted public ASR tables."""
@@ -307,12 +306,7 @@ def render_asr_figures(
     scale_modes = _scale_modes_by_lcia(
         rows=combined_prepared_asr_rows(groups),
     )
-    component_rows = None
-    if cc_type != "static":
-        component_rows = _dynamic_component_rows(
-            acc_output_files=acc_output_files,
-            component_rows_path=cast(Path, component_rows_path),
-        )
+    component_rows = component_rows if cc_type != "static" else None
     global_ar6_source = (
         deterministic_global_ar6_source(acc_output_files=acc_output_files)
         if cc_type != "static" and _single_year(requested_years) is None
@@ -357,17 +351,6 @@ def render_asr_figures(
     rows = all_prepared_asr_rows(groups)
     write_variant_compression_method_note(figures_root=figures_root, rows=rows)
     return paths
-
-
-def _dynamic_component_rows(
-    *,
-    acc_output_files: list[Path],
-    component_rows_path: Path,
-) -> DeterministicComponentRows:
-    return load_component_rows_artifact(
-        path=component_rows_path,
-        acc_output_files=acc_output_files,
-    )
 
 
 def _per_method_jobs(
@@ -532,7 +515,7 @@ def _multi_method_jobs(
                 output_base = top_level_figure_dir(
                     figures_root=figures_root, folder="multi_method"
                 ) / _scope_stem(
-                    label="multi_method",
+                    label="mm",
                     frame=scope,
                     requested_years=requested_years,
                     cc_source=cc_source,
@@ -697,7 +680,7 @@ def _plot_scope(
             frame=frame,
             values=values,
             frequencies=None,
-            output_stem=output_stem.parent / f"polar_{output_stem.name}",
+            output_stem=output_stem.parent / f"pol_{output_stem.name}",
             title=title,
             lcia_method=visible_values(frame, "lcia_method")[0],
             style="deterministic",
@@ -798,7 +781,7 @@ def _plot_dynamic_scope(
         include_method_in_label=include_method_in_label,
     )
     paths: list[Path] = []
-    for include_post, suffix in ((True, "__incl_post"), (False, "__excl_post")):
+    for include_post, suffix in ((True, "_incl_post"), (False, "_excl_post")):
         post_years = global_ar6.post_years if include_post else []
         transition_shade_right = _post_study_transition_right(post_years)
         fig, axes = plt.subplots(
@@ -2002,11 +1985,14 @@ def _scope_stem(
     selector_token: str = "all",
 ) -> str:
     if cc_type != "static":
-        base = dynamic_output_base_stem(
-            base_stem=label,
-            lcia_method=visible_values(frame, "lcia_method")[0],
-        )
-        parts = [base]
+        parts = [
+            sanitize_token(
+                dynamic_output_base_stem(
+                    base_stem=label,
+                    lcia_method=visible_values(frame, "lcia_method")[0],
+                )
+            )
+        ]
         if str(selector_token).strip() and selector_token != "all":
             parts.append(str(selector_token).strip())
         if include_impact:
@@ -2019,8 +2005,8 @@ def _scope_stem(
         )
         if model_pair is not None:
             parts.append(model_pair)
-        return "__".join(sanitize_token(part) for part in parts if str(part).strip())
-    parts = [strip_lcia_method_suffix(stem=label, lcia_methods=[cc_source]), cc_source]
+        return "_".join(sanitize_token(part) for part in parts if str(part).strip())
+    parts = [sanitize_token(strip_lcia_method_suffix(stem=label, lcia_methods=[cc_source]))]
     if str(selector_token).strip() and selector_token != "all":
         parts.append(str(selector_token).strip())
     if include_impact:
@@ -2029,7 +2015,7 @@ def _scope_stem(
     year = _single_year(requested_years)
     if year is not None:
         parts.append(str(year))
-    return "__".join(sanitize_token(part) for part in parts if str(part).strip())
+    return "_".join(sanitize_token(part) for part in parts if str(part).strip())
 
 
 def _scope_scenario_values(frame: pd.DataFrame) -> list[str]:

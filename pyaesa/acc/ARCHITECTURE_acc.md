@@ -129,8 +129,8 @@ aCC path and public artifact ownership is split by scope:
 | Family neutral completed run reuse and appendable run selection | `pyaesa/shared/uncertainty_assessment/run_state/runs.py` |
 
 The deterministic branch root is keyed only by the source token, carrying
-capacity family, and carrying capacity source: `static__<lcia_method>` or
-`dynamic_ar6__<lcia_method>`. Row selectors such as `cc_bound`, dynamic AR6
+capacity family, and carrying capacity source: `static_<lcia_method>` or
+`dynamic_ar6_<lcia_method>`. Row selectors such as `cc_bound`, dynamic AR6
 category, dynamic AR6 SSP, model, scenario, and studied year coverage are row
 or manifest coverage axes. They are not aCC path helper arguments.
 
@@ -138,15 +138,15 @@ Deterministic branch outputs:
 
 ```text
 B2_acc/<source_token>/deterministic/
-    static__<lcia_method>/
-    dynamic_ar6__<lcia_method>/
+    static_<lcia_method>/
+    dynamic_ar6_<lcia_method>/
 ```
 
 Single branch uncertainty outputs:
 
 ```text
 B2_acc/<source_token>/monte_carlo/<branch_token>/<run_id>/
-    results/public_row_identity.<ext>
+    results/row_identity.<ext>
     results/acc_runs.<ext>
     results/summary_stats_runs.<ext>
     results/cumulative_row_identity.<ext>
@@ -160,8 +160,8 @@ B2_acc/<source_token>/monte_carlo/<branch_token>/<run_id>/
     logs/scope_manifest.json
 ```
 
-The branch token is `static__<lcia_method>` or
-`dynamic_ar6__<lcia_method>`. A mixed public request that includes several
+The branch token is `static_<lcia_method>` or
+`dynamic_ar6_<lcia_method>`. A mixed public request that includes several
 static or dynamic carrying capacity branches writes a branch set manifest at
 `B2_acc/<source_token>/monte_carlo/<run_id>/logs/scope_manifest.json`. The
 branch set manifest records the branch scope manifests and branch run roots;
@@ -173,7 +173,7 @@ as a compact fixed row matrix. Sparse selected aSoCC rows or sparse dynamic
 AR6 CC rows produce sparse aCC run rows with `run_index`, `public_row_id`,
 and `acc`. Dynamic AR6 CC source state columns such as `cc_category`,
 `cc_model`, `cc_scenario`, and `ar6_cc_ssp_scenario` remain in
-`public_row_identity` so selected trajectories are auditable. aCC summaries
+`row_identity` so selected trajectories are auditable. aCC summaries
 group sampled AR6 source state out in the same way as AR6 CC summaries.
 The upstream aSoCC `asocc_time_route` column remains in aCC public identity so
 downstream ASR and figure renderers can derive retrospective to prospective

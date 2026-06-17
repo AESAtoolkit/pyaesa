@@ -27,7 +27,7 @@ def build_io_lca_uncertainty_run_paths(
     ) / str(run_id)
     return IOLCAUncertaintyRunPaths(
         run_root=run_root,
-        public_row_identity=run_root / "results" / f"public_row_identity{suffix}",
+        public_row_identity=run_root / "results" / f"row_identity{suffix}",
         public_runs=run_root / "results" / f"lca_runs{suffix}",
         summary_stats_runs=run_root / "results" / f"summary_stats_runs{suffix}",
         results_readme=run_root / "results" / "README.txt",
@@ -38,4 +38,4 @@ def build_io_lca_uncertainty_run_paths(
 
 def io_lca_uncertainty_figures_root(*, paths: IOLCAUncertaintyRunPaths) -> Path:
     """Return the canonical figure root for one IO-LCA uncertainty run."""
-    return paths.run_root / "figures"
+    return paths.run_root / "figs"

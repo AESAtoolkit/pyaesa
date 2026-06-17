@@ -56,10 +56,6 @@ def _subsample_sampled_index(sampled_index: list[tuple]) -> list[tuple]:
     return [sampled_index[i] for i in chosen]
 
 
-def _study_period_suffix(study_period: list[int], ext: str) -> str:
-    return f"studyperiod={int(study_period[0])}to{int(study_period[1])}.{ext}"
-
-
 def _apply_dense_sampling_layout(fig: Figure) -> None:
     """Apply stable manual spacing for dense sampling comparison panels."""
     fig.subplots_adjust(top=0.89, bottom=0.07, left=0.06, right=0.98, hspace=0.4, wspace=0.38)
@@ -156,7 +152,7 @@ def write_sampling_figures(
                 remaining_budget_end_year_value=remaining_budget_end_year_value,
                 database=database,
                 categories_repr=categories_repr,
-                figure_stub=f"fig-LHSSRS-budgets-{variable_group}-{emissions_mode}",
+                figure_stub=f"LHSSRS_budgets_{variable_group}_{emissions_mode}",
                 metadata_callback=metadata_callback,
             )
     return convergence_log_df
@@ -227,10 +223,7 @@ def _write_sampling_probability_ratio_figure(
         )
         ax[idx_var].set_ylabel("LHS/SRS probability ratio [/]")
         ax[idx_var].set_title(f"{var_sel}")
-    output_path = (
-        figures_dir / f"fig-LHSSRS-ratioproba-{variable_group}-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-{_study_period_suffix(study_period, ext)}"
-    )
+    output_path = figures_dir / f"LHSSRS_ratioproba_{variable_group}.{ext}"
     save_figure(
         fig,
         output_path,
@@ -309,10 +302,7 @@ def _write_sampling_median_ratio_figure(
         )
         ax[idx_var].grid(axis="y", color="grey", alpha=0.3, zorder=-1)
         ax[idx_var].set_ylabel("LHS/SRS median ratio [/]")
-    output_path = (
-        figures_dir / f"fig-LHSSRS-ratiomedian-{variable_group}-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-{_study_period_suffix(study_period, ext)}"
-    )
+    output_path = figures_dir / f"LHSSRS_ratiomedian_{variable_group}.{ext}"
     save_figure(
         fig,
         output_path,
@@ -458,10 +448,7 @@ def _generate_sampling_budget_figure(
             )
         ax[0, 2 * idx_var].set_ylabel("LHS/SRS probability ratio [/]")
         ax[0, 2 * idx_var].set_title(var_sel)
-    output_path = (
-        figures_dir / f"{figure_stub}-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-{_study_period_suffix(study_period, ext)}"
-    )
+    output_path = figures_dir / f"{figure_stub}.{ext}"
     save_figure(
         fig,
         output_path,
@@ -471,6 +458,6 @@ def _generate_sampling_budget_figure(
     )
     write_drop_csv(
         figures_dir,
-        f"{output_path.stem}-remaining-budget-panel",
+        f"{output_path.stem}_remaining_budget",
         remaining_drop_records,
     )

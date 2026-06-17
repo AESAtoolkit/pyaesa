@@ -18,7 +18,6 @@ from ....runtime.output.contracts import (
     OutputRoute,
     OutputSpec,
     identifier_columns_from_frame,
-    join_file_owned_tokens,
 )
 from ..shared.scenario_routing import (
     is_scenario_dependent_l1,
@@ -77,14 +76,17 @@ def _build_l2_output_spec(
     cached = get_cached_output_spec(state=state, key=cache_key)
     if isinstance(cached, OutputSpec):
         return cached
-    file_stem_tokens: tuple[str | None, ...]
     if spec.route == "l2_in_l1":
-        file_stem_tokens = (f"l2_{spec.l2_method}", spec.lcia_method_name)
+        base_file_stem = f"l2_{spec.l2_method}"
     elif spec.route == "l2_vs_global" and spec.l1_method:
-        file_stem_tokens = (f"{spec.l1_method}_{spec.l2_method}", spec.lcia_method_name)
+        base_file_stem = f"{spec.l1_method}_{spec.l2_method}"
     else:
-        file_stem_tokens = (spec.l2_method, spec.lcia_method_name)
-    file_stem = join_file_owned_tokens(*file_stem_tokens)
+        base_file_stem = spec.l2_method
+    file_stem = (
+        f"{base_file_stem}__{spec.lcia_method_name}"
+        if spec.lcia_method_name is not None
+        else base_file_stem
+    )
     l1_l2_method = (
         l1_l2_method_label(l1_method=spec.l1_method, l2_method=spec.l2_method)
         if spec.l1_method

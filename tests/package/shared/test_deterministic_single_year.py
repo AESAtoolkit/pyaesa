@@ -113,7 +113,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             force_zero_ymin=True,
             footer_note="Overlay note",
         )
-        assert overlay_paths == [output_root / "overlay__2031.png"]
+        assert overlay_paths == [output_root / "overlay_2031.png"]
         assert overlay_paths[0].is_file()
 
         assert render_single_year_panels(
@@ -124,7 +124,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             ylabel="Value",
             dpi=10,
             output_format="png",
-        ) == [output_root / "missing_year__2031.png"]
+        ) == [output_root / "missing_year_2031.png"]
 
         grid_axis_styler_calls: list[int] = []
         grid_paths = render_single_year_panels(
@@ -140,7 +140,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             force_zero_ymin=True,
             axis_styler=_recording_axis_styler(grid_axis_styler_calls),
         )
-        assert grid_paths == [output_root / "grid__2030.png"]
+        assert grid_paths == [output_root / "grid_2030.png"]
         assert grid_paths[0].is_file()
         assert grid_axis_styler_calls == [2, 2]
 
@@ -156,7 +156,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             overlay_panels=True,
             axis_styler=_recording_axis_styler(axis_styler_calls),
         )
-        assert styled_paths == [output_root / "styled_overlay__2032.png"]
+        assert styled_paths == [output_root / "styled_overlay_2032.png"]
         assert axis_styler_calls == [2]
 
         split_paths = render_single_year_panels(
@@ -178,7 +178,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             for value in pd.Series(_impact_frame()["impact"], copy=False).drop_duplicates().tolist()
         }
         assert {path.name for path in split_paths} == {
-            f"split__{token}__2030.png" for token in split_impact_tokens
+            f"split_{token}_2030.png" for token in split_impact_tokens
         }
 
         split_axis_styler_calls: list[int] = []
@@ -196,7 +196,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
         assert len(split_styled_paths) == 2
         assert split_axis_styler_calls == [2, 2]
         assert {path.name for path in split_styled_paths} == {
-            f"split_styled__{token}__2030.png" for token in split_impact_tokens
+            f"split_styled_{token}_2030.png" for token in split_impact_tokens
         }
 
         single_panel_paths = render_single_year_panels(
@@ -210,7 +210,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             overlay_panels=True,
             force_zero_ymin=True,
         )
-        assert single_panel_paths == [output_root / "single_panel__2032.png"]
+        assert single_panel_paths == [output_root / "single_panel_2032.png"]
         assert single_panel_paths[0].is_file()
 
         titled_overlay_paths = render_single_year_panels(
@@ -224,7 +224,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             overlay_panels=True,
             force_zero_ymin=True,
         )
-        assert titled_overlay_paths == [output_root / "titled_overlay__2032.png"]
+        assert titled_overlay_paths == [output_root / "titled_overlay_2032.png"]
         assert titled_overlay_paths[0].is_file()
 
         multi_overlay_paths = render_single_year_panels(
@@ -237,7 +237,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
             output_format="png",
             overlay_panels=True,
         )
-        assert multi_overlay_paths == [output_root / "multi_overlay__2030.png"]
+        assert multi_overlay_paths == [output_root / "multi_overlay_2030.png"]
         assert multi_overlay_paths[0].is_file()
 
         with pytest.raises(ValueError):
@@ -303,7 +303,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
         assert len(split_percent_paths) == 2
         assert all(path.is_file() for path in split_percent_paths)
         assert {path.name for path in split_percent_paths} == {
-            f"split_percent__{token}__2030.png" for token in split_impact_tokens
+            f"split_percent_{token}_2030.png" for token in split_impact_tokens
         }
 
         split_no_zero_paths = render_single_year_panels(
@@ -319,7 +319,7 @@ def test_render_single_year_panels_covers_empty_overlay_grid_and_split_paths(
         assert len(split_no_zero_paths) == 2
         assert all(path.is_file() for path in split_no_zero_paths)
         assert {path.name for path in split_no_zero_paths} == {
-            f"split_no_zero__{token}__2030.png" for token in split_impact_tokens
+            f"split_no_zero_{token}_2030.png" for token in split_impact_tokens
         }
 
         with pytest.raises(ValueError):

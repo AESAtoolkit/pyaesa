@@ -47,7 +47,7 @@ def asocc_source_version_token(*, source: str, agg_version: str | None) -> str:
     )
     if version_token is None:
         return source_clean
-    return f"{source_clean}__{version_token}"
+    return f"{source_clean}_{version_token}"
 
 
 def _get_asocc_root(*, proj_base: Path) -> Path:

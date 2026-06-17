@@ -123,7 +123,7 @@ def deterministic_io_lca(
             and pass the custom method file stem here.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note__asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         s_p: Producing sector filter(s), single string or list. If this is a
@@ -190,7 +190,7 @@ def deterministic_io_lca(
             ``<project>/A_lca/io_lca``. For example, for
             ``project_name="demo"``, ``source="exiobase_3102_ixi"``, and
             ``agg_version="elec"``, the refreshed path is
-            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi__elec/deterministic``.
+            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi_elec/deterministic``.
             It is not limited to one LCIA method inside that output scope.
             Processed MRIO inputs, processed population and GDP, raw downloads,
             and downstream ASR outputs are not refreshed. Defaults to

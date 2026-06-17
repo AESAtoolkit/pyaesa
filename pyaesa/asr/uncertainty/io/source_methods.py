@@ -73,7 +73,7 @@ def write_asr_results_readme(
 ) -> None:
     """Write the public ASR Monte Carlo result guide."""
     artifact_lines = [
-        "- public_row_identity: public ASR rows, one row per run matrix column.",
+        "- row_identity: public ASR rows, one row per run matrix column.",
         *public_run_artifact_readme_lines(run_name="asr_runs"),
         "  Layout: ASR values by run and public row.",
         "- summary_stats_runs: exact yearly ASR and frequency of transgression",

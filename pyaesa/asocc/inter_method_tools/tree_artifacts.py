@@ -17,7 +17,7 @@ from pyaesa.shared.figures.request_validation import normalize_figure_format
 from pyaesa.shared.runtime.io.filesystem import atomic_write_text
 from pyaesa.shared.runtime.text import join_user_text_lines
 
-INTER_METHOD_TREE_GUIDE_NAME = "README_inter_method_weights.txt"
+INTER_METHOD_TREE_GUIDE_NAME = "README_im_weights.txt"
 
 
 @dataclass(frozen=True)
@@ -118,7 +118,7 @@ edge_weight values from root to the terminal row carrying candidate_label.
 Use preview_asocc_weight_tree(...) after editing a custom CSV. For a custom
 version named "custom_v1", place the edited file in this folder at:
 
-weights__custom_v1.csv
+custom_v1.csv
 
 Then run:
 

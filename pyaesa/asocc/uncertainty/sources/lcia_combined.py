@@ -9,7 +9,6 @@ from scipy.sparse import csr_matrix
 
 from pyaesa.asocc.methods.compute_l1 import resolve_l1_region_label
 from pyaesa.asocc.methods.registry.registry import REGISTRY
-from pyaesa.asocc.runtime.output.contracts import join_file_owned_tokens
 from pyaesa.asocc.uncertainty.inputs.deterministic_rows import LoadedAsoccFinalRows
 from pyaesa.asocc.uncertainty.inputs.external_rows import external_method_row_mask
 from pyaesa.shared.lcia.cov_inputs import LCIACoVInputs
@@ -91,14 +90,14 @@ def build_combined_routes(
             l1_rows = support_rows(
                 loaded=loaded,
                 bucket="level_1",
-                stem=join_file_owned_tokens(f"l1_{l1_method}", lcia_method if l1_sampled else None),
+                stem=(f"l1_{l1_method}__{lcia_method}" if l1_sampled else f"l1_{l1_method}"),
                 requested_years=final_years(final_rows=route_final),
                 support_cache=support_cache,
             ).reset_index(drop=True)
             l2_rows = support_rows(
                 loaded=loaded,
                 bucket="l2_in_l1",
-                stem=join_file_owned_tokens(f"l2_{l2_method}", lcia_method if l2_sampled else None),
+                stem=(f"l2_{l2_method}__{lcia_method}" if l2_sampled else f"l2_{l2_method}"),
                 requested_years=l2_support_years(final_rows=route_final),
                 support_cache=support_cache,
             ).reset_index(drop=True)

@@ -88,7 +88,7 @@ def _get_projection_regression_dir(
             source=source,
             agg_version=agg_version,
         )
-        / "regression_proj"
+        / "regr_proj"
     )
 
 
@@ -183,7 +183,7 @@ def allocate_regression_logs_dir(
         source=source,
         agg_version=agg_version,
     )
-    return base / "regression_proj"
+    return base / "regr_proj"
 
 
 def runtime_regression_logs_dir(

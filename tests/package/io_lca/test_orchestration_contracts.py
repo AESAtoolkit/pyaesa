@@ -487,7 +487,7 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
             paths=aggregated_paths,
             source="exiobase 396 ixi",
         ).name
-        == "exiobase_396_ixi__Demo_Version"
+        == "exiobase_396_ixi_Demo_Version"
     )
     assert data_paths.deterministic_scope_metadata_paths(paths=aggregated_paths) == []
 

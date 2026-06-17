@@ -444,10 +444,10 @@ def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
         / "deterministic"
     )
     assert sorted(path.name for path in route_root.iterdir()) == [
-        "static__gwp100_lcia",
-        "static__pb_lcia",
+        "static_gwp100_lcia",
+        "static_pb_lcia",
     ]
-    for branch_name in ("static__gwp100_lcia", "static__pb_lcia"):
+    for branch_name in ("static_gwp100_lcia", "static_pb_lcia"):
         assert (route_root / branch_name / "logs" / "scope_manifest.json").exists()
 
     for lcia_method in ("gwp100_lcia", "pb_lcia"):
@@ -633,8 +633,8 @@ def test_deterministic_asr_static_pb_lcia_public_figures_cover_polar_and_multi_m
     figure_paths = report.branches[0].figure_paths
     assert all(path.exists() for path in figure_paths)
     figure_names = {path.name for path in figure_paths}
-    assert "multi_method__pb_lcia__rp_FR__sp_D__2006.svg" in figure_names
-    assert any(name.startswith("polar_UT_FD__pb_lcia__") for name in figure_names)
+    assert "mm_rp_FR_sp_D_2006.svg" in figure_names
+    assert any(name.startswith("pol_UT_FD_rp_FR_sp_D_") for name in figure_names)
 
 
 def test_deterministic_asr_static_pb_lcia_multi_year_public_figures_cover_threshold_panels(
@@ -682,9 +682,9 @@ def test_deterministic_asr_static_pb_lcia_multi_year_public_figures_cover_thresh
     figure_paths = report.branches[0].figure_paths
     assert all(path.exists() for path in figure_paths)
     figure_names = {path.name for path in figure_paths}
-    assert "UT_FD__pb_lcia__rp_FR__sp_D.svg" in figure_names
-    assert "polar_UT_FD__pb_lcia__rp_FR__sp_D__2006.svg" in figure_names
-    assert "polar_UT_FD__pb_lcia__rp_FR__sp_D__2005.svg" not in figure_names
+    assert "UT_FD_rp_FR_sp_D.svg" in figure_names
+    assert "pol_UT_FD_rp_FR_sp_D_2006.svg" in figure_names
+    assert "pol_UT_FD_rp_FR_sp_D_2005.svg" not in figure_names
 
     no_product = deterministic_asr(
         **{
@@ -961,15 +961,11 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
             project_name="asr_dynamic_reuse",
         ).rglob("*.csv")
     )
-    result_paths = [path for path in output_paths if path.name != "dynamic_component_rows.csv"]
-    component_paths = [path for path in output_paths if path.name == "dynamic_component_rows.csv"]
     assert {path.name for path in output_paths} == {
-        "dynamic_component_rows.csv",
-        "UT(FD)__gwp100_lcia__dynamic_ar6.csv",
+        "UT(FD)__gwp100_lcia_dynamic_ar6.csv",
     }
-    assert len(component_paths) == 1
 
-    first_output = pd.concat([pd.read_csv(path) for path in result_paths], ignore_index=True)
+    first_output = pd.concat([pd.read_csv(path) for path in output_paths], ignore_index=True)
     assert {
         "l1_l2_method",
         "impact",
@@ -1022,6 +1018,35 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     )
     assert reused_dynamic_report.branches[0].reuse_status == "reused_exact"
 
+    reused_dynamic_figure_report = deterministic_asr(
+        project_name="asr_dynamic_reuse",
+        years=_DYNAMIC_TEST_YEARS,
+        lcia_method="gwp100_lcia",
+        fu_code="L2.a.a",
+        r_p=["FR"],
+        s_p=["D"],
+        source="exiobase_396_ixi",
+        base_asocc_args={
+            "method_plan": "one_step",
+            "one_step_methods": ["UT(FD)"],
+        },
+        base_cc_args={
+            "static": {"active": False},
+            "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
+        },
+        lca_args={
+            "external_lca": {"active": False, "version_name": None},
+            "io_lca": {"active": True},
+        },
+        figures=True,
+        figure_format={"format": "svg", "dpi": 1},
+        subfigures=False,
+        refresh=False,
+    )
+    assert reused_dynamic_figure_report.branches[0].reuse_status == "partially_reused"
+    assert reused_dynamic_figure_report.branches[0].figure_paths
+    assert all(path.exists() for path in reused_dynamic_figure_report.branches[0].figure_paths)
+
 
 def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
     allocation_dummy_repo,
@@ -1072,7 +1097,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
                 ("US", "X", 4.0),
             )
         ]
-    ).to_csv(external_dir / "supplier_v1__gwp100_lcia__ssp2.csv", index=False)
+    ).to_csv(external_dir / "supplier_v1__gwp100_lcia_ssp2.csv", index=False)
     base_allocate_args = build_composite_base_allocate_args(
         project_name=project_name,
         years=years,
@@ -1104,7 +1129,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
         public_result_root_name=public_result_root_name_for_fu_code(fu_code="L2.a.a"),
     )
     acc_path = _write_acc_wide_table(
-        acc_dir / "AR(E^{CBA_FD})__gwp100_lcia__dynamic_ar6.csv",
+        acc_dir / "AR(E^{CBA_FD})__gwp100_lcia_dynamic_ar6.csv",
         l1_l2_method="AR(E^{CBA_FD})",
         lcia_method="gwp100_lcia",
         impact="GWP_100",

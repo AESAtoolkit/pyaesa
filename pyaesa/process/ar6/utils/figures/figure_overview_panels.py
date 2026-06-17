@@ -35,11 +35,7 @@ def _pathway_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-harmonization-pathways-{database}"
-        f"-MOD={FIGURE_MODEL_LABEL}-CAT={categories_repr}"
-        f"-studyperiod={int(study_period[0])}to{int(study_period[1])}.{ext}"
-    )
+    return f"harmonization_pathways.{ext}"
 
 
 def _delta_tconv_filename(
@@ -48,11 +44,7 @@ def _delta_tconv_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-harmonization-stats-delta-tconv-{database}"
-        f"-MOD={FIGURE_MODEL_LABEL}-CAT={categories_repr}"
-        f"-studyperiod={int(study_period[0])}to{int(study_period[1])}.{ext}"
-    )
+    return f"harmonization_delta_tconv.{ext}"
 
 
 def _harm_stats_filename(
@@ -61,11 +53,7 @@ def _harm_stats_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-harmonization-stats-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-studyperiod={int(study_period[0])}"
-        f"to{int(study_period[1])}.{ext}"
-    )
+    return f"harmonization_stats.{ext}"
 
 
 def _budgets_filename(
@@ -75,11 +63,7 @@ def _budgets_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-budgets-{variable_group}-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-studyperiod={int(study_period[0])}"
-        f"to{int(study_period[1])}.{ext}"
-    )
+    return f"budget_{variable_group}.{ext}"
 
 
 def _sequestration_budgets_filename(
@@ -89,11 +73,7 @@ def _sequestration_budgets_filename(
     study_period: list[int],
     ext: str,
 ) -> str:
-    return (
-        f"fig-sequestration-budgets-for{variable_group}-{database}-MOD={FIGURE_MODEL_LABEL}"
-        f"-CAT={categories_repr}-studyperiod={int(study_period[0])}"
-        f"to{int(study_period[1])}.{ext}"
-    )
+    return f"sequestration_budgets_{variable_group}.{ext}"
 
 
 def _sequestration_variable_for_emissions_variable(emissions_variable: str) -> str:
@@ -147,7 +127,7 @@ def write_historical_emissions_figure(
     )
     save_figure(
         fig,
-        figures_dir / f"fig-processed-historical-emissions.{ext}",
+        figures_dir / f"hist_emissions.{ext}",
         dpi=dpi,
         out_paths=out_paths,
         metadata_callback=metadata_callback,
@@ -371,7 +351,7 @@ def write_processed_budgets_figure(
                 ax=ax[:, idx_var],
                 remaining_budget_end_year_value=remaining_budget_end_year_value,
                 remaining_budget_drop_records=budgets_remaining_drop_records,
-                remaining_budget_figure_name=f"fig-budgets-{variable_group}",
+                remaining_budget_figure_name=f"budget_{variable_group}",
                 remaining_budget_subset_name="all",
             )
             if list(map(int, study_period)) == [2010, 2100] and var_sel == NET_KYOTO_WO_AFOLU:
@@ -420,7 +400,7 @@ def write_processed_budgets_figure(
         )
         write_drop_csv(
             figures_dir,
-            f"{budgets_path.stem}-remaining-budget-panel",
+            f"{budgets_path.stem}_remaining_budget",
             budgets_remaining_drop_records,
         )
 
@@ -483,7 +463,7 @@ def write_sequestration_budgets_figure(
                 ax=ax[1:, idx_var],
                 remaining_budget_end_year_value=remaining_budget_end_year_value,
                 remaining_budget_drop_records=remaining_drop_records,
-                remaining_budget_figure_name=f"fig-sequestration-budgets-for{variable_group}",
+                remaining_budget_figure_name=f"sequestration_budgets_{variable_group}",
                 remaining_budget_subset_name=emissions_variable,
             )
         budgets_path = figures_dir / _sequestration_budgets_filename(
@@ -498,6 +478,6 @@ def write_sequestration_budgets_figure(
         )
         write_drop_csv(
             figures_dir,
-            f"{budgets_path.stem}-remaining-budget-panel",
+            f"{budgets_path.stem}_remaining_budget",
             remaining_drop_records,
         )

@@ -111,7 +111,7 @@ def get_cc_figures_dir(
             category=category,
             ssp_scenario=ssp_scenario,
         )
-        / "figures"
+        / "figs"
     )
 
 
@@ -158,4 +158,4 @@ def get_subset_csv_path(
     subset_version: str,
 ) -> Path:
     """Return the expected model-scenario subset CSV path."""
-    return ensure_file_parent(processed_dir / f"model_scenario_subset__{subset_version}.csv")
+    return ensure_file_parent(processed_dir / f"model_scenario_subset_{subset_version}.csv")

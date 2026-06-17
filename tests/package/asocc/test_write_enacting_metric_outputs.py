@@ -211,16 +211,16 @@ def test_reset_metric_index_and_build_output_cover_level_routing(tmp_path: Path)
             2030: pd.Series([2.0], index=pd.Index(["Climate"], name="impact")),
         },
         l1_source=None,
-        projection_subfolder="regression_proj",
+        projection_subfolder="regr_proj",
     )
     assert isinstance(artifact_lcia, OutputArtifact)
     assert artifact_lcia.schema.columns == ("unit", "impact")
     assert out_path_lcia.name == "e_cba_fd_reg_gwp100_lcia.csv"
     assert out_path_lcia.parts[-5:] == (
         "results",
-        "level_2",
+        "l2",
         "enacting_metrics",
-        "regression_proj",
+        "regr_proj",
         "e_cba_fd_reg_gwp100_lcia.csv",
     )
 
@@ -253,7 +253,7 @@ def test_projection_split_and_output_target_count_cover_routing_branches() -> No
         key=key,
         year_map=year_map,
     )
-    assert [item[0] for item in split] == [None, "regression_proj"]
+    assert [item[0] for item in split] == [None, "regr_proj"]
     assert split[0][1] == {2005: year_map[2005]}
     assert split[1][1] == {2030: year_map[2030]}
     assert mod._split_year_map_for_output(  # noqa: SLF001
@@ -265,7 +265,7 @@ def test_projection_split_and_output_target_count_cover_routing_branches() -> No
         context=_context(projection_context=_projection_context()),
         key=key,
         year_map={2030: year_map[2030]},
-    ) == [("regression_proj", {2030: year_map[2030]})]
+    ) == [("regr_proj", {2030: year_map[2030]})]
 
     state = SimpleNamespace(
         enacting_metric_inputs={
@@ -325,5 +325,5 @@ def test_write_enacting_metric_outputs_covers_noop_and_writer_calls(tmp_path: Pa
         write_result_artifact=_record_writer,
     )
     assert len(calls) == 2
-    assert any(path.parent.name == "regression_proj" for path, _ in calls)
+    assert any(path.parent.name == "regr_proj" for path, _ in calls)
     assert any(path.parent.name == "enacting_metrics" for path, _ in calls)

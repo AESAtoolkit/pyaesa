@@ -32,12 +32,12 @@ def test_group_files_by_base_normalizes_parents_and_reuse_metadata(tmp_path: Pat
     regression_path = (
         root
         / "results"
-        / "level_2"
+        / "l2"
         / "l2_in_l1"
-        / "regression_proj"
-        / "native_SSP2__C1__ssp2__gwp100_lcia__min_cc.csv"
+        / "regr_proj"
+        / "native_SSP2_C1_ssp2__gwp100_lcia_min_cc.csv"
     )
-    reuse_path = root / "historical_reuse" / "family" / "base.csv"
+    reuse_path = root / "hist_reuse" / "family" / "base.csv"
     regression_path.parent.mkdir(parents=True)
     reuse_path.parent.mkdir(parents=True)
     regression_path.write_text("demo", encoding="utf-8")
@@ -73,7 +73,7 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
     root = tmp_path / "outputs"
     root.mkdir()
     historical_path = root / "historical.csv"
-    prospective_path = root / "historical_reuse" / "prospective.csv"
+    prospective_path = root / "hist_reuse" / "prospective.csv"
     prospective_path.parent.mkdir(parents=True)
     pd.DataFrame(
         {
@@ -177,19 +177,19 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
         == "results / family / stem"
     )
     assert groups_mod.normalize_companion_relative_parent(
-        Path("historical_reuse/2030/results/family")
+        Path("hist_reuse/2030/results/family")
     ) == Path("2030/family")
     assert groups_mod.normalize_companion_relative_parent(Path("results/family")) == Path("family")
     assert groups_mod.normalize_companion_relative_parent(Path("family")) == Path("family")
     assert groups_mod.normalize_companion_relative_parent(
-        Path("results/level_2/l2_in_l1/regression_proj")
+        Path("results/l2/l2_in_l1/regr_proj")
     ) == Path("l2_in_l1")
     assert groups_mod.normalize_companion_relative_parent(
-        Path("results/level_1/utility_propagation_contrib/family")
-    ) == Path("utility_propagation_contrib/family")
+        Path("results/l1/ut_propag_contrib/family")
+    ) == Path("ut_propag_contrib/family")
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="native_SSP2__C1__ssp2__gwp100_lcia__min_cc",
+            output_stem="native_SSP2_C1_ssp2__gwp100_lcia_min_cc",
             share_transition_meta={"native_SSP2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}},
         )
         == "native_SSP2"
@@ -215,22 +215,22 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="base__gwp100_lcia__max_cc",
+            output_stem="base__gwp100_lcia_max_cc",
             share_transition_meta={"base": {}},
         )
         == "base"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="EG_Pop__AR_E_PBA__gwp100_lcia__ssp2__min_cc",
-            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_lcia__ssp2": {}},
+            output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_ssp2_min_cc",
+            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2": {}},
         )
-        == "EG(Pop)_AR(E^{PBA})__gwp100_lcia__ssp2"
+        == "EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2"
     )
     assert scenarios_mod.share_transition_payload_for_output_stem(
-        output_stem="EG_Pop__AR_E_PBA__gwp100_lcia__ssp2__min_cc",
+        output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_ssp2_min_cc",
         share_transition_meta={
-            "EG(Pop)_AR(E^{PBA})__gwp100_lcia__ssp2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
+            "EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
         },
     ) == {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
 
@@ -238,7 +238,7 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
 def test_transition_group_stem_resolution_contracts(
     tmp_path: Path,
 ) -> None:
-    historical_path = tmp_path / "historical_reuse" / "family" / "base.csv"
+    historical_path = tmp_path / "hist_reuse" / "family" / "base.csv"
     historical_path.parent.mkdir(parents=True)
     pd.DataFrame({"2030": [1.0], "2031": [2.0]}).to_csv(historical_path, index=False)
 
@@ -264,20 +264,20 @@ def test_transition_group_stem_resolution_contracts(
     ) == {"marker_label": "fallback"}
     assert (
         groups_mod._candidate_output_share_stem(  # noqa: SLF001
-            "base__gwp100_lcia__max_cc"
+            "base__gwp100_lcia_max_cc"
         )
         == "base__gwp100_lcia"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="base__gwp100_lcia__max_cc",
+            output_stem="base__gwp100_lcia_max_cc",
             share_transition_meta={"base__gwp100_lcia": {}},
         )
         == "base__gwp100_lcia"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="EG_Pop__AR_E_PBA__gwp100_lcia__min_cc",
+            output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_min_cc",
             share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_lcia": {}},
         )
         == "EG(Pop)_AR(E^{PBA})__gwp100_lcia"
@@ -290,7 +290,7 @@ def test_transition_group_stem_resolution_contracts(
     )
     assert (
         groups_mod._raw_candidate_output_share_stem(  # noqa: SLF001
-            "base__gwp100_lcia__min_cc__ssp2__max_cc"
+            "base__gwp100_lcia_min_cc_ssp2_max_cc"
         )
         == "base__gwp100_lcia"
     )

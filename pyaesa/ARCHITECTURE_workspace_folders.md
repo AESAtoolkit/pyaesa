@@ -24,7 +24,7 @@ Folder ownership is split by runtime family:
 | Raw source payloads under `data_raw/` | `pyaesa/download/` |
 | Processed runtime assets under `data_processed/` | `pyaesa/process/` |
 | Deterministic and uncertainty scientific outputs under `<project_name>/` | The owning deterministic or uncertainty family package |
-| External input scaffolds under `<project_name>/A_lca/external_lca/` and `<project_name>/B1_asocc/external_asocc/` | `pyaesa/external_inputs/` |
+| External input scaffolds under `<project_name>/A_lca/ext_lca/` and `<project_name>/B1_asocc/ext_asocc/` | `pyaesa/external_inputs/` |
 
 Refresh behavior is scoped to the public function that exposes the refresh
 argument. Refresh cleanup must delete only that function's own output scope
@@ -42,7 +42,7 @@ Active deterministic families write under:
 - `<project_name>/B2_acc/`
 - `<project_name>/C_asr/`
 - `<project_name>/A_lca/io_lca/`
-- `<project_name>/A_lca/external_lca/`
+- `<project_name>/A_lca/ext_lca/`
 - `data_processed/ar6/<processed_scope>/ar6_cc/<cc_scope>/deterministic/`
   for deterministic dynamic AR6 carrying capacity tables
 
@@ -60,12 +60,12 @@ AR6 CC uncertainty manifest contract.
 `prepare_external_inputs(...)` creates project scoped external input folders,
 README guidance, and runnable CSV examples:
 
-- `<project_name>/B1_asocc/external_asocc/deterministic/`
-- `<project_name>/B1_asocc/external_asocc/monte_carlo/`
-- `<project_name>/B1_asocc/external_asocc/templates/`
-- `<project_name>/A_lca/external_lca/deterministic/`
-- `<project_name>/A_lca/external_lca/monte_carlo/`
-- `<project_name>/A_lca/external_lca/templates/`
+- `<project_name>/B1_asocc/ext_asocc/deterministic/`
+- `<project_name>/B1_asocc/ext_asocc/monte_carlo/`
+- `<project_name>/B1_asocc/ext_asocc/templates/`
+- `<project_name>/A_lca/ext_lca/deterministic/`
+- `<project_name>/A_lca/ext_lca/monte_carlo/`
+- `<project_name>/A_lca/ext_lca/templates/`
 
 External LCA figure folders are created by the external LCA figure renderer
 when `figures=True` (default).

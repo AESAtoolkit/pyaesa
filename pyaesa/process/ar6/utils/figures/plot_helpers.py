@@ -199,7 +199,7 @@ def write_drop_csv(output_dir: Path, stem: str, drop_records: list[dict]) -> str
         by=["figure", "subset", "variable", "category", "ssp_family", "model", "scenario"],
         kind="stable",
     )
-    csv_path = output_dir / f"{stem}-dropped_rows.csv"
+    csv_path = output_dir / f"{stem}_dropped_rows.csv"
     drop_df.to_csv(csv_path, index=False)
     return str(csv_path)
 

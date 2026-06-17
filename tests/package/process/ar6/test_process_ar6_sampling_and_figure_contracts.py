@@ -124,41 +124,36 @@ def test_ar6_sampling_config_and_guide_templates(tmp_path: Path) -> None:
 
     figures_dir = tmp_path / "figures"
     figures_dir.mkdir()
-    (figures_dir / "fig-budgets-CO2-demo-remaining-budget-panel-dropped_rows.csv").write_text(
+    (figures_dir / "budget_CO2_demo_remaining_budget_dropped_rows.csv").write_text(
         "header\n",
         encoding="utf-8",
     )
-    (
-        figures_dir
-        / "fig-sequestration-budgets-forCO2-demo-remaining-budget-panel-dropped_rows.csv"
-    ).write_text(
+    (figures_dir / "sequestration_budgets_CO2_demo_remaining_budget_dropped_rows.csv").write_text(
         "header\n",
         encoding="utf-8",
     )
-    (
-        figures_dir / "fig-LHSSRS-budgets-CO2-net-demo-remaining-budget-panel-dropped_rows.csv"
-    ).write_text(
+    (figures_dir / "LHSSRS_budgets_CO2_net_demo_remaining_budget_dropped_rows.csv").write_text(
         "header\n",
         encoding="utf-8",
     )
     global_drop_csv = tmp_path / "global_drop.csv"
     figure_names = [
-        "fig-processed-historical-emissions.png",
-        "fig-harmonization-pathways-demo-studyperiod=2019to2060.png",
-        "fig-harmonization-stats-delta-tconv-demo-studyperiod=2019to2060.png",
-        "fig-harmonization-stats-demo.png",
-        "fig-budgets-CO2-demo.png",
-        "fig-budgets-GHG-demo.png",
-        "fig-sequestration-contributions-demo.png",
-        "fig-sequestration-budgets-forCO2-demo.png",
-        "fig-sequestration-budgets-forGHG-demo.png",
-        "fig-median-warming-demo-studyperiod=2019to2060.png",
-        "fig-LHSSRS-ratioproba-CO2-demo.png",
-        "fig-LHSSRS-ratioproba-GHG-demo.png",
-        "fig-LHSSRS-ratiomedian-CO2-demo.png",
-        "fig-LHSSRS-ratiomedian-GHG-demo.png",
-        "fig-LHSSRS-budgets-GHG-net-demo.png",
-        "fig-LHSSRS-budgets-CO2-net-demo.png",
+        "hist_emissions.png",
+        "harmonization_pathways_demo.png",
+        "harmonization_delta_tconv_demo.png",
+        "harmonization_stats_demo.png",
+        "budget_CO2_demo.png",
+        "budget_GHG_demo.png",
+        "sequestration_contributions_demo.png",
+        "sequestration_budgets_CO2_demo.png",
+        "sequestration_budgets_GHG_demo.png",
+        "median_warming_demo.png",
+        "LHSSRS_ratioproba_CO2_demo.png",
+        "LHSSRS_ratioproba_GHG_demo.png",
+        "LHSSRS_ratiomedian_CO2_demo.png",
+        "LHSSRS_ratiomedian_GHG_demo.png",
+        "LHSSRS_budgets_GHG_net_demo.png",
+        "LHSSRS_budgets_CO2_net_demo.png",
     ]
     for figure_name in figure_names:
         block = _figure_explanation_block(
@@ -166,14 +161,12 @@ def test_ar6_sampling_config_and_guide_templates(tmp_path: Path) -> None:
             [2019, 2060],
             global_drop_csv,
             {
-                "fig-budgets-CO2-demo": [
-                    "fig-budgets-CO2-demo-remaining-budget-panel-dropped_rows.csv"
+                "budget_CO2_demo": ["budget_CO2_demo_remaining_budget_dropped_rows.csv"],
+                "sequestration_budgets_CO2_demo": [
+                    "sequestration_budgets_CO2_demo_remaining_budget_dropped_rows.csv"
                 ],
-                "fig-sequestration-budgets-forCO2-demo": [
-                    "fig-sequestration-budgets-forCO2-demo-remaining-budget-panel-dropped_rows.csv"
-                ],
-                "fig-LHSSRS-budgets-CO2-net-demo": [
-                    "fig-LHSSRS-budgets-CO2-net-demo-remaining-budget-panel-dropped_rows.csv"
+                "LHSSRS_budgets_CO2_net_demo": [
+                    "LHSSRS_budgets_CO2_net_demo_remaining_budget_dropped_rows.csv"
                 ],
             },
         )
@@ -680,10 +673,7 @@ def test_ar6_generate_overview_and_warming_branches(
         database="ar6-public",
         categories_repr="['C1', 'C2', 'C9']",
     )
-    assert (
-        tmp_path / "fig-median-warming-ar6-public-MOD=ALL-CAT=['C1', 'C2', 'C9']"
-        "-studyperiod=2019to2060.svg"
-    ).exists()
+    assert (tmp_path / "median_warming.svg").exists()
 
     zero_delta_log = inputs["harmonization_log"].copy()
     zero_delta_log["horizon-for-harmonization"] = zero_delta_log["model-netzero-year"]
@@ -735,10 +725,7 @@ def test_ar6_generate_overview_and_warming_branches(
         database="ar6-public",
         categories_repr="['C1']",
     )
-    assert (
-        tmp_path
-        / "fig-harmonization-stats-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2019to2060.svg"
-    ).exists()
+    assert (tmp_path / "harmonization_stats.svg").exists()
 
     write_processed_budgets_figure(
         figures_dir=tmp_path,
@@ -753,9 +740,7 @@ def test_ar6_generate_overview_and_warming_branches(
         database="ar6-public",
         categories_repr="['C1']",
     )
-    assert (
-        tmp_path / "fig-budgets-GHG-ar6-public-MOD=ALL-CAT=['C1']-studyperiod=2010to2100.svg"
-    ).exists()
+    assert (tmp_path / "budget_GHG.svg").exists()
 
     write_sequestration_budgets_figure(
         figures_dir=tmp_path,
@@ -774,14 +759,8 @@ def test_ar6_generate_overview_and_warming_branches(
         database="ar6-public",
         categories_repr="['C1']",
     )
-    assert (
-        tmp_path / "fig-sequestration-budgets-forCO2-ar6-public-MOD=ALL-CAT=['C1']"
-        "-studyperiod=2019to2060.svg"
-    ).exists()
-    assert (
-        tmp_path / "fig-sequestration-budgets-forGHG-ar6-public-MOD=ALL-CAT=['C1']"
-        "-studyperiod=2019to2060.svg"
-    ).exists()
+    assert (tmp_path / "sequestration_budgets_CO2.svg").exists()
+    assert (tmp_path / "sequestration_budgets_GHG.svg").exists()
 
     harmonized_vars = harmonized_data.index.get_level_values("variable")
     gross_figure_vars = [NET_CO2_WITH_AFOLU, GROSS_CO2_WITH_AFOLU]
@@ -822,8 +801,8 @@ def test_ar6_generate_overview_and_warming_branches(
         write_sampling_figures_func=fake_sampling_generate_only,
     )
     assert gross_convergence.empty
-    assert any("fig-sequestration-contributions" in path for path in gross_paths)
-    assert any("fig-sequestration-budgets-forCO2" in path for path in gross_paths)
+    assert any("sequestration_contributions" in path for path in gross_paths)
+    assert any("sequestration_budgets_CO2" in path for path in gross_paths)
 
     with pytest.raises(RuntimeError):
         generate_ar6_figures(

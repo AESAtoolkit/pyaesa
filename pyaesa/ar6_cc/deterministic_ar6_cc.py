@@ -83,7 +83,7 @@ def deterministic_ar6_cc(
             negative sequestration. Gross modes write positive emissions rows
             and signed negative sequestration companion rows; downstream aCC
             and ASR consume only the positive emissions rows. See
-            ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``
+            ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
             for the methodological explanation.
         subset_version: Optional selector for a subset of AR6 model-scenario
             pairs. Follow
@@ -113,7 +113,7 @@ def deterministic_ar6_cc(
             that processed AR6 scope. For example, for years 2019 to 2060,
             default harmonization, default Kyoto gas settings, category
             ``["C1"]``, and SSP ``["SSP1"]``, the refreshed path is
-            ``<repo>/data_processed/ar6/2019-2060_harmonization_offset/ar6_cc/gross_alt_kyoto_gases_wo_afolu/C1__SSP1/deterministic``.
+            ``<repo>/data_processed/ar6/2019-2060_harmonization_offset/ar6_cc/gross_alt_kyoto_gases_wo_afolu/C1_SSP1/deterministic``.
             Raw downloads and downstream aCC or ASR outputs are not refreshed.
             Defaults to ``False``.
 
@@ -139,7 +139,7 @@ def deterministic_ar6_cc(
         AR6 inputs. Methodological details on AR6 scenario filtering,
         harmonization, and dynamic carrying capacity construction are provided
         in
-        ``data_raw/methodological_notes/methodological_note__steady_state__dynamic_cc.pdf``.
+        ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``.
 
     Example:
         Extract dynamic AR6 carrying capacity pathways for one study period

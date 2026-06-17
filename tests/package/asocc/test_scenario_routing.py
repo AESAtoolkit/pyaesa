@@ -311,7 +311,7 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
             l2_method="UT(FD)",
             bucket="l2_vs_global",
         )
-        == "regression_proj"
+        == "regr_proj"
     )
     assert (
         l2_projection_subfolder(
@@ -320,7 +320,7 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
             l2_method="UT(FD)",
             bucket="l2_vs_global",
         )
-        == "regression_proj"
+        == "regr_proj"
     )
     assert (
         l2_projection_subfolder(
@@ -329,7 +329,7 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
             l2_method="UT(FD)",
             bucket="utility_propagation_contrib",
         )
-        == "regression_proj"
+        == "regr_proj"
     )
     assert (
         l2_projection_subfolder(
@@ -338,7 +338,7 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
             l2_method="UT(FD)",
             bucket="l2_in_l1",
         )
-        == "regression_proj"
+        == "regr_proj"
     )
     assert (
         l2_projection_subfolder(
@@ -347,7 +347,7 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
             l2_method="UT(FD)",
             bucket="l2_vs_global",
         )
-        == "historical_reuse"
+        == "hist_reuse"
     )
     assert (
         l2_projection_subfolder(
@@ -381,13 +381,9 @@ def test_projection_cover_all_reachable_routes_and_subfolders() -> None:
     assert is_regression_projection_year(context=historical_context, year=2030) is False
     assert is_regression_projection_year(context=regression_context, year=2030) is True
 
-    assert (
-        regression_projection_subfolder_for_context(context=disabled_context) == "regression_proj"
-    )
+    assert regression_projection_subfolder_for_context(context=disabled_context) == "regr_proj"
     assert (
         regression_projection_subfolder_for_context(context=regression_default_context)
-        == "regression_proj"
+        == "regr_proj"
     )
-    assert (
-        regression_projection_subfolder_for_context(context=regression_context) == "regression_proj"
-    )
+    assert regression_projection_subfolder_for_context(context=regression_context) == "regr_proj"

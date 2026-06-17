@@ -633,7 +633,7 @@ def _support_paths(*, loaded: LoadedAsoccFinalRows, bucket: str, stem: str) -> l
 
 def _matches_stem(*, path: Path, stem: str) -> bool:
     path_stem = path.stem
-    return path_stem == stem or path_stem.startswith(f"{stem}__ssp")
+    return path_stem == stem or path_stem.startswith(f"{stem}_ssp")
 
 
 def _l2_public_merge_axes(identity: pd.DataFrame, support: pd.DataFrame) -> list[str]:
