@@ -108,9 +108,10 @@ def _slice_l2_inputs_for_compute(
     if keep_full_weight_axes:
         rf_values = None
         ru_values = None
+    gva_rp_values = None if keep_full_weight_axes else rp_values
 
     fd_rf = _slice_series_index(inputs.fd_rf, level="r_f", allowed=rf_values)
-    gva_rp = _slice_series_index(inputs.gva_rp, level="r_p", allowed=rp_values)
+    gva_rp = _slice_series_index(inputs.gva_rp, level="r_p", allowed=gva_rp_values)
 
     fd_rp_sp_rf = _slice_frame_index(inputs.fd_rp_sp_rf, level="r_p", allowed=rp_values)
     fd_rp_sp_rf = _slice_frame_index(fd_rp_sp_rf, level="s_p", allowed=sp_values)

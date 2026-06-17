@@ -143,6 +143,7 @@ def test_slice_l2_inputs_and_lcia_payload_for_compute() -> None:
     )
     kept = slicing_mod._slice_l2_inputs_for_compute(context=context_keep_full, inputs=inputs)
     assert set(kept.fd_rf.index.tolist()) == {"FR", "US"}
+    assert set(kept.gva_rp.index.tolist()) == {"FR", "US"}
     assert set(kept.omega_reg.index.tolist()) == {"U1", "U2"}
 
     payload = {
