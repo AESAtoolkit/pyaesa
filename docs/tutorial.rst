@@ -15,11 +15,11 @@ notebooks, study objective notebooks, and optional workflow notebooks.
    tutorials/study_objectives/index
    tutorials/optional_workflows/index
 
-Methodological References
--------------------------
+Methodological Notes
+--------------------
 
 The repository folder ``methodological_notes/`` contains the detailed
-methodological PDFs and recommended citation guide. ``set_workspace(...)``
-copies these references and the functional unit guide into the active workspace
-under ``data_raw/methodological_notes/``. See :doc:`methodological_notes` for
-downloadable references.
+methodological PDFs and recommended citation guide. ``set_workspace(...)`` copies these files
+and the short functional unit and allocation methods guide into the active workspace under
+``data_raw/methodological_notes/``. See :doc:`methodological_notes` for the
+article link, downloadable appendices, and citation guide.

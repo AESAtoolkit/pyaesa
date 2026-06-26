@@ -343,20 +343,42 @@ notebooks, and optional workflow notebooks.
 | inter-method weights | [`tutorials/optional_workflows/custom_asocc_method_weights.ipynb`](tutorials/optional_workflows/custom_asocc_method_weights.ipynb) |
 | external aSoCC and external LCA input staging | [`tutorials/optional_workflows/external_asocc_lca_input_staging.ipynb`](tutorials/optional_workflows/external_asocc_lca_input_staging.ipynb) |
 
-### Methodological references:
+### Methodological notes:
 
 | Location | Notes |
 | --- | --- |
-| [`methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf`](methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf) | Functional units and allocation methods. |
-| [`methodological_notes/methodological_note_acc_prospective.pdf`](methodological_notes/methodological_note_acc_prospective.pdf) | Prospective allocation. |
-| [`methodological_notes/methodological_note_acc_uncertainty_sources.pdf`](methodological_notes/methodological_note_acc_uncertainty_sources.pdf) | Uncertainty sources. |
-| [`methodological_notes/methodological_note_steady_state_dynamic_cc.pdf`](methodological_notes/methodological_note_steady_state_dynamic_cc.pdf) | Definition of steady state and dynamic carrying capacities. |
+| [UNCASExt arXiv preprint](https://arxiv.org/abs/2606.21465) | Article providing the methodological basis for `pyaesa`. |
+| [`methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf`](methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf) | Article Appendix B: functional units, allocation methods, prospective allocation, and uncertainty sources. |
+| [`methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf`](methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf) | Article Appendix C: carrying capacities definition. |
 
-`set_workspace(...)` copies these methodological references into the active
-workspace under `data_raw/methodological_notes/`.
+`set_workspace(...)` copies the appendix PDF files into the active workspace
+under `data_raw/methodological_notes/`.
 
 Use the API reference in [docs/api.rst](docs/api.rst) for exact signatures and parameter
 contracts. Use [docs/tutorial.rst](docs/tutorial.rst) for the notebook index.
+
+## Citation
+
+Please cite these references when using `pyaesa`, as they constitute the
+methodological basis for `pyaesa`, including the allocation methods included in
+the package.
+
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt: A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA)
+[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
+
+Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
+Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
+Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
+for systematically allocating carrying capacities under uncertainty in AESA
+[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
+Netherlands. SETAC.
+https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+
+For data source citations, see
+`methodological_notes/recommended_citations.txt`.
 
 ## Use of generative AI
 
@@ -365,3 +387,14 @@ Generative AI tools were used during the development of `pyaesa`. As the develop
 These tools were used to support implementation tasks, including code generation, refactoring, debugging, test design, documentation drafting, code review, computing time optimization, memory use reduction, and figure rendering workflows.
 
 The development of AESA methodology and workflow, mathematical expressions, software architecture and the figures conception were defined by the authors. Generative AI outputs were used as implementation drafts, checked and modified where needed, and retained only after review and testing by human intelligence.
+
+## Funding information
+
+The work of Erwan Ike de Bantel received organizational support from the
+CircularIT Alliance project. The work of Thibault Pirson is part of the SOIL
+project, which received funding from the European Union's Horizon Europe
+research and innovation program under the HORIZON KDT JU 2023 1 IA grant
+agreement No. 101139785. Views and opinions expressed are those of the authors
+only and do not necessarily reflect those of the European Union or CHIPS.
+Neither the European Union nor the granting authority can be held responsible
+for them.

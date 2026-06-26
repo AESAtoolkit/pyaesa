@@ -95,7 +95,7 @@ def uncertainty_ar6_cc(
               positive emissions rows and signed negative sequestration
               companion rows; downstream aCC and ASR consume only the positive
               emissions rows. See
-              ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
+              ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``
               for the methodological explanation.
             - ``subset_version``: Optional selector for a subset of AR6
               model-scenario pairs. Follow
@@ -106,7 +106,7 @@ def uncertainty_ar6_cc(
             uncertainty is inactive by default. Source blocks use an
             ``active`` boolean; write ``active=False`` to disable dynamic AR6
             CC uncertainty. See
-            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -207,7 +207,7 @@ def uncertainty_ar6_cc(
         AR6 inputs through its deterministic AR6 CC prerequisite.
         Methodological details on AR6 scenario filtering, harmonization, and
         dynamic carrying capacity construction are provided in
-        ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``.
+        ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``.
 
     Example:
         Run dynamic AR6 CC with category uncertainty added, using defaults

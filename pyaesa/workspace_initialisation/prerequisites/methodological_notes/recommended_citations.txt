@@ -18,7 +18,11 @@ for systematically allocating carrying capacities under uncertainty in AESA
 [Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
 Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
 
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D., Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. UNCASExt -- A Systematic Computational Framework for Uncertainty Propagation and Scope Consistency in Absolute Environmental Sustainability Assessments (AESA) [Manuscript submitted for publication].
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt: A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA)
+[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 2. DATA SOURCES
 
@@ -154,8 +158,8 @@ the source page.
 Emissions harmonization is used by process_ar6(...) when harmonizing
 AR6 scenario pathways to historical emissions for dynamic carrying capacities.
 
-The pyaesa implementation is documented in UNCASExt methodology and in the
-methodological_note_steady_state_dynamic_cc.pdf.
+The pyaesa implementation is documented by the UNCASExt arXiv preprint
+and appendixC_UNCASExt_Carrying_capacities_definition.pdf.
 
 Citations:
 Gidden, M. J., Fujimori, S., van den Berg, M., Klein, D., Smith, S. J.,
@@ -171,7 +175,11 @@ for systematically allocating carrying capacities under uncertainty in AESA
 [Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
 Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
 
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D., Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. UNCASExt -- A Systematic Computational Framework for Uncertainty Propagation and Scope Consistency in Absolute Environmental Sustainability Assessments (AESA) [Manuscript submitted for publication].
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt: A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA)
+[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 3. METHODOLOGICAL REFERENCES
 
@@ -347,9 +355,9 @@ https://doi.org/10.1016/j.spc.2024.12.013
 3.5 ASOCC methods and uncertainty sources
 
 The allocation method definitions and mathematical expressions are defined by
-the UNCASExt framework (de Bantel et al., 2026). For precise references per
-allocation method, see methodological_note_asocc_fus_allocation_methods.pdf,
-which is an abstract of the UNCASExt article. Also cite the selected input data
+the UNCASExt framework (de Bantel et al., 2026). For precise references per allocation method, see
+appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf, which is an
+appendix from the UNCASExt arXiv preprint. Also cite the selected input data
 sections used by the run, for example MRIO, population and GDP, LCIA methods,
 and LCIA uncertainty sources.
 
@@ -361,7 +369,11 @@ for systematically allocating carrying capacities under uncertainty in AESA
 [Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
 Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
 
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D., Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. UNCASExt -- A Systematic Computational Framework for Uncertainty Propagation and Scope Consistency in Absolute Environmental Sustainability Assessments (AESA) [Manuscript submitted for publication].
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt: A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA)
+[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 Puig-Samper, G., Owsianiak, M., Clavreul, J., Jeandaux, C., Prieur-Vernat, A.,
 & Gondran, N. (2025). Quantifying uncertainties in absolute environmental

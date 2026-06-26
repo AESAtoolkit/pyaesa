@@ -14,6 +14,48 @@
   white-space: nowrap;
 }
 
+/* Read the Docs sidebar color. */
+.wy-side-nav-search {
+  background: #e6f2f7;
+  border-bottom: 1px solid #d8e0e7;
+}
+
+.wy-side-nav-search>a,
+.wy-side-nav-search .wy-dropdown>a,
+.wy-side-nav-search>div.version {
+  color: #24343c;
+}
+
+.wy-side-nav-search>a:hover,
+.wy-side-nav-search .wy-dropdown>a:hover {
+  color: #c83737;
+}
+
+.wy-side-nav-search img.logo {
+  display: block;
+  height: auto;
+  margin: 0.75rem auto 1rem;
+  max-height: 5.5rem;
+  max-width: 82%;
+  width: auto;
+}
+
+.wy-side-nav-search input[type="text"] {
+  border: 1px solid #c9d4dc;
+  box-shadow: none;
+}
+
+.wy-nav-top {
+  background: #e6f2f7;
+  border-bottom: 1px solid #d8e0e7;
+  color: #24343c;
+}
+
+.wy-nav-top a,
+.wy-nav-top i {
+  color: #24343c;
+}
+
 .rst-content details {
   margin: 1rem 0 1.5rem;
 }
@@ -24,7 +66,7 @@
   margin-bottom: 0.5rem;
 }
 
-.rst-content details > table {
+.rst-content details>table {
   border-collapse: collapse;
   display: table;
   margin: 0.75rem 0 1.25rem;
@@ -34,8 +76,8 @@
   width: 100%;
 }
 
-.rst-content details > table th,
-.rst-content details > table td {
+.rst-content details>table th,
+.rst-content details>table td {
   border: 1px solid #d9e1e5;
   padding: 0.5rem 0.65rem;
   text-align: left;
@@ -45,14 +87,14 @@
   word-break: normal;
 }
 
-.rst-content details > table th {
+.rst-content details>table th {
   background: #f3f6f8;
   color: #24343c;
   font-weight: 700;
 }
 
-.rst-content details > table th:first-child,
-.rst-content details > table td:first-child {
+.rst-content details>table th:first-child,
+.rst-content details>table td:first-child {
   font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-weight: 700;
@@ -61,62 +103,62 @@
   width: 14rem;
 }
 
-.rst-content details > table th:last-child,
-.rst-content details > table td:last-child {
+.rst-content details>table th:last-child,
+.rst-content details>table td:last-child {
   min-width: 0;
   width: auto;
 }
 
-.rst-content details > table td:first-child p {
+.rst-content details>table td:first-child p {
   white-space: normal;
 }
 
-.rst-content details > table td p {
+.rst-content details>table td p {
   color: inherit;
   line-height: 1.35rem;
   margin: 0.2rem 0;
   white-space: normal;
 }
 
-.rst-content details > table td ul {
+.rst-content details>table td ul {
   margin-bottom: 0.35rem;
   margin-top: 0.35rem;
 }
 
-.rst-content details > table .pyaesa-argument-intro {
+.rst-content details>table .pyaesa-argument-intro {
   margin-bottom: 0.35rem;
 }
 
-.rst-content details > table .pyaesa-nested-heading {
+.rst-content details>table .pyaesa-nested-heading {
   font-weight: 700;
   margin-top: 0.55rem;
 }
 
-.rst-content details > table ul.pyaesa-nested-args {
+.rst-content details>table ul.pyaesa-nested-args {
   list-style-position: outside;
   margin: 0.35rem 0 0.6rem 1.25rem;
   padding-left: 0.75rem;
 }
 
-.rst-content details > table ul.pyaesa-nested-args-child {
+.rst-content details>table ul.pyaesa-nested-args-child {
   margin-bottom: 0.25rem;
   margin-top: 0.25rem;
 }
 
-.rst-content details > table ul.pyaesa-nested-args li {
+.rst-content details>table ul.pyaesa-nested-args li {
   line-height: 1.35rem;
   margin: 0.3rem 0;
   padding-left: 0.1rem;
 }
 
-.rst-content details > table code,
-.rst-content details > table code *,
-.rst-content details > table .docutils.literal,
-.rst-content details > table .docutils.literal *,
-.rst-content details > table tt,
-.rst-content details > table tt *,
-.rst-content details > table span.pre,
-.rst-content details > table a {
+.rst-content details>table code,
+.rst-content details>table code *,
+.rst-content details>table .docutils.literal,
+.rst-content details>table .docutils.literal *,
+.rst-content details>table tt,
+.rst-content details>table tt *,
+.rst-content details>table span.pre,
+.rst-content details>table a {
   color: inherit;
   overflow-wrap: anywhere;
   white-space: normal !important;
@@ -151,22 +193,22 @@
   word-break: normal;
 }
 
-.rst-content > .document p,
-.rst-content > .document li {
+.rst-content>.document p,
+.rst-content>.document li {
   overflow-wrap: break-word;
   word-break: normal;
 }
 
 .rst-content table p,
 .rst-content table li,
-.rst-content > .document table p,
-.rst-content > .document table li {
+.rst-content>.document table p,
+.rst-content>.document table li {
   overflow-wrap: normal;
   word-break: normal;
 }
 
-.rst-content > .document details > table td p,
-.rst-content > .document details > table td li {
+.rst-content>.document details>table td p,
+.rst-content>.document details>table td li {
   overflow-wrap: break-word;
   word-break: normal;
 }
@@ -176,18 +218,14 @@
 .rst-content .wy-table-responsive table.docutils .docutils.literal,
 .rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) code,
 .rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) tt,
-.rst-content
-  table.docutils:not(.field-list):not(.footnote):not(.citation)
-  .docutils.literal {
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) .docutils.literal {
   overflow-wrap: normal;
   white-space: nowrap !important;
   word-break: normal;
 }
 
 .rst-content .wy-table-responsive table.docutils .docutils.literal span.pre,
-.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation)
-  .docutils.literal
-  span.pre {
+.rst-content table.docutils:not(.field-list):not(.footnote):not(.citation) .docutils.literal span.pre {
   overflow-wrap: normal;
   white-space: nowrap !important;
   word-break: normal;
@@ -200,42 +238,31 @@
   word-break: normal;
 }
 
-.rst-content section#study-objectives > table.docutils:first-of-type {
+.rst-content section#study-objectives>table.docutils:first-of-type {
   table-layout: fixed;
 }
 
-.rst-content section#study-objectives > table.docutils:first-of-type col:nth-child(1) {
+.rst-content section#study-objectives>table.docutils:first-of-type col:nth-child(1) {
   width: 10rem !important;
 }
 
-.rst-content section#study-objectives > table.docutils:first-of-type col:nth-child(2) {
+.rst-content section#study-objectives>table.docutils:first-of-type col:nth-child(2) {
   width: auto !important;
 }
 
-.rst-content
-  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
-  table.docutils {
+.rst-content section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives table.docutils {
   table-layout: fixed;
 }
 
-.rst-content
-  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
-  table.docutils
-  col:nth-child(1) {
+.rst-content section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives table.docutils col:nth-child(1) {
   width: 10.5rem !important;
 }
 
-.rst-content
-  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
-  table.docutils
-  col:nth-child(2) {
+.rst-content section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives table.docutils col:nth-child(2) {
   width: 15rem !important;
 }
 
-.rst-content
-  section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives
-  table.docutils
-  col:nth-child(3) {
+.rst-content section#pyaesa-automatically-orchestrates-functions-to-reach-study-objectives table.docutils col:nth-child(3) {
   width: auto !important;
 }
 
@@ -305,6 +332,7 @@
 }
 
 @media screen and (max-width: 640px) {
+
   .wy-nav-content,
   .rst-content,
   .rst-content .document {
@@ -320,31 +348,31 @@
     overflow-x: auto;
   }
 
-  .rst-content details > table,
-  .rst-content details > table tbody,
-  .rst-content details > table tr,
-  .rst-content details > table th,
-  .rst-content details > table td {
+  .rst-content details>table,
+  .rst-content details>table tbody,
+  .rst-content details>table tr,
+  .rst-content details>table th,
+  .rst-content details>table td {
     display: block;
     max-width: 100%;
     width: 100% !important;
   }
 
-  .rst-content details > table thead {
+  .rst-content details>table thead {
     display: none;
   }
 
-  .rst-content details > table tr {
+  .rst-content details>table tr {
     border: 1px solid #d9e1e5;
     margin: 0 0 0.75rem;
   }
 
-  .rst-content details > table th,
-  .rst-content details > table td {
+  .rst-content details>table th,
+  .rst-content details>table td {
     border: 0;
   }
 
-  .rst-content details > table td:first-child {
+  .rst-content details>table td:first-child {
     background: #f3f6f8;
     border-bottom: 1px solid #d9e1e5;
   }

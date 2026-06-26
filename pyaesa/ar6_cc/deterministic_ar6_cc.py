@@ -83,7 +83,7 @@ def deterministic_ar6_cc(
             negative sequestration. Gross modes write positive emissions rows
             and signed negative sequestration companion rows; downstream aCC
             and ASR consume only the positive emissions rows. See
-            ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
+            ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``
             for the methodological explanation.
         subset_version: Optional selector for a subset of AR6 model-scenario
             pairs. Follow
@@ -139,7 +139,7 @@ def deterministic_ar6_cc(
         AR6 inputs. Methodological details on AR6 scenario filtering,
         harmonization, and dynamic carrying capacity construction are provided
         in
-        ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``.
+        ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``.
 
     Example:
         Extract dynamic AR6 carrying capacity pathways for one study period

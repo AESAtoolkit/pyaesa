@@ -57,20 +57,16 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         str(data_raw / "methodological_notes"),
         "",
         "Files:",
-        "Quick guide for selecting pyaesa function arguments for functional units and "
-        "allocation methods:",
+        "Short guide for selecting functional units and allocation methods in pyaesa:",
         "  -> 1_functional_units_and_allocation_methods.md",
-        "Allocation paths figure used by the quick guide:",
+        "Allocation paths figure of the short guide:",
         "  -> fig-asocc-paths.svg",
-        "Detailed methodological guide with scientific references for functional units "
-        "and allocation methods:",
-        "  -> methodological_note_asocc_fus_allocation_methods.pdf",
-        "Prospective allocation:",
-        "  -> methodological_note_acc_prospective.pdf",
-        "Uncertainty sources:",
-        "  -> methodological_note_acc_uncertainty_sources.pdf",
-        "Definition of steady state and dynamic carrying capacities:",
-        "  -> methodological_note_steady_state_dynamic_cc.pdf",
+        "Detailed methodological appendix of de Bantel et al. (2026) regarding"
+        "functional units, allocation methods, prospective allocation, and uncertainty sources:",
+        "  -> appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf",
+        "Detailed methodological appendix of de Bantel et al. (2026) regarding"
+        "carrying capacities definition:",
+        "  -> appendixC_UNCASExt_Carrying_capacities_definition.pdf",
         "Recommended citations:",
         "  -> recommended_citations.txt",
         "",

@@ -186,7 +186,7 @@ def deterministic_acc(
             and pass the custom method file stem there.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         s_p: Producing sector filter(s), single string or list. If this is a
@@ -235,7 +235,7 @@ def deterministic_acc(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1
@@ -350,7 +350,7 @@ def deterministic_acc(
                 modes write positive emissions rows and signed negative
                 sequestration companion rows; downstream aCC and ASR consume
                 only the positive emissions rows. See
-                ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
+                ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``
                 for the methodological explanation.
 
               - ``subset_version``: Optional selector for a subset of AR6

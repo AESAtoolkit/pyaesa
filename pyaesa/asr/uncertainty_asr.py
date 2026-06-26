@@ -172,7 +172,7 @@ def uncertainty_asr(
             exist.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         group_indices: Whether multiple selected region or sector filter values
@@ -245,7 +245,7 @@ def uncertainty_asr(
                 modes write positive emissions rows and signed negative
                 sequestration companion rows; downstream aCC and ASR consume
                 only the positive emissions rows. See
-                ``data_raw/methodological_notes/methodological_note_steady_state_dynamic_cc.pdf``
+                ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``
                 for the methodological explanation.
               - ``subset_version``: Optional selector for a subset of AR6
                 model-scenario pairs. Follow
@@ -288,7 +288,7 @@ def uncertainty_asr(
             default active source. For external LCA Monte Carlo inputs, use
             ``prepare_external_inputs(...)`` and follow the imported external
             LCA README guidance and runnable examples. See
-            ``data_raw/methodological_notes/methodological_note_acc_uncertainty_sources.pdf``
+            ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
             for uncertainty source definitions and mathematical expressions.
 
             Accepted keys:
@@ -533,7 +533,7 @@ def uncertainty_asr(
               ``"pairs"``, or ``"one_step_pairs"``. When omitted, all pyaesa
               allocation methods available for the selected ``fu_code`` are
               applied. See
-              ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
+              ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
               for the allocation methods available per functional unit,
               including definitions and mathematical expressions.
             - ``l1_methods``: Optional L1 subset. Omit it to keep all L1

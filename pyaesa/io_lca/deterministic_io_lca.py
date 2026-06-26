@@ -123,7 +123,7 @@ def deterministic_io_lca(
             and pass the custom method file stem here.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
-            ``data_raw/methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf``
+            ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
             for all available functional unit codes and the system
             boundaries each represents.
         s_p: Producing sector filter(s), single string or list. If this is a

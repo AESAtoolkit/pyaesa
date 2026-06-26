@@ -9,7 +9,7 @@ method selectors used by:
 - Only FU code: `deterministic_io_lca(...)` and `uncertainty_io_lca(...)`
 
 The functional unit (FU) and allocation method tables of this file summarize
-`methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf`.
+`methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf`.
 That appendix provides the definitions and mathematical expressions for each
 allocation method available in <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
@@ -94,7 +94,7 @@ with `process_mrio(...)` arguments: `agg_reg`, `agg_sec`, and `agg_version`.
 
 The definitions and mathematical expressions for each allocation method are
 provided in
-`methodological_notes/methodological_note_asocc_fus_allocation_methods.pdf`.
+`methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf`.
 The allocation method labels below use the syntax accepted by <span style="color:#366e9c"><strong>py</strong></span><span style="color:#c83737"><strong>aesa</strong></span>.
 
 ### Allocation paths overview
