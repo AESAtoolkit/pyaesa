@@ -56,7 +56,7 @@ The region selectors (`r_f`, `r_p`, `r_c`) are specific per FU.
 | `"L1.a"` | L1 | Final demand of goods and services in region(s) `r_f` in year `t`. | `CBA_FD` | `r_f` |
 | `"L1.b"` | L1 | Total production of goods and services by producing region(s) `r_p` in year `t`. | `PBA` | `r_p` |
 | `"L2.a.a"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` directly supplied to final demand worldwide in year `t`. | `CBA_FD` | `s_p`, `r_p` |
-| `"L2.a.b"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` in year `t`. | `CBA_TD` | `s_p`, `r_p` |
+| `"L2.a.b"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` directly supplied to total demand worldwide in year `t`. | `CBA_TD` | `s_p`, `r_p` |
 | `"L2.a.c"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` in year `t`. | `PBA` | `s_p`, `r_p` |
 | `"L2.b.a"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` directly supplied to final demand in region(s) `r_f` in year `t`. | `CBA_FD` | `s_p`, `r_p`, `r_f` |
 | `"L2.b.b"` | L2 | Total production of goods and services by sector `s_p` in producing region(s) `r_p` directly supplied to total demand in region(s) `r_c` in year `t`. | `CBA_TD` | `s_p`, `r_p`, `r_c` |
