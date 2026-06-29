@@ -32,13 +32,40 @@ def test_requires_ar_or_prhr_history_detects_any_requiring_method() -> None:
         selection=_selection(combined=[("AR(E^{CBA_FD})", "EG(Pop)")]),
         fu_code="L2.a.a",
     )
-    assert not mod._requires_ar_or_prhr_history(
-        selection=_selection(selected_l1=["EG(Pop)"]),
+    assert mod._requires_ar_or_prhr_history(
+        selection=_selection(selected_l1=["PR-HR(Ecap,cum^{CBA_FD})"]),
         fu_code="L2.a.a",
+    )
+    assert (
+        mod._requires_ar_or_prhr_history(
+            selection=_selection(selected_l1=["EG(Pop)"]),
+            fu_code="L2.a.a",
+        )
+        is False
     )
 
 
-def test_validate_history_since_baseline_branches() -> None:
+@pytest.mark.parametrize(
+    "method",
+    [
+        "AR(E^{CBA_FD})",
+        "PR-HR(Ecap,cum^{CBA_FD})",
+    ],
+)
+def test_validate_history_since_baseline_raises_when_missing_years(method: str) -> None:
+    with pytest.raises(ValueError, match="1996"):
+        mod._validate_history_since_baseline(
+            source="exiobase_396_ixi",
+            agg_version=None,
+            agg_reg=False,
+            agg_sec=False,
+            historical_years=[1995, 1997],
+            selection=_selection(selected_l1=[method]),
+            fu_code="L2.a.a",
+        )
+
+
+def test_validate_history_since_baseline_skips_non_history_methods() -> None:
     mod._validate_history_since_baseline(
         source="oecd_v2025",
         agg_version=None,
@@ -48,7 +75,6 @@ def test_validate_history_since_baseline_branches() -> None:
         selection=_selection(selected_l1=["AR(E^{CBA_FD})"]),
         fu_code="L2.a.a",
     )
-
     mod._validate_history_since_baseline(
         source="exiobase_396_ixi",
         agg_version=None,
@@ -58,19 +84,6 @@ def test_validate_history_since_baseline_branches() -> None:
         selection=_selection(selected_l1=["EG(Pop)"]),
         fu_code="L2.a.a",
     )
-
-
-def test_validate_history_since_baseline_raises_when_missing_years() -> None:
-    with pytest.raises(ValueError, match="1996"):
-        mod._validate_history_since_baseline(
-            source="exiobase_396_ixi",
-            agg_version=None,
-            agg_reg=False,
-            agg_sec=False,
-            historical_years=[1995, 1997],
-            selection=_selection(selected_l1=["AR(E^{CBA_FD})"]),
-            fu_code="L2.a.a",
-        )
 
 
 def test_validate_history_since_baseline_passes_when_contiguous() -> None:

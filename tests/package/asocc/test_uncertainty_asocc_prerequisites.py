@@ -797,7 +797,6 @@ def test_uncertainty_asocc_writes_inter_method_sobol_outputs(allocation_dummy_re
         "lcia_method": "gwp100_lcia",
         "r_p": ["FR"],
         "s_p": ["D"],
-        "r_f": ["FR"],
         "l1_reg_aggreg": "pre",
         "ssp_scenario": ["SSP2"],
         "projection_mode": "historical_reuse",

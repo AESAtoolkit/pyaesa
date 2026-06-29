@@ -2956,7 +2956,6 @@ def test_sobol_request_context_uses_reference_and_projection_sources(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
             "ssp_scenario": ["SSP2"],
             "projection_mode": "historical_reuse",

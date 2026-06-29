@@ -62,7 +62,11 @@ def resolve_selectors(
         "r_p": _normalize_selector_values(r_p),
         "s_p": _normalize_selector_values(s_p),
     }
-    validated = apply_filter_messages(required_indices=set(spec.selector_axes), filters=filters)
+    validated = apply_filter_messages(
+        fu_code=spec.fu_code,
+        expected_indices=spec.selector_axes,
+        filters=filters,
+    )
     tag = build_indices_tag(validated)
     return validated, tag
 

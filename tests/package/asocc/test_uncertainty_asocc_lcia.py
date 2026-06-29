@@ -115,7 +115,6 @@ def _lcia_base_args(*, project_name: str, reference_years: list[int] | None) -> 
         "lcia_method": "gwp100_lcia",
         "r_p": ["FR"],
         "s_p": ["D"],
-        "r_f": ["FR"],
         "l1_reg_aggreg": "pre",
         "ssp_scenario": ["SSP2"],
     }
@@ -1207,7 +1206,9 @@ def test_uncertainty_asocc_lcia_writes_public_runs_logs_and_summaries(
     )
     assert cov_scope == {
         ("level_1", "country", "FR", "world", "World"),
+        ("level_1", "country", "US", "world", "World"),
         ("l2_in_l1", "sector", "Electricity", "country", "FR"),
+        ("l2_in_l1", "sector", "Electricity", "country", "US"),
         ("l2_vs_global", "sector", "Electricity", "world", "World"),
     }
     assert source_methods["formula"].str.contains("primary_cov_value").all()
@@ -1235,6 +1236,7 @@ def test_uncertainty_asocc_lcia_aggregated_indices_use_full_cov_label(
     manifest = uncertainty_asocc(
         base_asocc_args={
             **_lcia_base_args(project_name=project_name, reference_years=[2005]),
+            "fu_code": "L2.b.a",
             "r_p": ["FR", "US"],
             "r_f": ["FR", "US"],
             "group_indices": True,
@@ -1446,7 +1448,6 @@ def test_uncertainty_asocc_lcia_samples_combined_rows_without_direct_rows(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
         },
         uncertainty_config=_lcia_config(n_runs=2),
@@ -1480,7 +1481,6 @@ def test_uncertainty_asocc_lcia_historical_reuse_uses_final_l2_reuse_year(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
             "ssp_scenario": ["SSP2"],
             "projection_mode": "historical_reuse",
@@ -1521,7 +1521,6 @@ def test_uncertainty_asocc_requires_projection_uncertainty_for_multiple_l2_reuse
                 "lcia_method": "gwp100_lcia",
                 "r_p": ["FR"],
                 "s_p": ["D"],
-                "r_f": ["FR"],
                 "l1_reg_aggreg": "pre",
                 "ssp_scenario": ["SSP2"],
                 "projection_mode": "historical_reuse",
@@ -1550,7 +1549,6 @@ def test_uncertainty_asocc_projection_uncertainty_samples_l2_reuse_year_axis(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
             "ssp_scenario": ["SSP2"],
             "projection_mode": "historical_reuse",
@@ -1611,7 +1609,6 @@ def test_uncertainty_asocc_projection_and_reference_year_use_selected_rows(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
             "ssp_scenario": ["SSP2"],
             "projection_mode": "historical_reuse",
@@ -1733,7 +1730,6 @@ def test_uncertainty_asocc_lcia_plus_projection_collapses_reuse_axis(
             "lcia_method": "gwp100_lcia",
             "r_p": ["FR"],
             "s_p": ["D"],
-            "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
             "ssp_scenario": ["SSP2"],
             "projection_mode": "historical_reuse",

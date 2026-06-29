@@ -1,7 +1,7 @@
 """Resolved run-plan setup for disaggregate_asocc branch orchestration."""
 
 from ..entrypoints.argument_contracts import ensure_list_str
-from ..methods.registry.registry import REGISTRY, resolve_required_indices
+from ..methods.registry.registry import REGISTRY
 from pyaesa.asocc.orchestration.setup.request.selection import _resolve_filters
 from ..runtime.selection.normalize import normalize_l1_reg_mode, normalize_output_mode
 from ..runtime.selection.resolve import resolve_method_selection
@@ -24,20 +24,11 @@ def _validate_l2_region_filters(
     r_p: list[str] | None,
     r_c: list[str] | None,
     r_f: list[str] | None,
-    combined_non_lcia: list[tuple[str, str]],
-    one_step_non_lcia: list[str],
 ) -> None:
     """Fail fast using deterministic_asocc selector guards for L2 disaggregation scope."""
-    required_indices = resolve_required_indices(
-        fu_code=fu_code,
-        selected_l1=[],
-        combined=combined_non_lcia,
-        selected_l2_one_step=one_step_non_lcia,
-        l1_kinds_needed=set(),
-    )
     try:
         _resolve_filters(
-            required_indices=required_indices,
+            fu_code=fu_code,
             r_p=r_p,
             s_p=s_p,
             r_c=r_c,
@@ -45,9 +36,7 @@ def _validate_l2_region_filters(
         )
     except ValueError as exc:
         raise ValueError(
-            "Invalid region selector for disaggregate_asocc L2 scope "
-            f"(fu_code='{fu_code}', required_indices={sorted(required_indices)}): "
-            f"{exc}"
+            f"Invalid region selector for disaggregate_asocc L2 scope (fu_code='{fu_code}'): {exc}"
         ) from exc
 
 
@@ -102,8 +91,6 @@ def build_disaggregation_run_plan(parsed: ParsedArgs) -> DisaggregationRunPlan:
         r_p=r_p,
         r_c=r_c,
         r_f=r_f,
-        combined_non_lcia=combined_non_lcia,
-        one_step_non_lcia=one_step_non_lcia,
     )
     return DisaggregationRunPlan(
         r_p=r_p,

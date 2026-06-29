@@ -1,6 +1,7 @@
 """Selection, filter, and index-tag normalization for setup orchestration."""
 
 from pyaesa.process.mrios.utils.io.paths import _resolve_version_tag
+from pyaesa.shared.selectors.fu_axes import expected_fu_selector_columns
 from pyaesa.shared.selectors.path_tokens import build_selector_filter_segment
 from ....data.source_schema import ISO3_SOURCE_KEY
 from ....methods.registry.registry import REGISTRY, normalize_fu_code, resolve_required_indices
@@ -39,20 +40,23 @@ def build_indices_tag(filters: dict[str, list[str] | None]) -> str:
 
 def apply_filter_messages(
     *,
-    required_indices: set[str],
+    fu_code: str,
+    expected_indices: tuple[str, ...] | set[str],
     filters: dict[str, list[str] | None],
 ) -> dict[str, list[str] | None]:
-    """Validate filters and keep only those required by selected methods."""
+    """Validate filters and keep only selectors expected by the FU."""
+    allowed = set(expected_indices)
+    expected = ", ".join(index_key for index_key in _FILTER_KEYS if index_key in allowed)
     out: dict[str, list[str] | None] = {}
     for index_key, filter_key in _FILTER_KEYS.items():
         values = filters.get(filter_key)
-        if index_key in required_indices:
+        if index_key in allowed:
             out[filter_key] = values
             continue
         if values:
             raise ValueError(
-                f"{filter_key} provided but index '{index_key}' is not "
-                "required by the selected methods."
+                f"Selector '{filter_key}' is not valid for fu_code='{fu_code}'. "
+                f"Expected selectors: {expected}."
             )
         out[filter_key] = None
     return out
@@ -260,7 +264,7 @@ def _restrict_selection_for_iso3_mode(
 
 def _resolve_filters(
     *,
-    required_indices: set[str],
+    fu_code: str,
     r_p: list[str] | None,
     s_p: list[str] | None,
     r_c: list[str] | None,
@@ -274,7 +278,8 @@ def _resolve_filters(
         "r_f": normalize_filter(r_f),
     }
     validated = apply_filter_messages(
-        required_indices=required_indices,
+        fu_code=fu_code,
+        expected_indices=expected_fu_selector_columns(fu_code=fu_code),
         filters=filters,
     )
     return validated, build_indices_tag(validated)

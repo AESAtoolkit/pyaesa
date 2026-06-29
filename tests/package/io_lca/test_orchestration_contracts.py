@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -504,6 +505,17 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
     )
     assert resolved_filters["r_f"] == ["FR"]
     assert tag == "r_f-FR"
+    invalid_message = (
+        "Selector 'r_p' is not valid for fu_code='L2.c.b'. Expected selectors: s_p, r_c."
+    )
+    with pytest.raises(ValueError, match=re.escape(invalid_message)):
+        selectors.resolve_selectors(
+            spec=resolve_fu_spec(fu_code="L2.c.b"),
+            r_f=None,
+            r_c=None,
+            r_p="FR",
+            s_p=None,
+        )
 
     metadata, _metadata_path = load_domain_metadata(
         source=io_lca_dummy_repo.source,

@@ -308,7 +308,7 @@ def build_asocc_scope(*, base_allocate_args: Mapping[str, Any]) -> AsoccScope:
         selection=selection,
     )
     filters, studied_indices_tag = _resolve_filters(
-        required_indices=selection.required_indices,
+        fu_code=str(base_allocate_args["fu_code"]),
         r_p=base_allocate_args["r_p"],
         s_p=base_allocate_args["s_p"],
         r_c=base_allocate_args["r_c"],

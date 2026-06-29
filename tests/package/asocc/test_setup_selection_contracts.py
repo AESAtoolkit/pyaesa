@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from pyaesa.asocc.orchestration.setup.request import selection as mod
@@ -44,16 +46,48 @@ def test_build_filter_segment_and_normalize_filter_paths() -> None:
 
 def test_apply_filter_messages_valid_and_invalid_cases() -> None:
     out = mod.apply_filter_messages(
-        required_indices={"r_p", "s_p"},
+        fu_code="L2.a.a",
+        expected_indices=("r_p", "s_p"),
         filters={"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None},
     )
     assert out == {"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None}
 
-    with pytest.raises(ValueError):
+    expected = "Selector 's_p' is not valid for fu_code='L1.b'. Expected selectors: r_p."
+    with pytest.raises(ValueError, match=re.escape(expected)):
         mod.apply_filter_messages(
-            required_indices={"r_p"},
+            fu_code="L1.b",
+            expected_indices=("r_p",),
             filters={"r_p": ["FR"], "s_p": ["A"], "r_c": None, "r_f": None},
         )
+
+
+@pytest.mark.parametrize(
+    ("fu_code", "selector", "expected"),
+    [
+        ("L1.a", "s_p", "r_f"),
+        ("L1.b", "s_p", "r_p"),
+        ("L2.a.a", "r_f", "r_p, s_p"),
+        ("L2.a.b", "r_f", "r_p, s_p"),
+        ("L2.a.c", "r_c", "r_p, s_p"),
+        ("L2.b.a", "r_c", "r_p, s_p, r_f"),
+        ("L2.b.b", "r_f", "r_p, s_p, r_c"),
+        ("L2.c.a", "r_p", "s_p, r_f"),
+        ("L2.c.b", "r_p", "s_p, r_c"),
+    ],
+)
+def test_resolve_filters_rejects_unexpected_public_selector_by_fu(
+    fu_code: str,
+    selector: str,
+    expected: str,
+) -> None:
+    values = {"r_p": None, "s_p": None, "r_c": None, "r_f": None}
+    values[selector] = ["D"] if selector == "s_p" else ["FR"]
+    message = (
+        f"Selector '{selector}' is not valid for fu_code='{fu_code}'. "
+        f"Expected selectors: {expected}."
+    )
+    with pytest.raises(ValueError, match=re.escape(message)):
+        mod._resolve_filters(fu_code=fu_code, **values)
 
 
 def test_resolve_l1_kinds_and_needs_lcia() -> None:

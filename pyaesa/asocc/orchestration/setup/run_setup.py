@@ -186,7 +186,7 @@ def _prepare_context(
 
     # 2) Validate filter contract and LCIA prerequisites for selected methods.
     filters, studied_indices_tag = _resolve_filters(
-        required_indices=selection.required_indices,
+        fu_code=fu_code_norm,
         r_p=request.r_p,
         s_p=request.s_p,
         r_c=request.r_c,

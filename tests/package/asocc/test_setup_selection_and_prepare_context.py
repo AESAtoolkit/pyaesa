@@ -22,7 +22,7 @@ def _request(**overrides) -> PrepareContextRequest:
         "refresh": False,
         "lcia_method": None,
         "fu_code": "L1.a",
-        "r_p": ["FR"],
+        "r_p": None,
         "s_p": None,
         "r_c": None,
         "r_f": None,
@@ -132,7 +132,7 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
     assert iso3_selection.selected_l1 == ["EG(Pop)", "PR(GDPcap)"]
 
     filters, indices_tag = selection_mod._resolve_filters(
-        required_indices={"r_p"},
+        fu_code="L1.b",
         r_p=[" FR "],
         s_p=None,
         r_c=None,
@@ -140,6 +140,15 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
     )
     assert filters == {"r_p": ["FR"], "s_p": None, "r_c": None, "r_f": None}
     assert indices_tag == "r_p-FR"
+    all_filters, all_indices_tag = selection_mod._resolve_filters(
+        fu_code="L2.b.a",
+        r_p=None,
+        s_p=None,
+        r_c=None,
+        r_f=None,
+    )
+    assert all_filters == {"r_p": None, "s_p": None, "r_c": None, "r_f": None}
+    assert all_indices_tag == "all_indices"
     assert selection_mod._resolve_output_domain_tag(source="iso3", agg_version=None) is None
     assert (
         selection_mod._resolve_output_domain_tag(source="oecd_v2025", agg_version=None)

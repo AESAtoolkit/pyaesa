@@ -556,7 +556,6 @@ def test_deterministic_asocc_generates_public_multi_impact_single_year_figures(
         lcia_method="pb_lcia",
         r_p=["FR"],
         s_p=["D"],
-        r_f=["FR"],
         l1_reg_aggreg="pre",
         figures=True,
         figure_format={"format": "svg", "dpi": 1},
