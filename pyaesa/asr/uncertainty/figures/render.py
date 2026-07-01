@@ -45,12 +45,12 @@ from pyaesa.asr.uncertainty.figures.row_reader import (
     attach_dynamic_pair_counts,
     collapsed_value_rows,
     cumulative_value_rows_from_runs,
-    prepared_cumulative_frequency_rows,
     prepared_cumulative_identity_rows,
     prepared_frequency_rows,
     prepared_identity_rows,
     prepared_summary_rows,
     read_figure_tables,
+    summary_rows_from_collapsed_values,
     value_rows_from_runs,
     SUMMARY_STAT_COLUMNS,
 )
@@ -131,7 +131,6 @@ def render_asr_uncertainty_figures(
             identity=tables.identity,
             summary=tables.summary,
             cumulative_identity=tables.cumulative_identity,
-            cumulative_summary=tables.cumulative_summary,
         )
     )
     return ASRUncertaintyFigureResult(
@@ -150,7 +149,6 @@ def _uncertainty_jobs(
     identity: pd.DataFrame,
     summary: pd.DataFrame,
     cumulative_identity: pd.DataFrame,
-    cumulative_summary: pd.DataFrame,
 ) -> Iterator[PlannedFigureJob]:
     if single_requested_year(context) is None:
         return _multi_year_jobs(
@@ -158,41 +156,27 @@ def _uncertainty_jobs(
             identity=identity,
             summary=summary,
             cumulative_identity=cumulative_identity,
-            cumulative_summary=cumulative_summary,
         )
-    return _single_year_jobs(context=context, identity=identity, summary=summary)
+    return _single_year_jobs(context=context, identity=identity)
 
 
 def _single_year_jobs(
-    *, context: FigureContext, identity: pd.DataFrame, summary: pd.DataFrame
+    *, context: FigureContext, identity: pd.DataFrame
 ) -> Iterator[PlannedFigureJob]:
     identity_rows = prepared_identity_rows(context=context, identity=identity)
     value_rows = value_rows_from_runs(context=context, identity_rows=identity_rows)
-    summary_rows = prepared_summary_rows(context=context, summary=summary)
-    frequency_rows = prepared_frequency_rows(context=context, summary=summary)
-    method_summary_rows = _summary_scope_rows(summary_rows, ASR_SUMMARY_SCOPE_PER_METHOD)
-    method_frequency_rows = _summary_scope_rows(frequency_rows, ASR_SUMMARY_SCOPE_PER_METHOD)
     method_rows = collapsed_value_rows(
         rows=value_rows,
         context=context,
         include_method_axis=True,
     )
-    method_rows = _with_polar_summary_rows(
+    method_rows = _with_distribution_summary_rows(
         rows=method_rows,
-        summary_rows=method_summary_rows,
-        frequency_rows=method_frequency_rows,
     )
     if _inter_method_active(context):
-        inter_summary_rows = _summary_scope_rows(summary_rows, ASR_SUMMARY_SCOPE_INTER_METHOD)
-        inter_frequency_rows = _summary_scope_rows(
-            frequency_rows,
-            ASR_SUMMARY_SCOPE_INTER_METHOD,
-        )
         inter_rows = _collapsed_inter_method_value_rows(rows=value_rows, context=context)
-        inter_rows = _with_polar_summary_rows(
+        inter_rows = _with_distribution_summary_rows(
             rows=inter_rows,
-            summary_rows=inter_summary_rows,
-            frequency_rows=inter_frequency_rows,
         )
         yield from _plan_inter_method_jobs(
             rows=inter_rows,
@@ -224,7 +208,6 @@ def _multi_year_jobs(
     identity: pd.DataFrame,
     summary: pd.DataFrame,
     cumulative_identity: pd.DataFrame,
-    cumulative_summary: pd.DataFrame,
 ) -> Iterator[PlannedFigureJob]:
     dynamic_rows = _raw_identity_is_dynamic(identity)
     component_rows = load_component_diagnostic_rows(context=context) if dynamic_rows else None
@@ -239,7 +222,6 @@ def _multi_year_jobs(
         cumulative_method_rows, cumulative_inter_rows = _cumulative_rows(
             context=context,
             cumulative_identity=cumulative_identity,
-            cumulative_summary=cumulative_summary,
         )
     else:
         cumulative_method_rows = summary_rows.iloc[0:0].copy()
@@ -292,15 +274,11 @@ def _multi_year_jobs(
                 rows=value_rows,
                 context=context,
             )
-            method_polar_rows = _with_polar_summary_rows(
+            method_polar_rows = _with_distribution_summary_rows(
                 rows=method_polar_rows,
-                summary_rows=method_summary_rows,
-                frequency_rows=method_frequency_rows,
             )
-            inter_polar_rows = _with_polar_summary_rows(
+            inter_polar_rows = _with_distribution_summary_rows(
                 rows=inter_polar_rows,
-                summary_rows=inter_summary_rows,
-                frequency_rows=inter_frequency_rows,
             )
             del value_rows
     else:
@@ -335,10 +313,8 @@ def _multi_year_jobs(
             if context.polar_years and not value_rows.empty
             else value_rows.iloc[0:0].copy()
         )
-        method_polar_rows = _with_polar_summary_rows(
+        method_polar_rows = _with_distribution_summary_rows(
             rows=method_polar_rows,
-            summary_rows=method_summary_rows,
-            frequency_rows=method_frequency_rows,
         )
         inter_polar_rows = value_rows.iloc[0:0].copy()
     if context.inter_method:
@@ -457,19 +433,10 @@ def _cumulative_rows(
     *,
     context: FigureContext,
     cumulative_identity: pd.DataFrame,
-    cumulative_summary: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     cumulative_identity_rows = prepared_cumulative_identity_rows(
         context=context,
         cumulative_identity=cumulative_identity,
-    )
-    cumulative_frequency_rows = prepared_cumulative_frequency_rows(
-        context=context,
-        cumulative_summary=cumulative_summary,
-    )
-    method_frequency_rows = _summary_scope_rows(
-        cumulative_frequency_rows,
-        ASR_SUMMARY_SCOPE_PER_METHOD,
     )
     cumulative_value_rows = cumulative_value_rows_from_runs(
         context=context,
@@ -480,18 +447,14 @@ def _cumulative_rows(
         context=context,
         include_method_axis=True,
     )
-    method_rows = _with_frequency_summary(method_rows, method_frequency_rows)
+    method_rows = _with_distribution_frequency_rows(rows=method_rows)
     if _inter_method_active(context):
-        inter_frequency_rows = _summary_scope_rows(
-            cumulative_frequency_rows,
-            ASR_SUMMARY_SCOPE_INTER_METHOD,
-        )
         inter_rows = collapsed_value_rows(
             rows=cumulative_value_rows,
             context=context,
             include_method_axis=False,
         )
-        return method_rows, _with_frequency_summary(inter_rows, inter_frequency_rows)
+        return method_rows, _with_distribution_frequency_rows(rows=inter_rows)
     return method_rows, method_rows.iloc[0:0].copy()
 
 
@@ -909,45 +872,39 @@ def _summary_warning_messages(jobs: tuple[PlannedFigureJob, ...]) -> tuple[str, 
     return (asr_zero_log_scale_warning_message(labels=labels),)
 
 
-def _with_polar_summary_rows(
+def _with_distribution_summary_rows(
     *,
     rows: pd.DataFrame,
-    summary_rows: pd.DataFrame,
-    frequency_rows: pd.DataFrame,
 ) -> pd.DataFrame:
-    key_columns = _summary_merge_columns(rows=rows, summary_rows=summary_rows)
-    summary = summary_rows.loc[:, [*key_columns, *SUMMARY_STAT_COLUMNS]].drop_duplicates(
-        subset=key_columns,
-        ignore_index=True,
-    )
-    frequency = frequency_rows.loc[:, [*key_columns, ASR_FREQUENCY_VALUE_COLUMN]].drop_duplicates(
-        subset=key_columns,
-        ignore_index=True,
-    )
-    frequency = frequency.rename(columns={ASR_FREQUENCY_VALUE_COLUMN: FT_FRACTION_COLUMN})
-    out = rows.merge(summary, on=key_columns, how="left")
-    out = out.merge(frequency, on=key_columns, how="left")
+    summary = summary_rows_from_collapsed_values(rows)
+    out = rows.copy()
+    for column in SUMMARY_STAT_COLUMNS:
+        out[column] = (
+            pd.Series(dtype="float64", index=out.index)
+            if summary.empty
+            else summary[column].to_numpy(dtype=np.float64, copy=False)
+        )
+    return _with_distribution_frequency_rows(rows=out)
+
+
+def _with_distribution_frequency_rows(
+    *,
+    rows: pd.DataFrame,
+) -> pd.DataFrame:
+    out = rows.copy()
+    out[FT_FRACTION_COLUMN] = [
+        _frequency_of_transgression(np.asarray(values, dtype=np.float64))
+        for values in out[VALUE_ARRAY_COLUMN]
+    ]
     return out
 
 
-def _summary_merge_columns(*, rows: pd.DataFrame, summary_rows: pd.DataFrame) -> list[str]:
-    excluded = {
-        VALUE_ARRAY_COLUMN,
-        "public_row_id",
-        FT_FRACTION_COLUMN,
-        "l1_l2_method",
-        "l1_method",
-        "l2_method",
-        ASR_SUMMARY_METRIC_COLUMN,
-        *SUMMARY_STAT_COLUMNS,
-    }
-    return [
-        column
-        for column in rows.columns
-        if column in summary_rows.columns
-        and column not in excluded
-        and not (rows[column].dropna().empty and summary_rows[column].dropna().empty)
-    ]
+def _frequency_of_transgression(values: np.ndarray) -> float:
+    observed = ~np.isnan(values)
+    count = int(np.count_nonzero(observed))
+    if count == 0:
+        return float("nan")
+    return float(np.count_nonzero(values[observed] > 1.0) / count)
 
 
 def _with_frequency_summary(rows: pd.DataFrame, frequency_rows: pd.DataFrame) -> pd.DataFrame:

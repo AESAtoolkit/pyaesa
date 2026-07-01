@@ -156,6 +156,7 @@ from pyaesa.asr.uncertainty.figures.render import (
     _summary_scope_rows as _row_reader_summary_scope_rows,
     _summary_warning_messages,
     _with_cumulative_values,
+    _with_distribution_summary_rows,
     _with_frequency_summary,
 )
 from pyaesa.asr.uncertainty.figures.row_reader import (
@@ -2174,7 +2175,6 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
             identity=static_identity,
             summary=static_summary,
             cumulative_identity=static_identity.iloc[0:0].copy(),
-            cumulative_summary=static_summary.iloc[0:0].copy(),
         )
     )
     assert static_jobs
@@ -2184,7 +2184,6 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
             identity=static_identity,
             summary=static_summary,
             cumulative_identity=static_identity.iloc[0:0].copy(),
-            cumulative_summary=static_summary.iloc[0:0].copy(),
         )
     )
     assert no_inter_multi_jobs
@@ -2192,7 +2191,6 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
         _single_year_jobs(
             context=replace(context, requested_years=(2020,), multi_method=False),
             identity=static_identity.loc[static_identity["year"].eq(2020)].copy(),
-            summary=static_summary.loc[static_summary["year"].eq(2020)].copy(),
         )
     )
     assert single_year_jobs
@@ -2476,26 +2474,6 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
         ],
         ignore_index=True,
     )
-    dynamic_cumulative_summary = pd.concat(
-        [
-            dynamic_identity.assign(
-                **{
-                    ASR_SUMMARY_METRIC_COLUMN: (ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
-                    ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_PER_METHOD,
-                    ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN: [0.7, 0.8],
-                }
-            ),
-            dynamic_identity.assign(
-                **{
-                    ASR_SUMMARY_METRIC_COLUMN: (ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC),
-                    ASR_SUMMARY_SCOPE_COLUMN: ASR_SUMMARY_SCOPE_INTER_METHOD,
-                    "__method": "",
-                    ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN: [0.7, 0.8],
-                }
-            ),
-        ],
-        ignore_index=True,
-    )
     dynamic_repo_root = tmp_path / "dynamic_repo"
     dynamic_cc_dir = dynamic_repo_root / "data_raw" / "carrying_capacities"
     dynamic_cc_dir.mkdir(parents=True)
@@ -2516,7 +2494,6 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
                 identity=dynamic_identity,
                 summary=dynamic_summary,
                 cumulative_identity=dynamic_identity,
-                cumulative_summary=dynamic_cumulative_summary,
             )
         )
     finally:
@@ -2530,7 +2507,6 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
                 identity=dynamic_identity,
                 summary=dynamic_summary,
                 cumulative_identity=dynamic_identity,
-                cumulative_summary=dynamic_cumulative_summary,
             )
         )
         dynamic_no_polar_jobs = list(
@@ -2544,7 +2520,6 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
                 identity=dynamic_identity,
                 summary=dynamic_summary,
                 cumulative_identity=dynamic_identity,
-                cumulative_summary=dynamic_cumulative_summary,
             )
         )
     finally:
@@ -2794,7 +2769,7 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
 
     run_rows = identity.head(2).copy()
     run_rows[VALUE_ARRAY_COLUMN] = [
-        np.array([0.8, 1.0]),
+        np.array([0.8, np.nan]),
         np.array([1.2, 1.4]),
     ]
     collapsed = collapsed_value_rows(rows=run_rows, context=context, include_method_axis=True)
@@ -2807,6 +2782,17 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
     assert "__method" not in inter_collapsed.columns
     summarized = summary_rows_from_collapsed_values(collapsed)
     assert set(SUMMARY_STAT_COLUMNS).issubset(summarized.columns)
+    polar_rows = _with_distribution_summary_rows(rows=collapsed)
+    expected_frequency = [
+        float(
+            np.count_nonzero(np.asarray(values, dtype=float)[~np.isnan(values)] > 1.0)
+            / np.count_nonzero(~np.isnan(values))
+        )
+        for values in collapsed[VALUE_ARRAY_COLUMN]
+    ]
+    assert VALUE_ARRAY_COLUMN in polar_rows.columns
+    assert polar_rows["median"].tolist() == summarized["median"].tolist()
+    assert polar_rows[FT_FRACTION_COLUMN].tolist() == expected_frequency
     collapsed["__asr_max_threshold"] = np.nan
     collapsed["fu_code"] = "L2.a.a"
     attached = attach_dynamic_pair_counts(
@@ -2890,7 +2876,6 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-            "year": [2020, 2021],
         }
     )
     with CompactRunMatrixWriter(
@@ -2910,44 +2895,24 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
         [1.0, 1.5, 2.0],
         [2.0, 2.5, 3.0],
     ]
-    cumulative_summary = pd.DataFrame(
-        {
-            ASR_SUMMARY_METRIC_COLUMN: [
-                ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
-                ASR_CUMULATIVE_FREQUENCY_OF_TRANSGRESSION_METRIC,
-            ],
-            ASR_SUMMARY_SCOPE_COLUMN: [
-                ASR_SUMMARY_SCOPE_PER_METHOD,
-                ASR_SUMMARY_SCOPE_INTER_METHOD,
-            ],
-            "__method": ["UT(FD)", ""],
-            "l1_l2_method": ["UT(FD)", "UT(FD)"],
-            "l1_method": ["UT", "UT"],
-            "l2_method": ["FD", "FD"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
-            "impact": ["GWP_100", "GWP_100"],
-            "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
-            "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-            ASR_CUMULATIVE_FREQUENCY_VALUE_COLUMN: [0.5, 0.6],
-        }
-    )
     inactive_method_rows, inactive_inter_rows = _cumulative_rows(
         context=cumulative_context,
         cumulative_identity=cumulative_identity,
-        cumulative_summary=cumulative_summary,
     )
     assert not inactive_method_rows.empty
     assert inactive_inter_rows.empty
+    assert inactive_method_rows[FT_FRACTION_COLUMN].tolist() == [5 / 6]
     active_method_rows, active_inter_rows = _cumulative_rows(
         context=replace(
             cumulative_context,
             active_sources=("asocc::inter_method_uncertainty",),
         ),
         cumulative_identity=cumulative_identity,
-        cumulative_summary=cumulative_summary,
     )
     assert not active_method_rows.empty
     assert not active_inter_rows.empty
+    assert active_method_rows[FT_FRACTION_COLUMN].tolist() == [5 / 6]
+    assert active_inter_rows[FT_FRACTION_COLUMN].tolist() == [5 / 6]
 
 
 def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems(

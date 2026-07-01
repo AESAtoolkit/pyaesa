@@ -1576,7 +1576,6 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
         identity=figure_tables.identity,
         summary=figure_tables.summary,
         cumulative_identity=figure_tables.cumulative_identity,
-        cumulative_summary=figure_tables.cumulative_summary,
     )
     assert planned_jobs
     ar6_rows = uncertainty_global_ar6_rows_from_source(
