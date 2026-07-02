@@ -36,6 +36,30 @@ The example below illustrates some of the 83 figure families available with `pya
 remain governed by their original providers' terms and conditions documented in
 the [Workflow Reference](workflow_reference.md).
 
+## Copyright
+
+    pyaesa is a Python package for absolute environmental sustainability
+    assessment (AESA) workflows. It supports data download,
+    data processing, deterministic calculations, figure rendering,
+    Monte Carlo uncertainty and Sobol variance.
+
+    Copyright (C) 2026,
+    Université Paris-Saclay, Université catholique de Louvain,
+    Luxembourg Institute of Science and Technology, RWTH Aachen University.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ## Community
 
 ### Contributing to `pyaesa`
