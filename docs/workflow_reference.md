@@ -261,13 +261,34 @@ software architecture and the figures conception were defined by the authors.
 Generative AI outputs were used as implementation drafts, checked and modified
 where needed, and retained only after review and testing by human intelligence.
 
-## Funding Information
+## Funding information
 
-The work of Erwan Ike de Bantel received organizational support from the
-CircularIT Alliance project. The work of Thibault Pirson is part of the SOIL
-project, which received funding from the European Union's Horizon Europe
-research and innovation program under the HORIZON KDT JU 2023 1 IA grant
-agreement No. 101139785. Views and opinions expressed are those of the authors
-only and do not necessarily reflect those of the European Union or CHIPS.
-Neither the European Union nor the granting authority can be held responsible
-for them.
+This work was made possible thanks to the support and fundings from several sources:
+
+- The work of **Erwan Ike de Bantel** received organizational support
+of the CircularIT Alliance project. Erwan Ike de Bantel is affiliated to
+Université Paris-Saclay, CentraleSupélec, Laboratoire Genie Industriel,
+91190 Gif-sur-Yvette, France.
+
+- The work of **Thibault Pirson** is part of the SOIL project, which received funding from
+the European Union’s Horizon Europe research and innovation program under
+the HORIZON-KDTJU-2023-1-IA grant agreement N°101139785. Views and opinions expressed
+are however those of the authors only and do not necessarily reflect those
+of the European Union or CHIPS. Neither the European Union nor the granting authority
+can be held responsible for them. Thibault Pirson is affiliated to Université catholique
+de Louvain, Institute of Information and Communication Technologies, Electronics,
+and Applied Mathematics (ICTEAM), 1348 Louvain-la-Neuve, Belgium.
+
+- **Gonzalo Puig-Samper** is affiliated to Luxembourg Institute of Science and Technology,
+5 Avenue des Hauts-Fourneaux, Esch-sur-Alzette, L-4362, Luxembourg.
+
+- **Jan Marcus Hartmann** is affiliated to Institute of Technical Thermodynamics,
+RWTH Aachen University, Schinkelstraße 8, 52062 Aachen, Germany.
+
+## Acknowledgments
+
+The authors would like to thank Anders Bjørn, Michaël Lejeune, Romain Sacchi,
+Joanna Schlesinger-Martinat, Niklas von der Assen, Mikolaj Owsianiak,
+Natacha Gondran, Timo Diepers, Sankalp Shrivastava, Andrea Paulillo, 
+and Julie Clavreul for the valuable discussions and interactions during
+the realization of this work.
