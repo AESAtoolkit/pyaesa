@@ -59,6 +59,10 @@ How custom MRIO aggregation and disaggregation works
    - To disaggregate one original label into several target labels, add a
      `weight` column and repeat the original label once for each target label.
      Weights must be finite, non negative, and sum to 1 for each original label.
+   - (optional) To provide a weight for a specific year, repeat the previous step
+     by adding a 'weight::<year>' column, with the <year> of interest, e.g., 2020.
+     Make sure to always have a default 'weight' column defined. Same weight
+     constraints apply.
 4. Use the same `<name>` as `agg_version` in package calls.
 
 Public argument contract

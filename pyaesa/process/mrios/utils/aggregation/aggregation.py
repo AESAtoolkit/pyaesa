@@ -11,6 +11,7 @@ import pandas as pd
 
 REQUIRED_COLUMNS = ("original_classification", "aggregated_mrio")
 WEIGHT_COLUMN = "weight"
+WEIGHT_SPECIFIC_YEAR_COLUMN = "weight::"
 _WEIGHT_SUM_RTOL = 1e-10
 
 
@@ -71,37 +72,62 @@ def read_agg_map(csv_path: str | Path) -> pd.DataFrame:
         raise ValueError(f"{path} contains empty aggregated labels for originals: {examples}")
 
     if WEIGHT_COLUMN in df.columns:
-        weight_missing = cast(pd.Series, df[WEIGHT_COLUMN].isna())
-        if bool(weight_missing.any()):
-            examples = df.loc[weight_missing, "original_classification"].head(10).tolist()
-            raise ValueError(f"{path} contains empty mapping weights for originals: {examples}")
-        weights = cast(pd.Series, pd.to_numeric(df[WEIGHT_COLUMN], errors="coerce"))
-        invalid = cast(pd.Series, weights.isna() | ~np.isfinite(weights) | (weights < 0.0))
-        if bool(invalid.any()):
-            examples = df.loc[invalid, "original_classification"].head(10).tolist()
-            raise ValueError(f"{path} contains invalid mapping weights for originals: {examples}")
-        df[WEIGHT_COLUMN] = weights.astype(float)
-        duplicate_pairs = cast(
-            pd.Series,
-            df.duplicated(subset=["original_classification", "aggregated_mrio"]),
+        df = _populate_df_with_weights(
+                regex=WEIGHT_COLUMN,
+                in_df=df,
+                csv_path=csv_path,
+            )   
+
+    if len(df.filter(regex=f'^{WEIGHT_SPECIFIC_YEAR_COLUMN}').columns) > 0:
+        for curr_weight in df.filter(regex=f'^{WEIGHT_SPECIFIC_YEAR_COLUMN}').columns.to_list():
+            df = _populate_df_with_weights(
+                    regex=curr_weight,
+                    in_df=df,
+                    csv_path=csv_path,
+                )    
+
+    return df
+
+def _populate_df_with_weights(
+    regex: str,
+    in_df: pd.DataFrame,
+    csv_path: str | Path,
+) -> pd.DataFrame:
+    """Return a DataFrame populated with weight columns, as provided in the input csv file."""
+    path = Path(csv_path)
+    df = in_df.copy()
+    weight_missing = cast(pd.Series, df[regex].isna())
+    if bool(weight_missing.any()):
+        examples = df.loc[weight_missing, "original_classification"].head(10).tolist()
+        raise ValueError(f"{path} contains empty mapping weights for originals: {examples}")
+    weights = cast(pd.Series, pd.to_numeric(df[regex], errors="coerce"))
+    invalid = cast(pd.Series, weights.isna() | ~np.isfinite(weights) | (weights < 0.0))
+    if bool(invalid.any()):
+        examples = df.loc[invalid, "original_classification"].head(10).tolist()
+        raise ValueError(f"{path} contains invalid mapping weights for originals: {examples}")
+    df[regex] = weights.astype(float)
+    duplicate_pairs = cast(
+        pd.Series,
+        df.duplicated(subset=["original_classification", "aggregated_mrio"]),
+    )
+    if bool(duplicate_pairs.any()):
+        examples = (
+            df.loc[duplicate_pairs, ["original_classification", "aggregated_mrio"]]
+            .head(10)
+            .to_dict(orient="records")
         )
-        if bool(duplicate_pairs.any()):
-            examples = (
-                df.loc[duplicate_pairs, ["original_classification", "aggregated_mrio"]]
-                .head(10)
-                .to_dict(orient="records")
-            )
-            raise ValueError(
-                f"{path} contains duplicate weighted MRIO aggregation and "
-                f"disaggregation rows: {examples}"
-            )
-        sums = cast(pd.Series, df.groupby("original_classification")[WEIGHT_COLUMN].sum())
-        bad_sum = cast(pd.Series, ~np.isclose(sums, 1.0, rtol=_WEIGHT_SUM_RTOL, atol=0.0))
-        if bool(bad_sum.any()):
-            examples = sums.loc[bad_sum].head(10).to_dict()
-            raise ValueError(
-                f"{path} mapping weights must sum to 1 per original label. Invalid sums: {examples}"
-            )
+        raise ValueError(
+            f"{path} contains duplicate weighted MRIO aggregation and "
+            f"disaggregation rows: {examples}"
+        )
+    sums = cast(pd.Series, df.groupby("original_classification")[regex].sum())
+    bad_sum = cast(pd.Series, ~np.isclose(sums, 1.0, rtol=_WEIGHT_SUM_RTOL, atol=0.0))
+    if bool(bad_sum.any()):
+        examples = sums.loc[bad_sum].head(10).to_dict()
+        raise ValueError(
+            f"{path} mapping weights must sum to 1 per original label. Invalid sums: {examples}"
+        )   
+
     return df
 
 

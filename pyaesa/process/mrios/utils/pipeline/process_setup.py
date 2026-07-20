@@ -8,6 +8,7 @@ import pandas as pd
 
 from pyaesa.process.mrios.utils.aggregation.aggregation import (
     WEIGHT_COLUMN,
+    WEIGHT_SPECIFIC_YEAR_COLUMN,
     agg_map_fingerprint,
     read_agg_map,
 )
@@ -78,6 +79,7 @@ def _resolve_aggregation_inputs(
         "agg_sec_file": str(agg_sec_path) if agg_sec else None,
         "agg_reg_weighted": bool(agg_reg_df is not None and WEIGHT_COLUMN in agg_reg_df),
         "agg_sec_weighted": bool(agg_sec_df is not None and WEIGHT_COLUMN in agg_sec_df),
+        "agg_sec_specific_weight_year": list(_years_weight_available(agg_sec_df)),
         "agg_reg_fingerprint": (
             agg_map_fingerprint(agg_reg_df) if agg_reg_df is not None else None
         ),
@@ -132,3 +134,11 @@ def _update_report_clipping_stats(report: ProcessReportMRIO, iosys) -> None:
         report.f_clip_count += int(f_abs.shape[0])
         report.f_clip_abs_sum += float(f_abs.sum())
         report.f_clip_abs_max = max(report.f_clip_abs_max, float(f_abs.max()))
+
+def _years_weight_available(df: pd.DataFrame) -> list:
+    """Return a list of years for which specific disaggregation weights are available."""
+    years_specific_weights = df.filter(regex=f'^{WEIGHT_SPECIFIC_YEAR_COLUMN}').columns.to_list()
+    year_delimiter = WEIGHT_SPECIFIC_YEAR_COLUMN.split(WEIGHT_COLUMN)[-1]
+    years_specific_weights = [int(w.split(year_delimiter)[-1]) for w in years_specific_weights]
+
+    return years_specific_weights
