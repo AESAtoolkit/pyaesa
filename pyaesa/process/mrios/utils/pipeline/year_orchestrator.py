@@ -49,6 +49,7 @@ def parse_and_calc_year(
     agg_sec_path: Optional[Path],
     reg_vec_cache: Optional[dict[tuple[str, ...], AggregationSpec]] = None,
     sec_vec_cache: Optional[dict[tuple[str, ...], AggregationSpec]] = None,
+    agg_sec_specific_weight_year: Optional[list],
     pymrio_calc_all: bool = False,
     keep_postclip_ghosh: bool = True,
     parse_exio_func=_parse_exio_year,
@@ -109,7 +110,7 @@ def parse_and_calc_year(
 
     if agg_sec:
         sec_key = tuple(sectors_original)
-        if sec_vec_cache is not None and sec_key in sec_vec_cache:
+        if sec_vec_cache is not None and sec_key in sec_vec_cache and year not in agg_sec_specific_weight_year: 
             sec_spec = sec_vec_cache[sec_key]
         else:
             sec_spec = build_aggregation_spec(
