@@ -444,6 +444,8 @@ def test_process_setup_contracts_cover_aggregation_jobs_and_clipping(project_rep
         "agg_sec_file": None,
         "agg_reg_weighted": False,
         "agg_sec_weighted": False,
+        "agg_reg_specific_weight_year": [],
+        "agg_sec_specific_weight_year": [],
         "agg_reg_fingerprint": None,
         "agg_sec_fingerprint": None,
     }
@@ -466,6 +468,7 @@ def test_process_setup_contracts_cover_aggregation_jobs_and_clipping(project_rep
         {
             "original_classification": ["R1", "R2"],
             "aggregated_mrio": ["EU", "ROW"],
+            "weight::2020": [1.0, 1.0],
         }
     ).to_csv(reg_path, index=False)
     with pytest.raises(FileNotFoundError):
@@ -479,6 +482,8 @@ def test_process_setup_contracts_cover_aggregation_jobs_and_clipping(project_rep
         {
             "original_classification": ["S1", "S2"],
             "aggregated_mrio": ["Energy", "Other"],
+            "weight": [1.0, 1.0],
+            "weight::2021": [1.0, 1.0],
         }
     ).to_csv(sec_path, index=False)
     agg_reg_path, agg_sec_path, agg_reg_df, agg_sec_df, payload = _resolve_aggregation_inputs(
@@ -494,8 +499,10 @@ def test_process_setup_contracts_cover_aggregation_jobs_and_clipping(project_rep
     assert list(agg_reg_df["aggregated_mrio"]) == ["EU", "ROW"]
     assert list(agg_sec_df["aggregated_mrio"]) == ["Energy", "Other"]
     assert payload["agg_version"] == "demo"
-    assert payload["agg_reg_weighted"] is False
-    assert payload["agg_sec_weighted"] is False
+    assert payload["agg_reg_weighted"] is True
+    assert payload["agg_sec_weighted"] is True
+    assert payload["agg_reg_specific_weight_year"] == [2020]
+    assert payload["agg_sec_specific_weight_year"] == [2021]
     assert isinstance(payload["agg_reg_fingerprint"], str)
     assert isinstance(payload["agg_sec_fingerprint"], str)
 

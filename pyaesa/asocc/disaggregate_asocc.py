@@ -116,6 +116,8 @@ def disaggregate_asocc(
               token in downstream calls that should reuse the processed
               classification. When a mapping file has a ``weight``
               column, weights must sum to ``1`` for each original label.
+              ``weight::<YYYY>`` columns provide matching year weights and follow
+              the same validation. Every processed year must have its own column.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
               ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``

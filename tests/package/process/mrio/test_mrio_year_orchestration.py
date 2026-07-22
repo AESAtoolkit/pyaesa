@@ -5,6 +5,10 @@ import pandas as pd
 import pytest
 
 from pyaesa.process.mrios.utils.raw_corrections.runtime import AppliedCorrectionSummary
+from pyaesa.process.mrios.utils.aggregation.aggregation import (
+    agg_map_fingerprint,
+    resolve_agg_map_for_year,
+)
 from pyaesa.process.mrios.utils.parsers.exio_parser import ExioCharacterizationOptions
 from pyaesa.process.mrios.utils.pipeline.contracts import SourceConfig
 from pyaesa.process.mrios.utils.pipeline.year_orchestrator import parse_and_calc_year
@@ -127,11 +131,64 @@ def test_parse_and_calc_year_covers_aggregation_cache_and_oecd_calc_all() -> Non
     assert sectors_original == ["S1", "S2"]
     assert regions_used == ["EU", "ROW"]
     assert sectors_used == ["Energy", "Other"]
-    assert ("R1", "R2") in reg_cache
-    assert ("S1", "S2") in sec_cache
+    assert ("R1", "R2", agg_map_fingerprint(reg_df)) in reg_cache
+    assert ("S1", "S2", agg_map_fingerprint(sec_df)) in sec_cache
     assert iosys.A is not None
     assert iosys.L is not None
     assert iosys.G is not None
+
+
+def test_parse_and_calc_year_isolates_region_and_sector_year_weight_caches() -> None:
+    cfg = SourceConfig(
+        requires_characterization=False, required_core=("A",), required_extensions=()
+    )
+    reg_map = pd.DataFrame(
+        {
+            "original_classification": ["R1", "R1", "R2"],
+            "aggregated_mrio": ["R1a", "R1b", "R2"],
+            "weight::2019": [0.8, 0.2, 1.0],
+            "weight::2020": [0.3, 0.7, 1.0],
+        }
+    )
+    sec_map = pd.DataFrame(
+        {
+            "original_classification": ["S1", "S1", "S2"],
+            "aggregated_mrio": ["S1a", "S1b", "S2"],
+            "weight::2019": [0.9, 0.1, 1.0],
+            "weight::2020": [0.4, 0.6, 1.0],
+        }
+    )
+    reg_cache = {}
+    sec_cache = {}
+
+    for year in (2019, 2020):
+        parse_and_calc_year(
+            source="oecd_v2025",
+            cfg=cfg,
+            full_dir=Path("."),
+            year=year,
+            char_jobs=None,
+            agg_reg=True,
+            agg_sec=True,
+            agg_reg_df=resolve_agg_map_for_year(reg_map, year=year),
+            agg_sec_df=resolve_agg_map_for_year(sec_map, year=year),
+            agg_reg_path=Path("agg_reg.csv"),
+            agg_sec_path=Path("agg_sec.csv"),
+            reg_vec_cache=reg_cache,
+            sec_vec_cache=sec_cache,
+            parse_oecd_func=lambda full_dir, year: build_dummy_iosystem(),
+        )
+
+    assert len(reg_cache) == 2
+    assert len(sec_cache) == 2
+    assert {spec.rows for spec in reg_cache.values()} == {
+        ((0, 0, 0.8), (0, 1, 0.2), (1, 2, 1.0)),
+        ((0, 0, 0.3), (0, 1, 0.7), (1, 2, 1.0)),
+    }
+    assert {spec.rows for spec in sec_cache.values()} == {
+        ((0, 0, 0.9), (0, 1, 0.1), (1, 2, 1.0)),
+        ((0, 0, 0.4), (0, 1, 0.6), (1, 2, 1.0)),
+    }
 
 
 def test_parse_and_calc_year_attaches_raw_corrected_values_summary() -> None:
@@ -196,8 +253,10 @@ def test_parse_and_calc_year_populates_caches_and_covers_exio_non_lcia_paths() -
         sec_vec_cache=sec_cache,
         parse_oecd_func=lambda full_dir, year: build_dummy_iosystem(),
     )
-    assert reg_cache[("R1", "R2")].aggregated_labels == ("EU", "ROW")
-    assert sec_cache[("S1", "S2")].aggregated_labels == ("Energy", "Other")
+    reg_key = ("R1", "R2", agg_map_fingerprint(reg_df))
+    sec_key = ("S1", "S2", agg_map_fingerprint(sec_df))
+    assert reg_cache[reg_key].aggregated_labels == ("EU", "ROW")
+    assert sec_cache[sec_key].aggregated_labels == ("Energy", "Other")
     parse_and_calc_year(
         source="oecd_v2025",
         cfg=oecd_cfg,

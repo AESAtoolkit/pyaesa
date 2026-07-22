@@ -139,6 +139,9 @@ Aggregation uses packaged prerequisite CSVs under `data_raw/`. `agg_version`
 selects the aggregation folder. Aggregation validation must happen before year
 processing begins.
 
+Weighted region and sector maps use either one `weight` column for all years or
+`weight::<YYYY>` columns for every processed year.
+
 Contributor rules:
 
 1. Aggregation path ownership stays in process and project prerequisite path
