@@ -143,7 +143,7 @@ def render_external_lca_deterministic_figures_from_rows(
             checkpoint_years=unique_years,
             dpi=dpi,
             output_format=output_format,
-            family_label="LCA",
+            family_label=f"LCA | {file_stem_prefix}",
             selector_columns=SELECTOR_COLUMNS,
             file_stem_prefix=file_stem_prefix,
         )
@@ -155,7 +155,7 @@ def render_external_lca_deterministic_figures_from_rows(
             lcia_method=lcia_method,
             dpi=dpi,
             output_format=output_format,
-            family_label="LCA",
+            family_label=f"LCA | {file_stem_prefix}",
             selector_columns=SELECTOR_COLUMNS,
             file_stem_prefix=file_stem_prefix,
         )
@@ -375,7 +375,7 @@ def _render_uncertainty_band_figures(
                 lcia_method=source.lcia_method,
                 dpi=dpi,
                 output_format=output_format,
-                family_label="LCA uncertainty",
+                family_label=f"LCA uncertainty | {file_stem_prefix}",
                 selector_columns=SELECTOR_COLUMNS,
                 file_stem_prefix=file_stem_prefix,
             )
@@ -410,7 +410,7 @@ def _render_uncertainty_violin_figures(
                 checkpoint_years=years,
                 dpi=dpi,
                 output_format=output_format,
-                family_label="LCA uncertainty",
+                family_label=f"LCA uncertainty | {file_stem_prefix}",
                 selector_columns=SELECTOR_COLUMNS,
                 file_stem_prefix=file_stem_prefix,
             )

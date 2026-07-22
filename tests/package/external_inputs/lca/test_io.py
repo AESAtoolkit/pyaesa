@@ -655,13 +655,14 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     )
     assert len(mc_reuse_status.messages) == 1
     assert mc_reuse_status.messages[0].startswith("[external_lca] Generated figure")
-    assert figures_mod.render_external_lca_uncertainty_figures_from_source(
+    mc_svg_paths = figures_mod.render_external_lca_uncertainty_figures_from_source(
         proj_base=report.project_root,
         source=source,
         output_format="svg",
         dpi=10,
         completed_runs=1,
     )
+    assert "LCA uncertainty | supplier_mc" in mc_svg_paths[0].read_text(encoding="utf-8")
 
     scoped_requests: list[tuple[int, ...]] = []
     multi_year_values = np.array([[1.0, 3.0], [2.0, 4.0]], dtype=np.float64)

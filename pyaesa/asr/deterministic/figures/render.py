@@ -307,6 +307,9 @@ def render_asr_figures(
         rows=combined_prepared_asr_rows(groups),
     )
     component_rows = component_rows if cc_type != "static" else None
+    family_label = (
+        "ASR" if path_context.lca_version_name is None else f"ASR | {path_context.lca_version_name}"
+    )
     global_ar6_source = (
         deterministic_global_ar6_source(acc_output_files=acc_output_files)
         if cc_type != "static" and _single_year(requested_years) is None
@@ -330,6 +333,7 @@ def render_asr_figures(
                 selector_scope_request=selector_scope_request,
                 scale_modes=scale_modes,
                 polar_years=polar_years,
+                family_label=family_label,
             )
         if bool(figure_options["multi_method"]) and has_multiple_prepared_asr_groups(groups):
             yield from _multi_method_jobs(
@@ -345,6 +349,7 @@ def render_asr_figures(
                 output_format=output_format,
                 selector_scope_request=selector_scope_request,
                 scale_modes=scale_modes,
+                family_label=family_label,
             )
 
     paths = render_figure_jobs(source="deterministic_asr", jobs=jobs, status=status)
@@ -368,6 +373,7 @@ def _per_method_jobs(
     selector_scope_request: SelectorScopeRequest | None,
     scale_modes: dict[str, ASRScaleMode],
     polar_years: list[int],
+    family_label: str,
 ) -> Iterator[PlannedFigureJob]:
     single_year = _single_year(requested_years)
     for group in groups:
@@ -391,7 +397,7 @@ def _per_method_jobs(
                     selector_token=selector_token,
                 )
                 title = asr_scope_title(
-                    "ASR",
+                    family_label,
                     group.title_label,
                     prepared,
                     include_impact=len(impacts) == 1,
@@ -441,7 +447,7 @@ def _per_method_jobs(
                             selector_token=selector_token,
                         )
                         year_title = asr_scope_title(
-                            "ASR",
+                            family_label,
                             group.title_label,
                             year_prepared,
                             include_impact=False,
@@ -485,6 +491,7 @@ def _multi_method_jobs(
     output_format: str,
     selector_scope_request: SelectorScopeRequest | None,
     scale_modes: dict[str, ASRScaleMode],
+    family_label: str,
 ) -> Iterator[PlannedFigureJob]:
     single_year = _single_year(requested_years)
     for branch_rows in _dynamic_branch_slices(
@@ -524,7 +531,7 @@ def _multi_method_jobs(
                     selector_token=selector_token,
                 )
                 title = asr_scope_title(
-                    "ASR",
+                    family_label,
                     None,
                     scope,
                     include_impact=include_impact or len(ordered_impacts(scope)) == 1,

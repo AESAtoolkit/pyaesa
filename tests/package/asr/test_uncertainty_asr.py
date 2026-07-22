@@ -1555,6 +1555,23 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
         figure_options={"multi_method": False, "polar": {"polar_years": []}},
         figure_format={"format": "png", "dpi": 10},
     )
+    assert figure_context.lca_version_name is None
+    external_figure_context = build_figure_context(
+        manifest=replace(
+            manifest,
+            arguments={
+                **dict(manifest.arguments or {}),
+                "lca_args": {
+                    "external_lca": {"active": True, "version_name": "supplier_v1"},
+                    "io_lca": {"active": False},
+                },
+            },
+        ),
+        paths=_asr_paths_from_manifest(manifest),
+        figure_options={"multi_method": False, "polar": {"polar_years": []}},
+        figure_format={"format": "png", "dpi": 10},
+    )
+    assert external_figure_context.lca_version_name == "supplier_v1"
     figure_tables = read_figure_tables(context=figure_context)
     single_year_context = build_figure_context(
         manifest=replace(

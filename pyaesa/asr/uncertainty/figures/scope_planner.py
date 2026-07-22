@@ -36,6 +36,7 @@ class FigureContext:
     dynamic_category_uncertainty_active: bool
     polar_years: tuple[int, ...]
     polar_style: str
+    lca_version_name: str | None = None
     dynamic_cc_sampling_method: str | None = None
 
 
@@ -62,6 +63,7 @@ def build_figure_context(
     public_output = dict(manifest.artifacts["public_output"] or {})
     runs = dict(public_output.get("asr_runs") or {})
     source_parameters = dict(manifest.source_parameters or {})
+    external_lca = args["lca_args"]["external_lca"]
     years = _years_from_args(args)
     return FigureContext(
         manifest=manifest,
@@ -94,6 +96,7 @@ def build_figure_context(
             )
         ),
         polar_style=str(polar["polar_style"]),
+        lca_version_name=external_lca["version_name"] if external_lca["active"] else None,
     )
 
 

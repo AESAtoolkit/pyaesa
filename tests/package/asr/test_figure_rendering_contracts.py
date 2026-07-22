@@ -146,6 +146,7 @@ from pyaesa.asr.uncertainty.figures.render import (
     _figure_scopes,
     _frequency_value_column,
     _multi_year_jobs,
+    _plan_per_method_jobs,
     _planned_plot,
     _single_year_jobs,
     _plan_polar_checkpoint_jobs,
@@ -1959,6 +1960,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
         ),
         dynamic_category_uncertainty_active=True,
     )
+    context = replace(context, lca_version_name="supplier_v1")
     manifest = build_manifest(
         family="acc",
         mode="fixed",
@@ -2178,6 +2180,16 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
         )
     )
     assert static_jobs
+    external_jobs = list(
+        _plan_per_method_jobs(
+            rows=static_identity,
+            context=context,
+            plotter=_dummy_uncertainty_plotter,
+            kind="multi_year",
+        )
+    )
+    external_jobs[0].render()
+    assert str(captured_extra["title"]).startswith("ASR uncertainty | supplier_v1")
     no_inter_multi_jobs = list(
         _multi_year_jobs(
             context=replace(context, inter_method=False, multi_method=False),
@@ -2189,7 +2201,12 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
     assert no_inter_multi_jobs
     single_year_jobs = list(
         _single_year_jobs(
-            context=replace(context, requested_years=(2020,), multi_method=False),
+            context=replace(
+                context,
+                requested_years=(2020,),
+                multi_method=False,
+                lca_version_name=None,
+            ),
             identity=static_identity.loc[static_identity["year"].eq(2020)].copy(),
         )
     )

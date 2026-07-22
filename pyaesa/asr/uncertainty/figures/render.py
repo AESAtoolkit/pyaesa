@@ -675,6 +675,8 @@ def _scope_jobs(
             selector_token=selector_token,
         )
     )
+    if context.lca_version_name is not None:
+        family_label = f"{family_label} | {context.lca_version_name}"
     title = asr_scope_title(
         family_label,
         title_label,
@@ -725,6 +727,8 @@ def _polar_scope_jobs(
 ) -> Iterator[PlannedFigureJob]:
     """Yield ASR uncertainty polar jobs for one selector and year scope."""
     scale_mode = _scale_mode_for_scope(scope, mean_line=False)
+    if context.lca_version_name is not None:
+        family_label = f"{family_label} | {context.lca_version_name}"
     title = asr_scope_title(
         family_label,
         title_label,

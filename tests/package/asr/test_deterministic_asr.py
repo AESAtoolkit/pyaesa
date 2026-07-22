@@ -768,6 +768,7 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     )
     generated_subfigures = sorted(subfigure_external_figure_dir.rglob("supplier_v1__*.svg"))
     assert generated_subfigures
+    assert "LCA | supplier_v1" in generated_subfigures[0].read_text(encoding="utf-8")
     recorded_subfigures = [
         Path(path)
         for path in rerendered_metadata["provenance"]["external_lca_summary"]["figure_paths"]
@@ -789,6 +790,7 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     )
     seeded_branch = figure_seed.branches[0]
     assert seeded_branch.figure_paths
+    assert "ASR | supplier_v1" in seeded_branch.figure_paths[0].read_text(encoding="utf-8")
     seeded_metadata = json.loads(cast(Path, seeded_branch.meta_file).read_text())
     seeded_subfigures = [
         Path(path) for path in seeded_metadata["provenance"]["external_lca_summary"]["figure_paths"]
