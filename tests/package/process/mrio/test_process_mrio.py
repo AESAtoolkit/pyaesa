@@ -199,6 +199,51 @@ def test_run_process_mrio_processes_then_skips_cached_oecd_outputs(project_repo:
     assert (calc_all_saved_dir / "preclip" / "A.pickle").exists()
 
 
+def test_run_process_mrio_applies_region_and_sector_year_weight_overrides(
+    project_repo: Path,
+) -> None:
+    write_oecd_raw_csv_files(project_repo, years=[2020, 2021])
+    agg_version = "year_weights"
+    pd.DataFrame(
+        {
+            "original_classification": ["R1", "R1", "R2"],
+            "aggregated_mrio": ["R1a", "R1b", "R2"],
+            "weight::2020": [0.3, 0.7, 1.0],
+            "weight::2021": [0.8, 0.2, 1.0],
+        }
+    ).to_csv(
+        _get_agg_map_path("oecd_v2025", kind="reg", agg_version=agg_version),
+        index=False,
+    )
+    pd.DataFrame(
+        {
+            "original_classification": ["S1", "S1", "S2"],
+            "aggregated_mrio": ["S1a", "S1b", "S2"],
+            "weight::2020": [0.4, 0.6, 1.0],
+            "weight::2021": [0.9, 0.1, 1.0],
+        }
+    ).to_csv(
+        _get_agg_map_path("oecd_v2025", kind="sec", agg_version=agg_version),
+        index=False,
+    )
+
+    report = run_process_mrio(
+        source="oecd_v2025",
+        years=[2020, 2021],
+        agg_reg=True,
+        agg_sec=True,
+        agg_version=agg_version,
+        keep_intermediate_uncasext=True,
+    )
+
+    assert report is not None
+    assert report.processed == [2020, 2021]
+    assert report.errors == {}
+    aggregation = _read_metadata("oecd_v2025", matrix_version=agg_version)["aggregation"]
+    assert aggregation["agg_reg_specific_weight_year"] == [2020, 2021]
+    assert aggregation["agg_sec_specific_weight_year"] == [2020, 2021]
+
+
 def test_run_process_mrio_records_raw_corrected_values_summary(project_repo: Path) -> None:
     report = ProcessReportMRIO(source="exiobase_3102_ixi", requested=[1995])
     iosys = SimpleNamespace(

@@ -73,6 +73,8 @@ def process_mrio(
             token in downstream calls that should reuse the processed
             classification. When a mapping file has a ``weight``
             column, weights must sum to ``1`` for each original label.
+            ``weight::<YYYY>`` columns provide matching year weights and follow
+            the same validation. Every processed year must have its own column.
         keep_intermediate_uncasext: If ``True``, keep intermediate UNCASExt
             matrices needed only for optional diagnostic upstream supply chain
             decomposition in

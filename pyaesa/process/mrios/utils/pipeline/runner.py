@@ -35,9 +35,8 @@ from pyaesa.process.mrios.utils.io.paths import (
     _resolve_version_tag,
 )
 from pyaesa.process.mrios.utils.aggregation.aggregation import (
-    WEIGHT_COLUMN,
-    WEIGHT_SPECIFIC_YEAR_COLUMN,
-    AggregationSpec
+    AggregationSpec,
+    resolve_agg_map_for_year,
 )
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
@@ -83,7 +82,6 @@ from pyaesa.process.mrios.utils.pipeline.process_setup import (
     _resolve_aggregation_inputs,
     _resolve_year_characterization_jobs,
     _update_report_clipping_stats,
-    _years_weight_available,
 )
 from pyaesa.process.mrios.utils.pipeline.runtime_environment import runtime_env_versions
 from pyaesa.process.mrios.utils.pipeline.year_orchestrator import parse_and_calc_year
@@ -457,11 +455,16 @@ def _process_mrio_year(
             year_lcia_methods=year_lcia_methods,
             char_jobs_cache=context.char_jobs_cache,
         )
-    curr_agg_sec_df = _resolve_agg_weights_for_specific_year(
-                            context=context,
-                            agg_df=context.agg_sec_df,
-                            year=year,
-                        )
+    curr_agg_reg_df = (
+        resolve_agg_map_for_year(context.agg_reg_df, year=year)
+        if context.agg_reg_df is not None
+        else None
+    )
+    curr_agg_sec_df = (
+        resolve_agg_map_for_year(context.agg_sec_df, year=year)
+        if context.agg_sec_df is not None
+        else None
+    )
     try:
         with suppress_pymrio_logging():
             (
@@ -480,13 +483,12 @@ def _process_mrio_year(
                 char_jobs=year_char_jobs,
                 agg_reg=context.agg_reg,
                 agg_sec=context.agg_sec,
-                agg_reg_df=context.agg_reg_df,
+                agg_reg_df=curr_agg_reg_df,
                 agg_sec_df=curr_agg_sec_df,
                 agg_reg_path=context.agg_reg_path,
                 agg_sec_path=context.agg_sec_path,
                 reg_vec_cache=context.reg_vec_cache,
                 sec_vec_cache=context.sec_vec_cache,
-                agg_sec_specific_weight_year=context.metadata["aggregation"]["agg_sec_specific_weight_year"],
                 pymrio_calc_all=context.pymrio_calc_all,
                 keep_postclip_ghosh=context.keep_intermediate_uncasext,
             )
@@ -595,23 +597,6 @@ def _process_mrio_year(
     context.report.saved_dirs[year] = saved_dir
     context.progress.complete_year(year)
 
-def _resolve_agg_weights_for_specific_year(
-    *,
-    context: YearProcessContext,
-    agg_df: pd.DataFrame,
-    year: int,
-) -> pd.DataFrame:
-    """Return a DataFrame where the weight column corresponds to the weight column for the specific year of interest (if provided), else the default weight column is kept."""
-    df = agg_df.copy()
-    years_specific_weights = _years_weight_available(df=df)
-    if (year in years_specific_weights):
-        df = df[["original_classification", "aggregated_mrio", f"{WEIGHT_SPECIFIC_YEAR_COLUMN}{year}"]].copy()
-        df.columns = ["original_classification", "aggregated_mrio", WEIGHT_COLUMN]
-    else:
-        df = df[["original_classification", "aggregated_mrio", WEIGHT_COLUMN]].copy()
-        context.progress.log_message(f"[{context.source_key}] {year}: **WARNING** default (constant) weight assumed for disaggregation, as no specific weight available")
-
-    return df
 
 def _year_lcia_methods(
     *,

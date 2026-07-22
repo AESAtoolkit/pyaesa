@@ -117,6 +117,8 @@ def uncertainty_asocc(
               token in downstream calls that should reuse the processed
               classification. When a mapping file has a ``weight``
               column, weights must sum to ``1`` for each original label.
+              ``weight::<YYYY>`` columns provide matching year weights and follow
+              the same validation. Every processed year must have its own column.
             - ``years``: Studied years. Accepts a single year, list, or
               range. If omitted, all available MRIO years for the selected
               source and ``agg_version`` are used.

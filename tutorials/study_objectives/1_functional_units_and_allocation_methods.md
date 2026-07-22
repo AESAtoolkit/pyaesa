@@ -89,6 +89,8 @@ N.B., `group_indices=True` is not allowed for `L2.a.b`, `L2.b.b`, or `L2.c.b`
 because summing total demand CBA output rows can double count. For these FUs,
 define the upstream MRIO aggregation and disaggregation scope before running the study
 with `process_mrio(...)` arguments: `agg_reg`, `agg_sec`, and `agg_version`.
+Weighted region and sector maps use either one `weight` column for all years or
+`weight::<YYYY>` columns for every processed year.
 
 ## Allocation methods
 

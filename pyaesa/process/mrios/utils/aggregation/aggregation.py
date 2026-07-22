@@ -71,62 +71,110 @@ def read_agg_map(csv_path: str | Path) -> pd.DataFrame:
         examples = df.loc[empty_aggregated, "original_classification"].head(10).tolist()
         raise ValueError(f"{path} contains empty aggregated labels for originals: {examples}")
 
-    if WEIGHT_COLUMN in df.columns:
-        df = _populate_df_with_weights(
-                regex=WEIGHT_COLUMN,
-                in_df=df,
-                csv_path=csv_path,
-            )   
-
-    if len(df.filter(regex=f'^{WEIGHT_SPECIFIC_YEAR_COLUMN}').columns) > 0:
-        for curr_weight in df.filter(regex=f'^{WEIGHT_SPECIFIC_YEAR_COLUMN}').columns.to_list():
+    year_weight_columns = _year_specific_weight_columns(df, csv_path=path)
+    weight_columns = ([WEIGHT_COLUMN] if WEIGHT_COLUMN in df.columns else []) + list(
+        year_weight_columns
+    )
+    if weight_columns:
+        duplicate_pairs = cast(
+            pd.Series,
+            df.duplicated(subset=["original_classification", "aggregated_mrio"]),
+        )
+        if bool(duplicate_pairs.any()):
+            examples = (
+                df.loc[duplicate_pairs, ["original_classification", "aggregated_mrio"]]
+                .head(10)
+                .to_dict(orient="records")
+            )
+            raise ValueError(
+                f"{path} repeats the same original and aggregated label pair: {examples}"
+            )
+        for weight_column in weight_columns:
             df = _populate_df_with_weights(
-                    regex=curr_weight,
-                    in_df=df,
-                    csv_path=csv_path,
-                )    
+                weight_column=weight_column,
+                in_df=df,
+                csv_path=path,
+            )
 
     return df
 
+
+def _year_specific_weight_columns(
+    map_df: pd.DataFrame,
+    *,
+    csv_path: str | Path,
+) -> tuple[str, ...]:
+    """Return validated year specific weight columns in year order."""
+    columns = [
+        str(column)
+        for column in map_df.columns
+        if str(column).startswith(WEIGHT_SPECIFIC_YEAR_COLUMN)
+    ]
+    malformed = [
+        column
+        for column in columns
+        if len(column.removeprefix(WEIGHT_SPECIFIC_YEAR_COLUMN)) != 4
+        or not column.removeprefix(WEIGHT_SPECIFIC_YEAR_COLUMN).isdigit()
+    ]
+    if malformed:
+        raise ValueError(
+            f"{Path(csv_path)} contains invalid year specific weight columns: {malformed}. "
+            f"Expected names such as {WEIGHT_SPECIFIC_YEAR_COLUMN}2020."
+        )
+    return tuple(
+        sorted(columns, key=lambda column: int(column.removeprefix(WEIGHT_SPECIFIC_YEAR_COLUMN)))
+    )
+
+
+def year_specific_weight_years(map_df: pd.DataFrame) -> tuple[int, ...]:
+    """Return the validated years with specific weights in an aggregation map."""
+    return tuple(
+        int(column.removeprefix(WEIGHT_SPECIFIC_YEAR_COLUMN))
+        for column in _year_specific_weight_columns(map_df, csv_path="aggregation map")
+    )
+
+
+def resolve_agg_map_for_year(map_df: pd.DataFrame, *, year: int) -> pd.DataFrame:
+    """Return a canonical map using the selected year weight."""
+    year_columns = _year_specific_weight_columns(map_df, csv_path="aggregation map")
+    if not year_columns:
+        return map_df
+    selected = f"{WEIGHT_SPECIFIC_YEAR_COLUMN}{int(year)}"
+    if selected not in year_columns:
+        raise ValueError(
+            f"Aggregation map has no weights for year {year}. Year specific maps must "
+            "provide weights for every processed year."
+        )
+    active = map_df.loc[:, list(REQUIRED_COLUMNS)].copy()
+    active[WEIGHT_COLUMN] = map_df[selected].to_numpy(dtype=float, copy=False)
+    return active
+
+
 def _populate_df_with_weights(
-    regex: str,
+    weight_column: str,
     in_df: pd.DataFrame,
     csv_path: str | Path,
 ) -> pd.DataFrame:
     """Return a DataFrame populated with weight columns, as provided in the input csv file."""
     path = Path(csv_path)
     df = in_df.copy()
-    weight_missing = cast(pd.Series, df[regex].isna())
-    if bool(weight_missing.any()):
-        examples = df.loc[weight_missing, "original_classification"].head(10).tolist()
-        raise ValueError(f"{path} contains empty mapping weights for originals: {examples}")
-    weights = cast(pd.Series, pd.to_numeric(df[regex], errors="coerce"))
+    weights = cast(pd.Series, pd.to_numeric(df[weight_column], errors="coerce"))
     invalid = cast(pd.Series, weights.isna() | ~np.isfinite(weights) | (weights < 0.0))
     if bool(invalid.any()):
         examples = df.loc[invalid, "original_classification"].head(10).tolist()
-        raise ValueError(f"{path} contains invalid mapping weights for originals: {examples}")
-    df[regex] = weights.astype(float)
-    duplicate_pairs = cast(
-        pd.Series,
-        df.duplicated(subset=["original_classification", "aggregated_mrio"]),
-    )
-    if bool(duplicate_pairs.any()):
-        examples = (
-            df.loc[duplicate_pairs, ["original_classification", "aggregated_mrio"]]
-            .head(10)
-            .to_dict(orient="records")
-        )
         raise ValueError(
-            f"{path} contains duplicate weighted MRIO aggregation and "
-            f"disaggregation rows: {examples}"
+            f"{path} contains invalid weights in {weight_column!r} for original labels "
+            f"{examples}. Weights must be nonempty, numeric, finite, and nonnegative."
         )
-    sums = cast(pd.Series, df.groupby("original_classification")[regex].sum())
+    df[weight_column] = weights.astype(float)
+    sums = cast(pd.Series, df.groupby("original_classification")[weight_column].sum())
     bad_sum = cast(pd.Series, ~np.isclose(sums, 1.0, rtol=_WEIGHT_SUM_RTOL, atol=0.0))
     if bool(bad_sum.any()):
         examples = sums.loc[bad_sum].head(10).to_dict()
         raise ValueError(
-            f"{path} mapping weights must sum to 1 per original label. Invalid sums: {examples}"
-        )   
+            f"{path} mapping weights in {weight_column!r} must sum to 1 per original label. "
+            f"Invalid sums: {examples}"
+        )
 
     return df
 
@@ -223,13 +271,16 @@ def build_aggregation_spec(
 def agg_map_fingerprint(map_df: pd.DataFrame) -> str:
     """Return a stable fingerprint for a validated MRIO aggregation and disaggregation map."""
     columns = ["original_classification", "aggregated_mrio"]
+    weight_columns: list[str] = []
     if WEIGHT_COLUMN in map_df.columns:
-        columns.append(WEIGHT_COLUMN)
+        weight_columns.append(WEIGHT_COLUMN)
+    weight_columns.extend(_year_specific_weight_columns(map_df, csv_path="aggregation map"))
+    columns.extend(weight_columns)
     rows = [
         {
             "original_classification": str(record["original_classification"]),
             "aggregated_mrio": str(record["aggregated_mrio"]),
-            **({"weight": float(record[WEIGHT_COLUMN])} if WEIGHT_COLUMN in map_df.columns else {}),
+            **{column: float(record[column]) for column in weight_columns},
         }
         for record in map_df.loc[:, columns].to_dict(orient="records")
     ]
