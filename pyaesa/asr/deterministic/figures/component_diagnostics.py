@@ -9,6 +9,7 @@ import pandas as pd
 
 from pyaesa.asr.figures.common import visible_values
 from pyaesa.asr.figures.transitions import ASR_TRANSITION_SERIES_EXCLUDED_COLUMNS
+from pyaesa.shared.figures.contracts import SELECTOR_COLUMNS
 from pyaesa.shared.figures.deterministic_variant_compressor import (
     MIN_ROLE,
     ROLE_COLUMN,
@@ -121,8 +122,7 @@ def _scope_component_rows(
         "ar6_cc_ssp_scenario",
         "asocc_ssp_scenario",
         EXT_LCA_SSP_SCENARIO_COLUMN,
-        "s_p",
-        "r_c",
+        *SELECTOR_COLUMNS,
     ]
     if include_method_axis:
         columns.append("__method")

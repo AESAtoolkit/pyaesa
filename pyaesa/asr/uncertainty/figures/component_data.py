@@ -132,8 +132,7 @@ def component_scope_rows(
         "ar6_cc_ssp_scenario",
         "asocc_ssp_scenario",
         EXT_LCA_SSP_SCENARIO_COLUMN,
-        "s_p",
-        "r_c",
+        *SELECTOR_COLUMNS,
     ]
     if include_method_axis:
         columns.append("__method")
