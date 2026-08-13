@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -121,7 +123,9 @@ def test_raise_on_duplicate_keys_and_missing_uncertainty_cover_guards() -> None:
         )
 
 
-def test_normalize_regression_models_frame_covers_ols_log_ratio_and_blank_rows() -> None:
+def test_normalize_regression_models_frame_covers_ols_log_ratio_and_blank_rows(
+    tmp_path: Path,
+) -> None:
     frame = pd.DataFrame(
         [
             _base_row(
@@ -171,7 +175,7 @@ def test_normalize_regression_models_frame_covers_ols_log_ratio_and_blank_rows()
     ].iloc[0]
     assert ols_row["x_transform"] == "level"
     assert ols_row["y_transform"] == "level"
-    assert ols_row["x_center_value"] == ""
+    assert pd.isna(ols_row["x_center_value"])
     assert ols_row["deterministic_clip_lower"] == 0.0
     clip_hint = str(ols_row["deterministic_clip_applied_count_hint"])
     assert "3" in clip_hint
@@ -191,12 +195,18 @@ def test_normalize_regression_models_frame_covers_ols_log_ratio_and_blank_rows()
     assert log_ratio_row["y_transform"] == "log_ratio"
     assert log_ratio_row["baseline_object"] == "denominator"
     assert log_ratio_row["category_object"] == "numerator"
-    assert log_ratio_row["deterministic_clip_lower"] == ""
+    assert pd.isna(log_ratio_row["deterministic_clip_lower"])
     assert log_ratio_row["deterministic_clip_applied_count_hint"] == ""
 
     other_row = normalized.loc[normalized["model_type"] == "spline"].iloc[0]
-    assert other_row["deterministic_clip_lower"] == ""
+    assert pd.isna(other_row["deterministic_clip_lower"])
     assert other_row["deterministic_clip_applied_count_hint"] == ""
+
+    parquet_path = tmp_path / "regression_stats.parquet"
+    normalized.to_parquet(parquet_path, index=False)
+    round_tripped = pd.read_parquet(parquet_path)
+    assert str(round_tripped["x_center_value"].dtype) == "Float64"
+    assert str(round_tripped["deterministic_clip_lower"].dtype) == "Float64"
 
 
 def test_normalize_regression_models_frame_requires_log_ratio_center_value() -> None:

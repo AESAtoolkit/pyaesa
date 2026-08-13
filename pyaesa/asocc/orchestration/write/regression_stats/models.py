@@ -123,6 +123,17 @@ def _normalize_regression_models_frame(
     out.loc[~is_ols_level, "deterministic_clip_lower"] = ""
     out.loc[~is_ols_level, "deterministic_clip_applied_count_hint"] = ""
 
+    for column in ("x_center_value", "deterministic_clip_lower"):
+        values = _column_series(out, column)
+        numeric_values = cast(
+            pd.Series,
+            pd.to_numeric(
+                values.mask(_is_blank_series(values), pd.NA),
+                errors="raise",
+            ),
+        )
+        out[column] = numeric_values.astype("Float64")
+
     out = out.loc[:, REGRESSION_MODELS_COLUMNS]
     return cast(
         pd.DataFrame,
