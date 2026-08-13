@@ -243,7 +243,6 @@ def resolve_acc_l1_l2_methods(
         external_method=external_method,
         years=years,
         lcia_method=cc_source,
-        output_source_label=source_label,
         branch_ssp_scenario=ssp_scenario,
         switch_label="aSoCC SSP-dependent switch",
     )

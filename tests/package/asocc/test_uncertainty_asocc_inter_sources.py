@@ -680,6 +680,10 @@ def test_external_method_monte_carlo_discovery_uses_persisted_files(tmp_path: Pa
 
     assert not external_asocc_has_monte_carlo_rows(
         loaded=loaded,
+        external_method=None,
+    )
+    assert not external_asocc_has_monte_carlo_rows(
+        loaded=loaded,
         external_method=external_method,
     )
     for lcia_method in ("gwp100_lcia", ["gwp100_lcia"]):

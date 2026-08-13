@@ -2241,7 +2241,6 @@ def test_external_downstream_asocc_shares(
             years=[2005],
             lcia_method=None,
             base_allocate_args=base_allocate_args,
-            output_source_label="oecd_v2025",
         )
         == []
     )
@@ -2254,7 +2253,6 @@ def test_external_downstream_asocc_shares(
             years=[2005],
             lcia_method=None,
             base_allocate_args=base_allocate_args,
-            output_source_label="oecd_v2025",
         )
 
     deterministic_dir = get_asocc_external_method_level_dir(
@@ -2273,7 +2271,6 @@ def test_external_downstream_asocc_shares(
         years=[2005],
         lcia_method=None,
         base_allocate_args=base_allocate_args,
-        output_source_label="oecd_v2025",
     )
     assert len(asocc_shares) == 1
     assert asocc_shares[0].relative_dir == Path("results_l2_vs_global")

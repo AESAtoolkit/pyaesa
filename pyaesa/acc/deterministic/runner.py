@@ -187,7 +187,6 @@ def run_single_acc(
         external_method=external_method,
         years=requested_years,
         lcia_method=cc_source,
-        output_source_label=source_label,
         branch_ssp_scenario=ssp_scenario,
     )
     share_transition_meta = asocc_share_context.share_transition_meta

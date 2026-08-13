@@ -1322,6 +1322,7 @@ def test_uncertainty_asocc_reference_year_keeps_invariant_external_rows(
     deterministic_asocc(
         **_base_asocc_args(project_name=project_name),
         figures=False,
+        output_format="parquet",
         refresh=True,
     )
     _write_external_deterministic_rows(

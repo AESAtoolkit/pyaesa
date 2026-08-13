@@ -40,7 +40,6 @@ def build_downstream_asocc_share_context(
     external_method: dict[str, Any] | None,
     years: list[int],
     lcia_method: str | None,
-    output_source_label: str,
     branch_ssp_scenario: list[str] | None = None,
     switch_label: str = "Switch year for SSP-dependent series",
 ) -> DownstreamAsoccShareContext:
@@ -55,7 +54,6 @@ def build_downstream_asocc_share_context(
             external_method=external_method,
             years=years,
             lcia_method=lcia_method,
-            output_source_label=output_source_label,
         )
     ]
     share_transition_meta = share_transition_metadata(

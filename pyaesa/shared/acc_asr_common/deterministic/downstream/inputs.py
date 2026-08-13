@@ -133,7 +133,6 @@ def external_asocc_shares(
     external_method: dict[str, Any] | None,
     years: list[int],
     lcia_method: str | None,
-    output_source_label: str,
 ) -> list[AsoccShare]:
     """Return deterministic external aSoCC share tables for one branch scope."""
     if external_method is None:
@@ -145,7 +144,6 @@ def external_asocc_shares(
         years=years,
         lcia_method=lcia_method,
         base_allocate_args=base_allocate_args,
-        output_source_label=output_source_label,
     )
     return [
         AsoccShare(
@@ -168,7 +166,6 @@ def combined_asocc_shares(
     external_method: dict[str, Any] | None,
     years: list[int],
     lcia_method: str | None,
-    output_source_label: str,
 ) -> list[AsoccShare]:
     """Return native plus deterministic external aSoCC shares."""
     return [
@@ -185,7 +182,6 @@ def combined_asocc_shares(
             external_method=external_method,
             years=years,
             lcia_method=lcia_method,
-            output_source_label=output_source_label,
         ),
     ]
 

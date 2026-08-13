@@ -1,6 +1,10 @@
 """Scenario planning for setup orchestration."""
 
+from typing import Any
+
 import pandas as pd
+
+from pyaesa.asocc.orchestration.setup.loading.loading import _load_source_tables
 
 
 def _assert_unique_scenarios(
@@ -69,3 +73,19 @@ def scenario_state_options_from_plan(
     if None in values:
         return [None, *ordered_non_null]
     return [value for value in ordered_non_null]
+
+
+def resolve_external_ssp_scenario_options_by_year(
+    *,
+    base_allocate_args: dict[str, Any],
+    years: list[int],
+) -> dict[int, list[str | None]]:
+    """Return canonical per-year scenario routing for external aSoCC inputs."""
+    wb_df, _ssp_df, _wb_df_raw, _ssp_df_raw = _load_source_tables(
+        source=str(base_allocate_args["source"]),
+    )
+    return build_scenario_plan_by_year(
+        years=years,
+        wb_df=wb_df,
+        ssp_scenarios=list(base_allocate_args["ssp_scenario"]),
+    )

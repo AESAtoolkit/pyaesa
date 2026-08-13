@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Any
 import pandas as pd
 
-from pyaesa.asocc.runtime.scope.context_rebuild import resolve_external_ssp_scenario_options_by_year
+from pyaesa.asocc.orchestration.setup.request.scenarios import (
+    resolve_external_ssp_scenario_options_by_year,
+)
 from pyaesa.asocc.runtime.paths.external import external_asocc_relative_dir
 
 from pyaesa.external_inputs.asocc.schema.contracts import iter_external_method_selections
@@ -147,7 +149,6 @@ def load_external_asocc_shares(
     years: list[int],
     lcia_method: str | None,
     base_allocate_args: dict[str, Any],
-    output_source_label: str,
 ) -> list[ExternalAsoccShare]:
     """Load resolved deterministic external aSoCC share tables for downstream aCC/ASR."""
     if external_method is None:
@@ -156,7 +157,6 @@ def load_external_asocc_shares(
     ssp_scenario_options_by_year = resolve_external_ssp_scenario_options_by_year(
         base_allocate_args=base_allocate_args,
         years=years,
-        output_source_label=str(output_source_label),
     )
     asocc_shares: list[ExternalAsoccShare] = []
     for selection in iter_external_method_selections(

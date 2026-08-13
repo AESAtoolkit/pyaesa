@@ -140,7 +140,6 @@ def test_downstream_input_covers_file_loading_and_path_routing(
             external_method=None,
             years=[2005],
             lcia_method=None,
-            output_source_label="oecd_v2025",
         )
         == []
     )
@@ -220,7 +219,6 @@ def test_downstream_asocc_shares_validate_canonical_method_identity() -> None:
         external_method=None,
         years=[2005, 2006],
         lcia_method="gwp100_lcia",
-        output_source_label="native",
         branch_ssp_scenario=["SSP2"],
     )
     assert context.asocc_shares == []
@@ -310,7 +308,6 @@ def test_downstream_native_and_external_inputs_cover_real_routing(
         external_method={"one_step_methods": ["UT(FD)"]},
         years=[2005],
         lcia_method=None,
-        output_source_label="oecd_v2025",
     )
     assert len(external_asocc_shares) == 1
     assert external_asocc_shares[0].source_label == "external"
@@ -324,7 +321,6 @@ def test_downstream_native_and_external_inputs_cover_real_routing(
         external_method={"one_step_methods": ["UT(FD)"]},
         years=[2005],
         lcia_method=None,
-        output_source_label="oecd_v2025",
     )
     assert len(combined) == len(native_l2) + len(external_asocc_shares)
 

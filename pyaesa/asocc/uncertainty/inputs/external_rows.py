@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 
 from pyaesa.asocc.methods.lcia_inputs import normalize_lcia_methods
-from pyaesa.asocc.runtime.scope.context_rebuild import resolve_external_ssp_scenario_options_by_year
+from pyaesa.asocc.orchestration.setup.request.scenarios import (
+    resolve_external_ssp_scenario_options_by_year,
+)
 from pyaesa.asocc.runtime.paths.external import get_asocc_external_method_level_dir
 from pyaesa.asocc.uncertainty.inputs.deterministic_rows import (
     ASOCC_VALUE_COLUMN,
@@ -295,7 +297,6 @@ def _external_rows_context(
         ssp_scenario_options_by_year=resolve_external_ssp_scenario_options_by_year(
             base_allocate_args=loaded.base_asocc_args,
             years=years,
-            output_source_label=loaded.path_scope.source_label,
         ),
     )
 

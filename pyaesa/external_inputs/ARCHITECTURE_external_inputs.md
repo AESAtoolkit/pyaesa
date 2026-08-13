@@ -68,7 +68,7 @@ It does not:
     `asocc/monte_carlo/files.py`
 - `asocc/deterministic/downstream_shares.py`
   - shared downstream aSoCC share preparation for external aSoCC from the
-    canonical published source label passed by downstream owners
+    canonical observed and SSP year plan owned by aSoCC scenario planning
 - `asocc/schema/row_schema.py`
   - external aSoCC canonical public row shaping
 - `asocc/templates/templates.py`
