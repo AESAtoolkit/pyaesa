@@ -340,14 +340,16 @@ def test_validate_metadata_aggregation_covers_matching_and_mismatch_cases(tmp_pa
     sec_path = tmp_path / "agg_sec_demo.csv"
     pd.DataFrame(
         {
-            "original_classification": ["R1", "R2"],
-            "aggregated_mrio": ["EU", "ROW"],
+            "original_classification": ["R1", "R1", "R2"],
+            "aggregated_mrio": ["EU", "ROW", "ROW"],
+            "weight::2019": [0.75, 0.25, 1.0],
         }
     ).to_csv(reg_path, index=False)
     pd.DataFrame(
         {
-            "original_classification": ["S1", "S2"],
-            "aggregated_mrio": ["Energy", "Other"],
+            "original_classification": ["S1", "S1", "S2"],
+            "aggregated_mrio": ["Energy", "Other", "Other"],
+            "weight::2019": [0.6, 0.4, 1.0],
         }
     ).to_csv(sec_path, index=False)
     reg_df = read_agg_map(reg_path)

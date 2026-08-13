@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from pyaesa.process.mrios.utils.aggregation.aggregation import (
     build_aggregation_spec,
+    resolve_agg_map_for_year,
 )
 
 
@@ -52,7 +53,10 @@ def validate_metadata_aggregation(
     if agg_reg and labels.get("regions_original"):
         reg_spec = build_aggregation_spec(
             labels["regions_original"],
-            agg_reg_df,
+            resolve_agg_map_for_year(
+                agg_reg_df,
+                year=int(next(iter(metadata["years"]))),
+            ),
             label_kind="region",
             csv_path=agg_reg_path or "agg_reg",
         )
@@ -67,7 +71,10 @@ def validate_metadata_aggregation(
     if agg_sec and labels.get("sectors_original"):
         sec_spec = build_aggregation_spec(
             labels["sectors_original"],
-            agg_sec_df,
+            resolve_agg_map_for_year(
+                agg_sec_df,
+                year=int(next(iter(metadata["years"]))),
+            ),
             label_kind="sector",
             csv_path=agg_sec_path or "agg_sec",
         )
