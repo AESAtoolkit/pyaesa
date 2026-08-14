@@ -144,6 +144,7 @@ from pyaesa.asr.uncertainty.figures.product_renderers import (
 from pyaesa.asr.uncertainty.figures.render import (
     _cumulative_rows,
     _figure_scopes,
+    _frequency_of_transgression,
     _frequency_value_column,
     _multi_year_jobs,
     _plan_per_method_jobs,
@@ -2810,6 +2811,7 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
     assert VALUE_ARRAY_COLUMN in polar_rows.columns
     assert polar_rows["median"].tolist() == summarized["median"].tolist()
     assert polar_rows[FT_FRACTION_COLUMN].tolist() == expected_frequency
+    assert np.isnan(_frequency_of_transgression(np.array([np.nan])))
     collapsed["__asr_max_threshold"] = np.nan
     collapsed["fu_code"] = "L2.a.a"
     attached = attach_dynamic_pair_counts(

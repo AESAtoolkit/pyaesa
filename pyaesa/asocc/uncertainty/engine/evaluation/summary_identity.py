@@ -56,6 +56,8 @@ def summary_identity_groups(
             "l1_l2_method",
             "l1_method",
             "l2_method",
+            "l2_reuse_year",
+            "reference_year",
             ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
         },
         scope=ASOCC_SUMMARY_SCOPE_INTER_METHOD,

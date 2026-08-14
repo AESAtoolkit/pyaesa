@@ -70,7 +70,7 @@ def asr_summary_identity_groups(
         active_sources=active_sources,
         dynamic_category_uncertainty_active=dynamic_category_uncertainty_active,
     )
-    inter_excluded.add("l2_reuse_year")
+    inter_excluded.update({"l2_reuse_year", "reference_year"})
     inter_identity, inter_groups = scenario_identity_groups_from_excluded_columns(
         identity=identity,
         excluded_columns=inter_excluded,

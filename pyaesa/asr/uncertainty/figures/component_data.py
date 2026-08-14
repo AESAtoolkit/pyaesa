@@ -583,6 +583,7 @@ def _component_cumulative_drop_columns(
         dropped.add("cc_category")
     if not include_method_axis:
         dropped.update({"__method", "l1_l2_method", "l1_method", "l2_method"})
+        dropped.update({"l2_reuse_year", "reference_year"})
     return dropped
 
 

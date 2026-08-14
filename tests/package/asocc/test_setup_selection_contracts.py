@@ -80,7 +80,7 @@ def test_resolve_filters_rejects_unexpected_public_selector_by_fu(
     selector: str,
     expected: str,
 ) -> None:
-    values = {"r_p": None, "s_p": None, "r_c": None, "r_f": None}
+    values: dict[str, list[str] | None] = dict.fromkeys(("r_p", "s_p", "r_c", "r_f"))
     values[selector] = ["D"] if selector == "s_p" else ["FR"]
     message = (
         f"Selector '{selector}' is not valid for fu_code='{fu_code}'. "

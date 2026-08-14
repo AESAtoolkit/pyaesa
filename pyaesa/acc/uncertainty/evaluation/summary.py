@@ -49,9 +49,10 @@ def acc_summary_identity_groups(
         excluded_columns=method_excluded,
         scope=ACC_SUMMARY_SCOPE_PER_METHOD,
     )
+    inter_excluded = {*excluded_columns, "l2_reuse_year", "reference_year"}
     inter_identity, inter_groups = _scenario_scoped_summary_groups(
         identity=identity,
-        excluded_columns=excluded_columns,
+        excluded_columns=inter_excluded,
         scope=ACC_SUMMARY_SCOPE_INTER_METHOD,
     )
     return (
