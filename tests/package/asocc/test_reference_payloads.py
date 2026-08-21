@@ -272,6 +272,7 @@ def test_load_ar_l2_reference_lcia_payload_uses_normal_filtered_axes(
         lcia_key="gwp100_lcia",
     )
 
-    assert list(lcia_ref["e_cba_fd_reg"].columns) == ["FR"]
+    assert list(lcia_ref["e_cba_fd_reg"].columns) == ["FR", "US"]
+    assert list(lcia_ref["e_pba_reg"].columns) == ["FR", "US"]
     assert list(lcia_ref["e_cba_fd_rp_sp"].columns.get_level_values("r_p")) == ["FR"]
     assert list(lcia_ref["e_cba_fd_rp_sp"].columns.get_level_values("s_p")) == ["D"]

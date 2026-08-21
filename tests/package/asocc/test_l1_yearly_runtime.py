@@ -281,7 +281,7 @@ def test_l1_slicing_and_store_cover_axes_filters_and_cached_specs() -> None:
 
     assert list(preserved.index.get_level_values("r_f")) == ["EU", "NAM"]
     assert list(preserved.index.get_level_values("s_p")) == ["D", "D"]
-    assert simple.index.tolist() == ["EU"]
+    assert simple.index.tolist() == ["EU", "NAM"]
     assert unmatched_simple.equals(unmatched_simple_index_frame)
     assert _slice_l1_frame_for_compute(run=run, frame=pd.DataFrame()).empty
 

@@ -7,6 +7,7 @@ from typing import cast
 import pandas as pd
 
 from ..runtime.scope.filtering import (
+    _COMPLETE_REGION_DOMAIN_METRICS,
     normalize_filter_values,
     slice_frame_any_axis,
 )
@@ -37,6 +38,11 @@ def _slice_payload_dict(
     """Slice all LCIA reference payload frames with one axis contract."""
     out: dict[str, pd.DataFrame] = {}
     for key, value in payload.items():
+        # Keep e_cba_fd_reg and e_pba_reg with every region. Direct one step AR methods
+        # sum these frames for the global denominator.
+        if key in _COMPLETE_REGION_DOMAIN_METRICS:
+            out[key] = value
+            continue
         sliced = value
         for axis_name, allowed in allowed_by_axis.items():
             sliced = slice_frame_any_axis(sliced, axis_name=axis_name, allowed=allowed)
