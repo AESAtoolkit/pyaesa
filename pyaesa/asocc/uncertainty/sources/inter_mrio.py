@@ -100,6 +100,7 @@ def build_inter_mrio_plan(
         refresh=False,
         reference_year_uncertainty_active=reference_year_uncertainty_active,
         phase=phase,
+        use_persisted_projection=True,
     )
     alternate_loaded = load_final_deterministic_asocc_rows(prerequisite=alternate_prerequisite)
     alternate_loaded = replace(

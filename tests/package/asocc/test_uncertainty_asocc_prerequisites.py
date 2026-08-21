@@ -623,6 +623,14 @@ def test_prerequisite_keeps_explicit_disaggregated_projection_request(
     assert prerequisite.base_asocc_args["projection_mode"] == "historical_reuse"
     assert prerequisite.persisted_scope_matches == ()
 
+    alternate_prerequisite = prepare_asocc_deterministic_prerequisite(
+        base_asocc_args=base_args,
+        refresh=False,
+        use_persisted_projection=True,
+    )
+    assert alternate_prerequisite.base_asocc_args["projection_mode"] == "regression"
+    assert len(alternate_prerequisite.persisted_scope_matches) == 1
+
 
 def test_prerequisite_returns_no_disaggregated_match_for_uncovered_years(
     allocation_dummy_repo,
