@@ -100,6 +100,7 @@ def ensure_acc_branch_prerequisites(
     phase.announce(PHASE_B1_ASOCC, "deterministic_asocc")
     asocc_report = deterministic_asocc(
         **_base_asocc_kwargs(base_allocate_args=base_allocate_args),
+        output_format=output_format,
         figures=figures,
         figure_format=figure_format or {"format": "png", "dpi": 500},
         figure_options=figure_options or {"per_method": True, "multi_method": True},

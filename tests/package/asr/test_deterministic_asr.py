@@ -56,7 +56,12 @@ _DYNAMIC_TEST_YEAR_COLUMNS = ("2020", "2021")
 
 
 def _run_static_asr(
-    *, project_name: str, refresh: bool, figures: bool = False, years: list[int] | None = None
+    *,
+    project_name: str,
+    refresh: bool,
+    figures: bool = False,
+    years: list[int] | None = None,
+    output_format: str = "csv",
 ):
     return deterministic_asr(
         project_name=project_name,
@@ -77,6 +82,7 @@ def _run_static_asr(
         figures=figures,
         figure_format={"format": "svg", "dpi": 1},
         subfigures=False,
+        output_format=output_format,
         refresh=refresh,
     )
 
@@ -389,6 +395,39 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
     assert expanded_report.branches[0].reuse_status == "computed"
     subset_report = _run_static_asr(project_name="asr_static_io_lca", refresh=False)
     assert subset_report.branches[0].reuse_status == "reused_exact"
+
+
+def test_deterministic_asr_parquet_format_applies_to_all_phases(
+    allocation_dummy_repo,
+) -> None:
+    prepare_static_asr_io_lca_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        lcia_method="gwp100_lcia",
+        impact_parent="GWP_100",
+        impact_unit="kg CO2-eq",
+    )
+
+    report = _run_static_asr(
+        project_name="asr_static_parquet",
+        output_format="parquet",
+        refresh=True,
+    )
+
+    phase_formats = {}
+    for entry in report.branches[0].phase_entries:
+        assert entry.output_root is not None
+        phase_formats[entry.function] = {
+            path.suffix
+            for path in entry.output_root.rglob("*")
+            if path.is_file() and path.suffix in {".csv", ".parquet", ".pickle"}
+        }
+    assert phase_formats == {
+        "deterministic_asocc": {".parquet"},
+        "deterministic_acc": {".parquet"},
+        "deterministic_io_lca": {".parquet"},
+        "deterministic_asr": {".parquet"},
+    }
 
 
 def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
