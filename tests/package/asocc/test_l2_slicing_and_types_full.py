@@ -132,8 +132,8 @@ def test_slice_l2_inputs_and_lcia_payload_for_compute() -> None:
         filters={"r_p": ["FR"], "s_p": ["A"], "r_c": ["FR"], "r_f": ["FR"], "r_u": ["U1"]},
     )
     sliced = slicing_mod._slice_l2_inputs_for_compute(context=context, inputs=inputs)
-    assert list(sliced.fd_rf.index) == ["FR"]
-    assert list(sliced.gva_rp.index) == ["FR"]
+    assert list(sliced.fd_rf.index) == ["FR", "US"]
+    assert list(sliced.gva_rp.index) == ["FR", "US"]
     assert list(sliced.x_to_rc.columns) == ["FR"]
     assert list(sliced.omega_reg.index) == ["U1"]
 
@@ -142,18 +142,28 @@ def test_slice_l2_inputs_and_lcia_payload_for_compute() -> None:
         filters={"r_p": ["FR"], "s_p": ["A"], "r_c": ["FR"], "r_f": ["FR"], "r_u": ["U1"]},
     )
     kept = slicing_mod._slice_l2_inputs_for_compute(context=context_keep_full, inputs=inputs)
-    assert set(kept.fd_rf.index.tolist()) == {"FR", "US"}
-    assert set(kept.gva_rp.index.tolist()) == {"FR", "US"}
     assert set(kept.omega_reg.index.tolist()) == {"U1", "U2"}
 
     payload = {
         "df": pd.DataFrame({"FR": [1.0], "US": [2.0]}, index=pd.Index(["x"], name="r_p")),
         "series": pd.Series([1.0, 2.0], index=pd.Index(["FR", "US"], name="r_p")),
+        "e_cba_fd_reg": pd.DataFrame(
+            [[1.0, 2.0]],
+            index=pd.Index(["AAL"], name="impact"),
+            columns=pd.Index(["FR", "US"], name="r_f"),
+        ),
+        "e_pba_reg": pd.DataFrame(
+            [[3.0, 4.0]],
+            index=pd.Index(["AAL"], name="impact"),
+            columns=pd.Index(["FR", "US"], name="r_p"),
+        ),
         "other": "keep",
     }
     sliced_payload = slicing_mod._slice_lcia_payload_for_compute(context=context, payload=payload)
     assert list(sliced_payload["df"].columns) == ["FR", "US"]
     assert list(sliced_payload["series"].index) == ["FR"]
+    assert list(sliced_payload["e_cba_fd_reg"].columns) == ["FR", "US"]
+    assert list(sliced_payload["e_pba_reg"].columns) == ["FR", "US"]
     assert sliced_payload["other"] == "keep"
 
     context_keep_full_axes = SimpleNamespace(

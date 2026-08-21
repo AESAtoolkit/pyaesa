@@ -13,6 +13,9 @@ from pyaesa.asocc.runtime.scope.filtering import (
 from .l2_types import _L2ComputeInputs, _L2RunContext
 
 
+_COMPLETE_REGION_DOMAIN_METRICS = frozenset({"fd_rf", "gva_rp", "e_cba_fd_reg", "e_pba_reg"})
+
+
 def _mask_for_allowed(labels: pd.Index, allowed: set[str]):
     """Build membership mask for normalized textual labels."""
     return labels.isin(allowed)
@@ -108,10 +111,9 @@ def _slice_l2_inputs_for_compute(
     if keep_full_weight_axes:
         rf_values = None
         ru_values = None
-    gva_rp_values = None if keep_full_weight_axes else rp_values
 
-    fd_rf = _slice_series_index(inputs.fd_rf, level="r_f", allowed=rf_values)
-    gva_rp = _slice_series_index(inputs.gva_rp, level="r_p", allowed=gva_rp_values)
+    fd_rf = inputs.fd_rf
+    gva_rp = inputs.gva_rp
 
     fd_rp_sp_rf = _slice_frame_index(inputs.fd_rp_sp_rf, level="r_p", allowed=rp_values)
     fd_rp_sp_rf = _slice_frame_index(fd_rp_sp_rf, level="s_p", allowed=sp_values)
@@ -173,6 +175,13 @@ def _slice_lcia_payload_for_compute(
 
     out: dict = {}
     for key, value in payload.items():
+        # Direct one step routes sum e_cba_fd_reg and e_pba_reg for the global
+        # denominator. Two step routes use their region values for L2 in L1 weights.
+        # Keep these frames unchanged. Payloads with any other metric name continue
+        # below, where context.filters selects their indexed regions and sectors.
+        if key in _COMPLETE_REGION_DOMAIN_METRICS:
+            out[key] = value
+            continue
         sliced = value
         if isinstance(value, pd.DataFrame):
             sliced_frame = value

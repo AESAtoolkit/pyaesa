@@ -163,6 +163,30 @@ def test_deterministic_asocc_end_to_end_reuse_and_refresh(allocation_dummy_repo)
     assert refreshed_report is not None
 
 
+def test_deterministic_asocc_filtered_direct_share_uses_global_denominator(
+    allocation_dummy_repo,
+) -> None:
+    project_name = "asocc_global_denominator"
+    deterministic_asocc(
+        project_name=project_name,
+        source="exiobase_396_ixi",
+        years=[2005],
+        fu_code="L2.c.a",
+        method_plan="one_step",
+        one_step_methods=["UT(FD)"],
+        s_p="D",
+        r_f="FR",
+        figures=False,
+        refresh=True,
+    )
+
+    result_path = next(
+        _asocc_root(allocation_dummy_repo.repo_root, project_name=project_name).rglob("UT(FD).csv")
+    )
+    result = pd.read_csv(result_path)
+    assert result.loc[0, "2005"] == pytest.approx(9 / (5 + 7))
+
+
 @pytest.mark.parametrize("refresh", [False, True])
 def test_deterministic_asocc_rejects_shared_scope_identity_drift(
     allocation_dummy_repo,
