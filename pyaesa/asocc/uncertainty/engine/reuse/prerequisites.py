@@ -60,6 +60,7 @@ def prepare_asocc_deterministic_prerequisite(
     figure_options: dict[str, bool] | None = None,
     figure_external_method: dict[str, Any] | None = None,
     phase: PhasePrinter | NullPhasePrinter | None = None,
+    use_persisted_projection: bool = False,
 ) -> AsoccDeterministicPrerequisite:
     """Materialize and resolve the deterministic prerequisite for aSoCC uncertainty."""
     normalized = normalize_base_allocate_args(
@@ -111,6 +112,12 @@ def prepare_asocc_deterministic_prerequisite(
             source_label=str(normalized["source"])
         )
         catalog = load_asocc_persisted_run_catalog(payload=_load_run_metadata(metadata_path))
+        if use_persisted_projection:
+            persisted_signature = catalog.scopes[0].compute_signature.as_dict()
+            normalized["projection_mode"] = persisted_signature.get("projection_mode")
+            normalized["reg_window"] = persisted_signature.get("reg_window")
+            normalized["l2_reuse_years"] = persisted_signature.get("l2_reuse_years")
+            asocc_scope = build_asocc_scope(base_allocate_args=normalized)
         normalized, asocc_scope, scope_matches = _disaggregated_scope_matches(
             base_asocc_args=normalized,
             asocc_scope=asocc_scope,
