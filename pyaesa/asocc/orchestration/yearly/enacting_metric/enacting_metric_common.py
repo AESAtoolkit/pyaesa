@@ -2,10 +2,12 @@
 
 import pandas as pd
 
+from pyaesa.asocc.runtime.scope.filtering import normalize_filter_values
+
 from ....data.region_agg_mapping import load_region_agg_mapping
 from ....io.metadata import EnactingMetricKey, RunContext, RunState
 from ....methods.registry.registry import REGISTRY
-from pyaesa.asocc.runtime.scope.filtering import normalize_filter_values
+from ..l2.l2_slicing import _COMPLETE_REGION_DOMAIN_METRICS
 
 
 def _record_enacting_metric_input(
@@ -18,14 +20,16 @@ def _record_enacting_metric_input(
     level: str,
 ) -> None:
     """Record one enacting metric with explicit level contract."""
+    # Store fd_rf and gva_rp with every region. One step methods sum these series for
+    # the global denominator, while two step methods use each regional value to compute
+    # L2 in L1 weights.
+    if key.metric not in _COMPLETE_REGION_DOMAIN_METRICS:
+        series = _slice_enacting_metric_series_for_run(context=context, series=series)
     _store_enacting_metric_input(
         state=state,
         key=key,
         year=year,
-        series=_slice_enacting_metric_series_for_run(
-            context=context,
-            series=series,
-        ),
+        series=series,
         level=level,
     )
 

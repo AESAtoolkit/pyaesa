@@ -681,6 +681,9 @@ def test_enacting_metric_policy_and_base_cover_registry_and_projection_routes() 
         state.enacting_metric_levels[EnactingMetricKey(metric="fd_rp_sp", ssp_scenario=None)]
         == "level_2"
     )
+    assert state.enacting_metric_inputs[EnactingMetricKey(metric="fd_rf", ssp_scenario=None)][
+        2005
+    ].index.tolist() == ["FR", "US"]
     assert state.enacting_metric_inputs[EnactingMetricKey(metric="fd_rp_sp_rf", ssp_scenario=None)][
         2005
     ].index.names == ["r_p", "s_p", "r_f"]
@@ -770,6 +773,11 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
         ]
         == "level_2"
     )
+    for metric, axis in (("e_pba_reg", "r_p"), ("e_cba_fd_reg", "r_f")):
+        metric_key = EnactingMetricKey(metric=metric, lcia_method="gwp100_lcia")
+        assert state.enacting_metric_inputs[metric_key][2030].index.get_level_values(
+            axis
+        ).tolist() == ["FR", "DE"]
     assert EnactingMetricKey(metric="e_pba_reg", lcia_method="skip_method") not in (
         state.enacting_metric_inputs
     )

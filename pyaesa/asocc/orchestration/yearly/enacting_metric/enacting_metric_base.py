@@ -1,12 +1,12 @@
 """Base and LCIA enacting metric recording."""
 
-from ...method_scope import _unique_l2_methods_in_scope
 from ....data.load_mrio import _metric_to_series
 from ....io.metadata import EnactingMetricKey, RunContext, RunState
-from ....methods.run_ut import _compute_ut_l2_preweight, _ut_preweight_cache_key
 from ....methods.lcia_key_selection import required_lcia_metric_keys_for_context
 from ....methods.registry.registry import REGISTRY
-from ..l2.l2_slicing import _slice_l2_inputs_for_compute
+from ....methods.run_ut import _compute_ut_l2_preweight, _ut_preweight_cache_key
+from ...method_scope import _unique_l2_methods_in_scope
+from ..l2.l2_slicing import _COMPLETE_REGION_DOMAIN_METRICS, _slice_l2_inputs_for_compute
 from ..shared.year_inputs import build_l2_compute_inputs
 from .enacting_metric_common import (
     _record_enacting_metric_input,
@@ -129,10 +129,15 @@ def record_lcia_enacting_metrics(
         for key in required_keys:
             if key not in lcia_data:
                 continue
-            sliced_payload = _slice_enacting_metric_payload_for_run(
-                context=context,
-                payload=lcia_data[key],
-            )
+            sliced_payload = lcia_data[key]
+            # Store e_cba_fd_reg and e_pba_reg with every region. One step methods sum
+            # these series for the global denominator, while two step methods use each
+            # regional value to compute L2 in L1 weights.
+            if key not in _COMPLETE_REGION_DOMAIN_METRICS:
+                sliced_payload = _slice_enacting_metric_payload_for_run(
+                    context=context,
+                    payload=sliced_payload,
+                )
             series = _metric_to_series(key, sliced_payload)
             level = "level_2" if key in l2_keys else "level_1"
             _store_enacting_metric_input(
