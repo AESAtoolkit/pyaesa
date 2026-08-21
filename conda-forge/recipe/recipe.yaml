@@ -1,7 +1,7 @@
 schema_version: 1
 
 context:
-  version: "1.2.7"
+  version: "1.2.8"
   python_min: "3.11"
 
 package:
@@ -10,7 +10,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/p/pyaesa/pyaesa-${{ version }}.tar.gz
-  sha256: eb6a9ab3ea4abd75521a71ed4a955d002cf7c7f2a8849020c946892a99af27ca
+  sha256: 58b20b072337cf25c211b392c5360037f0213e415f8c95866d47beb541d88bbb
 
 build:
   number: 0

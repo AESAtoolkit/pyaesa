@@ -11,7 +11,7 @@ package release.
 | Field | Value |
 | --- | --- |
 | Package | `pyaesa` |
-| Release | `1.2.7` |
+| Release | `1.2.8` |
 | Source archive | PyPI source distribution |
 | Recipe path | `recipe/recipe.yaml` |
 | Staged recipes path | `recipes/pyaesa/recipe.yaml` |
@@ -26,12 +26,12 @@ feedstock created after the staged recipes pull request is accepted.
 The source hash can be reproduced with:
 
 ```bash
-python -m pip download --no-deps --no-binary :all: pyaesa==1.2.7
+python -m pip download --no-deps --no-binary :all: pyaesa==1.2.8
 python - <<'PY'
 from pathlib import Path
 import hashlib
 
-path = next(Path(".").glob("pyaesa-1.2.7.tar.gz"))
+path = next(Path(".").glob("pyaesa-1.2.8.tar.gz"))
 print(hashlib.sha256(path.read_bytes()).hexdigest())
 PY
 ```
