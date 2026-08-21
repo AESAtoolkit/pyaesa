@@ -6,14 +6,12 @@ from typing import cast
 
 from ....methods.registry.registry import REGISTRY
 from pyaesa.asocc.runtime.scope.filtering import (
+    _COMPLETE_REGION_DOMAIN_METRICS,
     normalize_filter_values,
     slice_frame_any_axis,
     slice_series_any_axis,
 )
 from .l2_types import _L2ComputeInputs, _L2RunContext
-
-
-_COMPLETE_REGION_DOMAIN_METRICS = frozenset({"fd_rf", "gva_rp", "e_cba_fd_reg", "e_pba_reg"})
 
 
 def _mask_for_allowed(labels: pd.Index, allowed: set[str]):

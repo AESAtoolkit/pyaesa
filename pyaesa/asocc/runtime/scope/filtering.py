@@ -3,6 +3,9 @@
 import pandas as pd
 
 
+_COMPLETE_REGION_DOMAIN_METRICS = frozenset({"fd_rf", "gva_rp", "e_cba_fd_reg", "e_pba_reg"})
+
+
 def normalize_filter_values(values: list[str] | None) -> set[str] | None:
     """Normalize optional filter values to a string set."""
     if not values:

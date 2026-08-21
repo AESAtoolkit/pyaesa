@@ -5,8 +5,9 @@ from ....io.metadata import EnactingMetricKey, RunContext, RunState
 from ....methods.lcia_key_selection import required_lcia_metric_keys_for_context
 from ....methods.registry.registry import REGISTRY
 from ....methods.run_ut import _compute_ut_l2_preweight, _ut_preweight_cache_key
+from ....runtime.scope.filtering import _COMPLETE_REGION_DOMAIN_METRICS
 from ...method_scope import _unique_l2_methods_in_scope
-from ..l2.l2_slicing import _COMPLETE_REGION_DOMAIN_METRICS, _slice_l2_inputs_for_compute
+from ..l2.l2_slicing import _slice_l2_inputs_for_compute
 from ..shared.year_inputs import build_l2_compute_inputs
 from .enacting_metric_common import (
     _record_enacting_metric_input,

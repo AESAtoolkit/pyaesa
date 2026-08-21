@@ -40,7 +40,9 @@ def _active_l1_slice_filters(*, run: _L1RunContext) -> list[tuple[str, set[str]]
         allowed = normalize_filter_values(run.context.filters.get(axis))
         if not allowed:
             continue
-        if preserve_full and axis in {"r_f", "r_u"}:
+        # Total demand routes apply region selectors to the final L2 result after L1
+        # weighting, so every regional L1 weight remains available at this stage.
+        if preserve_full and axis in {"r_p", "r_f", "r_u"}:
             continue
         filters.append((axis, allowed))
     return filters

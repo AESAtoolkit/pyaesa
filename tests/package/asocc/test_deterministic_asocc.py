@@ -187,6 +187,76 @@ def test_deterministic_asocc_filtered_direct_share_uses_global_denominator(
     assert result.loc[0, "2005"] == pytest.approx(9 / (5 + 7))
 
 
+def test_deterministic_asocc_filtered_direct_ar_share_uses_global_denominator(
+    allocation_dummy_repo,
+) -> None:
+    project_name = "asocc_ar_global_denominator"
+    deterministic_asocc(
+        project_name=project_name,
+        source="exiobase_396_ixi",
+        years=[2005],
+        fu_code="L2.c.a",
+        method_plan="one_step",
+        one_step_methods=["AR(E^{CBA_FD})"],
+        lcia_method="gwp100_lcia",
+        reference_years=[2005],
+        s_p="D",
+        r_f="FR",
+        figures=False,
+        refresh=True,
+    )
+
+    result_path = next(
+        _asocc_root(allocation_dummy_repo.repo_root, project_name=project_name).rglob(
+            "AR(E^{CBA_FD})__gwp100_lcia.csv"
+        )
+    )
+    result = pd.read_csv(result_path)
+    assert result.loc[0, "2005"] == pytest.approx(2 / (12.005 + 22.005))
+
+
+def test_deterministic_asocc_filtered_two_step_pba_weights_keep_full_domain(
+    allocation_dummy_repo,
+) -> None:
+    project_name = "asocc_two_step_pba_weight_domain"
+    deterministic_asocc(
+        project_name=project_name,
+        source="exiobase_396_ixi",
+        years=[2005],
+        fu_code="L2.b.b",
+        method_plan="pairs",
+        l1_l2_pairs=["AR(E^{PBA})::UT(GVAa)"],
+        lcia_method="gwp100_lcia",
+        reference_years=[2005],
+        r_p="FR",
+        s_p="D",
+        r_c="FR",
+        figures=False,
+        refresh=True,
+    )
+
+    output_root = _asocc_root(allocation_dummy_repo.repo_root, project_name=project_name)
+    l1_result = pd.read_csv(
+        next(output_root.rglob("l1_AR(E^{PBA})__gwp100_lcia.csv")),
+        nrows=1,
+    )
+    assert l1_result.columns.tolist() == [
+        "l1_l2_method",
+        "l1_method",
+        "asocc_ssp_scenario",
+        "asocc_time_route",
+        "impact",
+        "r_p",
+        "reference_year",
+        "2005",
+    ]
+    result_path = next(output_root.rglob("AR(E^{PBA})_UT(GVAa)__gwp100_lcia.csv"))
+    result = pd.read_csv(result_path)
+    global_pba = 8.005 + 10.005
+    expected = (11 / 60) * (8.005 / global_pba) + (9 / 80) * (10.005 / global_pba)
+    assert result.loc[0, "2005"] == pytest.approx(expected)
+
+
 @pytest.mark.parametrize("refresh", [False, True])
 def test_deterministic_asocc_rejects_shared_scope_identity_drift(
     allocation_dummy_repo,

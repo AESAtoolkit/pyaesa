@@ -2,12 +2,14 @@
 
 import pandas as pd
 
-from pyaesa.asocc.runtime.scope.filtering import normalize_filter_values
+from pyaesa.asocc.runtime.scope.filtering import (
+    _COMPLETE_REGION_DOMAIN_METRICS,
+    normalize_filter_values,
+)
 
 from ....data.region_agg_mapping import load_region_agg_mapping
 from ....io.metadata import EnactingMetricKey, RunContext, RunState
 from ....methods.registry.registry import REGISTRY
-from ..l2.l2_slicing import _COMPLETE_REGION_DOMAIN_METRICS
 
 
 def _record_enacting_metric_input(
