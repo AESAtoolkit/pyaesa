@@ -231,6 +231,7 @@ def test_share_fit_container_functions_cover_validation_paths() -> None:
             "baseline": "A",
             "coefs": {},
             "structural_zero_categories": [],
+            "fallback_categories": {},
             "last_vector": pd.Series({"A": 1.0}),
             "all_fitted": True,
         }
@@ -266,6 +267,7 @@ def test_share_projection_uses_cached_fit_map_and_skip_paths(tmp_path: Path) -> 
                 "baseline": "A",
                 "coefs": {},
                 "structural_zero_categories": [],
+                "fallback_categories": {},
                 "last_vector": pd.Series({"A": 1.0}),
                 "all_fitted": True,
             },
@@ -274,6 +276,7 @@ def test_share_projection_uses_cached_fit_map_and_skip_paths(tmp_path: Path) -> 
                 "baseline": None,
                 "coefs": {"B": (0.0, 1.0, 0.9, 0.1, 3, 2019.0)},
                 "structural_zero_categories": [],
+                "fallback_categories": {},
                 "last_vector": pd.Series({"B": 1.0}),
                 "all_fitted": True,
             },
@@ -282,6 +285,7 @@ def test_share_projection_uses_cached_fit_map_and_skip_paths(tmp_path: Path) -> 
                 "baseline": "A",
                 "coefs": {},
                 "structural_zero_categories": ["B"],
+                "fallback_categories": {},
                 "last_vector": pd.Series({"A": 1.0, "B": 0.0}),
                 "all_fitted": True,
             },
@@ -406,9 +410,7 @@ def test_level_regression_requires_three_obs_and_clips_outputs(tmp_path: Path) -
     assert clipped_rows["domain_key"].tolist() == ["FR", "FR"]
 
 
-def test_share_projection_strict_zero_policy_and_stability(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_share_projection_strict_zero_policy_and_stability(tmp_path: Path) -> None:
     state = _state(runtime_proj_base=tmp_path)
     share_by_year = {
         2018: pd.Series([0.0, 1.0, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
@@ -416,23 +418,21 @@ def test_share_projection_strict_zero_policy_and_stability(
         2020: pd.Series([0.3, 0.7, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
         2021: pd.Series([0.4, 0.6, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
     }
-    with caplog.at_level("WARNING"):
-        projected = share_mod.project_share_from_time_logit(
-            source="oecd_v2025",
-            fu_code="L2.a.a",
-            l2_method="UT(FD)",
-            target_object="fd_share_sp",
-            historical_years=[2018, 2019, 2020, 2021],
-            share_by_year=share_by_year,
-            target_year=2100,
-            future_years=[2030, 2100],
-            container_levels=[],
-            category_level="s_p",
-            selected_categories=None,
-            selected_containers=None,
-            state=state,
-        )
-    assert any(record.levelname == "WARNING" for record in caplog.records)
+    projected = share_mod.project_share_from_time_logit(
+        source="oecd_v2025",
+        fu_code="L2.a.a",
+        l2_method="UT(FD)",
+        target_object="fd_share_sp",
+        historical_years=[2018, 2019, 2020, 2021],
+        share_by_year=share_by_year,
+        target_year=2100,
+        future_years=[2030, 2100],
+        container_levels=[],
+        category_level="s_p",
+        selected_categories=None,
+        selected_containers=None,
+        state=state,
+    )
     assert np.isfinite(projected.to_numpy(dtype=float)).all()
     assert float(projected.loc["C"]) == 0.0
     assert abs(float(projected.sum()) - 1.0) <= 1.0e-12

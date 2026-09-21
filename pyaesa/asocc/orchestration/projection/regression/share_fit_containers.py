@@ -14,6 +14,7 @@ class ShareFitSpec(TypedDict):
     baseline: object | None
     coefs: dict[object, _ShareCoef]
     structural_zero_categories: list[object]
+    fallback_categories: dict[object, tuple[int, float]]
     last_vector: pd.Series
     all_fitted: bool
 
@@ -179,6 +180,7 @@ def share_fit_map_or_none(value: object) -> ShareFitMap | None:
             "baseline",
             "coefs",
             "structural_zero_categories",
+            "fallback_categories",
             "last_vector",
             "all_fitted",
         }.issubset(spec):
@@ -188,6 +190,8 @@ def share_fit_map_or_none(value: object) -> ShareFitMap | None:
         if not isinstance(spec["coefs"], dict):
             return None
         if not isinstance(spec["structural_zero_categories"], list):
+            return None
+        if not isinstance(spec["fallback_categories"], dict):
             return None
         if not isinstance(spec["last_vector"], pd.Series):
             return None

@@ -112,19 +112,20 @@ def test_share_projection_strict_failures(tmp_path: Path) -> None:
             },
             state=_state(runtime_proj_base=tmp_path),
         )
-    with pytest.raises(ValueError, match="nonzero_years"):
-        share_mod.project_share_from_time_logit(
-            **base_args,
-            historical_years=[2018, 2019, 2020, 2021],
-            share_by_year={
-                2018: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
-                2019: pd.Series([0.3, 0.7], index=pd.Index(["A", "B"], name="s_p")),
-                2020: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
-                2021: pd.Series([0.2, 0.8], index=pd.Index(["A", "B"], name="s_p")),
-            },
-            state=_state(runtime_proj_base=tmp_path),
-        )
-    with pytest.raises(ValueError):
+    fallback = share_mod.project_share_from_time_logit(
+        **base_args,
+        historical_years=[2018, 2019, 2020, 2021],
+        share_by_year={
+            2018: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
+            2019: pd.Series([0.3, 0.7], index=pd.Index(["A", "B"], name="s_p")),
+            2020: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
+            2021: pd.Series([0.2, 0.8], index=pd.Index(["A", "B"], name="s_p")),
+        },
+        state=_state(runtime_proj_base=tmp_path),
+    )
+    assert fallback.sum() == pytest.approx(1.0)
+    assert fallback["B"] > 0.0
+    with pytest.raises(ValueError, match="fewer than three valid years"):
         share_mod.project_share_from_time_logit(
             **base_args,
             historical_years=[2018, 2019, 2020, 2021],
@@ -136,3 +137,56 @@ def test_share_projection_strict_failures(tmp_path: Path) -> None:
             },
             state=_state(runtime_proj_base=tmp_path),
         )
+
+
+def test_share_projection_sparse_history_fallback_keeps_last_year_value(tmp_path: Path) -> None:
+    state = _state(runtime_proj_base=tmp_path)
+    projected = share_mod.project_share_from_time_logit(
+        source="oecd_v2025",
+        fu_code="L2.a.a",
+        l2_method="UT(FD)",
+        target_object="fd_share_sp",
+        target_year=2030,
+        future_years=[2030],
+        container_levels=[],
+        category_level="s_p",
+        selected_categories=None,
+        selected_containers=None,
+        historical_years=[2018, 2019, 2020, 2021],
+        share_by_year={
+            2018: pd.Series([0.9, 0.1, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
+            2019: pd.Series([0.85, 0.15, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
+            2020: pd.Series([0.8, 0.2, 0.0], index=pd.Index(["A", "B", "C"], name="s_p")),
+            2021: pd.Series([0.7, 0.1, 0.2], index=pd.Index(["A", "B", "C"], name="s_p")),
+        },
+        state=state,
+    )
+
+    assert projected.sum() == pytest.approx(1.0)
+    cached_spec = next(iter(state.regression_fit_cache.values()))
+    assert next(iter(cached_spec.values()))["fallback_categories"] == {"C": (2021, 0.2)}
+    assert projected["C"] == pytest.approx(0.2)
+
+    zero_anchor_state = _state(runtime_proj_base=tmp_path / "zero_anchor")
+    zero_anchor = share_mod.project_share_from_time_logit(
+        source="oecd_v2025",
+        fu_code="L2.a.a",
+        l2_method="UT(FD)",
+        target_object="fd_share_sp",
+        target_year=2030,
+        future_years=[2030],
+        container_levels=[],
+        category_level="s_p",
+        selected_categories=None,
+        selected_containers=None,
+        historical_years=[2018, 2019, 2020, 2021],
+        share_by_year={
+            2018: pd.Series([0.2, 0.8], index=pd.Index(["A", "C"], name="s_p")),
+            2019: pd.Series([0.0, 1.0], index=pd.Index(["A", "C"], name="s_p")),
+            2020: pd.Series([0.0, 1.0], index=pd.Index(["A", "C"], name="s_p")),
+            2021: pd.Series([0.0, 1.0], index=pd.Index(["A", "C"], name="s_p")),
+        },
+        state=zero_anchor_state,
+    )
+    assert zero_anchor["A"] == pytest.approx(0.0)
+    assert zero_anchor.sum() == pytest.approx(1.0)

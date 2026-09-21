@@ -96,6 +96,7 @@ def project_share_from_time_logit(
             continue
         coefs = spec["coefs"]
         structural_zeros = set(spec["structural_zero_categories"])
+        fallback_categories = dict(spec.get("fallback_categories", {}))
         logits: dict[object, float] = {}
         for category, (intercept, slope, _r2, _p, _n_obs, year_center) in coefs.items():
             x0 = float(target_year) - float(year_center)
@@ -117,8 +118,33 @@ def project_share_from_time_logit(
                 values_dict[category] = exp_value / denom
         else:
             values_dict[baseline] = 1.0
+        for category, (_fallback_year, fallback_value) in fallback_categories.items():
+            values_dict[category] = float(fallback_value)
         for category in structural_zeros:
             values_dict[category] = 0.0
+
+        if fallback_categories:
+            # The one or two year fallback case to regression assigns to the affected
+            # categories their last modeled value. The remaining fitted categories are
+            # then rescaled proportionally so the total share of all categories remains
+            # consistent after that anchor is inserted.
+            non_fallback_total = sum(
+                value
+                for category, value in values_dict.items()
+                if category not in fallback_categories and category not in structural_zeros
+            )
+            fallback_total = sum(
+                fallback_value
+                for _category, (_fallback_year, fallback_value) in fallback_categories.items()
+            )
+            if fallback_total > 0.0:
+                remaining_total = max(1.0 - fallback_total, 0.0)
+                scale = remaining_total / non_fallback_total
+                for category in list(values_dict):
+                    if category not in fallback_categories and category not in structural_zeros:
+                        values_dict[category] = values_dict[category] * scale
+                for category, (_fallback_year, fallback_value) in fallback_categories.items():
+                    values_dict[category] = float(fallback_value)
 
         for category in emit:
             index_key = (*container_key, category) if container_key else category
