@@ -1,7 +1,7 @@
 """Internal builder for strict share logit time regression fit maps."""
 
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import numpy as np
 import pandas as pd
@@ -11,13 +11,13 @@ from .regression_core_utils import (
     coerce_numeric_scalar,
     fit_simple_ols,
 )
-from .share_fit_window_log import write_share_fit_window_log_row
 from .share_fit_containers import ShareFitMap as _ShareFitMap
 from .share_fit_containers import ShareFitSpec as _ShareFitSpec
 from .share_fit_containers import as_selected_set as _as_selected_set
 from .share_fit_containers import container_category_map as _container_category_map
 from .share_fit_containers import filter_container_map as _filter_container_map
 from .share_fit_containers import slice_container as _slice_container
+from .share_fit_window_log import write_share_fit_window_log_row
 from .share_logit_time_fit_diagnostics import (
     ShareFitDiagnosticsContext,
     ShareFitDiagnosticsPayload,
@@ -28,8 +28,8 @@ from .share_logit_time_fit_types import (
     ShareFitBuildConfig,
     _ContainerSelection,
     _FitPoint,
-    _ShareCoef,
     _select_baseline,
+    _ShareCoef,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ _EMPTY_FIT_SPEC: _ShareFitSpec = {
     "baseline": None,
     "coefs": {},
     "structural_zero_categories": [],
+    "fallback_categories": {},
     "last_vector": pd.Series(dtype=float),
     "all_fitted": False,
 }
@@ -128,19 +129,23 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
         )
         coefs: dict[object, _ShareCoef] = {}
         structural_zero_categories: list[object] = []
+        fallback_categories: dict[object, tuple[int, float]] = {}
         for category in selection.modeled:
             if category == baseline:
                 continue
-            fit = self._fit_category(
+            fit, fallback = self._fit_category(
                 selection=selection,
                 modeled_by_year=modeled_by_year,
                 baseline=baseline,
                 category=category,
             )
-            if fit is None:
+            if fit is None and fallback is None:
                 structural_zero_categories.append(category)
                 continue
-            coefs[category] = fit
+            if fit is None and fallback is not None:
+                fallback_categories[category] = fallback
+                continue
+            coefs[category] = cast(_ShareCoef, fit)
         return {
             "emit": selection.selected
             if not selection.full_selection
@@ -148,6 +153,7 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
             "baseline": baseline,
             "coefs": coefs,
             "structural_zero_categories": structural_zero_categories,
+            "fallback_categories": fallback_categories,
             "last_vector": last_modeled_vector(
                 historical_years=self._config.historical_years,
                 modeled_by_year=modeled_by_year,
@@ -197,25 +203,47 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
         modeled_by_year: dict[int, pd.Series],
         baseline: object,
         category: object,
-    ) -> _ShareCoef | None:
+    ) -> tuple[_ShareCoef | None, tuple[int, float] | None]:
         nonzero_years = [
             int(year)
             for year in self._config.historical_years
             if coerce_numeric_scalar(modeled_by_year[int(year)].get(category, 0.0)) > 0.0
         ]
         if len(nonzero_years) == 0:
+            # A fully zero category is ecluded from the fitted model
+            # as remains zero all years.
             self._write_all_zero_category_log(
                 selection=selection,
                 baseline=baseline,
                 category=category,
             )
-            return None
+            return None, None
         if len(nonzero_years) < MIN_OLS_UNCERTAINTY_OBS:
-            raise ValueError(
-                "Share regression requires at least three nonzero years for "
-                f"category='{category}' in container='{selection.container_name}'. "
-                f"Found nonzero_years={nonzero_years}."
+            # This branch is only used for a series with only one or two positive
+            # years and the remaining historical values at zero. A logit time
+            # trend is not estimable in that case, so the category keeps the last
+            # modeled year value as an anchor while the rest of the share vector
+            # continues through the standard regression path.
+            fallback_year = int(self._config.historical_years[-1])
+            fallback_value = float(
+                coerce_numeric_scalar(modeled_by_year[fallback_year].get(category, 0.0))
             )
+            self._write_sparse_history_fallback_log(
+                selection=selection,
+                baseline=baseline,
+                category=category,
+                nonzero_years=nonzero_years,
+                fallback_year=fallback_year,
+                fallback_value=fallback_value,
+            )
+            self._record_sparse_history_fallback_info(
+                selection=selection,
+                category=category,
+                nonzero_years=nonzero_years,
+                fallback_year=fallback_year,
+                fallback_value=fallback_value,
+            )
+            return None, (fallback_year, fallback_value)
         fit_window = self._valid_fit_window(
             modeled_by_year=modeled_by_year,
             baseline=baseline,
@@ -270,12 +298,15 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
             ),
         )
         return (
-            float(intercept),
-            float(slope),
-            float(r_squared),
-            float(p_value),
-            int(n_obs),
-            float(fit_inputs.year_center),
+            (
+                float(intercept),
+                float(slope),
+                float(r_squared),
+                float(p_value),
+                int(n_obs),
+                float(fit_inputs.year_center),
+            ),
+            None,
         )
 
     def _valid_fit_window(
@@ -331,6 +362,51 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
             state=self._state,
         )
 
+    def _write_sparse_history_fallback_log(
+        self,
+        *,
+        selection: _ContainerSelection,
+        baseline: object,
+        category: object,
+        nonzero_years: list[int],
+        fallback_year: int,
+        fallback_value: float,
+    ) -> None:
+        """Record the fit window for a one or two year sparse category fallback.
+
+        The category has positive values in only one or two historical years, with
+        zero values in the remaining historical years, so no logit time trend is
+        fitted. The projection uses ``fallback_year`` and ``fallback_value`` as
+        the category's last modeled-year anchor; this log records the positive and
+        zero years that led to that decision.
+
+        Args:
+            selection: Container and category selection used for the fit.
+            baseline: Baseline category used by the share regression.
+            category: Category whose sparse history is being recorded.
+            nonzero_years: Historical years with a positive category value.
+            fallback_year: Last modeled year used as the fallback anchor.
+            fallback_value: Category value in ``fallback_year``.
+        """
+        write_share_fit_window_log_row(
+            source=self._config.source,
+            fu_code=self._config.fu_code,
+            l2_method=self._config.l2_method,
+            target_object=self._config.target_object,
+            container_label=selection.container_name,
+            category=category,
+            baseline=baseline,
+            fit_start_year=int(self._fit_start),
+            fit_end_year=int(self._fit_end),
+            years_used=nonzero_years,
+            dropped_numerator_zero_years=sorted(
+                year for year in self._config.historical_years if int(year) not in nonzero_years
+            ),
+            dropped_baseline_zero_years=[],
+            case="sparse_history_fallback",
+            state=self._state,
+        )
+
     def _write_subset_fit_window_log_if_needed(
         self,
         *,
@@ -358,17 +434,32 @@ class _ShareFitBuilder:  # pylint: disable=too few public methods
             case="subset_fit_window",
             state=self._state,
         )
-        logger.warning(
-            "Share regression uses subset fit window: target=%s, "
-            "container=%s, category=%s, baseline=%s, historical_years=%s, "
-            "valid_years=%s",
-            self._config.target_object,
-            selection.container_name,
-            category,
-            baseline,
-            self._config.historical_years,
-            fit_window.valid_years,
+
+    def _record_sparse_history_fallback_info(
+        self,
+        *,
+        selection: _ContainerSelection,
+        category: object,
+        nonzero_years: list[int],
+        fallback_year: int,
+        fallback_value: float,
+    ) -> None:
+        """Record one sparse-history fallback in the deterministic run summary."""
+        zero_years = [
+            int(year) for year in self._config.historical_years if int(year) not in nonzero_years
+        ]
+        message = (
+            "Share regression fallback applied for "
+            f"container='{selection.container_name}', category='{category}': "
+            f"positive_years={','.join(str(year) for year in nonzero_years)}; "
+            f"zero_years={','.join(str(year) for year in zero_years)}; "
+            f"last_modeled_year={fallback_year}, value={fallback_value:.1f}."
         )
+        notices = getattr(self._state, "startup_notices", None)
+        if notices is None:
+            notices = []
+            setattr(self._state, "startup_notices", notices)
+        notices.append(("INFO", message))
 
     def _build_fit_inputs(
         self,

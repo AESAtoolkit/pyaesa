@@ -18,10 +18,10 @@ from pyaesa.asocc.orchestration.projection.regression import (
     share_fit_containers as share_fit_containers_mod,
 )
 from pyaesa.asocc.orchestration.projection.regression import (
-    share_logit_time_fit_diagnostics as diagnostics_mod,
+    share_logit_time_fit_builder as share_fit_builder_mod,
 )
 from pyaesa.asocc.orchestration.projection.regression import (
-    share_logit_time_fit_builder as share_fit_builder_mod,
+    share_logit_time_fit_diagnostics as diagnostics_mod,
 )
 from pyaesa.asocc.orchestration.projection.regression import (
     share_logit_time_fit_types as share_fit_types_mod,
@@ -168,6 +168,7 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                     "baseline": None,
                     "coefs": {},
                     "structural_zero_categories": [],
+                    "fallback_categories": {},
                     "last_vector": pd.Series(dtype=float),
                     "all_fitted": True,
                 }
@@ -182,8 +183,25 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                 ("FR",): {
                     "emit": [],
                     "baseline": None,
+                    "coefs": {},
+                    "structural_zero_categories": [],
+                    "fallback_categories": [],
+                    "last_vector": pd.Series(dtype=float),
+                    "all_fitted": True,
+                }
+            }
+        )
+        is None
+    )
+    assert (
+        share_fit_containers_mod.share_fit_map_or_none(
+            {
+                ("FR",): {
+                    "emit": [],
+                    "baseline": None,
                     "coefs": [],
                     "structural_zero_categories": [],
+                    "fallback_categories": {},
                     "last_vector": pd.Series(dtype=float),
                     "all_fitted": True,
                 }
@@ -199,6 +217,7 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                     "baseline": None,
                     "coefs": {},
                     "structural_zero_categories": [],
+                    "fallback_categories": {},
                     "last_vector": pd.Series(dtype=float),
                     "all_fitted": True,
                 }
@@ -214,6 +233,7 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                     "baseline": None,
                     "coefs": {},
                     "structural_zero_categories": {},
+                    "fallback_categories": {},
                     "last_vector": pd.Series(dtype=float),
                     "all_fitted": True,
                 }
@@ -229,6 +249,7 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                     "baseline": None,
                     "coefs": {},
                     "structural_zero_categories": [],
+                    "fallback_categories": {},
                     "last_vector": {"A": 1.0},
                     "all_fitted": True,
                 }
@@ -244,6 +265,7 @@ def test_share_fit_container_contracts_cover_remaining_paths() -> None:
                     "baseline": None,
                     "coefs": {},
                     "structural_zero_categories": [],
+                    "fallback_categories": {},
                     "last_vector": pd.Series(dtype=float),
                     "all_fitted": "yes",
                 }
@@ -418,6 +440,32 @@ def test_share_fit_builder_covers_selected_and_partial_paths(tmp_path: Path) -> 
         state=state_full,
     )
     assert full[tuple()]["coefs"]
+
+    state_with_notices = _state(runtime_proj_base=tmp_path)
+    state_with_notices.startup_notices = []
+    sparse = share_fit_builder_mod.build_share_fit_map_impl(
+        config=share_fit_types_mod.ShareFitBuildConfig(
+            source="oecd_v2025",
+            fu_code="L2.a.a",
+            l2_method="UT(FD)",
+            target_object="fd_share_sp",
+            historical_years=historical_years,
+            share_by_year={
+                2018: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
+                2019: pd.Series([0.2, 0.8], index=pd.Index(["A", "B"], name="s_p")),
+                2020: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
+                2021: pd.Series([0.0, 1.0], index=pd.Index(["A", "B"], name="s_p")),
+            },
+            future_years=[2030],
+            containers=[],
+            category_level="s_p",
+            selected_categories=None,
+            selected_containers=None,
+        ),
+        state=state_with_notices,
+    )
+    assert sparse[tuple()]["fallback_categories"] == {"A": (2021, 0.0)}
+    assert "last_modeled_year=2021, value=0.0" in state_with_notices.startup_notices[0][1]
 
 
 def test_share_fit_diagnostics_reuses_current_owner_contracts(tmp_path: Path) -> None:
