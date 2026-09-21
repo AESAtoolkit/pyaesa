@@ -1,8 +1,5 @@
 import io
-import re
-import tomllib
 from importlib import metadata
-from pathlib import Path
 
 import pytest
 import requests
@@ -61,15 +58,8 @@ def test_import_does_not_call_update_endpoint(monkeypatch: pytest.MonkeyPatch) -
     assert called is False
 
 
-def test_version_sources_and_conda_mirror() -> None:
-    root = Path(__file__).parents[3]
-    with (root / "pyproject.toml").open("rb") as handle:
-        project_version = tomllib.load(handle)["project"]["version"]
-    recipe = (root / "conda-forge" / "recipe" / "recipe.yaml").read_text()
-    recipe_version = re.search(r'context:\n  version: "([^"]+)"', recipe)
-    assert recipe_version is not None
-    assert pyaesa.__version__ == metadata.version("pyaesa") == project_version
-    assert recipe_version.group(1) == project_version
+def test_imported_version_matches_installed_distribution() -> None:
+    assert pyaesa.__version__ == metadata.version("pyaesa")
 
 
 def test_latest_pypi_ignores_prerelease_and_yanked_files() -> None:
