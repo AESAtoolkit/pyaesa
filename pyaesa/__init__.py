@@ -44,9 +44,12 @@ Public functions exported at package level:
 """
 
 from importlib import import_module
+from importlib.metadata import version as distribution_version
 from typing import TYPE_CHECKING
 
-__version__ = "1.2.8"
+from .shared.runtime.update_check import check_for_updates
+
+__version__ = distribution_version("pyaesa")
 
 _PUBLIC_EXPORT_OWNERS = {
     "set_workspace": "pyaesa.workspace_initialisation.set_workspace",
@@ -124,6 +127,7 @@ def __getattr__(name):
     if name not in _PUBLIC_EXPORT_OWNERS:
         raise AttributeError(f"module 'pyaesa' has no attribute {name!r}")
 
+    check_for_updates(installed_version=__version__)
     module = import_module(_PUBLIC_EXPORT_OWNERS[name])
     value = getattr(module, name)
     globals()[name] = value

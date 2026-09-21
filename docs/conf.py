@@ -2,6 +2,7 @@
 
 import re
 import sys
+from importlib import import_module
 from pathlib import Path
 
 from docutils import nodes
@@ -11,15 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+pyaesa = import_module("pyaesa")
+
 project = "pyaesa"
 author = "pyaesa contributors"
 
-try:
-    import pyaesa
-
-    release = getattr(pyaesa, "__version__", "0.0.0")
-except Exception:
-    release = "0.0.0"
+release = pyaesa.__version__
 
 extensions: list[str] = [
     "myst_parser",

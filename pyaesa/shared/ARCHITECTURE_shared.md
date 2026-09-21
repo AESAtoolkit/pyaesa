@@ -58,6 +58,9 @@ Concrete canonical owners include:
 - `runtime/reuse/contracts.py` for deterministic persisted scope compatibility
   checks shared by aSoCC and IO-LCA consumers
 - `runtime/scenario/partitions.py` for SSP partition filename parsing
+- `runtime/update_check.py` for the once per interpreter session package update
+  notification, external version and release metadata retrieval, and terminal
+  message formatting
 - `tabular/table_io.py` for small shared table read/write helpers
 - `lcia/file_owned_tables.py` for LCIA method owned table path helpers
 - `lcia/static_cc.py` for static carrying capacity CSV loading and bound

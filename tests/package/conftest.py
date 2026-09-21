@@ -1,12 +1,15 @@
 """Shared fixtures for package test suite."""
 
+import os
+import shutil
 from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
-import shutil
 
 import matplotlib
 import pytest
+
+os.environ.setdefault("PYAESA_DISABLE_UPDATE_CHECK", "1")
 
 matplotlib.use("Agg")
 
