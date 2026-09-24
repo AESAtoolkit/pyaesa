@@ -1,16 +1,16 @@
 import builtins
-from dataclasses import dataclass
 from io import StringIO
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
+import numpy as np
+import pandas as pd
 import pytest
 
 from pyaesa.shared.runtime import memory as memory_mod
-
-
-@dataclass(frozen=True)
-class _Budget:
-    budget_bytes: int
+from pyaesa.shared.uncertainty_assessment.io.run_artifacts import read_run_interval_index
+from pyaesa.shared.uncertainty_assessment.io.run_writers import SparseRunRows, SparseRunRowsWriter
 
 
 class _Callable:
@@ -48,6 +48,8 @@ class _SuccessfulPsapi:
 
 
 class _SuccessfulMemoryKernel32:
+    GetCurrentProcess = _Callable(1)
+
     def __init__(self, *, total_phys: int, avail_phys: int) -> None:
         self.total_phys = total_phys
         self.avail_phys = avail_phys
@@ -59,48 +61,57 @@ class _SuccessfulMemoryKernel32:
         return 1
 
 
-def test_runtime_working_budget_accounts_for_current_process_rss(
-    monkeypatch: pytest.MonkeyPatch,
+def _windows_memory_api(
+    monkeypatch: pytest.MonkeyPatch, *, physical: int, available: int, rss: int
 ) -> None:
-    monkeypatch.setattr(
-        memory_mod,
-        "runtime_memory_budget",
-        lambda *, minimal_working_block_bytes: _Budget(budget_bytes=100),
-    )
-    monkeypatch.setattr(memory_mod, "current_process_rss_bytes", lambda: 0)
+    """Supply Windows memory observations at the external API boundary."""
+    kernel = _SuccessfulMemoryKernel32(total_phys=physical, avail_phys=available)
+
+    def win_dll(name: str, *, use_last_error: bool) -> object:
+        assert use_last_error is True
+        return _SuccessfulPsapi(working_set_size=rss) if name == "psapi" else kernel
+
+    monkeypatch.setattr(memory_mod, "os", SimpleNamespace(name="nt"))
+    monkeypatch.setattr(memory_mod.ctypes, "WinDLL", win_dll, raising=False)
+
+
+@pytest.mark.parametrize(
+    ("rss", "expected"),
+    [(0, 7 * 1024**3), (12 * 1024**3, 7 * 1024**3), (23 * 1024**3, 1024**3), (24 * 1024**3, 24)],
+)
+def test_runtime_working_budget_counts_resident_memory_once(
+    monkeypatch: pytest.MonkeyPatch, rss: int, expected: int
+) -> None:
+    _windows_memory_api(monkeypatch, physical=32 * 1024**3, available=8 * 1024**3, rss=rss)
     assert (
         memory_mod.runtime_working_budget_bytes(
             memory_budget_bytes=None,
-            minimal_working_block_bytes=10,
+            minimal_working_block_bytes=24,
         )
-        == 100
-    )
-
-    monkeypatch.setattr(memory_mod, "current_process_rss_bytes", lambda: 95)
-    assert (
-        memory_mod.runtime_working_budget_bytes(
-            memory_budget_bytes=None,
-            minimal_working_block_bytes=10,
-        )
-        == 10
+        == expected
     )
 
 
-def test_process_rss_routes_to_platform_owner(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(memory_mod.os, "name", "nt")
-    monkeypatch.setattr(memory_mod, "_current_windows_process_rss_bytes", lambda: 11)
-    assert memory_mod.current_process_rss_bytes() == 11
-
-    monkeypatch.setattr(memory_mod.os, "name", "posix")
-    monkeypatch.setattr(memory_mod, "_current_posix_process_rss_bytes", lambda: 12)
-    assert memory_mod.current_process_rss_bytes() == 12
-
-    monkeypatch.setattr(memory_mod, "_detect_windows_memory_bytes", lambda: (100, 80))
-    monkeypatch.setattr(memory_mod, "_detect_posix_memory_bytes", lambda: (90, 70))
-    monkeypatch.setattr(memory_mod.os, "name", "nt")
-    assert memory_mod._detect_system_memory_bytes() == (100, 80)
-    monkeypatch.setattr(memory_mod.os, "name", "posix")
-    assert memory_mod._detect_system_memory_bytes() == (90, 70)
+def test_allocated_sparse_batch_preserves_values_without_tiny_fragments(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _windows_memory_api(monkeypatch, physical=32 * 1024**3, available=8 * 1024**3, rss=12 * 1024**3)
+    rows = SparseRunRows(
+        run_index=np.repeat(np.arange(3, dtype=np.int64), 16),
+        public_row_id=np.tile(np.arange(16, dtype=np.int64), 3),
+        values=np.arange(48, dtype=np.float64) / 7,
+        value_column="acc",
+    )
+    path = tmp_path / "acc_runs.parquet"
+    with SparseRunRowsWriter(path=path, output_format="parquet") as writer:
+        writer.write_batch(rows=rows, batch_index=0)
+    intervals = read_run_interval_index(path=path, output_format="parquet")
+    assert intervals["row_count"].tolist() == [48]
+    actual = pd.read_parquet(path)
+    expected = pd.DataFrame(
+        {"run_index": rows.run_index, "public_row_id": rows.public_row_id, "acc": rows.values}
+    )
+    pd.testing.assert_frame_equal(actual, expected)
 
 
 def test_windows_memory_helpers_fall_back_when_windows_api_fails(
@@ -130,7 +141,8 @@ def test_windows_memory_helpers_read_successful_windows_api(
         return _SuccessfulPsapi(working_set_size=1234) if name == "psapi" else _ProcessKernel32()
 
     monkeypatch.setattr(memory_mod.ctypes, "WinDLL", process_win_dll, raising=False)
-    assert memory_mod._current_windows_process_rss_bytes() == 1234
+    monkeypatch.setattr(memory_mod.os, "name", "nt")
+    assert memory_mod.current_process_rss_bytes() == 1234
 
     def memory_win_dll(name: str, *, use_last_error: bool) -> object:
         assert name == "kernel32"
@@ -138,18 +150,20 @@ def test_windows_memory_helpers_read_successful_windows_api(
         return _SuccessfulMemoryKernel32(total_phys=4096, avail_phys=2048)
 
     monkeypatch.setattr(memory_mod.ctypes, "WinDLL", memory_win_dll, raising=False)
-    assert memory_mod._detect_windows_memory_bytes() == (4096, 2048)
+    assert memory_mod._detect_system_memory_bytes() == (4096, 2048)
 
 
 def test_posix_memory_helpers_use_proc_and_sysconf(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(memory_mod, "_sysconf_int", lambda name: 4096)
+    monkeypatch.setattr(memory_mod.os, "sysconf", lambda name: 4096, raising=False)
     monkeypatch.setattr(memory_mod.os.path, "exists", lambda path: path == "/proc/self/statm")
     monkeypatch.setattr(
         builtins,
         "open",
         lambda path, *, encoding: StringIO("10 3\n"),
     )
-    assert memory_mod._current_posix_process_rss_bytes() == 12_288
+    with monkeypatch.context() as platform:
+        platform.setattr(memory_mod.os, "name", "posix")
+        assert memory_mod.current_process_rss_bytes() == 12_288
 
     monkeypatch.setattr(
         builtins,
@@ -166,13 +180,15 @@ def test_posix_memory_helpers_use_proc_and_sysconf(monkeypatch: pytest.MonkeyPat
         "SC_PHYS_PAGES": 100,
         "SC_AVPHYS_PAGES": 25,
     }
-    monkeypatch.setattr(memory_mod, "_sysconf_int", lambda name: sysconf_values[name])
-    assert memory_mod._detect_posix_memory_bytes() == (409_600, 102_400)
+    monkeypatch.setattr(memory_mod.os, "sysconf", lambda name: sysconf_values[name], raising=False)
+    with monkeypatch.context() as platform:
+        platform.setattr(memory_mod.os, "name", "posix")
+        assert memory_mod._detect_system_memory_bytes() == (409_600, 102_400)
 
-    sysconf_values["SC_AVPHYS_PAGES"] = None
+    sysconf_values["SC_AVPHYS_PAGES"] = 0
     assert memory_mod._detect_posix_memory_bytes() == (409_600, 409_600)
 
-    monkeypatch.setattr(memory_mod, "_sysconf_int", lambda name: None)
+    monkeypatch.setattr(memory_mod.os, "sysconf", lambda name: 0, raising=False)
     assert memory_mod._detect_posix_memory_bytes() == memory_mod._fallback_system_memory_bytes()
 
 

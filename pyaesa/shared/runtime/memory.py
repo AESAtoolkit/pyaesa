@@ -95,19 +95,17 @@ def runtime_working_budget_bytes(
     memory_budget_bytes: int | None,
     minimal_working_block_bytes: int,
 ) -> int:
-    """Return runtime budget bytes after accounting for current process RSS."""
+    """Return free memory headroom within the total process memory cap."""
     if memory_budget_bytes is not None:
         return int(memory_budget_bytes)
-    budget = runtime_memory_budget(
-        minimal_working_block_bytes=minimal_working_block_bytes
-    ).budget_bytes
+    budget = runtime_memory_budget(minimal_working_block_bytes=minimal_working_block_bytes)
     current_rss = current_process_rss_bytes()
     if current_rss <= 0:
-        return budget
-    working_budget = int(budget) - int(current_rss)
-    if working_budget < int(minimal_working_block_bytes):
-        return int(minimal_working_block_bytes)
-    return working_budget
+        return budget.budget_bytes
+    process_headroom = _percent_of(
+        budget.physical_memory_bytes, MEMORY_PHYSICAL_LIMIT_PERCENT
+    ) - int(current_rss)
+    return max(min(budget.budget_bytes, process_headroom), int(minimal_working_block_bytes))
 
 
 def current_process_rss_bytes() -> int:
