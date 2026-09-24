@@ -13,10 +13,11 @@ by the package methodological notes.
 
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
-Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
-for systematically allocating carrying capacities under uncertainty in AESA
-[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
-Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+Jankovic, M., & Bol, D. (2026, May 17-21). pyaesa - Toward A Python Package
+for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
+[Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
+Meeting, Maastricht, Netherlands.
+https://doi.org/10.13140/RG.2.2.32727.43684
 
 de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
 Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
@@ -170,10 +171,11 @@ https://doi.org/10.1016/j.envsoft.2018.04.002
 
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
-Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
-for systematically allocating carrying capacities under uncertainty in AESA
-[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
-Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+Jankovic, M., & Bol, D. (2026, May 17-21). pyaesa - Toward A Python Package
+for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
+[Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
+Meeting, Maastricht, Netherlands.
+https://doi.org/10.13140/RG.2.2.32727.43684
 
 de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
 Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
@@ -364,10 +366,11 @@ and LCIA uncertainty sources.
 Recommended citations:
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
-Jankovic, M., & Bol, D. (2026, May 17-21). PyUNCASE: Towards a Python package
-for systematically allocating carrying capacities under uncertainty in AESA
-[Conference abstract]. SETAC Europe 36th Annual Meeting, Maastricht,
-Netherlands. SETAC. https://setac.confex.com/setac/europe2026/meetingapp.cgi/Paper/32699
+Jankovic, M., & Bol, D. (2026, May 17-21). pyaesa - Toward A Python Package
+for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
+[Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
+Meeting, Maastricht, Netherlands.
+https://doi.org/10.13140/RG.2.2.32727.43684
 
 de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
 Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
