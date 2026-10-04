@@ -6,10 +6,18 @@ sources and methodological references.
 Sections are organized as package citation, data sources, methodological
 references, and an AESA phase citation checklist.
 
-1. Use of PyAESA
+1. Use of pyaesa
 
-Please cite these references when using pyaesa, and when using ASOCC methods documented
-by the package methodological notes.
+Please cite these references when using pyaesa, as they constitute the
+methodological basis of the package, including the allocation methods included
+in the package.
+
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt – A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA).
+Sustainable Production and Consumption, 69, 394–415.
+https://doi.org/10.1016/j.spc.2026.09.018
 
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
@@ -18,12 +26,6 @@ for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
 [Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
 Meeting, Maastricht, Netherlands.
 https://doi.org/10.13140/RG.2.2.32727.43684
-
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
-Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
-UNCASExt: A systematic computational framework for uncertainty propagation and
-scope consistency in absolute environmental sustainability assessments (AESA)
-[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 2. DATA SOURCES
 
@@ -159,8 +161,8 @@ the source page.
 Emissions harmonization is used by process_ar6(...) when harmonizing
 AR6 scenario pathways to historical emissions for dynamic carrying capacities.
 
-The pyaesa implementation is documented by the UNCASExt arXiv preprint
-and appendixC_UNCASExt_Carrying_capacities_definition.pdf.
+The pyaesa implementation is documented by the UNCASExt article
+and appendixC_UNCASExt_Carrying_capacities_definition.pdf (Appendix C).
 
 Citations:
 Gidden, M. J., Fujimori, S., van den Berg, M., Klein, D., Smith, S. J.,
@@ -169,6 +171,13 @@ automated emissions harmonization for use in Integrated Assessment Models.
 Environmental Modelling & Software, 105, 187-200.
 https://doi.org/10.1016/j.envsoft.2018.04.002
 
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt – A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA).
+Sustainable Production and Consumption, 69, 394–415.
+https://doi.org/10.1016/j.spc.2026.09.018
+
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
 Jankovic, M., & Bol, D. (2026, May 17-21). pyaesa - Toward A Python Package
@@ -176,12 +185,6 @@ for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
 [Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
 Meeting, Maastricht, Netherlands.
 https://doi.org/10.13140/RG.2.2.32727.43684
-
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
-Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
-UNCASExt: A systematic computational framework for uncertainty propagation and
-scope consistency in absolute environmental sustainability assessments (AESA)
-[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 3. METHODOLOGICAL REFERENCES
 
@@ -359,11 +362,18 @@ https://doi.org/10.1016/j.spc.2024.12.013
 The allocation method definitions and mathematical expressions are defined by
 the UNCASExt framework (de Bantel et al., 2026). For precise references per allocation method, see
 appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf, which is an
-appendix from the UNCASExt arXiv preprint. Also cite the selected input data
+appendix from the UNCASExt article. Also cite the selected input data
 sections used by the run, for example MRIO, population and GDP, LCIA methods,
 and LCIA uncertainty sources.
 
 Recommended citations:
+de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
+Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
+UNCASExt – A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA).
+Sustainable Production and Consumption, 69, 394–415.
+https://doi.org/10.1016/j.spc.2026.09.018
+
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,
 Jankovic, M., & Bol, D. (2026, May 17-21). pyaesa - Toward A Python Package
@@ -371,12 +381,6 @@ for Systematically Allocating Carrying Capacities Under Uncertainty in AESA
 [Poster spotlight presentation, 5.07.P-Th207]. SETAC Europe 36th Annual
 Meeting, Maastricht, Netherlands.
 https://doi.org/10.13140/RG.2.2.32727.43684
-
-de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
-Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
-UNCASExt: A systematic computational framework for uncertainty propagation and
-scope consistency in absolute environmental sustainability assessments (AESA)
-[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
 
 Puig-Samper, G., Owsianiak, M., Clavreul, J., Jeandaux, C., Prieur-Vernat, A.,
 & Gondran, N. (2025). Quantifying uncertainties in absolute environmental

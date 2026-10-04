@@ -1,0 +1,88 @@
+cff-version: 1.2.0
+message: >-
+  Please cite the UNCASExt article and pyaesa SETAC poster listed below
+  when using pyaesa.
+title: pyaesa
+type: software
+version: "1.2.9"
+repository-code: https://github.com/AESAtoolkit/pyaesa
+url: https://pyaesa.readthedocs.io/
+authors:
+  - family-names: de Bantel
+    given-names: Erwan Ike
+    email: erwan.de-bantel@centralesupelec.fr
+  - family-names: Pirson
+    given-names: Thibault
+    email: thibault.pirson@uclouvain.be
+  - family-names: Puig-Samper
+    given-names: Gonzalo
+    email: gonzalo.puig-samper@list.lu
+  - family-names: Hartmann
+    given-names: Jan Marcus
+    email: jan.hartmann@ltt.rwth-aachen.de
+references:
+  - type: article
+    title: >-
+      UNCASExt – A systematic computational framework for uncertainty propagation
+      and scope consistency in absolute environmental sustainability assessments (AESA)
+    authors:
+      - family-names: de Bantel
+        given-names: Erwan Ike
+      - family-names: Pirson
+        given-names: Thibault
+      - family-names: Puig-Samper
+        given-names: Gonzalo
+      - family-names: Hartmann
+        given-names: Jan Marcus
+      - family-names: Bol
+        given-names: David
+      - family-names: Bouillass
+        given-names: Ghada
+      - family-names: Yannou
+        given-names: Bernard
+      - family-names: Jankovic
+        given-names: Marija
+      - family-names: Hauschild
+        given-names: Michael Zwicky
+    journal: Sustainable Production and Consumption
+    year: 2026
+    volume: 69
+    start: 394
+    end: 415
+    doi: 10.1016/j.spc.2026.09.018
+  - type: generic
+    title: >-
+      pyaesa - Toward A Python Package for Systematically Allocating Carrying
+      Capacities Under Uncertainty in AESA
+    authors:
+      - family-names: Pirson
+        given-names: Thibault
+      - family-names: de Bantel
+        given-names: Erwan Ike
+      - family-names: Puig-Samper
+        given-names: Gonzalo
+      - family-names: Hartmann
+        given-names: Jan Marcus
+      - family-names: von der Assen
+        given-names: N.
+      - family-names: Owsianiak
+        given-names: M.
+      - family-names: Clavreul
+        given-names: J.
+      - family-names: Bouillass
+        given-names: Ghada
+      - family-names: Yannou
+        given-names: Bernard
+      - family-names: Jankovic
+        given-names: Marija
+      - family-names: Bol
+        given-names: David
+    conference:
+      name: SETAC Europe 36th Annual Meeting
+      location: Maastricht, Netherlands
+      date-start: "2026-05-17"
+      date-end: "2026-05-21"
+    year: 2026
+    month: 5
+    notes: Poster spotlight presentation, 5.07.P-Th207
+    doi: 10.13140/RG.2.2.32727.43684

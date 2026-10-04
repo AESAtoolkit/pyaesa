@@ -207,14 +207,20 @@ notebooks, study endpoint notebooks, and optional workflow notebooks.
 
 ## Methodological Notes
 
+The UNCASExt article provides the methodological basis for `pyaesa`. Two
+methodological appendices directly supporting the package implementation
+are distributed with `pyaesa`:
+
 | Location | Notes |
 | --- | --- |
-| [UNCASExt arXiv preprint](https://arxiv.org/abs/2606.21465) | Article providing the methodological basis for `pyaesa`. |
+| [UNCASExt article](https://doi.org/10.1016/j.spc.2026.09.018) | Article providing the methodological basis for `pyaesa`. |
 | {download}`methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf <../methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf>` | Article Appendix B: functional units, allocation methods, prospective allocation, and uncertainty sources. |
+| {download}`methodological_notes/JSCP2026_appendixB_v2.zip <../methodological_notes/JSCP2026_appendixB_v2.zip>` | LaTeX source archive for Appendix B. |
 | {download}`methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf <../methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf>` | Article Appendix C: carrying capacities definition. |
+| {download}`methodological_notes/JSCP2026_appendixC_v2.zip <../methodological_notes/JSCP2026_appendixC_v2.zip>` | LaTeX source archive for Appendix C. |
 
-{func}`~pyaesa.set_workspace` copies the appendix PDF files into the active
-workspace under `data_raw/methodological_notes/`.
+{func}`~pyaesa.set_workspace` copies the appendix PDF files and LaTeX source
+archives into the active workspace under `data_raw/methodological_notes/`.
 
 Use the {doc}`API reference <api>` for exact signatures and parameter
 contracts. Use the {doc}`tutorial page <tutorial>` for the notebook index and
@@ -228,9 +234,10 @@ the package.
 
 de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
 Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
-UNCASExt: A systematic computational framework for uncertainty propagation and
-scope consistency in absolute environmental sustainability assessments (AESA)
-[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
+UNCASExt – A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA).
+Sustainable Production and Consumption, 69, 394–415.
+https://doi.org/10.1016/j.spc.2026.09.018
 
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,

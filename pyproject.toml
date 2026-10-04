@@ -55,6 +55,8 @@ Homepage = "https://github.com/AESAtoolkit/pyaesa"
 Repository = "https://github.com/AESAtoolkit/pyaesa"
 Issues = "https://github.com/AESAtoolkit/pyaesa/issues"
 Documentation = "https://pyaesa.readthedocs.io/"
+Paper = "https://doi.org/10.1016/j.spc.2026.09.018"
+Poster = "https://doi.org/10.13140/RG.2.2.32727.43684"
 
 [project.optional-dependencies]
 docs = [
@@ -85,6 +87,7 @@ pyaesa = [
   "workspace_initialisation/prerequisites/**/*.svg",
   "workspace_initialisation/prerequisites/**/*.txt",
   "workspace_initialisation/prerequisites/**/*.xlsx",
+  "workspace_initialisation/prerequisites/methodological_notes/*.zip",
   "external_inputs/examples/**/*.csv",
   "external_inputs/example_guidance/**/*.txt",
   "process/ar6/utils/io/README_model_scenario_subset.txt",

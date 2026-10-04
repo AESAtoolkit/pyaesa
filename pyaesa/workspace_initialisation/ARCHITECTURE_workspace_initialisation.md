@@ -61,7 +61,7 @@ workspace repository root.
 | `<repo_root>/data_raw/summary.log` | User facing setup guidance log written by `set_workspace(...)`. |
 | `prerequisites/mrio/` | Aggregation templates, region matching tables, sector classification, LCIA characterization factors, LCIA responsibility period files, and local README guides for aggregation or custom LCIA inputs. |
 | `prerequisites/carrying_capacities/` | Static carrying capacity prerequisite CSVs and the local README guide for adding custom carrying capacity files. |
-| `prerequisites/methodological_notes/` | Detailed methodological PDFs, recommended citation guide, quick functional unit and allocation method guide, and allocation paths figure copied to `data_raw/methodological_notes/`. |
+| `prerequisites/methodological_notes/` | Detailed methodological PDFs and LaTeX source archives, recommended citation guide, quick functional unit and allocation method guide, and allocation paths figure copied to `data_raw/methodological_notes/`. |
 
 `workspace_initialisation` path helpers own only the workspace root and
 project output root. Family packages own their own branch paths below those
@@ -128,7 +128,7 @@ Prerequisite families:
 | `prerequisites/mrio/oecd_v2025/aggregation/` | OECD region and sector aggregation templates. |
 | `prerequisites/mrio/oecd_v2025/reg_matching/` | OECD region matching tables for WB and SSP data. |
 | `prerequisites/carrying_capacities/` | Static carrying capacity tables, LCIA carrying capacity metadata, and the custom carrying capacity guide. |
-| `prerequisites/methodological_notes/` | Detailed methodological PDFs, recommended citations, the quick functional unit and allocation method guide, and the allocation paths figure copied to `data_raw/methodological_notes/`. |
+| `prerequisites/methodological_notes/` | Detailed methodological PDFs and LaTeX source archives, recommended citations, the quick functional unit and allocation method guide, and the allocation paths figure copied to `data_raw/methodological_notes/`. |
 
 Import rules:
 

@@ -16,6 +16,10 @@ packaged prerequisite files used by later public functions. The root contains:
 - `<project_name>/`
 - workspace metadata files owned by `pyaesa/workspace_initialisation/`
 
+`data_raw/methodological_notes/` contains the Appendix B/C PDFs, their LaTeX
+source archives, and the accompanying guides copied by `set_workspace(...)`
+from packaged prerequisites.
+
 Folder ownership is split by runtime family:
 
 | Workspace area | Canonical owner |

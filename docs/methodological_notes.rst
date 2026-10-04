@@ -5,12 +5,17 @@ This page provides the methodological notes and citation guide shipped with the
 package and copied by ``set_workspace(...)`` into
 ``data_raw/methodological_notes/``.
 
-The methodological notes comprise the article and its appendices:
+The methodological notes refer to the UNCASExt article and its
+Appendices B and C, which support the package implementation:
 
-* `UNCASExt arXiv preprint <https://arxiv.org/abs/2606.21465>`__:
+* `UNCASExt article <https://doi.org/10.1016/j.spc.2026.09.018>`__:
   article providing the methodological basis for ``pyaesa``.
 * :download:`Appendix B: functional units, allocation methods, prospective allocation, and uncertainty sources <../methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf>`
+* :download:`Appendix B LaTeX source archive <../methodological_notes/JSCP2026_appendixB_v2.zip>`:
+  LaTeX source archive for Appendix B.
 * :download:`Appendix C: carrying capacities definition <../methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf>`
+* :download:`Appendix C LaTeX source archive <../methodological_notes/JSCP2026_appendixC_v2.zip>`:
+  LaTeX source archive for Appendix C.
 
 Citation
 --------
@@ -21,9 +26,10 @@ in the package.
 
 de Bantel, E. I., Pirson, T., Puig-Samper, G., Hartmann, J. M., Bol, D.,
 Bouillass, G., Yannou, B., Jankovic, M., & Hauschild, M. Z. (2026).
-UNCASExt: A systematic computational framework for uncertainty propagation and
-scope consistency in absolute environmental sustainability assessments (AESA)
-[Preprint]. arXiv. https://arxiv.org/abs/2606.21465
+UNCASExt – A systematic computational framework for uncertainty propagation and
+scope consistency in absolute environmental sustainability assessments (AESA).
+Sustainable Production and Consumption, 69, 394–415.
+https://doi.org/10.1016/j.spc.2026.09.018
 
 Pirson, T., de Bantel, E. I., Puig-Samper, G., Hartmann, J. M., von der
 Assen, N., Owsianiak, M., Clavreul, J., Bouillass, G., Yannou, B.,

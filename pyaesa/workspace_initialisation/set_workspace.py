@@ -61,12 +61,16 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "  -> 1_functional_units_and_allocation_methods.md",
         "Allocation paths figure of the short guide:",
         "  -> fig-asocc-paths.svg",
-        "Detailed methodological appendix of de Bantel et al. (2026) regarding"
+        "Detailed methodological appendix (B) of de Bantel et al. (2026) regarding "
         "functional units, allocation methods, prospective allocation, and uncertainty sources:",
         "  -> appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf",
-        "Detailed methodological appendix of de Bantel et al. (2026) regarding"
+        "LaTeX source archive (Appendix B):",
+        "  -> JSCP2026_appendixB_v2.zip",
+        "Detailed methodological appendix (C) of de Bantel et al. (2026) regarding "
         "carrying capacities definition:",
         "  -> appendixC_UNCASExt_Carrying_capacities_definition.pdf",
+        "LaTeX source archive (Appendix C):",
+        "  -> JSCP2026_appendixC_v2.zip",
         "Recommended citations:",
         "  -> recommended_citations.txt",
         "",
@@ -229,8 +233,9 @@ def set_workspace(
     characterization matrices, LCIA responsibility period tables, carbon
     consumption based accounts coefficients of variation (CoV) tables, static
     carrying capacity CSVs and templates, local README guides for editable
-    prerequisite folders, methodological PDF references, the recommended
-    citation guide, and the functional unit and allocation method guide.
+    prerequisite folders, methodological PDF references and LaTeX source
+    archives, the recommended citation guide, and the functional unit and
+    allocation method guide.
     Methodological assets are copied into ``data_raw/methodological_notes``
     from installed package resources.
 
