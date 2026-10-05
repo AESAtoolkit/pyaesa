@@ -3,9 +3,8 @@
 **Documentation:** [pyaesa.readthedocs.io](https://pyaesa.readthedocs.io/)
 reproduces the documentation of this GitHub repository.
 
-**Beta status:** `pyaesa` is currently in beta testing. Please report bugs,
-unexpected behavior, documentation gaps, and installation or workflow issues on
-the [GitHub Issues page](https://github.com/AESAtoolkit/pyaesa/issues).
+**Issues and feedback:** Please report bugs, unexpected behavior, documentation gaps,
+and installation or workflow issues on the [GitHub Issues page](https://github.com/AESAtoolkit/pyaesa/issues).
 
 `pyaesa` is a Python package for absolute environmental sustainability
 assessment (AESA) workflows. It supports data download, data

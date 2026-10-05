@@ -1,8 +1,7 @@
 # Package Overview
 
-**Beta status:** `pyaesa` is currently in beta testing. Please report bugs,
-unexpected behavior, documentation gaps, and installation or workflow issues on
-the [GitHub Issues page](https://github.com/AESAtoolkit/pyaesa/issues).
+**Issues and feedback:** Please report bugs, unexpected behavior, documentation gaps,
+and installation or workflow issues on the [GitHub Issues page](https://github.com/AESAtoolkit/pyaesa/issues).
 
 ## Package Scope
 
