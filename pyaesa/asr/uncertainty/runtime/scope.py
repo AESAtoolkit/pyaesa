@@ -140,6 +140,10 @@ def build_asr_uncertainty_scope(
     )
     if len(branches) == 1:
         branch = branches[0]
+        shared_methods = [str(branch["cc_source"])]
+        base_args["lcia_method"] = shared_methods
+        if base_allocate_args["lcia_method"] is not None:
+            base_allocate_args["lcia_method"] = shared_methods
         root = asr_monte_carlo_branch_root(
             monte_carlo_root=root,
             cc_source=str(branch["cc_source"]),
