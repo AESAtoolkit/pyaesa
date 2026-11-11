@@ -1708,7 +1708,9 @@ def test_uncertainty_acc_convergence_reports_reuse_and_reached_modes(
     assert compact.artifacts["public_output"]["acc_runs"]["layout"] == "compact_run_matrix"
 
 
-def test_acc_sparse_writer_preserves_empty_requested_runs(tmp_path: Path) -> None:
+def test_acc_sparse_writer_preserves_empty_requested_runs(
+    tmp_path: Path, read_only_project_repo: Path
+) -> None:
     asocc_root = tmp_path / "asocc_run" / "results"
     asocc_root.mkdir(parents=True)
     asocc_identity_path = asocc_root / "row_identity.csv"

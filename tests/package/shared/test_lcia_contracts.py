@@ -49,6 +49,10 @@ def test_lcia_contracts_cover_rules_and_bundled_static_cc_loading(
     assert expected_impacts
     assert len(expected_units) == len(set(expected_units))
     assert len(expected_impacts) == len(set(expected_impacts))
+    declared_axis = contracts_mod.assessment_lcia_axis(methods=["pb_lcia", "custom_without_cc"])
+    assert declared_axis.to_dict(orient="records") == [
+        {"lcia_method": "pb_lcia", "impact": impact} for impact in expected_impacts
+    ]
     assert {impact for impact, _unit in expected_units} == set(expected_impacts)
     first_impact, first_unit = expected_units[0]
     impact_unit_path, impact_unit = contracts_mod.bundled_cc_impact_unit(

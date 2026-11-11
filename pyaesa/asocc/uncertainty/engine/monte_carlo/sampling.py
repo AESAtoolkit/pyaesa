@@ -14,9 +14,11 @@ from pyaesa.asocc.uncertainty.inputs.external_rows import (
     append_external_monte_carlo_matrix,
 )
 from pyaesa.asocc.uncertainty.lcia_support.sampling import LCIASharedUMatrix
+from pyaesa.asocc.methods.lcia_inputs import normalize_lcia_methods
 from pyaesa.asocc.uncertainty.schema.public_rows import (
     align_asocc_lcia_public_axis,
     finalize_asocc_public_row_identity,
+    requested_lcia_public_axis,
 )
 from pyaesa.asocc.uncertainty.sources.inter_mrio import (
     INTER_MRIO_SOURCE,
@@ -134,7 +136,14 @@ def sample_compact_batch(
     template, values = align_asocc_lcia_public_axis(
         frame=template,
         values=values,
-        reference_axis=lcia_public_axis,
+        reference_axis=(
+            requested_lcia_public_axis(
+                frame=template,
+                methods=normalize_lcia_methods(loaded.base_asocc_args.get("lcia_method")) or [],
+            )
+            if lcia_public_axis is None
+            else lcia_public_axis
+        ),
     )
     if sources.is_active(REFERENCE_YEAR_SOURCE):
         template, values = apply_reference_year_uncertainty_to_matrix(

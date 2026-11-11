@@ -48,6 +48,25 @@ def bundled_cc_expected_impacts(*, lcia_method: str) -> tuple[Path, list[str]]:
     return cc_csv_path, expected
 
 
+def assessment_lcia_axis(*, methods: Sequence[str]) -> pd.DataFrame:
+    """Return declared assessment categories from available static CC metadata.
+
+    LCIA methods without a static carrying capacity definition contribute no
+    declared axis. Their actual characterized categories remain available to
+    callers through the inventory or external input rows. A carrying capacity
+    category does not imply that an inventory can characterize that category.
+    """
+    pairs: list[tuple[str, str]] = []
+    for method in dict.fromkeys(methods):
+        cleaned = normalize_lcia_method_name(method)
+        try:
+            _path, impacts = bundled_cc_expected_impacts(lcia_method=cleaned)
+        except FileNotFoundError:
+            continue
+        pairs.extend((cleaned, impact) for impact in impacts)
+    return pd.DataFrame(pairs, columns=["lcia_method", "impact"])
+
+
 def bundled_cc_impact_unit(*, lcia_method: str, impact: str) -> tuple[Path, str]:
     """Return the bundled static carrying capacity unit for one impact."""
     cc_csv_path, _schema_kind, rows = load_bundled_static_cc_rows(lcia_method=lcia_method)

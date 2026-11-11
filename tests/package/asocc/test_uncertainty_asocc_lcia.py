@@ -66,7 +66,10 @@ from pyaesa.shared.runtime.scenario.columns import (
 )
 from pyaesa.shared.lcia.paths import carbon_account_cov_path
 from tests.package.helpers.acc_dummy_repo import prepare_exiobase_repo_with_years
-from tests.package.helpers.asr_dummy_repo import prepare_static_asr_pb_lcia_repo
+from tests.package.helpers.asr_dummy_repo import (
+    add_assessment_category,
+    prepare_static_asr_pb_lcia_repo,
+)
 
 
 def _run_root(repo_root: Path, *, project_name: str, run_id: str) -> Path:
@@ -360,25 +363,26 @@ def test_uncertainty_asocc_accepts_multi_lcia_public_scope(allocation_dummy_repo
         years=[2005],
         impacts=["AAL"],
     )
+    add_assessment_category(lcia_method="pb_lcia", impact="IR")
     base_args = _lcia_base_args(
         project_name="asocc_uncertainty_multi_lcia_public_scope",
         reference_years=[2005],
     )
     base_args["years"] = [2005]
     base_args["lcia_method"] = ["gwp100_lcia", "pb_lcia"]
-
+    config = {
+        "mc_parameters": {
+            "fixed": {"active": True, "n_runs": 2},
+            "convergence": {"active": False},
+        },
+        "lcia_uncertainty": {"active": False},
+        "projection_uncertainty": {"active": False},
+        "reference_year_uncertainty": {"active": False},
+        "inter_method_uncertainty": {"active": False},
+    }
     manifest = uncertainty_asocc(
         base_asocc_args=base_args,
-        uncertainty_config={
-            "mc_parameters": {
-                "fixed": {"active": True, "n_runs": 2},
-                "convergence": {"active": False},
-            },
-            "lcia_uncertainty": {"active": False},
-            "projection_uncertainty": {"active": False},
-            "reference_year_uncertainty": {"active": False},
-            "inter_method_uncertainty": {"active": False},
-        },
+        uncertainty_config=config,
         sobol_parameters={"active": False},
         output_format="csv_compact",
         figures=False,
@@ -389,6 +393,29 @@ def test_uncertainty_asocc_accepts_multi_lcia_public_scope(allocation_dummy_repo
 
     assert manifest.completed_runs == 2
     assert set(identity["lcia_method"].dropna().astype(str)) == {"gwp100_lcia", "pb_lcia"}
+    generic = identity.loc[identity["l1_l2_method"].eq("EG(Pop)_UT(FD)")]
+    assert set(generic.loc[generic["lcia_method"].eq("pb_lcia"), "impact"]) == {"AAL", "IR"}
+    constrained = identity.loc[identity["l1_l2_method"].eq("AR(E^{CBA_FD})")]
+    assert set(constrained.loc[constrained["lcia_method"].eq("pb_lcia"), "impact"]) == {"AAL"}
+    summary_path = Path(manifest.artifacts["scope_manifest"]).with_name("summary.log")
+    output = " ".join(summary_path.read_text(encoding="utf-8").split())
+    assert "unsupported categories ['IR']" in output
+    assert "exiobase_396_ixi" in output
+    assert "AR(E^{CBA_FD})" in output
+
+    add_assessment_category(lcia_method="pb_lcia", impact="ODP")
+    expanded = uncertainty_asocc(
+        base_asocc_args=base_args,
+        uncertainty_config=config,
+        sobol_parameters={"active": False},
+        output_format="csv_compact",
+        figures=False,
+        refresh=False,
+    ).manifest
+    assert expanded.run_id != manifest.run_id
+    expanded_identity = pd.read_csv(expanded.artifacts["public_row_identity"])
+    generic = expanded_identity.loc[expanded_identity["l1_l2_method"].eq("EG(Pop)_UT(FD)")]
+    assert set(generic.loc[generic["lcia_method"].eq("pb_lcia"), "impact"]) == {"AAL", "IR", "ODP"}
 
 
 def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None:
@@ -1187,7 +1214,7 @@ def test_uncertainty_asocc_lcia_writes_public_runs_logs_and_summaries(
         runs["l1_l2_method"].eq("EG(Pop)_UT(FD)"),
         ["run_index", "year", "lcia_method", "impact", "asocc"],
     ]
-    assert repeated_non_lcia["impact"].nunique() == 1
+    assert set(repeated_non_lcia["impact"]) == {"GWP_100", "climate_parent"}
     assert repeated_non_lcia.groupby(["run_index", "year"])["asocc"].nunique().max() == 1
     assert (
         repeated_non_lcia.groupby(["year", "lcia_method", "impact"])["asocc"].nunique().max() == 1

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyaesa.asocc.uncertainty.inputs.external_rows import ExternalAsoccRowsPlan
+from pyaesa.asocc.inter_method_tools.tree import eligible_inter_method_tree_probabilities
 from pyaesa.asocc.uncertainty.engine.inter_method.identity import (
     InterMethodRowUniverse,
     build_inter_method_row_universe,
@@ -47,6 +48,7 @@ class InterMethodExecutionPlan:
     lcia_plan: LCIAPlan | None
     projection_plan: ProjectionPlan | None
     row_universe: InterMethodRowUniverse
+    category_plans: tuple[InterMethodPlan, ...]
 
 
 def build_inter_method_execution_plan(
@@ -99,17 +101,31 @@ def build_inter_method_execution_plan(
         )
     branch_tuple = tuple(branches)
     row_external_plan = execution_external_plan_from_branches(branches=branch_tuple)
+    row_universe = build_inter_method_row_universe(
+        loaded=loaded,
+        sources=sources,
+        external_plan=row_external_plan,
+        lcia_plan=lcia_plan,
+        projection_plan=projection_plan,
+        branches=branch_tuple,
+    )
     return InterMethodExecutionPlan(
         branches=branch_tuple,
         lcia_plan=lcia_plan,
         projection_plan=projection_plan,
-        row_universe=build_inter_method_row_universe(
-            loaded=loaded,
-            sources=sources,
-            external_plan=row_external_plan,
-            lcia_plan=lcia_plan,
-            projection_plan=projection_plan,
-            branches=branch_tuple,
+        row_universe=row_universe,
+        category_plans=tuple(
+            inter_method_plan
+            if labels == inter_method_plan.candidate_labels
+            else replace(
+                inter_method_plan,
+                selection_probabilities=eligible_inter_method_tree_probabilities(
+                    frame=inter_method_plan.tree_frame,
+                    candidates=inter_method_plan.candidates,
+                    eligible_labels=labels,
+                ),
+            )
+            for labels in row_universe.eligibility_labels
         ),
     )
 

@@ -348,7 +348,6 @@ def evaluate_asocc_sobol_units(
     if context.inter_method_plan is not None:
         summary_identity, values = sample_inter_method_summary_matrix_batch(
             loaded=context.loaded,
-            inter_method_plan=context.inter_method_plan,
             execution_plan=cast(
                 InterMethodExecutionPlan,
                 context.inter_method_execution_plan,

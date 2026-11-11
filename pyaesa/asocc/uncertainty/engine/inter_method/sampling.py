@@ -29,7 +29,6 @@ from pyaesa.shared.uncertainty_assessment.evaluation.summary_groups import (
 from pyaesa.asocc.uncertainty.lcia_support.sampling import LCIASharedUMatrix
 from pyaesa.asocc.uncertainty.sources.inter_method import (
     INTER_METHOD_SOURCE,
-    InterMethodPlan,
     sample_inter_method_labels,
 )
 from pyaesa.asocc.uncertainty.sources.inter_mrio import InterMrioPlan
@@ -72,7 +71,6 @@ class _InterMethodSampleState:
 def sample_sparse_inter_method_batch(
     *,
     loaded,
-    inter_method_plan: InterMethodPlan,
     execution_plan: InterMethodExecutionPlan,
     inter_mrio_plan: InterMrioPlan | None,
     batch,
@@ -86,7 +84,6 @@ def sample_sparse_inter_method_batch(
     row_universe = execution_plan.row_universe
     public_identity = row_universe.identity if identity is None else identity
     sample_state = _inter_method_sample_state(
-        inter_method_plan=inter_method_plan,
         execution_plan=execution_plan,
         batch=batch,
         source_units=None,
@@ -96,19 +93,23 @@ def sample_sparse_inter_method_batch(
         branch.label: public_row_ids_for_branch(row_universe=row_universe, label=branch.label)
         for branch in execution_plan.branches
     }
-    row_offsets, sparse_row_count = _sparse_row_offsets(
-        selected=sample_state.selected,
-        row_counts_by_branch={
-            label: len(public_row_ids) for label, public_row_ids in public_row_ids_by_branch.items()
-        },
-    )
+    row_counts = np.zeros(len(run_indices), dtype=np.int64)
+    for label, row_ids in public_row_ids_by_branch.items():
+        groups, counts = np.unique(row_universe.eligibility_by_row[row_ids], return_counts=True)
+        for group, count in zip(groups, counts, strict=True):
+            row_counts += (sample_state.selected[:, group] == label) * count
+    row_offsets, sparse_row_count = _sparse_row_offsets(row_counts=row_counts)
     sparse_run_index = np.empty(sparse_row_count, dtype=np.int64)
     sparse_public_row_id = np.empty(sparse_row_count, dtype=np.int64)
     sparse_values = np.empty(sparse_row_count, dtype=np.float64)
     external_counts: dict[str, int] = {}
     offsets = external_render_offsets or {}
     for branch in execution_plan.branches:
-        run_positions = np.flatnonzero(sample_state.selected == branch.label)
+        row_ids = public_row_ids_by_branch[branch.label]
+        row_mask = (
+            sample_state.selected[:, row_universe.eligibility_by_row[row_ids]] == branch.label
+        )
+        run_positions = np.flatnonzero(row_mask.any(axis=1))
         if run_positions.size == 0:
             continue
         external_run_indices_by_label = _external_run_indices_for_branch(
@@ -151,6 +152,7 @@ def sample_sparse_inter_method_batch(
             branch_run_indices=branch_batch.run_indices(),
             branch_public_row_id=public_row_ids_by_branch[branch.label],
             branch_values=branch_values,
+            selected_rows=row_mask[run_positions],
         )
     return SparseInterMethodBatch(
         identity=public_identity,
@@ -168,7 +170,6 @@ def sample_sparse_inter_method_batch(
 def sample_inter_method_summary_matrix_batch(
     *,
     loaded,
-    inter_method_plan: InterMethodPlan,
     execution_plan: InterMethodExecutionPlan,
     inter_mrio_plan: InterMrioPlan | None,
     batch,
@@ -188,15 +189,18 @@ def sample_inter_method_summary_matrix_batch(
     public_group_index = sparse_public_row_group_index(public_row_groups=public_row_groups)
     output = np.full((batch.n_runs, len(public_row_groups)), np.nan, dtype=np.float64)
     sample_state = _inter_method_sample_state(
-        inter_method_plan=inter_method_plan,
         execution_plan=execution_plan,
         batch=batch,
         source_units=source_units,
     )
-    branches_by_label = {branch.label: branch for branch in execution_plan.branches}
-    for label in dict.fromkeys(str(value) for value in sample_state.selected.tolist()):
-        branch = branches_by_label[label]
-        run_positions = np.flatnonzero(sample_state.selected == label)
+    for branch in execution_plan.branches:
+        row_ids = public_row_ids_for_branch(row_universe=row_universe, label=branch.label)
+        row_mask = (
+            sample_state.selected[:, row_universe.eligibility_by_row[row_ids]] == branch.label
+        )
+        run_positions = np.flatnonzero(row_mask.any(axis=1))
+        if run_positions.size == 0:
+            continue
         branch_batch, branch_projection_selection, branch_lcia_shared_u = _branch_state(
             branch=branch,
             batch=batch,
@@ -226,10 +230,8 @@ def sample_inter_method_summary_matrix_batch(
         _assign_branch_summary_values(
             output=output,
             run_positions=run_positions,
-            public_group_ids=public_group_index[
-                public_row_ids_for_branch(row_universe=row_universe, label=branch.label)
-            ],
-            branch_values=branch_values,
+            public_group_ids=public_group_index[row_ids],
+            branch_values=np.where(row_mask[run_positions], branch_values, np.nan),
         )
     return summary_identity, output
 
@@ -258,13 +260,12 @@ def inter_method_inter_mrio_matches_by_branch(
 
 def _inter_method_sample_state(
     *,
-    inter_method_plan: InterMethodPlan,
     execution_plan: InterMethodExecutionPlan,
     batch,
     source_units: SourceUnitIntervalSamples | None,
 ) -> _InterMethodSampleState:
-    selected = sample_inter_method_labels(
-        plan=inter_method_plan,
+    selected = _selected_category_labels(
+        execution_plan=execution_plan,
         batch=batch,
         unit_values=None if source_units is None else source_units.values_for(INTER_METHOD_SOURCE),
     )
@@ -292,6 +293,21 @@ def _inter_method_sample_state(
         selected=selected,
         projection_l2_reuse_years=projection_l2_reuse_years,
         lcia_shared_u=lcia_shared_u,
+    )
+
+
+def _selected_category_labels(
+    *,
+    execution_plan: InterMethodExecutionPlan,
+    batch: RunBatch,
+    unit_values: np.ndarray | None = None,
+) -> np.ndarray:
+    """Draw coherent method labels for distinct category eligibility sets."""
+    return np.column_stack(
+        [
+            sample_inter_method_labels(plan=plan, batch=batch, unit_values=unit_values)
+            for plan in execution_plan.category_plans
+        ]
     )
 
 
@@ -347,27 +363,15 @@ def _assign_branch_summary_values(
         block = branch_values[:, value_positions]
         counts = np.sum(np.isfinite(block), axis=1)
         sums = np.nansum(block, axis=1)
-        output[run_positions, int(group_id)] = np.divide(
-            sums,
-            counts,
-            out=np.full(branch_values.shape[0], np.nan, dtype=np.float64),
-            where=counts > 0,
-        )
+        present = counts > 0
+        output[run_positions[present], int(group_id)] = sums[present] / counts[present]
 
 
 def _sparse_row_offsets(
     *,
-    selected: np.ndarray,
-    row_counts_by_branch: dict[str, int],
+    row_counts: np.ndarray,
 ) -> tuple[np.ndarray, int]:
-    row_counts = np.fromiter(
-        (row_counts_by_branch[str(label)] for label in selected.tolist()),
-        dtype=np.int64,
-        count=selected.size,
-    )
     offsets = np.empty_like(row_counts)
-    if row_counts.size == 0:
-        return offsets, 0
     offsets[0] = 0
     if row_counts.size > 1:
         np.cumsum(row_counts[:-1], out=offsets[1:])
@@ -384,16 +388,17 @@ def _assign_sparse_branch_rows(
     branch_run_indices: np.ndarray,
     branch_public_row_id: np.ndarray,
     branch_values: np.ndarray,
+    selected_rows: np.ndarray,
 ) -> None:
-    row_count = int(branch_public_row_id.size)
-    if row_count == 0 or run_positions.size == 0:
-        return
-    destination = (
-        row_offsets[run_positions, np.newaxis] + np.arange(row_count, dtype=np.int64)
-    ).reshape(-1)
-    run_index[destination] = np.repeat(branch_run_indices, row_count)
-    public_row_id[destination] = np.tile(branch_public_row_id, run_positions.size)
-    values[destination] = branch_values.reshape(-1)
+    selected_run, selected_value = np.nonzero(selected_rows)
+    counts = selected_rows.sum(axis=1)
+    starts = np.cumsum(counts) - counts
+    within_run = np.arange(len(selected_run)) - np.repeat(starts, counts)
+    destination = row_offsets[run_positions[selected_run]] + within_run
+    run_index[destination] = branch_run_indices[selected_run]
+    public_row_id[destination] = branch_public_row_id[selected_value]
+    values[destination] = branch_values[selected_run, selected_value]
+    row_offsets[run_positions] += counts
 
 
 def _source_units_for_positions(
@@ -411,7 +416,7 @@ def _source_units_for_positions(
 
 def external_run_offsets_for_start(
     *,
-    inter_method_plan: InterMethodPlan,
+    execution_plan: InterMethodExecutionPlan,
     start_run_index: int,
     external_labels: tuple[str, ...],
 ) -> dict[str, int]:
@@ -421,7 +426,9 @@ def external_run_offsets_for_start(
     if start_run_index <= 0 or not labels:
         return counts
     label_set = set(labels)
-    chunk_size = _inter_method_offset_chunk_size()
+    chunk_size = _inter_method_offset_chunk_size(
+        eligibility_group_count=len(execution_plan.category_plans)
+    )
     for start in range(0, int(start_run_index), chunk_size):
         stop = min(start + chunk_size, int(start_run_index))
         batch = RunBatch(
@@ -430,17 +437,15 @@ def external_run_offsets_for_start(
             stop_run_index=stop,
             rng_seed=0,
         )
-        selected = sample_inter_method_labels(plan=inter_method_plan, batch=batch)
-        for label, count in zip(*np.unique(selected, return_counts=True), strict=True):
-            text = str(label)
-            if text in label_set:
-                counts[text] += int(count)
+        selected = _selected_category_labels(execution_plan=execution_plan, batch=batch)
+        for label in label_set:
+            counts[label] += int(np.any(selected == label, axis=1).sum())
     return counts
 
 
-def _inter_method_offset_chunk_size() -> int:
-    row_bytes = np.dtype(object).itemsize * len(("selected_label", "unique_workspace"))
-    row_bytes += np.dtype(np.int64).itemsize * len(("unique_counts",))
+def _inter_method_offset_chunk_size(*, eligibility_group_count: int) -> int:
+    row_bytes = 2 * np.dtype(object).itemsize * eligibility_group_count
+    row_bytes += 2 * np.dtype(np.int64).itemsize
     return memory_bounded_rows(bytes_per_row=row_bytes)
 
 

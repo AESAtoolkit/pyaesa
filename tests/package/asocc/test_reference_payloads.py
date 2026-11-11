@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 
 import pandas as pd
@@ -15,6 +16,7 @@ from pyaesa.asocc.data.reference_payloads import (
 
 def _reference_context(*, fu_code: str = "L2.a.a") -> SimpleNamespace:
     return SimpleNamespace(
+        logger=logging.getLogger(__name__),
         source="oecd_v2025",
         agg_version=None,
         fu_code=fu_code,
@@ -40,6 +42,7 @@ def _reference_context(*, fu_code: str = "L2.a.a") -> SimpleNamespace:
 
 def _reference_state() -> SimpleNamespace:
     return SimpleNamespace(
+        notices_emitted=set(),
         skipped_years={},
         lcia_metadata_cache={},
         lcia_available_years_cache={},
