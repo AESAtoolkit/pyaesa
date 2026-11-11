@@ -22,14 +22,19 @@ def batch_row_count(
 ) -> int:
     """Return the memory planning row width for one aSoCC run batch."""
     if inter_method_execution_plan is not None:
-        return max(
-            len(
+        universe = inter_method_execution_plan.row_universe
+        branch_groups = tuple(
+            universe.eligibility_by_row[
                 public_row_ids_for_branch(
                     row_universe=inter_method_execution_plan.row_universe,
                     label=branch.label,
                 )
-            )
+            ]
             for branch in inter_method_execution_plan.branches
+        )
+        return sum(
+            max(int((groups == category).sum()) for groups in branch_groups)
+            for category in range(len(universe.eligibility_labels))
         )
     external_row_count = _external_monte_carlo_row_count(plan=external_plan)
     if lcia_plan is not None:

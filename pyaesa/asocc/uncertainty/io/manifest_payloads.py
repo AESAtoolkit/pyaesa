@@ -3,6 +3,7 @@
 from typing import Any
 
 from pyaesa.asocc.io.metadata import _load_run_metadata
+from pyaesa.asocc.methods.lcia_inputs import normalize_lcia_methods
 from pyaesa.asocc.uncertainty.inputs.external_rows import ExternalAsoccRowsPlan
 from pyaesa.asocc.uncertainty.io.paths import AsoccUncertaintyRunPaths
 from pyaesa.asocc.uncertainty.schema.public_rows import ASOCC_UNCERTAINTY_CSV_DTYPES
@@ -11,6 +12,7 @@ from pyaesa.asocc.orchestration.common_formatting import format_year_ranges
 from pyaesa.external_inputs.asocc.monte_carlo.files import external_monte_carlo_manifest_payload
 from pyaesa.external_inputs.asocc.schema.row_schema import expected_external_selector_columns
 from pyaesa.shared.runtime.io.file_identity import file_identity_payload
+from pyaesa.shared.lcia.contracts import assessment_lcia_axis
 from pyaesa.shared.runtime.manifest_contract import manifest_json_value
 from pyaesa.shared.runtime.scenario.columns import ASOCC_SSP_SCENARIO_COLUMN
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
@@ -47,7 +49,12 @@ def manifest_context(
     component_inventory: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build manifest context and compatibility key for one run."""
-    source_parameters = {source.name: source.parameters for source in sources.sources}
+    source_parameters: dict[str, Any] = {
+        source.name: source.parameters for source in sources.sources
+    }
+    source_parameters["assessment_lcia_axis"] = assessment_lcia_axis(
+        methods=normalize_lcia_methods(loaded.base_asocc_args.get("lcia_method")) or []
+    ).to_dict(orient="records")
     if inter_method_plan is not None:
         inter_method_parameters = dict(source_parameters.get(INTER_METHOD_SOURCE, {}))
         inter_method_parameters["probability_tree_key"] = build_compatibility_key(
@@ -82,7 +89,7 @@ def manifest_context(
     external_inputs = external_input_payload(plan=external_plan)
     compatibility_payload = {
         "family": "asocc",
-        "artifact_contract": "asocc_runs_with_public_identity_v1",
+        "artifact_contract": "asocc_runs_with_public_identity_v2",
         "run_role": run_role_payload(component_inventory=component_inventory),
         "output_format": runtime.output_format,
         "arguments": dict(loaded.base_asocc_args),

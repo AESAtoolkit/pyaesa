@@ -1,8 +1,11 @@
 """Public aSoCC Monte Carlo row schema ownership."""
 
+from typing import Sequence
+
 import numpy as np
 import pandas as pd
 
+from pyaesa.shared.lcia.contracts import assessment_lcia_axis
 from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
@@ -98,6 +101,14 @@ def lcia_public_axis(*, frame: pd.DataFrame) -> pd.DataFrame:
         .drop_duplicates(ignore_index=True)
         .reset_index(drop=True)
     )
+
+
+def requested_lcia_public_axis(*, frame: pd.DataFrame, methods: Sequence[str]) -> pd.DataFrame:
+    """Combine requested assessment categories with actual public row coverage."""
+    return pd.concat(
+        [assessment_lcia_axis(methods=methods), lcia_public_axis(frame=frame)],
+        ignore_index=True,
+    ).drop_duplicates(ignore_index=True)
 
 
 def align_asocc_lcia_public_axis(

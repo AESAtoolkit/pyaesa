@@ -9,19 +9,21 @@ from pyaesa.process.mrios.utils.io.metadata import (
     _read_metadata,
 )
 from pyaesa.process.mrios.utils.io.paths import _get_metadata_path
+from pyaesa.shared.lcia.contracts import assessment_lcia_axis
 
-from .enacting_metric_units import lcia_unit_series_for_method
-from .load_mrio import _load_lcia_l1_metric, _load_lcia_l2_metric
-from .lcia_status import resolve_lcia_status
-from .paths import _get_mrio_year_dir
-from ..runtime.methods.fallback_policy import resolve_latest_available_historical_year
-from ..runtime.reporting.family import emit_deduplicated_family_warning
 from ..methods.lcia_inputs import (
     aggregate_lcia_to_parent,
     load_impact_parent_mapping,
 )
 from ..methods.lcia_key_selection import required_lcia_metric_keys_for_context
 from ..methods.registry.registry import REGISTRY
+from ..runtime.methods.fallback_policy import resolve_latest_available_historical_year
+from ..runtime.methods.labels import l1_l2_method_label
+from ..runtime.reporting.family import emit_deduplicated_family_warning
+from .enacting_metric_units import lcia_unit_series_for_method
+from .lcia_status import resolve_lcia_status
+from .load_mrio import _load_lcia_l1_metric, _load_lcia_l2_metric
+from .paths import _get_mrio_year_dir
 
 _USE_CONTEXT_AGG_VERSION = object()
 
@@ -33,6 +35,41 @@ def _emit_lcia_notice(*, context, state, key: str, message: str) -> None:
         state=state,
         key=key,
         message=message,
+    )
+
+
+def _report_category_coverage(*, context, state, method: str, payload: dict) -> None:
+    """Report categories unavailable to selected LCIA allocation methods once."""
+    expected = assessment_lcia_axis(methods=[method])["impact"].tolist()
+    actual = {
+        str(impact)
+        for frame in payload.values()
+        for impact in frame.index.get_level_values("impact")
+    }
+    missing = sorted(set(expected) - actual)
+    if not missing:
+        return
+    labels = [name for name in context.selected_l1 if REGISTRY.method_requires_lcia(name, None)]
+    labels.extend(
+        l1_l2_method_label(l1_method=l1, l2_method=l2)
+        for l2, l1 in context.combined
+        if REGISTRY.method_requires_lcia(l1, None)
+        or REGISTRY.method_requires_lcia(l2, context.fu_code)
+    )
+    labels.extend(
+        name
+        for name in context.selected_l2_one_step
+        if REGISTRY.method_requires_lcia(name, context.fu_code)
+    )
+    _emit_lcia_notice(
+        context=context,
+        state=state,
+        key=f"lcia-category-coverage:{method}",
+        message=(
+            f"Source '{context.source}', LCIA method '{method}': allocation methods "
+            f"{sorted(set(labels))} are excluded for unsupported categories {missing}. "
+            "Compatible non-LCIA allocation methods retain these categories."
+        ),
     )
 
 
@@ -237,6 +274,7 @@ def _load_lcia_for_year(
             lcia = aggregate_lcia_to_parent(lcia_raw, impact_parent_map)
             state.lcia_method_payload_cache[payload_key] = lcia
         lcia_by_method[lcia_method] = lcia
+        _report_category_coverage(context=context, state=state, method=lcia_method, payload=lcia)
         if method_year_out is not None:
             method_year_out[str(lcia_method)] = int(loaded_year)
 

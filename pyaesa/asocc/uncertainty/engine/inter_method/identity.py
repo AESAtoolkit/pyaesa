@@ -15,7 +15,9 @@ from pyaesa.asocc.uncertainty.schema.public_rows import (
     align_asocc_lcia_public_axis,
     finalize_asocc_public_row_identity,
     lcia_public_axis,
+    requested_lcia_public_axis,
 )
+from pyaesa.asocc.methods.lcia_inputs import normalize_lcia_methods
 from pyaesa.asocc.uncertainty.sources.lcia import LCIAPlan, lcia_public_row_template
 from pyaesa.asocc.uncertainty.sources.names import REFERENCE_YEAR_SOURCE
 from pyaesa.asocc.uncertainty.sources.projection import (
@@ -44,6 +46,8 @@ class InterMethodRowUniverse:
     identity: pd.DataFrame
     public_lcia_axis: pd.DataFrame
     branch_row_ids: tuple[InterMethodBranchRowIds, ...]
+    eligibility_labels: tuple[tuple[str, ...], ...]
+    eligibility_by_row: np.ndarray
 
 
 def execution_external_plan_from_branches(*, branches: tuple[Any, ...]) -> ExternalAsoccRowsPlan:
@@ -97,11 +101,46 @@ def build_inter_method_row_universe(
         )
         for branch in branches
     )
+    labels, row_groups = _category_eligibility(identity=identity, branch_ids=branch_ids)
     return InterMethodRowUniverse(
         identity=identity,
         public_lcia_axis=public_axis,
         branch_row_ids=branch_ids,
+        eligibility_labels=labels,
+        eligibility_by_row=row_groups,
     )
+
+
+def _category_eligibility(
+    *, identity: pd.DataFrame, branch_ids: tuple[InterMethodBranchRowIds, ...]
+) -> tuple[tuple[tuple[str, ...], ...], np.ndarray]:
+    """Group assessment scopes sharing the same actual eligible method leaves.
+
+    Year and shared functional unit selectors constrain availability. Method
+    reference years and projection metadata do not define competing assessment
+    scopes, so invariant generic leaves remain comparable to constrained leaves.
+    """
+    columns = ["lcia_method", "impact"]
+    columns.extend(
+        column
+        for column in ("year", "r_p", "s_p", "r_c", "r_f")
+        if column in identity.columns and bool(identity[column].notna().to_numpy().all())
+    )
+    axis = identity.reindex(columns=columns).fillna("").astype(str)
+    groups: dict[tuple[str, ...], int] = {}
+    row_groups = np.empty(len(identity), dtype=np.int64)
+    scopes = tuple(axis.groupby(columns, sort=False).indices.values())
+    for scope_id, positions in enumerate(scopes):
+        row_groups[positions] = scope_id
+    branch_scopes = tuple(set(row_groups[branch.public_row_ids]) for branch in branch_ids)
+    for scope_id, positions in enumerate(scopes):
+        labels = tuple(
+            branch.label
+            for branch, available in zip(branch_ids, branch_scopes, strict=True)
+            if scope_id in available
+        )
+        row_groups[positions] = groups.setdefault(labels, len(groups))
+    return tuple(groups), row_groups
 
 
 def public_identity_for_sampling_plan(
@@ -120,6 +159,11 @@ def public_identity_for_sampling_plan(
         projection_plan=projection_plan,
     )
     template = append_external_monte_carlo_template(template=template, plan=external_plan)
+    if reference_axis is None:
+        reference_axis = requested_lcia_public_axis(
+            frame=template,
+            methods=normalize_lcia_methods(loaded.base_asocc_args.get("lcia_method")) or [],
+        )
     template, _values = align_asocc_lcia_public_axis(
         frame=template,
         values=np.empty((0, len(template)), dtype=np.float64),

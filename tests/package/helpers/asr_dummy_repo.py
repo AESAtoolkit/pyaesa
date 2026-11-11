@@ -11,6 +11,15 @@ from pyaesa.shared.lcia.paths import responsibility_periods_csv_path, static_cc_
 from tests.package.helpers.ar6_dummy_repo import build_ar6_dummy_repo
 
 
+def add_assessment_category(*, lcia_method: str, impact: str) -> None:
+    """Add a static assessment category without inventing inventory LCIA coverage."""
+    path = static_cc_csv_path(lcia_method=lcia_method)
+    frame = pd.read_csv(path)
+    added = frame.iloc[[0]].copy()
+    added["impact"] = impact
+    pd.concat([frame, added], ignore_index=True).to_csv(path, index=False)
+
+
 def prepare_static_asr_io_lca_repo(
     allocation_dummy_repo,
     *,

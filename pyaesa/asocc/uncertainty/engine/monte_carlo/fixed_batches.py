@@ -188,7 +188,7 @@ def _write_sparse_inter_method_fixed_batches(
             csv_dtypes=ASOCC_UNCERTAINTY_CSV_DTYPES,
         )
     external_render_offsets = external_run_offsets_for_start(
-        inter_method_plan=inter_method_plan,
+        execution_plan=inter_method_execution_plan,
         start_run_index=start_run_index,
         external_labels=tuple(
             source.selection.asocc_method_label
@@ -221,7 +221,6 @@ def _write_sparse_inter_method_fixed_batches(
                 )
                 sparse_batch = sample_sparse_inter_method_batch(
                     loaded=loaded,
-                    inter_method_plan=inter_method_plan,
                     execution_plan=inter_method_execution_plan,
                     inter_mrio_plan=inter_mrio_plan,
                     batch=batch,

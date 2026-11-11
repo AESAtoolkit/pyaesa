@@ -97,7 +97,13 @@ def inter_method_source_method_row(
         distribution="discrete probability over selected deterministic methods",
         shared_random_variable="run_index",
         formula="sampled row = active-source aSoCC value for selected method leaf",
-        notes=f"Candidate method leaves: {';'.join(labels)}",
+        notes=(
+            f"Candidate methods: {';'.join(labels)}. Unavailable methods are excluded "
+            "for each impact category, and selection probabilities are recalculated for "
+            "the remaining methods. The same random draw is used for all impact categories "
+            "in each run, so categories with the same available methods select the same "
+            "method. Results identify the selected method for each impact category."
+        ),
     )
 
 

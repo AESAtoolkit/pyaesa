@@ -25,6 +25,7 @@ from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_TIME_ROUTE_REGRESSION,
 )
 from pyaesa.shared.runtime.reporting.run_progress import monte_carlo_run_progress
+from pyaesa.shared.lcia.paths import static_cc_csv_path
 from pyaesa.asocc.uncertainty.sources.inter_method import (
     InterMethodPlan,
     build_inter_method_plan,
@@ -61,6 +62,7 @@ from pyaesa.asocc.inter_method_tools.tree import (
     candidates_from_scope,
     default_inter_method_tree_probabilities,
     inter_method_tree_version_name,
+    inter_method_tree_path,
     load_inter_method_tree_probabilities,
     write_inter_method_tree_csv,
 )
@@ -1257,7 +1259,16 @@ def test_inter_method_external_render_offsets_count_prior_selected_runs() -> Non
     )
 
     offsets = external_run_offsets_for_start(
-        inter_method_plan=plan,
+        execution_plan=build_inter_method_execution_plan(
+            loaded=_loaded(
+                rows=pd.DataFrame({"l1_l2_method": ["UT(TD)"], ASOCC_VALUE_COLUMN: [0.1]})
+            ),
+            inter_method_plan=plan,
+            sources=SourceActivationPlan(sources=()),
+            external_plan=ExternalAsoccRowsPlan(),
+            lcia_plan=None,
+            projection_plan=None,
+        ),
         start_run_index=200_003,
         external_labels=("UT(TD)", "missing_external"),
     )
@@ -1273,7 +1284,18 @@ def test_inter_method_external_render_offsets_count_prior_selected_runs() -> Non
     )
 
     native_offsets = external_run_offsets_for_start(
-        inter_method_plan=native_plan,
+        execution_plan=build_inter_method_execution_plan(
+            loaded=_loaded(
+                rows=pd.DataFrame(
+                    {"l1_l2_method": ["UT(TD)", "native"], ASOCC_VALUE_COLUMN: [0.1, 0.2]}
+                )
+            ),
+            inter_method_plan=native_plan,
+            sources=SourceActivationPlan(sources=()),
+            external_plan=ExternalAsoccRowsPlan(),
+            lcia_plan=None,
+            projection_plan=None,
+        ),
         start_run_index=5,
         external_labels=("UT(TD)",),
     )
@@ -1382,7 +1404,6 @@ def test_inter_method_external_monte_carlo_uses_selected_run_index(tmp_path: Pat
 
     sampled = sample_sparse_inter_method_batch(
         loaded=loaded,
-        inter_method_plan=inter_method_plan,
         execution_plan=execution_plan,
         inter_mrio_plan=None,
         batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=3, rng_seed=7),
@@ -2238,6 +2259,14 @@ def test_inter_method_public_weights_feed_custom_probabilities(allocation_dummy_
             pd.read_csv(custom_path).assign(edge_weight=0.25),
             "sibling edge weights",
         ),
+        (
+            pd.read_csv(custom_path).assign(edge_weight=float("nan")),
+            "finite",
+        ),
+        (
+            pd.read_csv(custom_path).assign(edge_weight=float("inf")),
+            "finite",
+        ),
     ):
         frame.to_csv(custom_path, index=False)
         with pytest.raises(ValueError):
@@ -2307,7 +2336,6 @@ def test_sampling_uses_inter_method_compact_owner() -> None:
 
     sparse_batch = sample_sparse_inter_method_batch(
         loaded=loaded,
-        inter_method_plan=plan,
         execution_plan=execution_plan,
         inter_mrio_plan=None,
         batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=2, rng_seed=17),
@@ -2328,6 +2356,208 @@ def test_sampling_uses_inter_method_compact_owner() -> None:
     assert sparse_batch.sparse_rows.run_index.tolist() == [0, 1]
     assert set(sparse_batch.sparse_rows.public_row_id.tolist()).issubset({0, 1, 2})
     assert set(sparse_batch.sparse_rows.values.tolist()).issubset({0.2, 0.4, 0.6})
+
+
+@pytest.mark.parametrize("weights", ["equal", "custom", "zero_eligible"])
+def test_inter_method_conditions_actual_category_coverage(tmp_path: Path, weights: str) -> None:
+    external, native, generic = "AR(E^{CBA_FD})", "AR(E^{CBA_TD})", "UT(FD)"
+    records = [
+        {"l1_l2_method": generic, "l2_method": generic, ASOCC_VALUE_COLUMN: 0.2},
+        *[
+            {
+                "l1_l2_method": label,
+                "l2_method": label,
+                "lcia_method": "custom_assessment",
+                "impact": impact,
+                ASOCC_VALUE_COLUMN: value,
+            }
+            for label, impacts, value in (
+                (native, ["GWP_100", "FEU"], 0.4),
+                (external, ["GWP_100", "FEU", "IR", "ODP"], 0.8),
+            )
+            for impact in impacts
+        ],
+    ]
+    rows = pd.DataFrame(records).assign(r_p="FR", s_p="Electricity", year=2030)
+    earlier = rows.loc[rows.l1_l2_method.ne(native)].assign(year=1995)
+    rows = pd.concat([earlier, rows], ignore_index=True)
+    rows["reference_year"] = np.where(rows.l1_l2_method.eq(native), 2010, np.nan)
+    path = tmp_path / "final_rows.csv"
+    rows.to_csv(path, index=False)
+    loaded = _loaded(rows=pd.read_csv(path), proj_base=tmp_path)
+    external_plan = ExternalAsoccRowsPlan(method_labels=(external,))
+    sources = SourceActivationPlan(
+        sources=(ActiveSource(name="inter_method_uncertainty", parameters={}),)
+    )
+    plan = build_inter_method_plan(loaded=loaded, parameters={}, external_plan=external_plan)
+    if weights != "equal":
+        probabilities = np.array([0.0, 1.0, 0.0] if weights == "zero_eligible" else [0.4, 0.1, 0.5])
+        custom_path = inter_method_tree_path(proj_base=tmp_path, version_name="category_weights")
+        write_inter_method_tree_csv(
+            path=custom_path,
+            frame=build_inter_method_tree_frame(
+                candidates=plan.candidates, probabilities=probabilities
+            ),
+        )
+        plan = build_inter_method_plan(
+            loaded=loaded,
+            parameters={"mode": "custom", "version_name": "category_weights"},
+            external_plan=external_plan,
+        )
+    if weights == "zero_eligible":
+        with pytest.raises(ValueError, match="No selectable method remains"):
+            build_inter_method_execution_plan(
+                loaded=loaded,
+                inter_method_plan=plan,
+                sources=sources,
+                external_plan=external_plan,
+                lcia_plan=None,
+                projection_plan=None,
+            )
+        return
+    execution = build_inter_method_execution_plan(
+        loaded=loaded,
+        inter_method_plan=plan,
+        sources=sources,
+        external_plan=external_plan,
+        lcia_plan=None,
+        projection_plan=None,
+    )
+    supported = [0.25, 0.25, 0.5] if weights == "equal" else [0.4, 0.1, 0.5]
+    for labels, category_plan in zip(
+        execution.row_universe.eligibility_labels, execution.category_plans, strict=True
+    ):
+        expected = supported if native in labels else [0.5, 0, 0.5]
+        np.testing.assert_allclose(category_plan.selection_probabilities, expected)
+    batch = RunBatch(batch_index=0, start_run_index=0, stop_run_index=100, rng_seed=17)
+    result = sample_sparse_inter_method_batch(
+        loaded=loaded,
+        execution_plan=execution,
+        inter_mrio_plan=None,
+        batch=batch,
+        sources=sources,
+        identity=None,
+    )
+    sampled = pd.DataFrame(
+        {
+            "run_index": result.sparse_rows.run_index,
+            "public_row_id": result.sparse_rows.public_row_id,
+            "value": result.sparse_rows.values,
+        }
+    ).merge(result.identity, on="public_row_id", validate="many_to_one")
+    choices = sampled.pivot(index=["run_index", "year"], columns="impact", values="l1_l2_method")
+    assert choices.shape == (200, 4)
+    assert choices.GWP_100.tolist() == choices.FEU.tolist()
+    assert choices.IR.tolist() == choices.ODP.tolist()
+    uniform = uniform_by_run_index(
+        stream_name="asocc.inter_method.selection", run_indices=batch.run_indices()
+    )
+    expected_incomplete = np.where(uniform < 0.5, external, generic)
+    assert choices.IR.tolist() == np.repeat(expected_incomplete, 2).tolist()
+    assert choices.xs(1995, level="year").GWP_100.tolist() == expected_incomplete.tolist()
+    expected_supported = np.where(
+        uniform < supported[0], external, np.where(uniform < 0.5, native, generic)
+    )
+    assert choices.xs(2030, level="year").GWP_100.tolist() == expected_supported.tolist()
+    offsets = external_run_offsets_for_start(
+        execution_plan=execution, start_run_index=100, external_labels=(external,)
+    )
+    assert offsets == {external: int((uniform < 0.5).sum())}
+    summary_identity, summary = sample_inter_method_summary_matrix_batch(
+        loaded=loaded,
+        execution_plan=execution,
+        inter_mrio_plan=None,
+        batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=1, rng_seed=17),
+        sources=sources,
+        source_units=SourceUnitIntervalSamples(
+            values_by_source={"inter_method_uncertainty": np.array([0.45])}
+        ),
+    )
+    keys = zip(summary_identity.year, summary_identity.impact, strict=True)
+    actual = dict(zip(keys, summary[0], strict=True))
+    assert actual == {
+        (year, impact): 0.4 if year == 2030 and impact in {"FEU", "GWP_100"} else 0.8
+        for year in (1995, 2030)
+        for impact in ("FEU", "GWP_100", "IR", "ODP")
+    }
+
+
+def test_category_eligible_external_runs_continue_once_per_selected_package_run(
+    tmp_path: Path, project_repo: Path
+) -> None:
+    del project_repo
+    loaded, sources, _, original_execution, _ = _external_sparse_inter_method_context(
+        tmp_path=tmp_path, available_runs=4
+    )
+    external_plan = original_execution.branches[0].external_plan
+    method = "category_fixture"
+    pd.DataFrame(
+        {
+            "impact_full_name": ["Climate", "Freshwater", "Radiation", "Ozone"],
+            "impact": ["GWP_100", "FEU", "IR", "ODP"],
+            "impact_unit": ["unit"] * 4,
+            "min_cc": [1.0] * 4,
+            "max_cc": [2.0] * 4,
+        }
+    ).to_csv(static_cc_csv_path(lcia_method=method), index=False)
+    rows = pd.DataFrame(
+        {
+            "l1_l2_method": ["AR(E^{CBA_TD})", "AR(E^{CBA_TD})", "UT(FD)"],
+            "l2_method": ["AR(E^{CBA_TD})", "AR(E^{CBA_TD})", "UT(FD)"],
+            "lcia_method": [method, method, None],
+            "impact": ["GWP_100", "FEU", None],
+            "r_p": ["FR"] * 3,
+            "s_p": ["Electricity"] * 3,
+            "year": [2030] * 3,
+            ASOCC_VALUE_COLUMN: [0.4, 0.4, 0.2],
+        }
+    )
+    loaded = replace(
+        loaded,
+        rows=rows,
+        base_asocc_args={"fu_code": "L2.a.a", "lcia_method": [method]},
+    )
+    plan = build_inter_method_plan(loaded=loaded, parameters={}, external_plan=external_plan)
+    execution = build_inter_method_execution_plan(
+        loaded=loaded,
+        inter_method_plan=plan,
+        sources=sources,
+        external_plan=external_plan,
+        lcia_plan=None,
+        projection_plan=None,
+    )
+
+    def sample(start: int, stop: int) -> pd.DataFrame:
+        result = sample_sparse_inter_method_batch(
+            loaded=loaded,
+            execution_plan=execution,
+            inter_mrio_plan=None,
+            batch=RunBatch(batch_index=0, start_run_index=start, stop_run_index=stop, rng_seed=17),
+            sources=sources,
+            identity=None,
+            external_render_offsets=external_run_offsets_for_start(
+                execution_plan=execution, start_run_index=start, external_labels=("UT(TD)",)
+            ),
+        )
+        return pd.DataFrame(
+            {
+                "run_index": result.sparse_rows.run_index,
+                "public_row_id": result.sparse_rows.public_row_id,
+                "value": result.sparse_rows.values,
+            }
+        ).merge(result.identity, on="public_row_id", validate="many_to_one")
+
+    combined = sample(0, 4).sort_values(["run_index", "impact"]).reset_index(drop=True)
+    split = pd.concat([sample(0, 2), sample(2, 4)], ignore_index=True)
+    split = split.sort_values(["run_index", "impact"]).reset_index(drop=True)
+    pd.testing.assert_frame_equal(split, combined)
+    assert combined.groupby("run_index").impact.nunique().tolist() == [4] * 4
+    external_rows = combined.loc[combined.l1_l2_method.eq("UT(TD)")]
+    selected_values = external_rows.groupby("run_index").value
+    assert selected_values.nunique().tolist() == [1] * selected_values.ngroups
+    np.testing.assert_allclose(
+        selected_values.first(), [0.7 + index / 10 for index in range(selected_values.ngroups)]
+    )
 
 
 def test_inter_method_reuses_inter_mrio_matches_for_selected_branches() -> None:
@@ -2379,7 +2609,6 @@ def test_inter_method_reuses_inter_mrio_matches_for_selected_branches() -> None:
 
     sparse_batch = sample_sparse_inter_method_batch(
         loaded=loaded,
-        inter_method_plan=plan,
         execution_plan=execution_plan,
         inter_mrio_plan=inter_mrio_plan,
         batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=1, rng_seed=17),
@@ -2397,16 +2626,8 @@ def test_inter_method_reuses_inter_mrio_matches_for_selected_branches() -> None:
 
 
 def test_inter_method_sampling_helpers_cover_empty_and_grouped_assignments() -> None:
-    empty_offsets, empty_total = _sparse_row_offsets(
-        selected=np.asarray([], dtype=object),
-        row_counts_by_branch={},
-    )
-    assert empty_offsets.size == 0
-    assert empty_total == 0
-
     offsets, total = _sparse_row_offsets(
-        selected=np.asarray(["a", "b", "a"], dtype=object),
-        row_counts_by_branch={"a": 2, "b": 1},
+        row_counts=np.asarray([2, 1, 2], dtype=np.int64),
     )
     np.testing.assert_array_equal(offsets, np.asarray([0, 2, 3], dtype=np.int64))
     assert total == 5
@@ -2429,20 +2650,11 @@ def test_inter_method_sampling_helpers_cover_empty_and_grouped_assignments() -> 
         public_row_id=public_row_id,
         values=values,
         row_offsets=offsets,
-        run_positions=np.asarray([], dtype=np.int64),
-        branch_run_indices=np.asarray([], dtype=np.int64),
-        branch_public_row_id=np.asarray([7], dtype=np.int64),
-        branch_values=np.empty((0, 1), dtype=np.float64),
-    )
-    _assign_sparse_branch_rows(
-        run_index=run_index,
-        public_row_id=public_row_id,
-        values=values,
-        row_offsets=offsets,
         run_positions=np.asarray([0, 2], dtype=np.int64),
         branch_run_indices=np.asarray([10, 12], dtype=np.int64),
         branch_public_row_id=np.asarray([7, 8], dtype=np.int64),
         branch_values=np.asarray([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64),
+        selected_rows=np.ones((2, 2), dtype=bool),
     )
     np.testing.assert_array_equal(run_index[[0, 1, 3, 4]], [10, 10, 12, 12])
     np.testing.assert_array_equal(public_row_id[[0, 1, 3, 4]], [7, 8, 7, 8])
@@ -2497,7 +2709,6 @@ def test_inter_method_summary_matrix_batch_collapses_public_groups() -> None:
     )
     identity, values = sample_inter_method_summary_matrix_batch(
         loaded=loaded,
-        inter_method_plan=plan,
         execution_plan=execution_plan,
         inter_mrio_plan=None,
         batch=RunBatch(batch_index=0, start_run_index=0, stop_run_index=2, rng_seed=17),
@@ -2637,7 +2848,6 @@ def test_inter_method_branch_keeps_inactive_inner_source_axes_stable() -> None:
     )
     sparse_batch = sample_sparse_inter_method_batch(
         loaded=loaded,
-        inter_method_plan=plan,
         execution_plan=execution_plan,
         inter_mrio_plan=None,
         batch=batch,

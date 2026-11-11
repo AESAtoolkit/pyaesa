@@ -232,6 +232,45 @@ def inter_method_tree_probabilities(
     )
 
 
+def eligible_inter_method_tree_probabilities(
+    *,
+    frame: pd.DataFrame,
+    candidates: tuple[InterMethodCandidate, ...],
+    eligible_labels: tuple[str, ...],
+) -> np.ndarray:
+    """Remove unavailable methods and renormalize the remaining tree weights.
+
+    Validate the complete tree before filtering. Raise ValueError if no
+    selectable method remains for the impact category.
+    """
+    original = inter_method_tree_probabilities(frame=frame, candidates=candidates)
+    eligible = {
+        candidate.candidate_label
+        for candidate, probability in zip(candidates, original, strict=True)
+        if candidate.candidate_label in eligible_labels and probability > 0
+    }
+    if not eligible:
+        raise ValueError(
+            "No selectable method remains after filtering for this impact category. "
+            f"Eligible methods: {list(eligible_labels)}. Review the selected methods and weights."
+        )
+    parents = dict(zip(frame.node_id.astype(str), frame.parent_id.astype(str), strict=True))
+    retained = set(frame.loc[frame.candidate_label.isin(eligible), "node_id"].astype(str))
+    for leaf in tuple(retained):
+        node = leaf
+        while node != "root":
+            node = parents[node]
+            retained.add(node)
+    pruned = frame.loc[frame.node_id.astype(str).isin(retained)].copy()
+    totals = pruned.groupby("parent_id", dropna=False)["edge_weight"].transform("sum")
+    pruned["edge_weight"] = pruned["edge_weight"] / totals
+    probabilities = _leaf_probabilities_from_edges(frame=pruned)
+    return np.array(
+        [probabilities.get(candidate.candidate_label, 0.0) for candidate in candidates],
+        dtype=np.float64,
+    )
+
+
 def load_inter_method_tree_probabilities(
     *,
     candidates: tuple[InterMethodCandidate, ...],
@@ -789,12 +828,13 @@ def _validate_tree_topology(*, expected: pd.DataFrame, actual: pd.DataFrame) -> 
             "method scope before editing edge weights."
         )
     actual["edge_weight"] = pd.to_numeric(actual["edge_weight"], errors="raise")
-    if bool(((actual["edge_weight"] < 0.0) | (actual["edge_weight"] > 1.0)).any()):
-        raise ValueError("Inter-method tree edge weights must be between 0 and 1.")
     _validate_parent_edge_sums(frame=actual)
 
 
 def _validate_parent_edge_sums(*, frame: pd.DataFrame) -> None:
+    weights = frame["edge_weight"].to_numpy(dtype=float)
+    if not np.isfinite(weights).all() or ((weights < 0) | (weights > 1)).any():
+        raise ValueError("Inter-method tree edge weights must be finite and between 0 and 1.")
     sums = frame.groupby("parent_id", dropna=False)["edge_weight"].sum()
     values = np.asarray(sums, dtype=np.float64)
     if bool((np.abs(values - 1.0) > EDGE_WEIGHT_TOLERANCE).any()):

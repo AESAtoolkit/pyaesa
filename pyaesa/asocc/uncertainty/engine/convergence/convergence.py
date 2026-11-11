@@ -251,7 +251,7 @@ def write_sparse_inter_method_convergence_batches(
         )
         accumulator.record_baseline(completed_runs=completed_runs)
     external_render_offsets = external_run_offsets_for_start(
-        inter_method_plan=inter_method_plan,
+        execution_plan=inter_method_execution_plan,
         start_run_index=start_run_index,
         external_labels=tuple(
             source.selection.asocc_method_label
@@ -287,7 +287,6 @@ def write_sparse_inter_method_convergence_batches(
             try:
                 sparse_batch = sample_sparse_inter_method_batch(
                     loaded=loaded,
-                    inter_method_plan=inter_method_plan,
                     execution_plan=inter_method_execution_plan,
                     inter_mrio_plan=inter_mrio_plan,
                     batch=batch,
