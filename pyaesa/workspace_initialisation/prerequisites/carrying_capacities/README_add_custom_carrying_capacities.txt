@@ -5,8 +5,9 @@ Purpose
 -------
 
 This folder stores static carrying capacity CSVs used by:
-- deterministic_acc(...)
-- deterministic_asr(...)
+
+- `deterministic_acc(...)`
+- `deterministic_asr(...)`
 - external LCA validation against bundled `(impact, impact_unit)` pairs
 
 This workspace folder stores the static carrying capacity CSVs available to
@@ -18,6 +19,7 @@ package. Users who run package shipped methods can use the bundled CSV files
 directly and do not need to edit this folder.
 
 The custom method workflow is:
+
 - work in that copied user side folder
 - add or edit the CSV there
 - call package functions with the selected `lcia_method` name
@@ -26,30 +28,34 @@ What to copy for a custom method
 --------------------------------
 
 Add one new CSV named:
-- <lcia_method>_cc_steady_state.csv
+
+- `<lcia_method>_cc_steady_state.csv`
 
 Use exactly one of the packaged model files as the starting structure:
-- name_lcia_cc_steady_state_template.csv
-- name_lcia_cc_steady_state_planetary_boundary_template.csv
+
+- `name_lcia_cc_steady_state_template.csv`
+- `name_lcia_cc_steady_state_planetary_boundary_template.csv`
 
 Canonical column contracts
 --------------------------
 
 Standard schema:
-- impact_full_name
-- impact
-- impact_unit
-- optional_global_normalisation_factor
-- min_cc
-- max_cc
+
+- `impact_full_name`
+- `impact`
+- `impact_unit`
+- `optional_global_normalisation_factor`
+- `min_cc`
+- `max_cc`
 
 Planetary boundary schema:
-- Planetary boundary
-- Control variable
-- impact
-- impact_unit
-- min_cc
-- max_cc
+
+- `Planetary boundary`
+- `Control variable`
+- `impact`
+- `impact_unit`
+- `min_cc`
+- `max_cc`
 
 The package normalizes both schemas to the same internal runtime contract.
 
@@ -66,6 +72,7 @@ Custom method workflow
 ----------------------
 
 User workflow:
+
 1. Run `set_workspace(...)` for the target workspace.
 2. Go to `data_raw/carrying_capacities/` in that workspace.
 3. Copy one template CSV there.
@@ -74,6 +81,7 @@ User workflow:
 6. Use the same `lcia_method` name in package calls.
 
 Optional contributor route:
+
 1. If the new file should become available to all users by default, submit it
    to `pyaesa` through a pull request.
 2. Add a matching characterization matrix in:

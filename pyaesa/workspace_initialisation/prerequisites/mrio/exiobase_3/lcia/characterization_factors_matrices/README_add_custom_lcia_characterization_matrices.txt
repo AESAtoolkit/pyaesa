@@ -5,12 +5,14 @@ Purpose
 -------
 
 This folder stores EXIOBASE LCIA characterization matrices used by:
-- process_mrio(...)
-- deterministic_io_lca(...)
+
+- `process_mrio(...)`
+- `deterministic_io_lca(...)`
 - LCIA based aSoCC methods that depend on processed MRIO characterization
 
 This workspace folder stores the EXIOBASE LCIA characterization matrices
 available to the current project under:
+
 - `data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/<exiobase_version>/`
 
 This guide is only needed when adding an LCIA characterization matrix for a
@@ -31,35 +33,39 @@ What to copy for a custom method
 --------------------------------
 
 Add one CSV per method in each required source version folder:
-- <lcia_method>.csv
+
+- `<lcia_method>.csv`
 
 Use exactly one of the packaged model files as the starting structure:
-- name_lcia_template.csv
-- name_lcia_planetary_boundary_template.csv
+
+- `name_lcia_template.csv`
+- `name_lcia_planetary_boundary_template.csv`
 
 Canonical column contract
 -------------------------
 
 Standard schema:
-- impact_full_name
-- impact_parent
-- impact
-- impact_unit
-- stressor
-- extension
-- stressor_unit
-- factor
+
+- `impact_full_name`
+- `impact_parent`
+- `impact`
+- `impact_unit`
+- `stressor`
+- `extension`
+- `stressor_unit`
+- `factor`
 
 Planetary boundary schema:
-- Planetary boundary
-- Control variable
-- impact_parent
-- impact
-- impact_unit
-- stressor
-- extension
-- stressor_unit
-- factor
+
+- `Planetary boundary`
+- `Control variable`
+- `impact_parent`
+- `impact`
+- `impact_unit`
+- `stressor`
+- `extension`
+- `stressor_unit`
+- `factor`
 
 When to use each schema
 -----------------------
@@ -72,7 +78,7 @@ preserve explicit `Planetary boundary` and `Control variable` vocabulary for
 user facing and contributor facing traceability.
 
 Guidance
----------------
+--------
 
 - Keep the file name stem equal to the public `lcia_method` token.
 - Match every `stressor`, `extension`, and `stressor_unit` to the selected
@@ -93,6 +99,7 @@ Custom method workflow
 ----------------------
 
 User workflow:
+
 1. Run `set_workspace(...)` for the target workspace.
 2. Go to `data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/`.
 3. Copy one template CSV into the selected version folder, for example
@@ -102,6 +109,7 @@ User workflow:
 6. Use the same `lcia_method` name in package calls.
 
 Optional contributor route:
+
 1. If the new method should become available to all users by default, submit
    the characterization matrix to `pyaesa` through a pull request.
 2. Add the matching bundled static carrying capacity CSV when the method should

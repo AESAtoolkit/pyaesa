@@ -15,6 +15,13 @@ notebooks, study objective notebooks, and optional workflow notebooks.
    tutorials/study_objectives/index
    tutorials/optional_workflows/index
 
+Workspace Guides
+----------------
+
+The :doc:`workspace_guides/index` provide the README instructions copied into
+the workspace for custom MRIO aggregations, LCIA inputs, carrying capacities,
+external inputs, and AR6 model-scenario subsets.
+
 Methodological Notes
 --------------------
 
