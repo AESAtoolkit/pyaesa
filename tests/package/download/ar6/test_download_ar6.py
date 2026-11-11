@@ -914,10 +914,9 @@ def test_historical_sources_contracts_and_ensure_historical_sources(
         download_binary_func=fake_download_binary,
         fetch_latest_gcp_link_func=lambda: ("http://gcp/file.xlsx", "GCP label", 2024),
         extract_gcp_recommended_citation_func=lambda: "GCP citation",
-        download_iiasa_public_file_func=lambda **kwargs: {
-            "path": str(kwargs["target_path"]),
-            "filename": kwargs["target_path"].name,
-        },
+        download_iiasa_public_file_func=lambda **kwargs: fake_download_binary(
+            "http://example", kwargs["target_path"]
+        ),
     )
     assert result["primap"] is not None
     assert result["gcp"] is not None
