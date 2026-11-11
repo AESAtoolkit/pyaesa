@@ -66,6 +66,13 @@ category, so its supplied category coverage can support a complete assessment
 when the internal inventory is partial. No missing numerator is interpreted as
 zero. These contracts are exercised through real input files in
 `tests/package/asr/test_deterministic_asr.py` and `test_uncertainty_asr.py`.
+The scope owner `uncertainty/runtime/scope.py` narrows a single selected branch
+to its LCIA method for both aCC and LCA component requests, including dynamic
+requests whose other methods have no compatible GWP carrying capacity row.
+Multiple branch execution applies the equivalent branch method binding in
+`uncertainty/runner.py`. Category membership therefore refers to one method's
+numerator universe at each alignment call.
+
 ## Data Flow
 
 Deterministic ASR:

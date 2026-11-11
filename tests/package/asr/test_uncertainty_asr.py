@@ -1615,7 +1615,10 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
     assert not ar6_rows.summary.empty
 
 
-def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_repo) -> None:
+@pytest.mark.parametrize("include_static", [False, True])
+def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(
+    allocation_dummy_repo, include_static: bool
+) -> None:
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
@@ -1625,11 +1628,12 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_r
         historical_years=[2020, 2021],
         scenario_years=[2030],
     )
-    prepare_static_asr_pb_lcia_repo(
-        allocation_dummy_repo,
-        source="exiobase_396_ixi",
-        years=[2020, 2021],
-    )
+    if include_static:
+        prepare_static_asr_pb_lcia_repo(
+            allocation_dummy_repo,
+            source="exiobase_396_ixi",
+            years=[2020, 2021],
+        )
 
     kwargs = {
         "project_name": "asr_uncertainty_mixed_branch_roots",
@@ -1646,7 +1650,7 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_r
             "include_lcia_based_allocation_methods": True,
         },
         "base_cc_args": {
-            "static": {"exclude_max_cc": True},
+            "static": {"active": include_static, "exclude_max_cc": True},
             "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP1"]},
         },
         "lca_args": {
@@ -1667,25 +1671,38 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(allocation_dummy_r
     }
     manifest = uncertainty_asr(**kwargs, refresh=True).manifest
 
-    by_branch = assert_mixed_static_dynamic_cc_outputs(
-        manifest=manifest,
-        output_format="csv_compact",
-    )
-    static_manifest = by_branch["static_gwp100_lcia"]
-    dynamic_manifest = by_branch["dynamic_ar6_gwp100_lcia"]
-    assert "cumulative_asr_runs" not in static_manifest.artifacts
-    assert static_manifest.compatibility_context is not None
-    assert bool(static_manifest.compatibility_context["has_cumulative_outputs"]) is False
+    if include_static:
+        by_branch = assert_mixed_static_dynamic_cc_outputs(
+            manifest=manifest,
+            output_format="csv_compact",
+        )
+        static_manifest = by_branch["static_gwp100_lcia"]
+        dynamic_manifest = by_branch["dynamic_ar6_gwp100_lcia"]
+        assert "cumulative_asr_runs" not in static_manifest.artifacts
+        assert static_manifest.compatibility_context is not None
+        assert bool(static_manifest.compatibility_context["has_cumulative_outputs"]) is False
+    else:
+        dynamic_manifest = manifest
+        assert manifest.arguments is not None
+        assert manifest.arguments["lcia_method"] == ["gwp100_lcia"]
+        identity = pd.read_csv(manifest.artifacts["public_row_identity"])
+        assert set(identity["lcia_method"]) == {"gwp100_lcia"}
+        assert (
+            Path(manifest.artifacts["scope_manifest"]).parents[2].name == "dynamic_ar6_gwp100_lcia"
+        )
     assert "cumulative_asr_runs" in dynamic_manifest.artifacts
     assert dynamic_manifest.compatibility_context is not None
     assert bool(dynamic_manifest.compatibility_context["has_cumulative_outputs"]) is True
     reused_report = uncertainty_asr(**kwargs, refresh=False)
     assert reused_report.reuse_status == "reused_exact"
-    assert_mixed_static_dynamic_cc_outputs(
-        manifest=reused_report.manifest,
-        output_format="csv_compact",
-        expected_run_id=manifest.run_id,
-    )
+    if include_static:
+        assert_mixed_static_dynamic_cc_outputs(
+            manifest=reused_report.manifest,
+            output_format="csv_compact",
+            expected_run_id=manifest.run_id,
+        )
+    else:
+        assert reused_report.manifest.run_id == manifest.run_id
 
 
 def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
