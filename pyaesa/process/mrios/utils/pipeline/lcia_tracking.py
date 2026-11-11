@@ -1,10 +1,8 @@
 """LCIA status and unit map ownership for MRIO processing."""
 
-from pathlib import Path
 from typing import Any, Sequence, cast
 
 import pandas as pd
-from pyaesa.shared.lcia.prerequisite_tables import clean_characterization_matrix_frame
 
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
@@ -92,49 +90,8 @@ def extract_lcia_units_from_char_matrix(
     char_matrix: pd.DataFrame,
 ) -> dict[str, str]:
     """Build ``impact_parent -> impact_unit`` mapping from a CF matrix."""
-    char_matrix = clean_characterization_matrix_frame(
-        frame=char_matrix,
-        path=Path(f"<in-memory:{lcia_method}>"),
-    )
-    required = {"impact_parent", "impact_unit"}
-    missing = sorted(col for col in required if col not in char_matrix.columns)
-    if missing:
-        raise ValueError(
-            f"Characterization matrix for '{lcia_method}' is missing columns {missing}."
-        )
+    del lcia_method
     mapping = cast(pd.DataFrame, char_matrix[["impact_parent", "impact_unit"]].copy())
-    mapping["impact_parent"] = mapping["impact_parent"].astype(str).str.strip()
-    mapping["impact_unit"] = mapping["impact_unit"].astype(str).str.strip()
-    valid_rows = cast(
-        pd.Series,
-        (mapping["impact_parent"] != "")
-        & (mapping["impact_parent"].str.lower() != "nan")
-        & (mapping["impact_unit"] != "")
-        & (mapping["impact_unit"].str.lower() != "nan"),
-    )
-    mapping = cast(pd.DataFrame, mapping.loc[valid_rows].copy())
-    if mapping.empty:
-        raise ValueError(
-            f"Characterization matrix for '{lcia_method}' has no usable impact/unit rows."
-        )
-    per_parent = cast(
-        pd.Series,
-        mapping.groupby("impact_parent")["impact_unit"].nunique(dropna=False),
-    )
-    conflicting = cast(pd.Series, per_parent[per_parent > 1])
-    if not conflicting.empty:
-        pairs = cast(
-            pd.Series,
-            mapping.drop_duplicates(subset=["impact_parent", "impact_unit"])
-            .sort_values(["impact_parent", "impact_unit"])
-            .groupby("impact_parent")["impact_unit"]
-            .agg(list),
-        )
-        sample = [f"{parent}->{units}" for parent, units in pairs.head(10).items()]
-        raise ValueError(
-            "Characterization matrix has impacts mapped to multiple units. "
-            f"Method='{lcia_method}', conflicting parent->units (sample)={sample}."
-        )
     dedup = cast(
         pd.DataFrame,
         mapping.drop_duplicates(subset=["impact_parent", "impact_unit"]).sort_values(

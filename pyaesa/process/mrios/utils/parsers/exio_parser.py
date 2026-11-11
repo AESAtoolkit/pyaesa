@@ -124,26 +124,6 @@ def _load_characterization_matrix(path: Path) -> pd.DataFrame:
         frame=pd.read_csv(path),
         path=path,
     )
-    required = {"extension", "stressor", "impact", "factor", "impact_unit"}
-    missing = sorted(required - set(df.columns))
-    if missing:
-        raise ValueError(
-            f"Characterization matrix at {path} is missing required columns: {missing}."
-        )
-    df["extension"] = df["extension"].astype(str).str.strip()
-    required_text = df.loc[:, ["extension", "stressor", "impact", "impact_unit"]].astype(str)
-    required_text = required_text.apply(lambda series: series.str.strip())
-    usable = (
-        required_text["extension"].ne("")
-        & required_text["stressor"].ne("")
-        & required_text["impact"].ne("")
-        & required_text["impact_unit"].ne("")
-    )
-    if not bool(usable.any()):
-        raise ValueError(
-            f"Characterization matrix at {path} has no usable impact rows with extension, "
-            "stressor, impact, and impact_unit values."
-        )
     df.attrs["source_path"] = str(path)
     return df
 
@@ -164,12 +144,6 @@ def _characterize_exiobase_io(
     year: int | None = None,
 ) -> CharacterizationSummary:
     """Attach characterized extension ``new_extension_name`` to ``io_system``."""
-    if not new_extension_name.isidentifier():
-        raise ValueError(
-            "The public lcia_method value becomes a PyMRIO extension name during "
-            "MRIO processing and must be a valid Python identifier. "
-            f"Received lcia_method='{new_extension_name}'."
-        )
 
     def _validate(validation_df: pd.DataFrame) -> None:
         _ensure_validation_success(

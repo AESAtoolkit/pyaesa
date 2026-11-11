@@ -63,6 +63,9 @@ Concrete canonical owners include:
   message formatting
 - `tabular/table_io.py` for small shared table read/write helpers
 - `lcia/file_owned_tables.py` for LCIA method owned table path helpers
+- `lcia/prerequisite_tables.py` for canonical numerical matrix validation;
+  unique factor keys, finite factors, required identities, and compatible units
+  are enforced before consumers perform calculations
 - `lcia/static_cc.py` for static carrying capacity CSV loading and bound
   validation used by aCC, ASR, and shared aCC/ASR request normalization
 - `lcia/uncertainty_keys.py` for LCIA shared random key construction used
