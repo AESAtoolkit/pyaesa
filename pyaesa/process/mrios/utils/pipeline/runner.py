@@ -93,6 +93,7 @@ from pyaesa.process.mrios.utils.uncasext_metrics.utility_propagation_metrics imp
     _precompute_utility_propag_uncasext,
 )
 from pyaesa.shared.runtime.reporting.progress import YearProgressPrinter
+from pyaesa.shared.lcia.identity import require_matching_scientific_inputs
 
 _RECOVERABLE_YEAR_EXCEPTIONS = (
     TypeError,
@@ -344,6 +345,26 @@ def _resolve_year_reuse_plan(
             _remove_year_entry(metadata, year)
             years_to_process.append(year)
             continue
+
+        if saved_exists and requested_lcia_methods:
+            prior_year = year_meta or {}
+            retained_methods = merge_lcia_method_lists(
+                list(cast(dict, prior_year.get("lcia_status", {}))),
+                cast(dict, prior_year.get("enacting_metrics", {})).get("lcia_methods", []),
+                requested_lcia_methods if year_meta is None else [],
+            )
+            retained_jobs, _ = _resolve_year_characterization_jobs(
+                source=source_key,
+                year_lcia_methods=retained_methods,
+                char_jobs_cache=dict(requested_char_jobs),
+            )
+            require_matching_scientific_inputs(
+                persisted=cast(dict | None, prior_year.get("characterization_inputs")),
+                current={
+                    method: options.matrix_sha256 for method, options in retained_jobs.items()
+                },
+                context=f"processed MRIO source={source_key}, year={year}",
+            )
 
         if _year_outputs_satisfied(
             saved_dir=saved_dir,

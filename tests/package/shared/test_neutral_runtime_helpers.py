@@ -157,6 +157,22 @@ def _base_asocc_signature() -> dict[str, Any]:
 
 def test_reuse_contracts_cover_asocc_signature_matching() -> None:
     candidate = _base_asocc_signature()
+    matched = {**candidate, "scientific_inputs": {"factors": "original"}}
+    assert asocc_signature_matches_request(
+        requested_signature=matched,
+        scope=_Scope(matched, ssp_scenarios=["SSP2"]),
+        run_ssp_scenarios=None,
+    )
+    assert (
+        asocc_signature_matches_request(
+            requested_signature=matched,
+            scope=_Scope(
+                {**matched, "scientific_inputs": {"factors": "changed"}}, ssp_scenarios=["SSP2"]
+            ),
+            run_ssp_scenarios=None,
+        )
+        is False
+    )
     requested = {
         **_base_asocc_signature(),
         "lcia_methods": "m1",
@@ -246,6 +262,7 @@ def test_reuse_contracts_cover_io_lca_signature_matching() -> None:
         "selectors": {"r_c": ["FR", "DE"]},
     }
     kwargs = {
+        "scientific_inputs": {},
         "signature": signature,
         "project_name": "demo",
         "source": "exiobase",
@@ -260,6 +277,13 @@ def test_reuse_contracts_cover_io_lca_signature_matching() -> None:
         "requested_selectors": {"r_c": ("FR",)},
     }
     assert io_lca_signature_compatible(**kwargs) == (True, (1, 2))
+    signature["scientific_inputs"] = {"factors": "original"}
+    assert io_lca_signature_compatible(
+        **{**kwargs, "scientific_inputs": {"factors": "original"}}
+    ) == (True, (1, 2))
+    assert io_lca_signature_compatible(
+        **{**kwargs, "scientific_inputs": {"factors": "changed"}}
+    ) == (False, (0, 0))
     assert not io_lca_signature_compatible(**{**kwargs, "source": "other"})[0]
     assert not io_lca_signature_compatible(**{**kwargs, "requested_years": {2030}})[0]
     assert not io_lca_signature_compatible(**{**kwargs, "requested_methods": {"missing"}})[0]

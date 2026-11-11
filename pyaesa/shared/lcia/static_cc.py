@@ -13,7 +13,7 @@ def read_static_cc(cc_csv_path: Path) -> pd.DataFrame:
             "Check that the static carrying capacity prerequisite exists for the "
             "requested LCIA method."
         )
-    df = pd.read_csv(cc_csv_path)
+    df = pd.read_csv(cc_csv_path, float_precision="round_trip")
     required = {"impact", "impact_unit", "min_cc"}
     missing = required - set(df.columns)
     if missing:

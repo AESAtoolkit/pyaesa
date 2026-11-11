@@ -96,7 +96,8 @@ def process_mrio(
 
     Raises:
         ValueError: If source, aggregation, or LCIA arguments are invalid for the
-            requested public processing scope.
+            requested public processing scope, or if scientific input identities
+            differ from existing processed results.
 
     Notes:
         The repository root is taken from the package default configured by

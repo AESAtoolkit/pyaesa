@@ -1,6 +1,8 @@
 """Canonical figure-scope coverage ownership for internal IO-LCA rendering."""
 
 import pandas as pd
+from pyaesa.io_lca.data.loaders import load_domain_metadata
+from pyaesa.shared.lcia.identity import processed_lcia_inputs
 
 from pyaesa.shared.runtime.reuse.contracts import normalize_selector_payload
 
@@ -71,6 +73,14 @@ def resolve_io_scope(
 ) -> tuple[str, dict]:
     """Resolve compatible deterministic_io_lca run scope and output format for figures."""
     requested_years = {int(year) for year in years}
+    domain_metadata, _ = load_domain_metadata(source=source, agg_version=agg_version)
+    scientific_inputs = processed_lcia_inputs(
+        source=source,
+        metadata=domain_metadata,
+        years=years,
+        methods=lcia_methods,
+        domain=agg_version or "original_class",
+    )
     requested_lcia_methods = {str(lcia_method) for lcia_method in lcia_methods}
     requested_selectors = normalize_selector_payload(
         filters,
@@ -91,6 +101,7 @@ def resolve_io_scope(
             requested_years=requested_years,
             requested_methods=requested_lcia_methods,
             requested_selectors=requested_selectors,
+            scientific_inputs=scientific_inputs,
         )
         if scope is None:
             continue

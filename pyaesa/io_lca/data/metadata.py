@@ -135,6 +135,7 @@ def compatible_scope(
     requested_years: set[int],
     requested_methods: set[str],
     requested_selectors: dict[str, tuple[str, ...]],
+    scientific_inputs: dict[str, str],
 ) -> dict[str, Any] | None:
     """Return the best deterministic IO-LCA scope compatible with one request."""
     candidates: list[tuple[tuple[int, int], dict[str, Any]]] = []
@@ -153,6 +154,7 @@ def compatible_scope(
             requested_years=requested_years,
             requested_methods=requested_methods,
             requested_selectors=requested_selectors,
+            scientific_inputs=scientific_inputs,
         )
         if compatible:
             candidates.append((score, scope))

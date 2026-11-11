@@ -32,6 +32,7 @@ def _signature() -> dict[str, object]:
         "l2_reuse_years": [],
         "output_format": "csv",
         "intermediate_outputs": False,
+        "scientific_inputs": {},
     }
 
 

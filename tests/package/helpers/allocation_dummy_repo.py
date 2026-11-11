@@ -22,7 +22,9 @@ from pyaesa.asocc.runtime.paths.published import (
 from pyaesa.asocc.orchestration.setup.run_setup import _prepare_context
 from pyaesa.process.mrios.utils.io.paths import _get_agg_map_path, _get_metadata_path
 from pyaesa.workspace_initialisation.workspace import clear_default_repo_root, get_default_repo_root
-from pyaesa.shared.lcia.paths import responsibility_periods_csv_path
+from pyaesa.shared.lcia.paths import characterization_matrix_path, responsibility_periods_csv_path
+from pyaesa.shared.lcia.identity import characterization_sha256
+from tests.package.helpers.data_processing_dummy import write_characterization_matrix
 
 
 @dataclass(frozen=True)
@@ -168,6 +170,16 @@ class AllocationDummyRepo:
                 raise ValueError(f"Year entry '{year_key}' has invalid lcia_by_method payload.")
             year_value = int(year_key)
             for lcia_method in methods:
+                if source.startswith("exiobase_"):
+                    if not characterization_matrix_path(
+                        source=source, lcia_method=lcia_method
+                    ).exists():
+                        write_characterization_matrix(
+                            self.repo_root, source_key=source, method_name=lcia_method
+                        )
+                    year_entry.setdefault("characterization_inputs", {})[lcia_method] = (
+                        characterization_sha256(source=source, lcia_method=lcia_method)
+                    )
                 available_years = (
                     set(int(item) for item in available_years_by_method.get(lcia_method, []))
                     if available_years_by_method is not None
