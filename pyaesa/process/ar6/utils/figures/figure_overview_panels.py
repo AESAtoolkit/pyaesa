@@ -225,7 +225,7 @@ def write_delta_tconv_figure(
     horizon = _numeric_series(pd.Series(harmonization_log["horizon-for-harmonization"], copy=False))
     netzero = _numeric_series(pd.Series(harmonization_log["model-netzero-year"], copy=False))
     ind = (horizon - netzero).abs().sort_values(ascending=False).dropna()
-    ind = ind[ind > 0]
+    ind = ind.loc[ind > 0]
     if len(ind) > 0:
         ax.violinplot(ind.to_numpy(dtype=float))
     ax.set_title(f"n={len(ind)}")

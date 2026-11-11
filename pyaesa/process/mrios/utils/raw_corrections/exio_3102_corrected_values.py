@@ -256,7 +256,7 @@ def _build_tw_rows(
                     prediction_clipped_to_zero=False,
                 )
             )
-        for sector in skipped[skipped].index:
+        for sector in skipped.loc[skipped].index:
             diagnostics.append(
                 _base_row(
                     source=source,
@@ -337,7 +337,7 @@ def _build_mt_rows(
                 )
             )
         skipped = donor_positive & ~eligible
-        for sector in skipped[skipped].index:
+        for sector in skipped.loc[skipped].index:
             diagnostics.append(
                 _base_row(
                     source=source,

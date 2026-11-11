@@ -139,7 +139,7 @@ def _build_characterization_validation(
     )
     for ext_name, ext in ext_lookup.items():
         mask = validation["extension"] == ext_name
-        if not mask.any():
+        if not bool(mask.any()):
             continue
 
         f_obj = getattr(ext, "F", None)

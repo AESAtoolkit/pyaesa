@@ -165,14 +165,14 @@ def _process_ssp_dataset(
     # Canonical unit conversions: ensure GDP rows are `USD_2017/yr` and
     # Population rows are `Persons`.
     pop_mask = (wide["variable"] == POP_SSP_INDICATOR) & (wide["unit"] != "Persons")
-    if pop_mask.any():
+    if bool(pop_mask.any()):
         wide.loc[pop_mask, year_cols] = (
             wide.loc[pop_mask, year_cols].apply(pd.to_numeric, errors="raise") * 1e6
         )
         wide.loc[pop_mask, "unit"] = "Persons"
 
     gdp_mask = (wide["variable"] == GDP_SSP_INDICATOR) & (wide["unit"] != "USD_2017/yr")
-    if gdp_mask.any():
+    if bool(gdp_mask.any()):
         wide.loc[gdp_mask, year_cols] = (
             wide.loc[gdp_mask, year_cols].apply(pd.to_numeric, errors="raise") * 1e9
         )

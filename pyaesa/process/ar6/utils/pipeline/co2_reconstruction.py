@@ -71,7 +71,7 @@ def drop_co2_reconstruction_failed_pairs(
         np.isfinite(reconstruction_error.to_numpy(dtype=float)),
         index=reconstruction_error.index,
     )
-    failed_pairs = reconstruction_error.index[~passed]
+    failed_pairs = reconstruction_error.index[(~passed).to_numpy(dtype=bool)]
     if failed_pairs.empty:
         return data_df, pd.DataFrame()
 

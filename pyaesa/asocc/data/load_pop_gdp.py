@@ -315,7 +315,7 @@ def _get_pr_iso3_inputs(
         )
     iso_to_mrio = iso_to_mrio.reindex(common_iso)
     if bool(iso_to_mrio.isna().any()):
-        missing_iso_index = pd.Index(iso_to_mrio.index[iso_to_mrio.isna()])
+        missing_iso_index = pd.Index(iso_to_mrio.index[iso_to_mrio.isna().to_numpy(dtype=bool)])
         sample = [str(value) for value in missing_iso_index.tolist()[:10]]
         raise ValueError(
             "Missing iso3->MRIO mapping for PR entities. "

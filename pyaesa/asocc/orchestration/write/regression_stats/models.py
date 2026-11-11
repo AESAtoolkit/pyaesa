@@ -70,7 +70,7 @@ def _normalize_regression_models_frame(
             out[column] = ""
     out = out.astype(object)
 
-    model_type = out["model_type"].astype(str)
+    model_type = _column_series(out, "model_type").astype(str)
     is_ols_level = model_type.eq("ols_level")
     is_log_ratio = model_type.eq("log_ratio_time")
 

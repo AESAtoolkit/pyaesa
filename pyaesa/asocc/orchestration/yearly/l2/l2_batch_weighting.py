@@ -72,7 +72,9 @@ def _factorize_required_index(
     ]
     if len(required_positions) == 1:
         row_codes, unique_codes = pd.factorize(required_codes[0], sort=False)
-        labels = pd.Index(multi_index.levels[required_positions[0]], copy=False).take(unique_codes)
+        labels = pd.Index(multi_index.levels[required_positions[0]], copy=False).take(
+            np.asarray(unique_codes, dtype="int64")
+        )
         grouped_index = pd.MultiIndex.from_arrays([labels], names=list(required_indices))
         return row_codes.astype("int64", copy=False), grouped_index
     dims = tuple(len(multi_index.levels[position]) for position in required_positions)
@@ -101,7 +103,9 @@ def _axis_labels_and_codes(
     axis_position = index_names.index(axis_name)
     original_codes = np.asarray(multi_index.codes[axis_position], dtype="int64")
     axis_codes, unique_codes = pd.factorize(original_codes, sort=False)
-    axis_labels = pd.Index(multi_index.levels[axis_position], copy=False).take(unique_codes)
+    axis_labels = pd.Index(multi_index.levels[axis_position], copy=False).take(
+        np.asarray(unique_codes, dtype="int64")
+    )
     return axis_labels, axis_codes.astype("int64", copy=False)
 
 

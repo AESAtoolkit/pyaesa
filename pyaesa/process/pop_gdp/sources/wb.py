@@ -183,10 +183,12 @@ def _add_imf_taiwan_and_adjust_china(
         ValueError: If the resulting China population or GDP becomes <= 0.
     """
     df = df.copy()
-    chn_gdp = (df["iso3_code"] == "CHN") & (df["variable"] == GDP_WB_INDICATOR)
-    chn_pop = (df["iso3_code"] == "CHN") & (df["variable"] == POP_WB_INDICATOR)
-    twn_pop = (df["iso3_code"] == "TWN") & (df["variable"] == POP_WB_INDICATOR)
-    twn_gdp = (df["iso3_code"] == "TWN") & (df["variable"] == GDP_WB_INDICATOR)
+    iso3_code = pd.Series(df["iso3_code"], copy=False)
+    variable = pd.Series(df["variable"], copy=False)
+    chn_gdp = (iso3_code == "CHN") & (variable == GDP_WB_INDICATOR)
+    chn_pop = (iso3_code == "CHN") & (variable == POP_WB_INDICATOR)
+    twn_pop = (iso3_code == "TWN") & (variable == POP_WB_INDICATOR)
+    twn_gdp = (iso3_code == "TWN") & (variable == GDP_WB_INDICATOR)
 
     for col in year_cols:
         _adjust_china_indicator_column(
@@ -281,7 +283,7 @@ def _prepare_wb_processing_input(
 
     combined = _add_imf_taiwan_and_adjust_china(combined, year_cols)
     gdp_mask = combined["variable"] == GDP_WB_INDICATOR
-    if gdp_mask.any():
+    if bool(gdp_mask.any()):
         factor = _us_price_level_ratio_2017_over_2021()
         combined.loc[gdp_mask, year_cols] = combined.loc[gdp_mask, year_cols] * factor
         combined.loc[gdp_mask, "unit"] = "USD_2017/yr"

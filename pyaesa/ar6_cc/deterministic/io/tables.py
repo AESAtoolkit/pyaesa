@@ -116,8 +116,8 @@ def filter_pathways(
     # Copy once before resetting the index so later selector work stays fast
     # and does not emit fragmentation warnings on large study windows.
     df_reset = df.copy().reset_index()
-    mask = df_reset["variable"] == variable
-    if mask.sum() == 0:
+    mask = pd.Series(df_reset["variable"], copy=False).eq(variable)
+    if not bool(mask.any()):
         available = sorted(set(df_reset["variable"]))
         raise ValueError(
             f"Variable '{variable}' not found in processed AR6 workbook. "
