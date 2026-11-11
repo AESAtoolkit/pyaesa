@@ -121,6 +121,7 @@ from pyaesa.shared.uncertainty_assessment.io.run_matrix_reader import (
     iter_sparse_run_rows,
 )
 from tests.package.helpers.asr_dummy_repo import (
+    add_assessment_category,
     prepare_dynamic_asr_io_lca_repo,
     prepare_static_asr_pb_lcia_repo,
     prepare_static_asr_external_lca_repo,
@@ -412,6 +413,7 @@ def test_asr_summary_groups_drop_active_dynamic_cc_category_axis(tmp_path: Path)
         acc_manifest=acc_manifest,
         lca_input=lca_input,
         output_format="csv_compact",
+        status=NullPhasePrinter(),
     )
     plan = replace(plan, source_method_rows=build_asr_source_methods(plan=plan))
     assert "cc_category" in plan.identity.columns
@@ -498,6 +500,7 @@ def test_asr_cumulative_identity_keeps_method_axis_for_inter_method_figures(
         acc_manifest=acc_manifest,
         lca_input=lca_input,
         output_format="csv_compact",
+        status=NullPhasePrinter(),
     )
 
     assert plan.cumulative_identity["l1_l2_method"].tolist() == ["A", "B"]
@@ -582,6 +585,7 @@ def test_asr_inter_method_summaries_use_visible_external_lca_scenario_scope(
         acc_manifest=acc_manifest,
         lca_input=lca_input,
         output_format="csv_compact",
+        status=NullPhasePrinter(),
     )
 
     inter_asr = plan.summary_identity.loc[
@@ -742,6 +746,7 @@ def test_asr_cumulative_identity_repeats_invariant_rows_into_ssp_periods(
         acc_manifest=acc_manifest,
         lca_input=lca_input,
         output_format="csv_compact",
+        status=NullPhasePrinter(),
     )
 
     assert "year" not in plan.cumulative_identity.columns
@@ -792,6 +797,7 @@ def test_asr_cumulative_identity_repeats_invariant_rows_into_ssp_periods(
         acc_manifest=invariant_manifest,
         lca_input=lca_input,
         output_format="csv_compact",
+        status=NullPhasePrinter(),
     )
 
     assert invariant_plan.cumulative_public_row_groups == (("0", "1"),)
@@ -1319,6 +1325,7 @@ def test_uncertainty_asr_static_io_lca_outputs(
 
 def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency(
     allocation_dummy_repo,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     prepare_static_asr_pb_lcia_repo(
         allocation_dummy_repo,
@@ -1326,6 +1333,7 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
         years=[2005, 2006],
         impacts=["AAL", "BI FD"],
     )
+    add_assessment_category(lcia_method="pb_lcia", impact="IR")
 
     kwargs = {
         "project_name": "asr_uncertainty_static_pb_lcia_public_figures",
@@ -1368,6 +1376,9 @@ def test_uncertainty_asr_static_pb_lcia_public_figures_cover_polar_and_frequency
     report = uncertainty_asr(**kwargs, refresh=True)
     manifest = report.manifest
     assert report.reuse_status == "computed"
+    assert "internal IO-LCA cannot characterize categories ['IR']" in capsys.readouterr().out
+    identity = pd.read_csv(manifest.artifacts["public_row_identity"])
+    assert set(identity["impact"]) == {"AAL", "BI FD"}
 
     assert manifest.artifacts is not None
     figure_paths = [Path(path) for path in manifest.artifacts["figure_paths"]]

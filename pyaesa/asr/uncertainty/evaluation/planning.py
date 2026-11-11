@@ -18,9 +18,11 @@ from pyaesa.asr.uncertainty.evaluation.summary import (
     summary_identity_with_metrics,
 )
 from pyaesa.asr.uncertainty.runtime.models import ASRUncertaintyPlan, LCAUncertaintyInput
+from pyaesa.asr.shared.lca.coverage import compatible_numerator_categories
 from pyaesa.asr.uncertainty.sources.source_keys import acc_source_name
 from pyaesa.shared.figures.dynamic_ar6 import DYNAMIC_AR6_CC_TYPE
 from pyaesa.shared.runtime.scenario.columns import ASOCC_TIME_ROUTE_PUBLIC_COLUMN
+from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.uncertainty_assessment.io.tables import read_uncertainty_table
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import UncertaintyManifest
 
@@ -30,12 +32,20 @@ def build_asr_uncertainty_plan(
     acc_manifest: UncertaintyManifest,
     lca_input: LCAUncertaintyInput,
     output_format: str,
+    status: StatusSink,
 ) -> ASRUncertaintyPlan:
     """Build ASR public identity and vectorized component position maps."""
     acc_paths = acc_run_paths_from_manifest(manifest=acc_manifest)
     acc_identity = read_uncertainty_table(
         path=acc_paths.public_row_identity,
         output_format=output_format,
+    )
+    acc_identity = compatible_numerator_categories(
+        denominator=acc_identity,
+        numerator=lca_input.identity,
+        lca_type=lca_input.lca_type,
+        source=str((acc_manifest.arguments or {}).get("source", "unspecified")),
+        status=status,
     )
     alignment = build_asr_alignment(
         acc_identity=acc_identity,

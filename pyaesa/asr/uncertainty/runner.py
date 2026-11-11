@@ -279,6 +279,7 @@ def run_uncertainty_asr(
         acc_manifest=acc_manifest,
         lca_input=lca_input,
         output_format=runtime.output_format,
+        status=phase,
     )
     plan = replace(plan, source_method_rows=build_asr_source_methods(plan=plan))
     runtime = replace(

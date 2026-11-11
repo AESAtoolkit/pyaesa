@@ -11,6 +11,7 @@ from pyaesa.acc.deterministic.runtime.paths import (
     get_acc_output_dir,
 )
 from pyaesa.acc.shared.runtime.paths import public_result_root_name_for_fu_code
+from pyaesa.asr.shared.lca.coverage import compatible_numerator_categories
 from pyaesa.shared.acc_asr_common.deterministic.status_labels import cc_branch_status_label
 from pyaesa.shared.runtime.reporting.status import StatusSink
 from pyaesa.shared.tabular.table_io import read_table
@@ -90,6 +91,13 @@ def process_static_asr(
         year_cols = requested_year_columns(acc_df, requested_years=years)
         if not year_cols:
             continue
+        acc_df = compatible_numerator_categories(
+            denominator=acc_df,
+            numerator=lca_rows,
+            lca_type=lca_type,
+            source=source_label,
+            status=status,
+        )
         asr_frames = []
         for impact_code, impact_acc_df in acc_df.groupby("impact", dropna=False, sort=False):
             impact_text = str(impact_code).strip()
