@@ -34,6 +34,7 @@ from pyaesa.external_inputs.lca.paths import (
     external_lca_deterministic_figures_dir,
 )
 from pyaesa.io_lca.data.paths import io_metadata_path_for_source, resolve_io_lca_paths
+from pyaesa.shared.lcia.paths import static_cc_csv_path
 from pyaesa.shared.runtime.reporting.status import TransientStatusPrinter
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
@@ -45,6 +46,7 @@ from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
 )
 from tests.package.helpers.asr_dummy_repo import (
+    add_assessment_category,
     prepare_dynamic_asr_io_lca_repo,
     prepare_static_asr_pb_lcia_repo,
     prepare_static_asr_external_lca_repo,
@@ -292,6 +294,7 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
+    add_assessment_category(lcia_method="gwp100_lcia", impact="IR")
     first_report = _run_static_asr(project_name="asr_static_io_lca", refresh=True)
     first_runtime_output = capsys.readouterr().out
 
@@ -308,6 +311,10 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
     assert branch.meta_file is not None and branch.meta_file.exists()
     assert branch.phase_index_path is not None and branch.phase_index_path.exists()
     assert first_runtime_output.strip()
+    assert "internal IO-LCA cannot characterize categories ['IR']" in " ".join(
+        first_runtime_output.split()
+    )
+    assert "UT(FD)" in first_runtime_output
     phase_index_payload = json.loads(branch.phase_index_path.read_text(encoding="utf-8"))
     assert [phase["phase"] for phase in phase_index_payload] == [
         "Phase B.1: aSoCC",
@@ -395,6 +402,22 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
     assert expanded_report.branches[0].reuse_status == "computed"
     subset_report = _run_static_asr(project_name="asr_static_io_lca", refresh=False)
     assert subset_report.branches[0].reuse_status == "reused_exact"
+
+
+def test_deterministic_asr_rejects_no_compatible_internal_category(allocation_dummy_repo) -> None:
+    prepare_static_asr_io_lca_repo(
+        allocation_dummy_repo,
+        source="exiobase_396_ixi",
+        lcia_method="gwp100_lcia",
+        impact_parent="GWP_100",
+        impact_unit="kg CO2-eq",
+    )
+    cc_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+    cc = pd.read_csv(cc_path)
+    cc["impact"] = "IR"
+    cc.to_csv(cc_path, index=False)
+    with pytest.raises(ValueError, match="No compatible ASR categories remain"):
+        _run_static_asr(project_name="asr_empty_coverage", refresh=False)
 
 
 def test_deterministic_asr_parquet_format_applies_to_all_phases(

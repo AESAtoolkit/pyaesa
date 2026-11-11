@@ -56,6 +56,16 @@ owner for numerator denominator matching, selector matching axes, unit factor
 resolution, and ASR division. ASR uncertainty reuses those row alignment
 contracts and adds only run matrix positioning and batch evaluation.
 
+`shared/lca/coverage.py` owns category compatibility before exact matching.
+Static deterministic execution and uncertainty planning restrict internal IO
+LCA calculations to categories represented in the numerator inventory, and
+report omitted categories with their source and allocation method labels.
+Missing years or selectors within a supported category still fail exact
+matching. External LCA retains strict numerator matching for every assessment
+category, so its supplied category coverage can support a complete assessment
+when the internal inventory is partial. No missing numerator is interpreted as
+zero. These contracts are exercised through real input files in
+`tests/package/asr/test_deterministic_asr.py` and `test_uncertainty_asr.py`.
 ## Data Flow
 
 Deterministic ASR:
