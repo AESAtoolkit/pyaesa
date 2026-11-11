@@ -26,9 +26,10 @@ def process_mrio(
     download missing MRIO data. Omit arguments to use their default.
 
     Args:
-        source: MRIO source key (``"exiobase_396_ixi"``,
-            ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-            ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``).
+        source: MRIO source key (``"exiobase_3112_ixi"``,
+            ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+            ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+            ``"exiobase_396_pxp"``, or ``"oecd_v2025"``).
         years: Studied years. Accepts a single year, list, or range. If
             omitted, all available MRIO
             years for the selected source and ``agg_version`` are used.
@@ -45,13 +46,17 @@ def process_mrio(
         lcia_method: LCIA method(s) used to characterize MRIO
             environmental stressors into the selected method(s) impact
             categories (for example ``"pb_lcia"`` or
-            ``["pb_lcia", "gwp100_lcia"]``). ``None`` skips LCIA
+            ``["ef_3.1_14cat", "ef_3.1", "gwp100_ef31", "gwp100_ipcc"]``). ``None`` skips LCIA
             characterization. Defaults to ``None``. pyaesa currently supports
             LCIA characterization only for EXIOBASE sources. To add a custom
             LCIA method, follow
             ``README_add_custom_lcia_characterization_matrices.txt`` in
             ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
-            and pass the custom method file stem here.
+            and pass the custom method file stem here. The matrix must be in
+            the selected source version subfolder, such as ``exiobase_3112/``.
+            For Phase A IO-LCA and Phase B LCIA-based allocation used with dynamic AR6 CC,
+            ``"gwp100_ipcc"`` is recommended. This aligns both phases with the IPCC GWP100
+            characterization used for carrying capacities derived from AR6 pathways.
         agg_reg: If ``True``, reclassify MRIO regions with the
             ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
             The mapping can keep native labels, aggregate several native regions
@@ -100,6 +105,16 @@ def process_mrio(
             differ from existing processed results.
 
     Notes:
+        Both EF 3.1 methods can be used directly with pyaesa. Use
+        ``"ef_3.1_14cat"`` for EXIOBASE IO-LCA (Phase A)
+        or EXIOBASE LCIA-based allocation (Phase B) with matching carrying
+        capacities across 14 categories. ``"ef_3.1"`` retains all 16 impact
+        categories, but EXIOBASE characterization still covers only 14; ionising
+        radiation and ozone depletion are unavailable. Non-LCIA-based allocation
+        and compatible externally supplied LCIA-based allocation can cover all
+        16. ASR across all 16 also requires external Phase A LCA results.
+        In mixed workflows, only the EXIOBASE LCIA-based routes are limited to 14.
+
         The repository root is taken from the package default configured by
         ``set_workspace()``; call ``set_workspace()`` before invoking this
         function. Run ``download_mrio(...)`` for the same source and years
@@ -126,7 +141,7 @@ def process_mrio(
 
             process_mrio(
                 source="exiobase_3102_ixi",
-                lcia_method=["pb_lcia","gwp100_lcia"],
+                lcia_method=["pb_lcia","gwp100_ipcc"],
             )
     """
     return run_process_mrio(

@@ -156,7 +156,7 @@ def _run(
         agg_version=None,
         group_indices=False,
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         logger=SimpleNamespace(warning=lambda _message: None),
         proj_base=SimpleNamespace(name="demo"),
         fu_code=fu_code,
@@ -217,7 +217,7 @@ def test_l2_output_spec_builders_and_subfolder() -> None:
             route="l2_in_l1",
             l2_method="UT(FD)",
             l1_method=None,
-            lcia_method_name="gwp100_lcia",
+            lcia_method_name="gwp100_ipcc",
             ssp_scenario=None,
             scenario_dependent=False,
             grouped_mode=False,
@@ -226,7 +226,7 @@ def test_l2_output_spec_builders_and_subfolder() -> None:
         state=state,
     )
     assert isinstance(spec_l2_in_l1, OutputSpec)
-    assert spec_l2_in_l1.file_stem == "l2_UT(FD)__gwp100_lcia"
+    assert spec_l2_in_l1.file_stem == "l2_UT(FD)__gwp100_ipcc"
     assert "reference_year" in spec_l2_in_l1.identifier_columns
 
     spec_l2_vs = outputs_mod._build_l2_output_spec(
@@ -290,7 +290,7 @@ def test_l2_write_cover_real_scenario_routing_and_intermediate_flags() -> None:
         l2_method="UT(FDa)",
         l1_name="EG(Pop)",
         l1_name_resolved="EG(Pop)",
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
         lcia_data=_payload()["lcia"],
         ref_year=2005,
         treat_as_one_step=False,
@@ -369,7 +369,7 @@ def test_l2_write_preweight_covers_ut_and_ar_paths(allocation_dummy_repo) -> Non
         l2_method="UT(FDa)",
         l1_name="EG(Pop)",
         l1_name_resolved="EG(Pop)",
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
         lcia_data=payload["lcia"],
         ref_year=None,
         treat_as_one_step=False,
@@ -438,7 +438,7 @@ def test_l2_write_preweight_covers_ut_and_ar_paths(allocation_dummy_repo) -> Non
         l2_method="AR(E^{CBA_TD})",
         l1_name="EG(Pop)",
         l1_name_resolved="EG(Pop)",
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
         lcia_data=payload["lcia"],
         ref_year=2005,
         treat_as_one_step=False,

@@ -818,12 +818,12 @@ def build_allocation_dummy_repo(top_path: Path) -> AllocationDummyRepo:
     repo.write_lcia_support(
         source="oecd_v2025",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=exio_baseline_years,
     )
     return repo

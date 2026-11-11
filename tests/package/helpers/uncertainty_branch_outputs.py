@@ -7,7 +7,7 @@ from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
 )
 
 MIXED_STATIC_DYNAMIC_CC_TOKENS = frozenset(
-    {"static_pb_lcia", "static_gwp100_lcia", "dynamic_ar6_gwp100_lcia"}
+    {"static_pb_lcia", "static_gwp100_ipcc", "dynamic_ar6_gwp100_ipcc"}
 )
 
 

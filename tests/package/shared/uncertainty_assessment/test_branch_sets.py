@@ -37,12 +37,12 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
     arguments = {
         "project_name": "demo",
         "years": [2020],
-        "lcia_method": ["gwp100_lcia", "pb_lcia"],
+        "lcia_method": ["gwp100_ipcc", "pb_lcia"],
         "fu_code": "L2.a.a",
         "base_cc_args": {"static": {"bounds": ["min_cc"]}},
     }
     branches = [
-        {"cc_source": "gwp100_lcia", "cc_type": "static", "static_cc_bounds": ["min_cc"]},
+        {"cc_source": "gwp100_ipcc", "cc_type": "static", "static_cc_bounds": ["min_cc"]},
         {"cc_source": "pb_lcia", "cc_type": "static", "static_cc_bounds": ["min_cc"]},
     ]
     _write_branch_manifest(
@@ -83,11 +83,11 @@ def test_branch_set_reuse_reads_branch_manifests_without_parent_index(
     assert "Run status:" in report_text
     assert "branch set" in report_text
     assert "Sobol:" in report_text
-    assert "static_gwp100_lcia" in report_text
+    assert "static_gwp100_ipcc" in report_text
     assert "static_pb_lcia" in report_text
     assert "completed fixed runs 5" in report_text
     live_output = capsys.readouterr().out
-    assert "static_gwp100_lcia" in live_output
+    assert "static_gwp100_ipcc" in live_output
     assert "static_pb_lcia" in live_output
     assert not (tmp_path / "mc_reuse").exists()
     assert (
@@ -157,7 +157,7 @@ def _write_branch_manifest(
         },
         artifacts={"scope_manifest": str(manifest_path)},
         compatibility_context=(
-            {"has_cumulative_outputs": True} if branch["cc_source"] == "gwp100_lcia" else {}
+            {"has_cumulative_outputs": True} if branch["cc_source"] == "gwp100_ipcc" else {}
         ),
         sobol={"ran": False},
     )

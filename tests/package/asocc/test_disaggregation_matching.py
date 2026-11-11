@@ -47,7 +47,7 @@ def _signature(**overrides) -> dict:
         "group_indices": False,
         "projection_mode": None,
         "reg_window": None,
-        "lcia_methods": ["gwp100_lcia"],
+        "lcia_methods": ["gwp100_ipcc"],
         "reference_years_input": [2005],
         "l2_reuse_years": [2005],
         "ssp_scenario_input": ["SSP2"],

@@ -68,7 +68,7 @@ def _run_static_asr(
     return deterministic_asr(
         project_name=project_name,
         years=[2005] if years is None else years,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
         base_asocc_args={
@@ -108,7 +108,7 @@ def test_deterministic_asr_rejects_invalid_polar_options(
         deterministic_asr(
             project_name=project_name,
             years=[2005],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.a.a",
             source="exiobase_396_ixi",
             base_asocc_args={
@@ -197,7 +197,7 @@ def test_deterministic_asr_report_renders_dynamic_ar6_and_external_lca_phases() 
         external_lca_summary={
             "source_type": "deterministic",
             "version_name": "supplier",
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "figures_available": 2,
             "figure_paths": ["external_a.svg", "external_b.svg"],
         },
@@ -222,7 +222,7 @@ def _acc_context(*, proj_base: Path, cc_type: str):
         proj_base=proj_base,
         source_label="exiobase_396_ixi",
         agg_version=None,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type=cc_type,
     )
 
@@ -241,7 +241,7 @@ def _asr_context(
         agg_version=None,
         fu_code=fu_code,
         lca_type=lca_type,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type=cc_type,
         lca_version_name=(
             "supplier_v1"
@@ -290,18 +290,18 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
-    add_assessment_category(lcia_method="gwp100_lcia", impact="IR")
+    add_assessment_category(lcia_method="gwp100_ipcc", impact="IR")
     first_report = _run_static_asr(project_name="asr_static_io_lca", refresh=True)
     first_runtime_output = capsys.readouterr().out
 
     assert first_report is not None
     assert len(first_report.branches) == 1
     branch = first_report.branches[0]
-    assert branch.cc_source == "gwp100_lcia"
+    assert branch.cc_source == "gwp100_ipcc"
     assert branch.cc_type == "static"
     assert branch.cc_bounds == ["min_cc"]
     assert branch.lca_type == "io_lca"
@@ -337,7 +337,7 @@ def test_deterministic_asr_static_io_lca_end_to_end_reuse_and_refresh(
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert output_paths[0].name == "UT(FD)__gwp100_lcia.csv"
+    assert output_paths[0].name == "UT(FD)__gwp100_ipcc.csv"
     output_frame = pd.read_csv(output_paths[0])
     assert {
         "l1_l2_method",
@@ -408,11 +408,11 @@ def test_deterministic_asr_rejects_no_compatible_internal_category(allocation_du
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
-    cc_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+    cc_path = static_cc_csv_path(lcia_method="gwp100_ipcc")
     cc = pd.read_csv(cc_path)
     cc["impact"] = "IR"
     cc.to_csv(cc_path, index=False)
@@ -426,7 +426,7 @@ def test_deterministic_asr_parquet_format_applies_to_all_phases(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -459,7 +459,7 @@ def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -492,11 +492,11 @@ def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
 
     report = deterministic_asr(
         **kwargs,
-        lcia_method=["gwp100_lcia", "pb_lcia"],
+        lcia_method=["gwp100_ipcc", "pb_lcia"],
         refresh=True,
     )
 
-    assert {branch.cc_source for branch in report.branches} == {"gwp100_lcia", "pb_lcia"}
+    assert {branch.cc_source for branch in report.branches} == {"gwp100_ipcc", "pb_lcia"}
     route_root = (
         allocation_dummy_repo.repo_root
         / "asr_static_multi_lcia"
@@ -506,13 +506,13 @@ def test_deterministic_asr_static_lcia_methods_use_separate_branch_scopes(
         / "deterministic"
     )
     assert sorted(path.name for path in route_root.iterdir()) == [
-        "static_gwp100_lcia",
+        "static_gwp100_ipcc",
         "static_pb_lcia",
     ]
-    for branch_name in ("static_gwp100_lcia", "static_pb_lcia"):
+    for branch_name in ("static_gwp100_ipcc", "static_pb_lcia"):
         assert (route_root / branch_name / "logs" / "scope_manifest.json").exists()
 
-    for lcia_method in ("gwp100_lcia", "pb_lcia"):
+    for lcia_method in ("gwp100_ipcc", "pb_lcia"):
         reused = deterministic_asr(**kwargs, lcia_method=lcia_method, refresh=False)
         assert reused.branches[0].reuse_status == "reused_exact"
 
@@ -523,7 +523,7 @@ def test_deterministic_asr_static_multi_lcia_reuses_shared_asocc_scope(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -537,7 +537,7 @@ def test_deterministic_asr_static_multi_lcia_reuses_shared_asocc_scope(
     report = deterministic_asr(
         project_name="asr_static_multi_lcia_shared_asocc",
         years=[2005],
-        lcia_method=["gwp100_lcia", "pb_lcia"],
+        lcia_method=["gwp100_ipcc", "pb_lcia"],
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -556,14 +556,14 @@ def test_deterministic_asr_static_multi_lcia_reuses_shared_asocc_scope(
         refresh=True,
     )
 
-    assert {branch.cc_source for branch in report.branches} == {"gwp100_lcia", "pb_lcia"}
+    assert {branch.cc_source for branch in report.branches} == {"gwp100_ipcc", "pb_lcia"}
 
 
 def test_deterministic_asr_static_figure_reuse_lifecycle(allocation_dummy_repo) -> None:
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -625,7 +625,7 @@ def test_deterministic_asr_static_reference_variant_figures_cover_compression(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -633,7 +633,7 @@ def test_deterministic_asr_static_reference_variant_figures_cover_compression(
     report = deterministic_asr(
         project_name="asr_static_reference_variant_figures",
         years=[2006],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -770,7 +770,7 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
         allocation_dummy_repo,
         project_name="asr_static_external",
         source="oecd_v2025",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
         include_deterministic=True,
@@ -779,7 +779,7 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
     external_kwargs = {
         "project_name": "asr_static_external",
         "years": [2005],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "source": "oecd_v2025",
         "base_asocc_args": {
@@ -823,7 +823,7 @@ def test_deterministic_asr_static_external_respects_subfigure_request(
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert output_paths[0].name == "UT(FD)__gwp100_lcia.csv"
+    assert output_paths[0].name == "UT(FD)__gwp100_ipcc.csv"
 
     subfigure_external_figure_dir = external_lca_deterministic_figures_dir(
         project_base=allocation_dummy_repo.repo_root / "asr_static_external",
@@ -909,7 +909,7 @@ def test_deterministic_asr_external_rejects_shared_scope_identity_drift(
         allocation_dummy_repo,
         project_name="asr_external_identity_guard",
         source="oecd_v2025",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
         include_deterministic=True,
@@ -918,7 +918,7 @@ def test_deterministic_asr_external_rejects_shared_scope_identity_drift(
     first_report = deterministic_asr(
         project_name="asr_external_identity_guard",
         years=[2005],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         source="oecd_v2025",
         base_asocc_args={
@@ -946,7 +946,7 @@ def test_deterministic_asr_external_rejects_shared_scope_identity_drift(
         deterministic_asr(
             project_name="asr_external_identity_guard",
             years=[2005],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.b.a",
             source="oecd_v2025",
             base_asocc_args={
@@ -973,7 +973,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
         historical_years=[2020, 2021],
@@ -983,7 +983,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     first_report = deterministic_asr(
         project_name="asr_dynamic_reuse",
         years=_DYNAMIC_TEST_YEARS,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1009,7 +1009,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     assert first_report is not None
     assert len(first_report.branches) == 1
     branch = first_report.branches[0]
-    assert branch.cc_source == "gwp100_lcia"
+    assert branch.cc_source == "gwp100_ipcc"
     assert branch.cc_type == "dynamic_ar6"
     assert branch.cc_bounds == ["C1"]
     assert branch.lca_type == "io_lca"
@@ -1026,7 +1026,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
         ).rglob("*.csv")
     )
     assert {path.name for path in output_paths} == {
-        "UT(FD)__gwp100_lcia_dynamic_ar6.csv",
+        "UT(FD)__gwp100_ipcc_dynamic_ar6.csv",
     }
 
     first_output = pd.concat([pd.read_csv(path) for path in output_paths], ignore_index=True)
@@ -1059,7 +1059,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     reused_dynamic_report = deterministic_asr(
         project_name="asr_dynamic_reuse",
         years=_DYNAMIC_TEST_YEARS,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1085,7 +1085,7 @@ def test_deterministic_asr_dynamic_io_lca_end_to_end_and_reuse(
     reused_dynamic_figure_report = deterministic_asr(
         project_name="asr_dynamic_reuse",
         years=_DYNAMIC_TEST_YEARS,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1118,7 +1118,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
         historical_years=[2020, 2030],
@@ -1144,7 +1144,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
                 ("US", "X", 4.0),
             )
         ]
-    ).to_csv(external_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(external_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
     pd.DataFrame(
         [
             {
@@ -1161,11 +1161,11 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
                 ("US", "X", 4.0),
             )
         ]
-    ).to_csv(external_dir / "supplier_v1__gwp100_lcia_ssp2.csv", index=False)
+    ).to_csv(external_dir / "supplier_v1__gwp100_ipcc_ssp2.csv", index=False)
     base_allocate_args = build_composite_base_allocate_args(
         project_name=project_name,
         years=years,
-        lcia_method=normalize_shared_lcia_methods("gwp100_lcia"),
+        lcia_method=normalize_shared_lcia_methods("gwp100_ipcc"),
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
         agg_reg=False,
@@ -1193,9 +1193,9 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
         public_result_root_name=public_result_root_name_for_fu_code(fu_code="L2.a.a"),
     )
     acc_path = _write_acc_wide_table(
-        acc_dir / "AR(E^{CBA_FD})__gwp100_lcia_dynamic_ar6.csv",
+        acc_dir / "AR(E^{CBA_FD})__gwp100_ipcc_dynamic_ar6.csv",
         l1_l2_method="AR(E^{CBA_FD})",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         selector="FR",
         ar6_cc_ssp_scenario="SSP2",
@@ -1210,7 +1210,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
         proj_base=external_report.project_root,
         source_label="exiobase_396_ixi",
         lca_type="external",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lca_version_name="supplier_v1",
         base_allocate_args=base_allocate_args,
         years=list(years),
@@ -1221,7 +1221,7 @@ def test_deterministic_asr_dynamic_external_lca_records_lca_transition_year(
         process_result = process_dynamic_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=years,
@@ -1256,7 +1256,7 @@ def test_deterministic_asr_rejects_invalid_lca_route_block(allocation_dummy_repo
         deterministic_asr(
             project_name="asr_bad_lca_type",
             years=[2005],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.a.a",
             source="exiobase_396_ixi",
             base_asocc_args={
@@ -1278,7 +1278,7 @@ def test_deterministic_asr_rejects_non_consecutive_dynamic_years(allocation_dumm
         deterministic_asr(
             project_name="asr_bad_dynamic_years",
             years=[2019, 2021],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.a.a",
             source="exiobase_396_ixi",
             base_asocc_args={
@@ -1302,7 +1302,7 @@ def test_deterministic_asr_rejects_non_boolean_subfigures(allocation_dummy_repo)
         deterministic_asr(
             project_name="asr_bad_subfigures",
             years=[2005],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.a.a",
             source="exiobase_396_ixi",
             base_asocc_args={

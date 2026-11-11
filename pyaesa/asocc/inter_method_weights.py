@@ -66,9 +66,10 @@ def write_asocc_weight_template(
 
             - ``project_name``: Required project name used to build
               ``<repo>/<project_name>``.
-            - ``source``: MRIO source key (``"exiobase_396_ixi"``,
-              ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-              ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
+            - ``source``: MRIO source key (``"exiobase_3112_ixi"``,
+              ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+              ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+              ``"exiobase_396_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
               for ISO3 only mode (L1 EG/PR(GDPcap) only).
             - ``agg_reg``: If ``True``, reclassify MRIO regions with the
               ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -163,18 +164,22 @@ def write_asocc_weight_template(
               (default) computes on original regions, then aggregates.
             - ``lcia_method``: LCIA method(s) to characterize for EXIO
               processing (for example ``"pb_lcia"`` or
-              ``["pb_lcia", "gwp100_lcia"]``). ``None`` means LCIA
+              ``["pb_lcia", "ef_3.1_14cat", "ef_3.1",
+              "gwp100_ef31", "gwp100_ipcc"]``). ``None`` means LCIA
               characterization is skipped. Defaults to ``None``. LCIA
-              characterization is available only for EXIOBASE sources. To add
-              a custom LCIA method, follow
+              characterization is available only for EXIOBASE sources.
+              For EF 3.1, use ``"ef_3.1_14cat"`` for EXIOBASE LCIA-based shares
+              and matching carrying capacities across 14 categories. Selecting
+              ``"ef_3.1"`` still limits these shares to the same 14 categories.
+              To add a custom LCIA method, follow
               ``README_add_custom_lcia_characterization_matrices.txt`` in
               ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
               and pass the method file stem here.
             - ``reference_years``: Acquired rights (AR) methods reference
               year selector. Accepts a single year, list, or range. If
               omitted, AR routes use all historical years in the studied range
-              up to the source registry historical cutoff. For EXIOBASE
-              3.10.2 and OECD ICIO v2025, the cutoff is 2022; other supported
+              up to the source registry historical cutoff. For EXIOBASE 3.11.2, the cutoff is 2023;
+              for OECD ICIO v2025, it is 2022. Other supported
               MRIO sources use their own registry cutoff.
             - ``ssp_scenario``: SSP scenario name or list. Defaults to
               ``["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"]`` and is applied
@@ -189,9 +194,9 @@ def write_asocc_weight_template(
               an explicit list of consecutive years in fit window order. When
               omitted, the source registry supplies the default fit window
               from the modeled year minimum through the source historical
-              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
-              to 1995 to 2022; other supported MRIO sources use their own
-              registry window.
+              cutoff. For EXIOBASE 3.11.2, this resolves to 1995 to 2023;
+              for OECD ICIO v2025, it resolves to 1995 to 2022. Other supported
+              MRIO sources use their own registry window.
             - ``l2_reuse_years``: Historical L2 reuse year selector used by
               all UT historical reuse routes. In
               ``projection_mode="historical_reuse"`` it applies to all UT
@@ -315,9 +320,10 @@ def preview_asocc_weight_tree(
 
             - ``project_name``: Required project name used to build
               ``<repo>/<project_name>``.
-            - ``source``: MRIO source key (``"exiobase_396_ixi"``,
-              ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-              ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
+            - ``source``: MRIO source key (``"exiobase_3112_ixi"``,
+              ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+              ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+              ``"exiobase_396_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
               for ISO3 only mode (L1 EG/PR(GDPcap) only).
             - ``agg_reg``: If ``True``, reclassify MRIO regions with the
               ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -412,18 +418,22 @@ def preview_asocc_weight_tree(
               (default) computes on original regions, then aggregates.
             - ``lcia_method``: LCIA method(s) to characterize for EXIO
               processing (for example ``"pb_lcia"`` or
-              ``["pb_lcia", "gwp100_lcia"]``). ``None`` means LCIA
+              ``["pb_lcia", "ef_3.1_14cat", "ef_3.1",
+              "gwp100_ef31", "gwp100_ipcc"]``). ``None`` means LCIA
               characterization is skipped. Defaults to ``None``. LCIA
-              characterization is available only for EXIOBASE sources. To add
-              a custom LCIA method, follow
+              characterization is available only for EXIOBASE sources.
+              For EF 3.1, use ``"ef_3.1_14cat"`` for EXIOBASE LCIA-based shares
+              and matching carrying capacities across 14 categories. Selecting
+              ``"ef_3.1"`` still limits these shares to the same 14 categories.
+              To add a custom LCIA method, follow
               ``README_add_custom_lcia_characterization_matrices.txt`` in
               ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
               and pass the method file stem here.
             - ``reference_years``: Acquired rights (AR) methods reference
               year selector. Accepts a single year, list, or range. If
               omitted, AR routes use all historical years in the studied range
-              up to the source registry historical cutoff. For EXIOBASE
-              3.10.2 and OECD ICIO v2025, the cutoff is 2022; other supported
+              up to the source registry historical cutoff. For EXIOBASE 3.11.2, the cutoff is 2023;
+              for OECD ICIO v2025, it is 2022. Other supported
               MRIO sources use their own registry cutoff.
             - ``ssp_scenario``: SSP scenario name or list. Defaults to
               ``["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"]`` and is applied
@@ -438,9 +448,9 @@ def preview_asocc_weight_tree(
               an explicit list of consecutive years in fit window order. When
               omitted, the source registry supplies the default fit window
               from the modeled year minimum through the source historical
-              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
-              to 1995 to 2022; other supported MRIO sources use their own
-              registry window.
+              cutoff. For EXIOBASE 3.11.2, this resolves to 1995 to 2023;
+              for OECD ICIO v2025, it resolves to 1995 to 2022. Other supported
+              MRIO sources use their own registry window.
             - ``l2_reuse_years``: Historical L2 reuse year selector used by
               all UT historical reuse routes. In
               ``projection_mode="historical_reuse"`` it applies to all UT

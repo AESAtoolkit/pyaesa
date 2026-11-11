@@ -143,12 +143,24 @@ def test_archive_validation_contract(tmp_path: Path) -> None:
 def test_download_report_contracts_and_year_normalization() -> None:
     assert get_mrio_entry("exiobase_3102_ixi").shared_prereq_root == "exiobase_3"
     assert list_mrio_source_keys() == (
-        "exiobase_396_ixi",
-        "exiobase_396_pxp",
+        "exiobase_3112_ixi",
+        "exiobase_3112_pxp",
         "exiobase_3102_ixi",
         "exiobase_3102_pxp",
+        "exiobase_396_ixi",
+        "exiobase_396_pxp",
         "oecd_v2025",
     )
+    for system in ("ixi", "pxp"):
+        source = f"exiobase_3112_{system}"
+        entry = get_mrio_entry(source)
+        assert entry.doi == "10.5281/zenodo.23039074"
+        assert entry.default_historical_cutoff == 2023
+        assert normalize_mrio_years(None, source_key=source) == list(range(1995, 2025))
+        assert _resolve_source_layout(source) == (
+            str(Path("exiobase_3") / "exiobase_3112"),
+            f"full_{system}",
+        )
     assert normalize_mrio_years(None, source_key="exiobase_3102_ixi")[0] == 1995
     assert normalize_mrio_years(None, source_key="exiobase_3102_ixi")[-1] == 2024
     assert normalize_mrio_years(2001, source_key="oecd_v2025") == [2001]

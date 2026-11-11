@@ -136,9 +136,10 @@ def deterministic_acc(
     Args:
         project_name: Required project name used to build
             ``<repo>/<project_name>``.
-        source: MRIO source key (``"exiobase_396_ixi"``,
-            ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-            ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
+        source: MRIO source key (``"exiobase_3112_ixi"``,
+            ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+            ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+            ``"exiobase_396_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
             for ISO3 only mode (L1 EG/PR(GDPcap) only).
         agg_reg: If ``True``, reclassify MRIO regions with the
             ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -167,7 +168,15 @@ def deterministic_acc(
             omitted, all available MRIO
             years for the selected source and ``agg_version`` are used.
         lcia_method: Carrying capacity reference method(s) selected for aCC
-            (for example ``"pb_lcia"``, ``"gwp100_lcia"``, or ``"ef_3.1"``).
+            (for example ``"pb_lcia"``, ``"gwp100_ef31"``, ``"gwp100_ipcc"``,
+            ``"ef_3.1_14cat"``, or ``"ef_3.1"``).
+            Both EF methods can be used directly with pyaesa. Use
+            ``"ef_3.1_14cat"`` for EXIOBASE LCIA-based shares
+            and matching carrying capacities across 14 categories. Select
+            ``"ef_3.1"`` to retain all 16 categories with non-LCIA-based
+            allocation and/or compatible externally supplied LCIA-based shares.
+            In mixed workflows, EXIOBASE LCIA-based shares cover only 14;
+            the other compatible allocation routes retain all 16.
             Static CC requires a matching reference file in
             ``data_raw/carrying_capacities/``; to add a custom carrying
             capacity reference, follow
@@ -186,6 +195,9 @@ def deterministic_acc(
             follow ``README_add_custom_lcia_characterization_matrices.txt`` in
             ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
             and pass the custom method file stem there.
+            For LCIA-based allocation used with dynamic AR6 CC, ``"gwp100_ipcc"`` is the
+            recommended method. This aligns Phase B LCIA-based allocated shares with the IPCC
+            GWP100 characterization used for carrying capacities derived from AR6 pathways.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
             ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
@@ -258,8 +270,8 @@ def deterministic_acc(
             - ``reference_years``: Acquired rights (AR) methods reference
               year selector. Accepts a single year, list, or range. If
               omitted, AR routes use all historical years in the studied range
-              up to the source registry historical cutoff. For EXIOBASE
-              3.10.2 and OECD ICIO v2025, the cutoff is 2022; other supported
+              up to the source registry historical cutoff. For EXIOBASE 3.11.2, the cutoff is 2023;
+              for OECD ICIO v2025, it is 2022. Other supported
               MRIO sources use their own registry cutoff.
             - ``ssp_scenario``: SSP scenario name or list. Defaults to
               ``["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"]`` and is applied
@@ -274,9 +286,9 @@ def deterministic_acc(
               an explicit list of consecutive years in fit window order. When
               omitted, the source registry supplies the default fit window
               from the modeled year minimum through the source historical
-              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
-              to 1995 to 2022; other supported MRIO sources use their own
-              registry window.
+              cutoff. For EXIOBASE 3.11.2, this resolves to 1995 to 2023;
+              for OECD ICIO v2025, it resolves to 1995 to 2022. Other supported
+              MRIO sources use their own registry window.
             - ``l2_reuse_years``: Historical L2 reuse year selector used by
               all UT historical reuse routes. In
               ``projection_mode="historical_reuse"`` it applies to all UT
@@ -405,8 +417,8 @@ def deterministic_acc(
             the matching ``deterministic_ar6_cc(...)`` output scope.
             For example, for ``project_name="demo"``,
             ``source="exiobase_3102_ixi"``, ``agg_version="elec"``, and
-            static ``cc_source="gwp100_lcia"``, the refreshed scope is
-            ``<repo>/demo/B2_acc/exiobase_3102_ixi_elec/deterministic/static_gwp100_lcia``.
+            static ``cc_source="gwp100_ipcc"``, the refreshed scope is
+            ``<repo>/demo/B2_acc/exiobase_3102_ixi_elec/deterministic/static_gwp100_ipcc``.
             Processed MRIO inputs, processed population and GDP, raw
             downloads, and downstream ASR outputs are not refreshed. Defaults
             to ``False``.
@@ -435,7 +447,7 @@ def deterministic_acc(
                 project_name="demo",
                 source="exiobase_3102_ixi",
                 years=range(2020, 2031),
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",
                 s_p=["Paper"],
                 r_c=["FR"],

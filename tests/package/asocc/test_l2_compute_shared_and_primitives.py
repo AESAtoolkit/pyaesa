@@ -172,7 +172,7 @@ def _run(
         source="oecd_v2025",
         agg_version=None,
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         logger=SimpleNamespace(warning=lambda _message: None),
         fu_code=fu_code,
         selected_l1=[],
@@ -216,7 +216,7 @@ def test_l2_compute_shared_cover_real_registry_and_slice_paths() -> None:
             "r_u": None,
         },
         reference_years=[2005, 2006],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
     )
 
     key = shared_mod._filters_cache_key(run=run)
@@ -243,7 +243,7 @@ def test_l2_compute_shared_cover_real_registry_and_slice_paths() -> None:
         run=run,
         l2_method="AR(E^{CBA_FD})",
     )
-    assert list(first) == ["gwp100_lcia"]
+    assert list(first) == ["gwp100_ipcc"]
     assert first == second
     assert len(run.state.lcia_sliced_payload_cache) == 1
 
@@ -400,7 +400,7 @@ def test_l2_compute_primitives_cover_ut_non_ut_and_ar_runtime_paths(
         year=2030,
         scenario=None,
         reference_years=[2005],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
     )
     run_ar.context.source = "exiobase_396_ixi"
     run_ar.context.selected_l2_one_step = ["AR(E^{CBA_FD})"]
@@ -412,7 +412,7 @@ def test_l2_compute_primitives_cover_ut_non_ut_and_ar_runtime_paths(
                 l2_method="AR(E^{CBA_FD})",
                 l1_name="AR(E^{CBA_FD})",
                 l1_name_resolved="AR(E^{CBA_FD})",
-                lcia_key="gwp100_lcia",
+                lcia_key="gwp100_ipcc",
                 lcia_data=payload["lcia"],
                 ref_year=2005,
                 treat_as_one_step=False,
@@ -432,7 +432,7 @@ def test_l2_compute_primitives_cover_ut_non_ut_and_ar_runtime_paths(
                 l2_method="AR(E^{CBA_FD})",
                 l1_name="AR(E^{CBA_FD})",
                 l1_name_resolved="AR(E^{CBA_FD})",
-                lcia_key="gwp100_lcia",
+                lcia_key="gwp100_ipcc",
                 lcia_data=payload["lcia"],
                 ref_year=2005,
                 treat_as_one_step=False,
@@ -455,7 +455,7 @@ def test_l2_compute_primitives_cover_ut_non_ut_and_ar_runtime_paths(
                 l2_method="AR(E^{CBA_FD})",
                 l1_name="EG(Pop)",
                 l1_name_resolved="EG(Pop)",
-                lcia_key="gwp100_lcia",
+                lcia_key="gwp100_ipcc",
                 lcia_data=payload["lcia"],
                 ref_year=2005,
                 treat_as_one_step=False,
@@ -545,7 +545,7 @@ def test_l2_compute_primitives_cover_historical_and_ar_runtime_paths() -> None:
         year=2030,
         scenario=None,
         reference_years=[2005],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
     )
     ar_pba_run.context.source = "exiobase_396_ixi"
     ar_pba_run.context.selected_l2_one_step = ["AR(E^{PBA})"]
@@ -557,7 +557,7 @@ def test_l2_compute_primitives_cover_historical_and_ar_runtime_paths() -> None:
                 l2_method="AR(E^{PBA})",
                 l1_name="PR(GDPcap)",
                 l1_name_resolved="PR(GDPcap)",
-                lcia_key="gwp100_lcia",
+                lcia_key="gwp100_ipcc",
                 lcia_data=payload["lcia"],
                 ref_year=2005,
                 treat_as_one_step=False,

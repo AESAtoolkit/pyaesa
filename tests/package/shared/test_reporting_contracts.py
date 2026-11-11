@@ -215,7 +215,7 @@ def test_uncertainty_report_writes_summary_log(tmp_path: Path) -> None:
         arguments={
             "project_name": "report_demo",
             "years": [2030],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "fu_code": "L2.a.a",
             "source": "exiobase_3",
             "agg_reg": True,
@@ -364,7 +364,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
                 "agg_sec": True,
                 "agg_version": "ixi",
                 "years": [2020],
-                "lcia_method": ["gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc"],
                 "fu_code": "L2.a.a",
                 "r_f": ["FR"],
                 "r_c": None,
@@ -454,7 +454,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
     assert "Monte Carlo: branch set" in branch_set_text
     assert "Sobol: branch set" in branch_set_text
     no_sobol_branch_path = (
-        tmp_path / "branches" / "dynamic_ar6_gwp100_lcia" / "mc_1" / "logs" / "scope.json"
+        tmp_path / "branches" / "dynamic_ar6_gwp100_ipcc" / "mc_1" / "logs" / "scope.json"
     )
     no_sobol_branch = build_manifest(
         family="asr",
@@ -565,7 +565,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
         arguments={
             "project_name": "demo",
             "years": [2020, 2021, 2030],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "fu_code": "L2.a.a",
             "lca_route": "external_lca",
         },
@@ -622,7 +622,7 @@ def test_uncertainty_report_covers_empty_and_sobol_status_variants(tmp_path: Pat
                 "source": "external_lca_monte_carlo",
                 "reuse_status": "reused_exact",
                 "version_name": "supplier",
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "output_root": str(Path("demo") / "A_lca"),
                 "figures_available": 2,
                 "summary_records": [

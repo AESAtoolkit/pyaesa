@@ -102,7 +102,7 @@ def test_parse_disaggregate_args_rejects_forbidden_base_args() -> None:
             **_runtime_args(),
         )
     args = _base_allocate_args()
-    args["lcia_method"] = ["gwp100_lcia"]
+    args["lcia_method"] = ["gwp100_ipcc"]
     with pytest.raises(ValueError):
         parse_disaggregate_args(
             disaggregation_config=_base_config(),

@@ -47,7 +47,7 @@ def _base_allocate_args(*, project_name: str) -> dict[str, object]:
             "one_step_methods": ["UT(FD)"],
             "two_step_methods": None,
             "l1_l2_pairs": None,
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "years": [2005, 2030],
             "reference_years": None,
             "ssp_scenario": None,
@@ -100,7 +100,7 @@ def _write_acc_file(
 def _write_io_lca_results(
     path: Path,
     *,
-    lcia_method: str = "gwp100_lcia",
+    lcia_method: str = "gwp100_ipcc",
     impact: str = "GWP_100",
     impact_unit: str = "kg CO2eq/yr",
     year_values: dict[int, float] | None = None,
@@ -156,7 +156,7 @@ def _acc_context(
         proj_base=proj_base,
         source_label=source_label,
         agg_version=None,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type=cc_type,
     )
 
@@ -176,7 +176,7 @@ def _asr_context(
         agg_version=None,
         fu_code=fu_code,
         lca_type=lca_type,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type=cc_type,
         lca_version_name=(
             "supplier_v1"
@@ -192,18 +192,18 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
     from pyaesa.shared.lcia.identity import carrying_capacity_sha256
 
     scientific_inputs = {
-        "carrying_capacity/gwp100_lcia": carrying_capacity_sha256(lcia_method="gwp100_lcia")
+        "carrying_capacity/gwp100_ipcc": carrying_capacity_sha256(lcia_method="gwp100_ipcc")
     }
     assert (
         shared_paths_mod.build_asr_scope_label(
             source_label="oecd_v2025",
             agg_version=None,
             lca_type="external",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             cc_type="dynamic_ar6",
             lca_version_name="supplier_v1",
         )
-        == "oecd_v2025_ext_lca_supplier_v1_dynamic_ar6_gwp100_lcia"
+        == "oecd_v2025_ext_lca_supplier_v1_dynamic_ar6_gwp100_ipcc"
     )
 
     assert shared_paths_mod.get_asr_root(proj_base=tmp_path) == (tmp_path / "C_asr")
@@ -222,7 +222,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
         / "oecd_v2025"
         / "ext_lca_supplier_v1"
         / "deterministic"
-        / "static_gwp100_lcia"
+        / "static_gwp100_ipcc"
     )
     assert shared_paths_mod.get_asr_results_dir(
         context=_asr_context(
@@ -265,7 +265,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
     ) == (branch_root / "figs_l2_vs_global")
     assert not (branch_root / "figs_l2_vs_global").exists()
     public_payload = {
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "years": [2020, 2021],
         "base_cc_args": {
             "static": {"exclude_max_cc": False},
@@ -276,7 +276,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
         public_request_payload=public_payload,
         cc_type="static",
     ) == {
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "scientific_inputs": scientific_inputs,
         "base_cc_args": {
             "static": {},
@@ -287,7 +287,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
         public_request_payload=public_payload,
         cc_type="dynamic_ar6",
     ) == {
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "scientific_inputs": scientific_inputs,
         "base_cc_args": {"static": {"exclude_max_cc": False}, "dynamic_ar6": {}},
     }
@@ -484,13 +484,13 @@ def test_lca_row_loading_covers_io_and_external_routes(
                 "impact": "GWP_100",
                 "lca_value": 1000.0,
                 "impact_unit": "kg CO2eq/yr",
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "r_p": "FR",
                 "s_p": "D",
             }
         ]
     )
-    good_path = results_dir / "gwp100_lcia.csv"
+    good_path = results_dir / "gwp100_ipcc.csv"
     good_path.parent.mkdir(parents=True, exist_ok=True)
     io_rows.to_csv(good_path, index=False)
 
@@ -502,7 +502,7 @@ def test_lca_row_loading_covers_io_and_external_routes(
 
     loaded_io = lca_rows_mod._load_io_lca_rows(  # noqa: SLF001
         source_label="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         base_allocate_args=base_allocate_args,
     )
     assert loaded_io.loc[0, "year"] == "2030"
@@ -513,7 +513,7 @@ def test_lca_row_loading_covers_io_and_external_routes(
             proj_base=paths.project_base,
             source_label="exiobase_396_ixi",
             lca_type=IO_LCA_FAMILY,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             lca_version_name=None,
             base_allocate_args=base_allocate_args,
             years=[2030],
@@ -525,7 +525,7 @@ def test_lca_row_loading_covers_io_and_external_routes(
     external_proj_base = allocation_dummy_repo.repo_root / "asr_runtime_external"
     external_dir = external_lca_deterministic_dir(project_base=external_proj_base)
     external_dir.mkdir(parents=True, exist_ok=True)
-    cc_path, expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_lcia")
+    cc_path, expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_ipcc")
     del cc_path
     impact, impact_unit = expected_pairs[0]
     pd.DataFrame(
@@ -536,12 +536,12 @@ def test_lca_row_loading_covers_io_and_external_routes(
             "impact_unit": [impact_unit],
             "2005": [2.5],
         }
-    ).to_csv(external_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(external_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
 
     loaded_external = lca_rows_mod._load_contextual_external_rows(  # noqa: SLF001
         proj_base=external_proj_base,
         version_name="supplier_v1",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         base_allocate_args=external_args,
         years=[2005],
     )
@@ -553,7 +553,7 @@ def test_lca_row_loading_covers_io_and_external_routes(
             proj_base=external_proj_base,
             source_label="exiobase_396_ixi",
             lca_type="external",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             lca_version_name="supplier_v1",
             base_allocate_args=external_args,
             years=[2005],
@@ -597,7 +597,7 @@ def test_lca_row_loading_covers_missing_discovery_and_external_absence(
     with pytest.raises(FileNotFoundError):
         lca_rows_mod._load_io_lca_rows(  # noqa: SLF001
             source_label="exiobase_396_ixi",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             base_allocate_args=missing_args,
         )
 
@@ -621,7 +621,7 @@ def test_lca_row_loading_covers_missing_discovery_and_external_absence(
     with pytest.raises(FileNotFoundError):
         lca_rows_mod._load_io_lca_rows(  # noqa: SLF001
             source_label="exiobase_396_ixi",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             base_allocate_args=mismatch_args,
         )
 
@@ -633,7 +633,7 @@ def test_lca_row_loading_covers_missing_discovery_and_external_absence(
         lca_rows_mod._load_contextual_external_rows(  # noqa: SLF001
             proj_base=external_report.project_root,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             base_allocate_args=external_args,
             years=[2005],
         )
@@ -659,7 +659,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
         agg_version=None,
     )
     results_dir = lca_results_dir_for_source(paths=paths, source="exiobase_396_ixi")
-    _write_io_lca_results(results_dir / "gwp100_lcia.csv")
+    _write_io_lca_results(results_dir / "gwp100_ipcc.csv")
     min_acc_dir = get_acc_output_dir(
         context=_acc_context(
             proj_base=paths.project_base,
@@ -671,25 +671,25 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
     status = _status()
     try:
         _write_acc_file(
-            min_acc_dir / "Skipped__gwp100_lcia.csv",
+            min_acc_dir / "Skipped__gwp100_ipcc.csv",
             l1_l2_method="Skipped",
             cc_bound="min_cc",
         )
         _write_acc_file(
-            min_acc_dir / "UT(FD)__gwp100_lcia_missing_year.csv",
+            min_acc_dir / "UT(FD)__gwp100_ipcc_missing_year.csv",
             year_values={1990: 2.0},
             cc_bound="min_cc",
         )
-        _write_acc_file(min_acc_dir / "UT(FD)__gwp100_lcia.csv", cc_bound="min_cc")
+        _write_acc_file(min_acc_dir / "UT(FD)__gwp100_ipcc.csv", cc_bound="min_cc")
         _write_acc_file(
-            min_acc_dir / "UT(FD)__gwp100_lcia.csv",
+            min_acc_dir / "UT(FD)__gwp100_ipcc.csv",
             year_values={2005: 4.0},
             cc_bound="max_cc",
         )
         result = static_mod.process_static_asr(
             proj_base=paths.project_base,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=[2005],
@@ -703,7 +703,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
                 proj_base=paths.project_base,
                 source_label="exiobase_396_ixi",
                 lca_type=IO_LCA_FAMILY,
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name=None,
                 base_allocate_args=base_allocate_args,
                 years=[2005],
@@ -720,16 +720,16 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
     assert len(result.output_files) == 1
     assert result.external_lca_transition is None
     assert all(path.exists() for path in result.output_files)
-    assert {path.stem for path in result.output_files} == {"UT(FD)__gwp100_lcia"}
+    assert {path.stem for path in result.output_files} == {"UT(FD)__gwp100_ipcc"}
 
     external_args = _historical_external_base_allocate_args(
         project_name="asr_runtime_static_external"
     )
     external_report = prepare_external_inputs(project_name="asr_runtime_static_external")
-    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_lcia")
+    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_ipcc")
     _write_external_lca_file(
         external_lca_deterministic_dir(project_base=external_report.project_root)
-        / "supplier_v1__gwp100_lcia.csv",
+        / "supplier_v1__gwp100_ipcc.csv",
         impact_unit=external_expected_pairs[0][1],
     )
     external_min_acc_dir = get_acc_output_dir(
@@ -741,7 +741,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
         public_result_root_name=public_result_root_name_for_fu_code(fu_code="L2.a.a"),
     )
     _write_acc_file(
-        external_min_acc_dir / "UT(FD)__gwp100_lcia.csv",
+        external_min_acc_dir / "UT(FD)__gwp100_ipcc.csv",
         cc_bound="min_cc",
     )
     external_status = _status()
@@ -749,7 +749,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
         external_result = static_mod.process_static_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=external_args,
             years=[2005],
@@ -763,7 +763,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
                 proj_base=external_report.project_root,
                 source_label="exiobase_396_ixi",
                 lca_type="external",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name="supplier_v1",
                 base_allocate_args=external_args,
                 years=[2005],
@@ -780,7 +780,7 @@ def test_static_runtime_contracts_cover_skip_paths_external_alignment_and_max_de
         "marker_label": "external LCA SSP-dependent switch",
         "marker_color": "#375a7f",
     }
-    assert external_result.output_files[0].stem == "UT(FD)__gwp100_lcia"
+    assert external_result.output_files[0].stem == "UT(FD)__gwp100_ipcc"
     del allocation_dummy_repo
 
 
@@ -792,9 +792,9 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
     )
     external_report = prepare_external_inputs(project_name="asr_runtime_dynamic_external")
     deterministic_dir = external_lca_deterministic_dir(project_base=external_report.project_root)
-    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_lcia")
+    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_ipcc")
     _write_external_lca_file(
-        deterministic_dir / "supplier_v1__gwp100_lcia.csv",
+        deterministic_dir / "supplier_v1__gwp100_ipcc.csv",
         impact_unit=external_expected_pairs[0][1],
     )
     acc_dir = get_acc_output_dir(
@@ -808,18 +808,18 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
     status = _status()
     try:
         _write_acc_file(
-            acc_dir / "Skipped__gwp100_lcia_dynamic_ar6.csv",
+            acc_dir / "Skipped__gwp100_ipcc_dynamic_ar6.csv",
             l1_l2_method="Skipped",
         )
         _write_acc_file(
-            acc_dir / "UT(FD)__gwp100_lcia_dynamic_ar6_missing_year.csv",
+            acc_dir / "UT(FD)__gwp100_ipcc_dynamic_ar6_missing_year.csv",
             year_values={1990: 2.0},
         )
-        _write_acc_file(acc_dir / "UT(FD)__gwp100_lcia_dynamic_ar6.csv")
+        _write_acc_file(acc_dir / "UT(FD)__gwp100_ipcc_dynamic_ar6.csv")
         result = dynamic_mod.process_dynamic_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=[2005],
@@ -833,7 +833,7 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
                 proj_base=external_report.project_root,
                 source_label="exiobase_396_ixi",
                 lca_type="external",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name="supplier_v1",
                 base_allocate_args=base_allocate_args,
                 years=[2005],
@@ -865,9 +865,9 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
                 "2030": 1000.0,
             }
         ]
-    ).to_csv(deterministic_dir / "supplier_v1__gwp100_lcia_ssp2.csv", index=False)
+    ).to_csv(deterministic_dir / "supplier_v1__gwp100_ipcc_ssp2.csv", index=False)
     _write_acc_file(
-        acc_dir / "UT(FD)__gwp100_lcia_dynamic_ar6.csv",
+        acc_dir / "UT(FD)__gwp100_ipcc_dynamic_ar6.csv",
         year_values={2030: 4.0},
     )
     status_with_transitions = _status()
@@ -875,7 +875,7 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
         transition_result = dynamic_mod.process_dynamic_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=[2005],
@@ -884,12 +884,12 @@ def test_dynamic_runtime_contracts_cover_missing_acc_skip_paths_and_external_ali
             lca_version_name="supplier_v1",
             acc_output_files=sorted(acc_dir.glob("*.csv")),
             allowed_l1_l2_methods={"UT(FD)"},
-            share_transition_meta={"UT(FD)__gwp100_lcia_dynamic_ar6": {"ssp_start_year": 2030}},
+            share_transition_meta={"UT(FD)__gwp100_ipcc_dynamic_ar6": {"ssp_start_year": 2030}},
             lca_rows=lca_rows_mod.load_lca_rows(
                 proj_base=external_report.project_root,
                 source_label="exiobase_396_ixi",
                 lca_type="external",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name="supplier_v1",
                 base_allocate_args=base_allocate_args,
                 years=[2005],
@@ -911,15 +911,15 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
     base_allocate_args["ssp_scenario"] = ["SSP2"]
     external_report = prepare_external_inputs(project_name="asr_runtime_dynamic_cumulative_scope")
     deterministic_dir = external_lca_deterministic_dir(project_base=external_report.project_root)
-    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_lcia")
+    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_ipcc")
     impact_unit = external_expected_pairs[0][1]
     _write_external_lca_file(
-        deterministic_dir / "supplier_v1__gwp100_lcia.csv",
+        deterministic_dir / "supplier_v1__gwp100_ipcc.csv",
         impact_unit=impact_unit,
         year_values={2005: 1000.0},
     )
     _write_external_lca_file(
-        deterministic_dir / "supplier_v1__gwp100_lcia_ssp2.csv",
+        deterministic_dir / "supplier_v1__gwp100_ipcc_ssp2.csv",
         impact_unit=impact_unit,
         year_values={2030: 1200.0},
     )
@@ -932,7 +932,7 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
         public_result_root_name=public_result_root_name_for_fu_code(fu_code="L2.a.a"),
     )
     historical_acc = _write_acc_file(
-        acc_dir / "UT(FD)__gwp100_lcia_dynamic_ar6.csv",
+        acc_dir / "UT(FD)__gwp100_ipcc_dynamic_ar6.csv",
         year_values={2005: 2.0},
         extra_columns={
             AR6_CC_SSP_SCENARIO_COLUMN: "SSP2",
@@ -940,7 +940,7 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
         },
     )
     prospective_acc = _write_acc_file(
-        acc_dir / "UT(FD)__gwp100_lcia_dynamic_ar6_SSP2.csv",
+        acc_dir / "UT(FD)__gwp100_ipcc_dynamic_ar6_SSP2.csv",
         year_values={2030: 4.0},
         extra_columns={
             AR6_CC_SSP_SCENARIO_COLUMN: "SSP2",
@@ -953,7 +953,7 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
         result = dynamic_mod.process_dynamic_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=[2005, 2030],
@@ -967,7 +967,7 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
                 proj_base=external_report.project_root,
                 source_label="exiobase_396_ixi",
                 lca_type="external",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name="supplier_v1",
                 base_allocate_args=base_allocate_args,
                 years=[2005, 2030],
@@ -981,8 +981,8 @@ def test_dynamic_runtime_repeats_invariant_rows_for_cumulative_identities(
     assert result.n_written == 2
     assert result.impacts == ["GWP_100"]
     output_by_stem = {path.stem: pd.read_csv(path) for path in result.output_files}
-    historical_output = output_by_stem["UT(FD)__gwp100_lcia_dynamic_ar6"]
-    prospective_output = output_by_stem["UT(FD)__gwp100_lcia_dynamic_ar6_SSP2"]
+    historical_output = output_by_stem["UT(FD)__gwp100_ipcc_dynamic_ar6"]
+    prospective_output = output_by_stem["UT(FD)__gwp100_ipcc_dynamic_ar6_SSP2"]
     assert historical_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
     assert prospective_output.loc[0, "cumulative_asr"] == pytest.approx(2.2 / 6.0)
     del allocation_dummy_repo
@@ -995,10 +995,10 @@ def test_static_runtime_contracts_skip_acc_files_without_requested_years(
         project_name="asr_runtime_static_missing_year_only"
     )
     external_report = prepare_external_inputs(project_name="asr_runtime_static_missing_year_only")
-    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_lcia")
+    _, external_expected_pairs = bundled_cc_expected_impact_units(lcia_method="gwp100_ipcc")
     _write_external_lca_file(
         external_lca_deterministic_dir(project_base=external_report.project_root)
-        / "supplier_v1__gwp100_lcia.csv",
+        / "supplier_v1__gwp100_ipcc.csv",
         impact_unit=external_expected_pairs[0][1],
     )
     min_acc_dir = get_acc_output_dir(
@@ -1010,7 +1010,7 @@ def test_static_runtime_contracts_skip_acc_files_without_requested_years(
         public_result_root_name=public_result_root_name_for_fu_code(fu_code="L2.a.a"),
     )
     _write_acc_file(
-        min_acc_dir / "UT(FD)__gwp100_lcia.csv",
+        min_acc_dir / "UT(FD)__gwp100_ipcc.csv",
         year_values={1990: 2.0},
         cc_bound="min_cc",
     )
@@ -1019,7 +1019,7 @@ def test_static_runtime_contracts_skip_acc_files_without_requested_years(
         result = static_mod.process_static_asr(
             proj_base=external_report.project_root,
             fu_code="L2.a.a",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             source_label="exiobase_396_ixi",
             base_allocate_args=base_allocate_args,
             years=[2005],
@@ -1033,7 +1033,7 @@ def test_static_runtime_contracts_skip_acc_files_without_requested_years(
                 proj_base=external_report.project_root,
                 source_label="exiobase_396_ixi",
                 lca_type="external",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 lca_version_name="supplier_v1",
                 base_allocate_args=base_allocate_args,
                 years=[2005],
@@ -1252,7 +1252,7 @@ def test_runtime_contracts_cover_path_and_ssp_edge_contracts(tmp_path: Path) -> 
         / "oecd_v2025"
         / "ext_lca_supplier_v1"
         / "deterministic"
-        / "static_gwp100_lcia"
+        / "static_gwp100_ipcc"
         / "results"
     )
     assert (

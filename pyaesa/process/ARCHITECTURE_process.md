@@ -179,6 +179,22 @@ MRIO processing consumes that path owner through
 `mrios/utils/io/paths.py::_get_characterization_matrix_path(...)`; it does not
 own a separate characterization directory contract.
 
+Matrices are read from
+`data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/<exiobase_version>/<method>.csv`.
+The source registry supplies `exiobase_3112`, `exiobase_3102`, or
+`exiobase_396`; another version is never substituted. Bundled methods are
+`pb_lcia`, `ef_3.1`, `ef_3.1_14cat`, `gwp100_ef31`, and `gwp100_ipcc`. Stressor names and units must
+match the selected inventory. Version-specific factors belong in prerequisite
+CSVs rather than runtime aliases or parser corrections.
+
+The assessment category axis comes from the carrying-capacity table. A matrix
+may characterize a subset of those categories. Missing characterization does
+not acquire zero factors; allocation consumers resolve eligible methods against
+the assessment axis, and IO-LCA consumes actual characterized impacts.
+
+The EXIOBASE 3.10.2 raw correction owner does not apply its corrections to
+EXIOBASE 3.11.2.
+
 | Metadata | Purpose |
 | --- | --- |
 | Applied LCIA methods | Downstream aSoCC LCIA method availability. |

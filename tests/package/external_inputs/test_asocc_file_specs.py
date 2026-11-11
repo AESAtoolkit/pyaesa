@@ -404,9 +404,9 @@ def test_external_monte_carlo_loader_covers_parquet_pickle_and_inventory_errors(
         _external_lcia_render_frame(lcia_method="pb_lcia", run_indices=[0], value_start=3.0),
     )
     _write_table(
-        directory / "l1_CO(S)_l2_UT(FD)__gwp100_lcia.csv",
+        directory / "l1_CO(S)_l2_UT(FD)__gwp100_ipcc.csv",
         _external_lcia_render_frame(
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             run_indices=[0, 1],
             value_start=30.0,
         ),
@@ -415,7 +415,7 @@ def test_external_monte_carlo_loader_covers_parquet_pickle_and_inventory_errors(
         proj_base=project_repo,
         selection=selection,
         years=[2019],
-        lcia_methods=["pb_lcia", "gwp100_lcia"],
+        lcia_methods=["pb_lcia", "gwp100_ipcc"],
         ssp_scenario_options_by_year=None,
     )
     assert source is not None
@@ -426,7 +426,7 @@ def test_external_monte_carlo_loader_covers_parquet_pickle_and_inventory_errors(
         directory / "l1_CO(S)_l2_UT(FD)__pb_lcia.csv",
         _external_lcia_render_frame(lcia_method="pb_lcia", run_indices=[0, 2], value_start=3.0),
     )
-    (directory / "l1_CO(S)_l2_UT(FD)__gwp100_lcia.csv").unlink()
+    (directory / "l1_CO(S)_l2_UT(FD)__gwp100_ipcc.csv").unlink()
     source = monte_carlo_mod.resolve_external_monte_carlo_source(
         proj_base=project_repo,
         selection=selection,
@@ -1805,7 +1805,7 @@ def test_validate_lcia_inventory_and_impact_contract_fail_fast(project_repo: Pat
                     path=directory / "c.csv",
                     scenario=None,
                     years=(2019,),
-                    lcia_method="gwp100_lcia",
+                    lcia_method="gwp100_ipcc",
                 ),
             ),
             selection=selection,

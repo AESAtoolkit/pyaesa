@@ -77,7 +77,7 @@ Optional contributor route:
 1. If the new file should become available to all users by default, submit it
    to `pyaesa` through a pull request.
 2. Add a matching characterization matrix in:
-   `prerequisites/mrio/exiobase_3/lcia/characterization_factors_matrices/`
+   `prerequisites/mrio/exiobase_3/lcia/characterization_factors_matrices/<exiobase_version>/`
 3. If the method needs historical responsibility allocation, add a
    responsibility period table in:
    `prerequisites/mrio/exiobase_3/lcia/responsibility_periods/`.

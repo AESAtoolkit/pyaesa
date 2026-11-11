@@ -255,16 +255,16 @@ of decoupling between economic growth and environmental pressure on Earth
 system processes. Sustainable Production and Consumption, 43, 217-229.
 https://doi.org/10.1016/j.spc.2023.11.001
 
-3.2 LCIA method: gwp100_lcia
+3.2 LCIA methods: gwp100_ef31 and gwp100_ipcc
 
 ....
 Carrying capacity thresholds
 ....
 
 Steady state climate carrying capacity:
-The gwp100_lcia steady state climate carrying capacity is used by
+The GWP100 steady-state climate carrying capacity is used by
 deterministic_acc(...), deterministic_asr(...), and uncertainty variants when
-lcia_method="gwp100_lcia" and static carrying capacities are selected.
+lcia_method="gwp100_ef31" or "gwp100_ipcc" and static carrying capacities are selected.
 
 Citations:
 Sanyé-Mengual, E., & Sala, S. (2023). Consumption footprint and domestic
@@ -283,7 +283,7 @@ level. The International Journal of Life Cycle Assessment, 20(7), 1005-1018.
 https://doi.org/10.1007/s11367-015-0899-2
 
 Dynamic climate carrying capacity:
-When lcia_method="gwp100_lcia" is used with dynamic climate carrying
+When lcia_method="gwp100_ef31" or "gwp100_ipcc" is used with dynamic climate carrying
 capacities, cite the AR6 climate pathways and harmonization method references
 of Section 2.3.
 
@@ -291,26 +291,28 @@ of Section 2.3.
 Characterization matrix
 ....
 
-The gwp100_lcia characterization matrix is used by process_mrio(...),
-deterministic_io_lca(...), deterministic_asocc(...), deterministic_acc(...),
-deterministic_asr(...), and uncertainty variants when gwp100_lcia is selected
-and EXIOBASE LCIA characterization is required.
+The gwp100_ef31 and gwp100_ipcc matrices are used by process_mrio(...),
+IO-LCA, and LCIA-based allocation methods when selected. Their source version
+folders match EXIOBASE 3.11.2, 3.10.2, or 3.9.6.
 
-Citations:
-Yang, Q., & Paulillo, A. (2026). Quantifying environmental impacts on planetary
-boundaries: A refined and validated impact assessment method. Environmental
-Impact Assessment Review, 119, 108355.
-https://doi.org/10.1016/j.eiar.2026.108355
+ef_3.1, ef_3.1_14cat and gwp100_ef31: adaptation of the EF 3.1 EXIOBASE
+concordance matrix.
 
-Yang, Q., & Paulillo, A. (2025). Advancing Planetary Boundaries Allocation:
-Systematic comparison of sharing principles for national level absolute
-environmental sustainability assessments. Procedia CIRP, 135, 875-880.
-https://doi.org/10.1016/j.procir.2024.12.087
+Boivent, S., de Bantel, E.I., and Blikra Vea, E. (2026). EXIOBASE EF3.1
+concordance matrix (upcoming v1.2).
+Zenodo. https://doi.org/10.5281/zenodo.21533474
 
 Andreasi Bassi, S., Biganzoli, F., Ferrara, N., Amadei, A., Valente, A.,
 Sala, S., & Ardente, F. (2023). Updated characterisation and normalisation
 factors for the Environmental Footprint 3.1 method. Publications Office of the
 European Union. https://doi.org/10.2760/798894
+
+gwp100_ipcc: IPCC AR6 Working Group I Chapter 7 GWP100 factors.
+https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07.pdf
+
+The BI FD GHG factors in pb_lcia use the corresponding gwp100_ipcc factors
+multiplied by the published BII loss coefficient from Galan Martin et al.
+(2021).
 
 3.3 Carrying capacity method: ef_3.1
 
@@ -320,8 +322,8 @@ Carrying capacity thresholds
 
 ef_3.1 carrying capacities are used by deterministic_acc(...),
 deterministic_asr(...), and uncertainty variants when lcia_method="ef_3.1".
-The package currently provides ef_3.1 as a carrying capacity reference,
-not yet among available EXIOBASE LCIA characterization matrices.
+The ef_3.1 method provides carrying capacities for all 16 EF 3.1 impact
+categories. EXIOBASE LCIA characterization covers 14 of these impact categories.
 
 Citations:
 Sanyé-Mengual, E., & Sala, S. (2023). Consumption footprint and domestic
@@ -338,7 +340,7 @@ https://doi.org/10.1016/j.jenvman.2020.110686
 Characterization matrix
 ....
 
-pyaesa does not yet provide an EXIOBASE LCIA characterization matrix for ef_3.1.
+See the characterization matrix citations in Section 3.2.
 
 3.4 LCIA uncertainty source
 

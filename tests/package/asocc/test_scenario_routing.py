@@ -52,7 +52,7 @@ def _run_context(
         ssp_scenario="SSP2",
         is_exio=False,
         l1_lcia_kind="CBA_FD",
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         selected_l1=["PR(GDPcap)", "AR(E^{CBA_FD})"],
         combined=[("UT(FD)", "PR(GDPcap)")],
         selected_l2_one_step=["UT(FD)", "UT(GVAa)"],

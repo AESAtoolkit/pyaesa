@@ -199,7 +199,7 @@ def _package_run_context(
         ssp_scenario="SSP2",
         is_exio=source.startswith("exiobase_"),
         l1_lcia_kind="CBA_FD",
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         selected_l1=selected_l1,
         combined=combined,
         selected_l2_one_step=selected_l2_one_step,
@@ -267,7 +267,7 @@ def _output_spec(*, scenario_dependent: bool) -> OutputSpec:
 
 def _ar_lcia_payload() -> dict[str, dict[str, pd.DataFrame]]:
     return {
-        "gwp100_lcia": {
+        "gwp100_ipcc": {
             "e_cba_fd_reg": pd.DataFrame(
                 [[10.0, 20.0]],
                 index=pd.Index(["climate_child"], name="impact"),
@@ -1069,5 +1069,5 @@ def test_process_year_covers_original_domain_current_year_lcia_loading(
     )
     assert state.processed_years == []
     assert state.l1_results_by_ssp_scenario[None] == {}
-    assert ("gwp100_lcia", "PBA", True, None, (2005,)) in state.ar_valid_refs_cache
+    assert ("gwp100_ipcc", "PBA", True, None, (2005,)) in state.ar_valid_refs_cache
     assert 2005 in state.pr_post_pop_series_by_ssp_scenario[None]

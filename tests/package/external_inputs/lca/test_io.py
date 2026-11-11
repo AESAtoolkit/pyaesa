@@ -475,7 +475,7 @@ def test_external_lca_selector_version_and_fu_contracts(project_repo: Path) -> N
 
 def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) -> None:
     del allocation_dummy_repo
-    lcia_method = "gwp100_lcia"
+    lcia_method = "gwp100_ipcc"
     base_args = normalize_base_allocate_args(
         {
             "project_name": "external_lca_figures_multi",
@@ -530,7 +530,7 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     multi_year.drop(columns=["2019", "2020"]).loc[
         :, ["r_p", "s_p", "impact", "impact_unit", "2005"]
     ].to_csv(
-        deterministic_dir / "supplier_v1__gwp100_lcia.csv",
+        deterministic_dir / "supplier_v1__gwp100_ipcc.csv",
         index=False,
     )
     ssp_year = _wide_lca_frame(lcia_method=lcia_method, include_scenario_metadata=False)
@@ -538,7 +538,7 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     ssp_year.drop(columns=["2019", "2020"]).loc[
         :, ["r_p", "s_p", "impact", "impact_unit", "2006"]
     ].to_csv(
-        deterministic_dir / "supplier_v1__gwp100_lcia_ssp2.csv",
+        deterministic_dir / "supplier_v1__gwp100_ipcc_ssp2.csv",
         index=False,
     )
     rows, _paths = load_external_lca_deterministic_rows(
@@ -561,7 +561,7 @@ def test_external_lca_figure_normalization_and_rendering(allocation_dummy_repo) 
     assert paths
     assert all(path.exists() for path in paths)
     assert all(path.parent == deterministic_dir / "figs" for path in paths)
-    assert all(path.name.startswith("supplier_v1__gwp100_lcia_") for path in paths)
+    assert all(path.name.startswith("supplier_v1__gwp100_ipcc_") for path in paths)
     assert all("_SSP2" in path.stem for path in paths)
     assert all("rf_all" not in path.name and "rc_all" not in path.name for path in paths)
     deterministic_status = _StatusRecorder()
@@ -820,7 +820,7 @@ def test_external_compact_run_matrix_reports_inventory_and_corrupt_rows(
 def test_external_lca_monte_carlo_real_sources_cover_empty_and_streamed_requests(
     project_repo: Path,
 ) -> None:
-    lcia_method = "gwp100_lcia"
+    lcia_method = "gwp100_ipcc"
     impact, impact_unit = _expected_pairs(lcia_method=lcia_method)[0]
     work_dir = project_repo / "external_lca_monte_carlo_real_sources"
     work_dir.mkdir()

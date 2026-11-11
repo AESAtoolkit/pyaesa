@@ -251,7 +251,7 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
     assert (
         asr_scope_stem(
             "mean",
-            pd.DataFrame({"lcia_method": ["gwp100_lcia"], "impact": ["GWP_100"]}),
+            pd.DataFrame({"lcia_method": ["gwp100_ipcc"], "impact": ["GWP_100"]}),
             include_impact=False,
         )
         == "mean"
@@ -358,7 +358,7 @@ def test_asr_axis_and_frequency_contracts_cover_public_labels(
                 {
                     "__method": ["UT(FD)"],
                     "cc_type": ["dynamic_ar6"],
-                    "lcia_method": ["gwp100_lcia"],
+                    "lcia_method": ["gwp100_ipcc"],
                     "impact": ["GWP_100"],
                     "impact_unit": ["kg CO2-eq"],
                     "year": [2020],
@@ -543,7 +543,7 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
 
     dynamic_frame = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "ar6_cc_ssp_scenario": ["SSP2"],
             "cc_category": ["C2"],
@@ -560,7 +560,7 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
         == "multi_method_GWP_100_SSP2_C2_REMIND_1_Low_Energy_Demand"
     )
     assert asr_scope_title("ASR", None, dynamic_frame, include_impact=False) == (
-        "ASR | Climate change (GWP_100) | SSP2\n"
+        "ASR | gwp100_ipcc | SSP2\n"
         "AR6 category: C2 | Model-scenario pair: REMIND 1 / Low Energy Demand"
     )
     assert "AR6 categories: C1-C2" in asr_scope_title(
@@ -568,7 +568,7 @@ def test_asr_scope_file_stem_keeps_selector_and_impact_tokens(
         None,
         pd.DataFrame(
             {
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 "cc_category": ["C1", "C2"],
             }
@@ -990,7 +990,7 @@ def test_asr_polar_layout_and_renderer_contracts(
         frequencies=None,
         output_stem=tmp_path / "gwp_polar",
         title="GWP polar",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         style="deterministic",
         dpi=1,
         output_format="svg",
@@ -1007,7 +1007,7 @@ def test_asr_polar_layout_and_renderer_contracts(
         frequencies=None,
         output_stem=tmp_path / "fallback_polar",
         title="Fallback polar",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         style="deterministic",
         dpi=1,
         output_format="svg",
@@ -1065,7 +1065,7 @@ def _asr_dynamic_uncertainty_figure_frame(*, include_values: bool = False) -> pd
                 "l1_l2_method": method,
                 "l1_method": method,
                 "l2_method": method,
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "impact": "GWP_100",
                 "impact_unit": "kg CO2-eq",
                 "year": year,
@@ -1161,7 +1161,7 @@ def _asr_dynamic_component_rows(
                 {
                     "__method": method,
                     "l1_l2_method": method,
-                    "lcia_method": "gwp100_lcia",
+                    "lcia_method": "gwp100_ipcc",
                     "impact": "GWP_100",
                     "impact_unit": "kg CO2-eq",
                     "year": year,
@@ -1186,7 +1186,7 @@ def _asr_dynamic_component_rows(
         base = 6.0 + year_index
         lca_rows.append(
             {
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "impact": "GWP_100",
                 "impact_unit": "kg CO2-eq",
                 "year": year,
@@ -1313,7 +1313,7 @@ def _asr_deterministic_dynamic_frame() -> pd.DataFrame:
                         "l1_l2_method": method,
                         "l1_method": method,
                         "l2_method": method,
-                        "lcia_method": "gwp100_lcia",
+                        "lcia_method": "gwp100_ipcc",
                         "impact": "GWP_100",
                         "impact_unit": "ratio",
                         "year": year,
@@ -1358,7 +1358,7 @@ def _asr_deterministic_component_rows(tmp_path: Path) -> DeterministicComponentR
                     {
                         "__method": method,
                         "l1_l2_method": method,
-                        "lcia_method": "gwp100_lcia",
+                        "lcia_method": "gwp100_ipcc",
                         "impact": "GWP_100",
                         "impact_unit": "kg CO2-eq",
                         "year": year,
@@ -1378,7 +1378,7 @@ def _asr_deterministic_component_rows(tmp_path: Path) -> DeterministicComponentR
         value = 5.0 + year_index
         lca_rows.append(
             {
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "impact": "GWP_100",
                 "impact_unit": "kg CO2-eq",
                 "year": year,
@@ -1473,7 +1473,7 @@ def _write_dynamic_ar6_prerequisite(tmp_path: Path) -> tuple[Path, Path]:
             "provenance": {"process_ar6": _dynamic_process_ar6_payload(tmp_path)},
         },
     )
-    acc_output_file = acc_results / "UT_FD__gwp100_lcia_dynamic_ar6.csv"
+    acc_output_file = acc_results / "UT_FD__gwp100_ipcc_dynamic_ar6.csv"
     acc_output_file.write_text("placeholder\n", encoding="utf-8")
     write_json_dict(
         acc_logs / "scope_manifest.json",
@@ -1989,7 +1989,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
             "l1_l2_method": ["UT(FD)", "UT(FD)"],
             "l1_method": ["UT", "UT"],
             "l2_method": ["FD", "FD"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["old", "old"],
             "year": [2020, 2021],
@@ -2012,7 +2012,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
     )
     lca = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "impact_unit": ["kg CO2-eq"],
         }
@@ -2061,7 +2061,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
     )
     frequency = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "cc_type": ["dynamic_ar6"],
             "frequency_of_transgression": [0.5],
@@ -2073,7 +2073,7 @@ def test_asr_uncertainty_component_and_render_helpers_cover_summary_branches(
     assert frequency_rows[FT_FRACTION_COLUMN].tolist() == [0.5]
     cumulative_rows = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "cc_type": ["dynamic_ar6"],
             VALUE_ARRAY_COLUMN: [np.array([1.2, 1.4])],
@@ -2259,7 +2259,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
     identity = pd.DataFrame(
         {
             "public_row_id": [0, 1, 2],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq", "kg CO2-eq"],
             "year": [2020, 2021, 2021],
@@ -2409,7 +2409,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
             "l1_l2_method": ["UT(FD)", "UT(FD)"],
             "l1_method": ["UT", "UT"],
             "l2_method": ["FD", "FD"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "year": [2020, 2021],
@@ -2495,7 +2495,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
     dynamic_repo_root = tmp_path / "dynamic_repo"
     dynamic_cc_dir = dynamic_repo_root / "data_raw" / "carrying_capacities"
     dynamic_cc_dir.mkdir(parents=True)
-    (dynamic_cc_dir / "gwp100_lcia_cc_steady_state.csv").write_text(
+    (dynamic_cc_dir / "gwp100_ipcc_cc_steady_state.csv").write_text(
         "impact_full_name,impact,impact_unit,min_cc,max_cc\n"
         "Climate change,GWP_100,kg CO2-eq,1.0,2.0\n",
         encoding="utf-8",
@@ -2547,7 +2547,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
 
     source = ExternalLCAMonteCarloSource(
         version_name="demo",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         identity=identity.head(2),
         run_indices=np.array([0, 1, 2], dtype=np.int64),
         paths=(tmp_path / "external.csv",),
@@ -2561,7 +2561,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
         [10.0, 11.0, 12.0],
         [20.0, 21.0, 22.0],
     ]
-    external_path = tmp_path / "supplier_v1__gwp100_lcia.csv"
+    external_path = tmp_path / "supplier_v1__gwp100_ipcc.csv"
     pd.DataFrame(
         [
             {
@@ -2609,7 +2609,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
     repo_root = tmp_path / "repo"
     cc_dir = repo_root / "data_raw" / "carrying_capacities"
     cc_dir.mkdir(parents=True)
-    (cc_dir / "gwp100_lcia_cc_steady_state.csv").write_text(
+    (cc_dir / "gwp100_ipcc_cc_steady_state.csv").write_text(
         "impact_full_name,impact,impact_unit,min_cc,max_cc\n"
         "Climate change,GWP_100,kg CO2-eq,1.0,2.0\n",
         encoding="utf-8",
@@ -2623,7 +2623,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
         arguments={
             "project_name": "demo",
             "years": [2020, 2021],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "fu_code": "L2.a.a",
             "r_p": ["FR"],
             "s_p": ["D"],
@@ -2654,7 +2654,7 @@ def test_asr_uncertainty_component_run_value_helpers_cover_io_and_external_sourc
                 "type": "external_lca_monte_carlo",
                 "paths": [str(external_path)],
                 "version_name": "supplier_v1",
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
             },
         ),
     )
@@ -2757,7 +2757,7 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
             "l1_l2_method": ["UT(FD)", "UT(FD)", "AR(E)"],
             "l1_method": ["UT", "UT", "AR"],
             "l2_method": ["FD", "FD", "E"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq", "kg CO2-eq"],
             "year": [2020, 2021, 2021],
@@ -2891,7 +2891,7 @@ def test_asr_uncertainty_row_reader_helpers_cover_dynamic_and_static_branches(
             "l1_l2_method": ["UT(FD)", "UT(FD)"],
             "l1_method": ["UT", "UT"],
             "l2_method": ["FD", "FD"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "cc_type": ["dynamic_ar6", "dynamic_ar6"],
@@ -3008,7 +3008,7 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             label="multi_method",
             frame=dynamic,
             requested_years=[2020, 2021],
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             cc_type="dynamic_ar6",
             include_impact=True,
             selector_token="rp_FR_sp_D",
@@ -3021,7 +3021,7 @@ def test_asr_deterministic_renderers_cover_variant_components_and_selector_stems
             label="multi_method",
             frame=dynamic_without_pair,
             requested_years=[2020, 2021],
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             cc_type="dynamic_ar6",
         )
         == "multi_method_SSP2_C1"
@@ -3150,14 +3150,14 @@ def test_asr_deterministic_render_asr_figures_uses_dynamic_multi_method_jobs(
         agg_version=None,
         fu_code="L2.a.a",
         lca_type="io_lca",
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="dynamic_ar6",
     )
     results_dir = get_asr_results_dir(context=path_context)
     dynamic = _asr_deterministic_dynamic_frame()
     output_paths: list[Path] = []
     for method in ["UT(FD)", "AR(E^{CBA_FD})"]:
-        path = results_dir / f"{method}__gwp100_lcia.csv"
+        path = results_dir / f"{method}__gwp100_ipcc.csv"
         _wide_asr_deterministic_rows(
             dynamic.loc[lambda frame, value=method: frame["__method"].eq(value)].copy(),
             years=[2020, 2021],
@@ -3168,7 +3168,7 @@ def test_asr_deterministic_render_asr_figures_uses_dynamic_multi_method_jobs(
     paths = render_asr_figures(
         path_context=path_context,
         fu_code="L2.a.a",
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="dynamic_ar6",
         requested_years=[2020, 2021],
         share_transition_meta={},
@@ -3224,7 +3224,7 @@ def test_asr_deterministic_dynamic_helpers_cover_cumulative_and_scope_branches(
     assert [label for label, _row, _low, _high in reordered] == ["A", "B"]
     cumulative_asr = pd.Series(dynamic["cumulative_asr"], copy=False)
     assert _common_asr_limits(dynamic, scale_mode=ASR_NORMAL_SCALE)[1] > float(cumulative_asr.max())
-    assert _scale_modes_by_lcia(rows=dynamic) == {"gwp100_lcia": ASR_NORMAL_SCALE}
+    assert _scale_modes_by_lcia(rows=dynamic) == {"gwp100_ipcc": ASR_NORMAL_SCALE}
     no_bound = _prepare_plot_rows(static.drop(columns=["cc_bound"]))
     assert bool(pd.Series(no_bound["__asr_max_threshold"], copy=False).isna().all())
     multi = _prepare_plot_rows(
@@ -3451,7 +3451,7 @@ def test_asr_dynamic_cumulative_rows_repeat_scenario_axes_and_attach_values(
 ) -> None:
     frame = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "l1_l2_method": ["UT(FD)"],
             "ar6_cc_ssp_scenario": ["SSP2"],
@@ -3515,7 +3515,7 @@ def test_asr_dynamic_cumulative_rows_repeat_scenario_axes_and_attach_values(
     )
     cumulative = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "l1_l2_method": ["UT(FD)"],
             "ar6_cc_ssp_scenario": ["SSP2"],

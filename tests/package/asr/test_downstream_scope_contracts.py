@@ -70,7 +70,7 @@ def _composite_base_allocate_args() -> dict[str, object]:
     return composite_mod.build_composite_base_allocate_args(
         project_name="downstream_scope_contracts",
         years=[2005, 2006],
-        lcia_method=composite_mod.normalize_shared_lcia_methods("gwp100_lcia"),
+        lcia_method=composite_mod.normalize_shared_lcia_methods("gwp100_ipcc"),
         fu_code="L2.a.a",
         r_p=None,
         s_p=None,
@@ -218,7 +218,7 @@ def test_downstream_asocc_shares_validate_canonical_method_identity() -> None:
         fu_code="L2.a.a",
         external_method=None,
         years=[2005, 2006],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         branch_ssp_scenario=["SSP2"],
     )
     assert context.asocc_shares == []
@@ -232,7 +232,7 @@ def test_downstream_asocc_shares_validate_canonical_method_identity() -> None:
     with pytest.raises(ValueError):
         selection_mod.asocc_share_declared_lcia_method(
             asocc_share=inputs_mod.AsoccShare(
-                file_stem="demo__gwp100_lcia",
+                file_stem="demo__gwp100_ipcc",
                 relative_dir=Path("l1"),
                 impacts=tuple(),
                 source_label="native",
@@ -520,7 +520,7 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
     with pytest.raises(ValueError):
         lca_mod.normalize_lca_args({"io_lca": {"extra": True}})
 
-    assert composite_mod.normalize_shared_lcia_methods("gwp100_lcia") == ["gwp100_lcia"]
+    assert composite_mod.normalize_shared_lcia_methods("gwp100_ipcc") == ["gwp100_ipcc"]
     with pytest.raises(ValueError):
         composite_mod.normalize_shared_lcia_methods([])
     normalized_mrio = composite_mod.normalize_mrio_scope(
@@ -635,20 +635,20 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
         )
     assert (
         composite_mod.effective_asocc_lcia_methods(
-            shared_lcia_methods=["gwp100_lcia"],
+            shared_lcia_methods=["gwp100_ipcc"],
             include_lcia_based_allocation_methods=False,
         )
         is None
     )
     assert composite_mod.effective_asocc_lcia_methods(
-        shared_lcia_methods=["gwp100_lcia"],
+        shared_lcia_methods=["gwp100_ipcc"],
         include_lcia_based_allocation_methods=True,
-    ) == ["gwp100_lcia"]
+    ) == ["gwp100_ipcc"]
 
     request = composite_mod.build_composite_base_allocate_args(
         project_name="demo",
         years=[2005, 2006],
-        lcia_method=composite_mod.normalize_shared_lcia_methods("gwp100_lcia"),
+        lcia_method=composite_mod.normalize_shared_lcia_methods("gwp100_ipcc"),
         fu_code="L2.a.a",
         r_p=None,
         s_p=None,
@@ -686,7 +686,7 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
         project_name="demo",
         years=[2005],
         lcia_method=["pb_lcia"],
-        asocc_lcia_methods=["gwp100_lcia", "pb_lcia"],
+        asocc_lcia_methods=["gwp100_ipcc", "pb_lcia"],
         fu_code="L2.a.a",
         r_p=None,
         s_p=None,
@@ -706,10 +706,10 @@ def test_downstream_scope_normalization_covers_all_contract_branches(project_rep
             fu_code="L2.a.a",
         ),
     )
-    assert shared_asocc_request["lcia_method"] == ["gwp100_lcia", "pb_lcia"]
+    assert shared_asocc_request["lcia_method"] == ["gwp100_ipcc", "pb_lcia"]
     assert composite_mod.asocc_lcia_methods_from_allocate_args(
         base_allocate_args=shared_asocc_request
-    ) == ["gwp100_lcia", "pb_lcia"]
+    ) == ["gwp100_ipcc", "pb_lcia"]
 
 
 def test_downstream_year_selector_and_groups_cover_edge_contracts(tmp_path: Path) -> None:

@@ -193,7 +193,7 @@ def _run(
         agg_version=None,
         group_indices=False,
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         logger=SimpleNamespace(warning=lambda _message: None),
         proj_base=SimpleNamespace(name="demo"),
         fu_code=fu_code,
@@ -229,7 +229,7 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
         scenario=None,
         one_step_methods=[],
         combined_methods=[("UT(FD)", "EG(Pop)")],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
         l1_results_year={
             "EG(Pop)__for__UT(FD)": weights,
         },
@@ -270,7 +270,7 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
             request=types_mod._CombinedSliceRequest(
                 l2_method="AR(E^{CBA_FD})",
                 l1_name="EG(Pop)",
-                lcia_key="gwp100_lcia",
+                lcia_key="gwp100_ipcc",
                 lcia_data=None,
                 ref_year=2005,
             ),
@@ -290,13 +290,13 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
         )
         is None
     )
-    run = run._replace(l1_results_year={"AR(E^{CBA_FD})_gwp100_lcia_ref_2005": weights})
+    run = run._replace(l1_results_year={"AR(E^{CBA_FD})_gwp100_ipcc_ref_2005": weights})
     resolved_ar_l1 = combined_mod._resolve_combined_slice(
         run=run,
         request=types_mod._CombinedSliceRequest(
             l2_method="UT(FD)",
             l1_name="AR(E^{CBA_FD})",
-            lcia_key="gwp100_lcia",
+            lcia_key="gwp100_ipcc",
             lcia_data=payload["lcia"],
             ref_year=2005,
         ),
@@ -309,7 +309,7 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
         request=types_mod._CombinedSliceRequest(
             l2_method="AR(E^{CBA_FD})",
             l1_name="AR(E^{CBA_FD})",
-            lcia_key="gwp100_lcia",
+            lcia_key="gwp100_ipcc",
             lcia_data=payload["lcia"],
             ref_year=2005,
         ),
@@ -367,7 +367,7 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
         scenario=None,
         one_step_methods=[],
         combined_methods=[("UT(FD)", "EG(Pop)")],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
         l1_results_year={},
         reference_years=[2005],
     )
@@ -380,7 +380,7 @@ def test_resolve_combined_slice_and_combined_runtime_paths(allocation_dummy_repo
         scenario=None,
         one_step_methods=[],
         combined_methods=[("AR(E^{PBA})", "AR(E^{PBA})")],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
         reference_years=[2005],
     )
     run_treat_as_one_step.context.source = "exiobase_396_ixi"
@@ -398,7 +398,7 @@ def test_one_step_runtime_paths_cover_default_and_historical_reuse() -> None:
         scenario=None,
         one_step_methods=["AR(E^{CBA_FD})"],
         combined_methods=[],
-        lcia_by_method={"gwp100_lcia": payload["lcia"]},
+        lcia_by_method={"gwp100_ipcc": payload["lcia"]},
         reference_years=[2005],
     )
     run_ar.context.source = "exiobase_396_ixi"

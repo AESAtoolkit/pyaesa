@@ -36,12 +36,14 @@ def bundled_static_cc_dir() -> Path:
 
 def characterization_matrix_path(*, source: str, lcia_method: str) -> Path:
     """Return the LCIA characterization matrix path for one MRIO source and method."""
+    entry = get_mrio_entry(source)
     return _get_repo_root().joinpath(
         "data_raw",
         "mrio",
-        _shared_lcia_subdir(source=source),
+        entry.shared_prereq_root,
         "lcia",
         CHARACTERIZATION_FACTORS_MATRICES_DIRNAME,
+        *([entry.raw_root] if entry.family == "exiobase" else []),
         f"{normalize_lcia_method_name(lcia_method)}.csv",
     )
 

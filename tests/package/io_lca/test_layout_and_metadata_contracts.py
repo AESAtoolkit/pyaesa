@@ -236,7 +236,7 @@ def test_io_lca_metadata_contracts_cover_roundtrip_defaults_and_contract_errors(
         "group_indices": False,
         "output_format": "csv",
         "years": [2019, 2020],
-        "lcia_methods": ["pb_lcia", "gwp100_lcia"],
+        "lcia_methods": ["pb_lcia", "gwp100_ipcc"],
         "selectors": {"r_f": ["FR", "DE"]},
     }
     complete_scope = {"arguments": complete_signature}
@@ -353,10 +353,10 @@ def test_io_lca_deterministic_path_probes_do_not_create_optional_directories(
     base_table = tmp_path / "main.csv"
     expected = paths_mod.io_lca_expected_method_table_paths(
         base_path=base_table,
-        lcia_methods=["gwp100_lcia", "pb_lcia"],
+        lcia_methods=["gwp100_ipcc", "pb_lcia"],
     )
     assert expected == [
-        paths_mod.io_lca_method_table_path(base_path=base_table, lcia_method="gwp100_lcia"),
+        paths_mod.io_lca_method_table_path(base_path=base_table, lcia_method="gwp100_ipcc"),
         paths_mod.io_lca_method_table_path(base_path=base_table, lcia_method="pb_lcia"),
     ]
     expected[0].parent.mkdir(parents=True, exist_ok=True)
@@ -367,5 +367,5 @@ def test_io_lca_deterministic_path_probes_do_not_create_optional_directories(
             path=expected[0],
             file_stem=base_table.stem,
         )
-        == "gwp100_lcia"
+        == "gwp100_ipcc"
     )

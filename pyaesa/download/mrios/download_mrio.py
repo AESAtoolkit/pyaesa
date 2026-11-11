@@ -1,7 +1,7 @@
 """Download MRIO archives and track coverage via metadata.
 
 This module orchestrates downloads for the supported MRIO sources:
-EXIOBASE 3.9.6, EXIOBASE 3.10.2, and OECD ICIO v2025. It exposes a
+EXIOBASE 3.11.2, EXIOBASE 3.10.2, EXIOBASE 3.9.6, and OECD ICIO v2025. It exposes a
 registry describing how to download each source and records which years
 exist locally after each run. If archives already exist on disk (even
 when metadata is missing) they are detected and added to the metadata
@@ -185,15 +185,16 @@ def download_mrio(
     Omit arguments to use their default.
 
     Args:
-        source: MRIO source key (``"exiobase_396_ixi"``,
+        source: MRIO source key (``"exiobase_3112_ixi"``,
+            ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+            ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
             ``"exiobase_396_pxp"``,
-            ``"exiobase_3102_ixi"``, ``"exiobase_3102_pxp"``,
             or ``"oecd_v2025"``).
         years: Optional year selection. Accepted forms are ``None``, one
             integer year, a ``range``, or a sequence of integer years. Defaults
             to ``None``, which selects all supported years for ``source``:
-            EXIOBASE 3.9.6 uses 1995 to 2022, EXIOBASE 3.10.2 uses 1995 to
-            2024, and OECD ICIO v2025 uses 1995 to 2022.
+            EXIOBASE 3.11.2 and 3.10.2 use 1995 to 2024; EXIOBASE
+            3.9.6 and OECD ICIO v2025 use 1995 to 2022.
         refresh: If ``True``, download the selected raw MRIO archive scope
             again to replace previous downloads. For EXIOBASE, the scope is
             each requested year archive under the selected source and system
@@ -218,11 +219,11 @@ def download_mrio(
         function. The source download folder is created lazily when missing.
 
     Example:
-        Download EXIOBASE 3.10.2 ixi archives with default years::
+        Download EXIOBASE 3.11.2 ixi archives with default years::
 
             from pyaesa import download_mrio
 
-            download_mrio("exiobase_3102_ixi")
+            download_mrio("exiobase_3112_ixi")
     """
     source_key = normalize_mrio_source_key(source)
     handler = SOURCE_HANDLERS[source_key]

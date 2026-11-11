@@ -220,7 +220,7 @@ def _ar_context(*, fu_code: str, selected_l1: list[str] | None = None) -> Simple
         fu_code=fu_code,
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None, "r_u": None},
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         selected_l1=[] if selected_l1 is None else list(selected_l1),
         selected_l2_one_step=selected_l2,
         combined=[],
@@ -551,7 +551,7 @@ def test_ar_cache_runtime(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
     )
     assert "e_cba_td_rp_sp" in lcia_ref
 
@@ -561,15 +561,15 @@ def test_ar_cache_runtime(
     unavailable_repo.set_lcia_methods(
         source="exiobase_396_ixi",
         matrix_version=None,
-        methods=["gwp100_lcia"],
-        available_years_by_method={"gwp100_lcia": []},
+        methods=["gwp100_ipcc"],
+        available_years_by_method={"gwp100_ipcc": []},
     )
-    with pytest.raises(ValueError, match="gwp100_lcia"):
+    with pytest.raises(ValueError, match="gwp100_ipcc"):
         reference_payloads_mod.load_ar_l2_reference_lcia_payload(
             context=unavailable_context,
             state=unavailable_state,
             ref_year=2005,
-            lcia_key="gwp100_lcia",
+            lcia_key="gwp100_ipcc",
         )
 
     projected = ar_cache._project_cached_baseline_for_year(
@@ -591,10 +591,10 @@ def test_ar_cache_runtime(
         context=context,
         state=state,
         ssp_scenario=None,
-        cache_key=("AR(E^{CBA_TD})", "L2.a.b", "gwp100_lcia"),
+        cache_key=("AR(E^{CBA_TD})", "L2.a.b", "gwp100_ipcc"),
         l2_method="AR(E^{CBA_TD})",
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
         l1_weights=None,
         pre_weighting=True,
         force_recompute=True,
@@ -604,10 +604,10 @@ def test_ar_cache_runtime(
         context=context,
         state=state,
         ssp_scenario=None,
-        cache_key=("AR(E^{CBA_TD})", "L2.a.b", "gwp100_lcia"),
+        cache_key=("AR(E^{CBA_TD})", "L2.a.b", "gwp100_ipcc"),
         l2_method="AR(E^{CBA_TD})",
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
         l1_weights=None,
         pre_weighting=True,
         force_recompute=False,
@@ -624,13 +624,13 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
         context=context_l2,
         state=state_l2,
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
     )
     assert (
         run_ar._compute_ar_l2_result(
             context=context_l2,
             state=state_l2,
-            cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia"),
+            cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc"),
             l2_method="AR(E^{CBA_FD})",
             year=2004,
             ref_year=2005,
@@ -643,7 +643,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
     early = run_ar._compute_ar_l2_result(
         context=context_l2,
         state=state_l2,
-        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia"),
+        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc"),
         l2_method="AR(E^{CBA_FD})",
         year=2004,
         ref_year=2005,
@@ -656,7 +656,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
     weighted = run_ar._compute_ar_l2_result(
         context=context_l2,
         state=state_l2,
-        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia"),
+        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc"),
         l2_method="AR(E^{CBA_FD})",
         year=2006,
         ref_year=2005,
@@ -671,7 +671,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
         run_ar._compute_ar_l2_preweight(
             context=context_l2,
             state=state_l2,
-            cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia", "pre"),
+            cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc", "pre"),
             l2_method="AR(E^{CBA_FD})",
             year=2004,
             ref_year=2005,
@@ -682,7 +682,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
     preweight_early = run_ar._compute_ar_l2_preweight(
         context=context_l2,
         state=state_l2,
-        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia", "pre"),
+        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc", "pre"),
         l2_method="AR(E^{CBA_FD})",
         year=2004,
         ref_year=2005,
@@ -693,7 +693,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
     preweight_projected = run_ar._compute_ar_l2_preweight(
         context=context_l2,
         state=state_l2,
-        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_lcia", "pre"),
+        cache_key=("AR(E^{CBA_FD})", "L2.b.a", "gwp100_ipcc", "pre"),
         l2_method="AR(E^{CBA_FD})",
         year=2006,
         ref_year=2005,
@@ -714,7 +714,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
         l1_method="AR(E^{CBA_FD})",
         year=2004,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         lcia_reg=lcia_reg,
         lcia_reg_by_year={2005: lcia_reg},
@@ -739,7 +739,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
         l1_method="AR(Ecap^{CBA_FD})",
         year=2006,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         lcia_reg=lcia_reg,
         lcia_reg_by_year={2005: lcia_reg},
@@ -763,7 +763,7 @@ def test_run_ar_runtime_paths(allocation_dummy_repo) -> None:
         l1_method="AR(E^{CBA_FD})",
         year=2006,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         lcia_reg=lcia_reg,
         lcia_reg_by_year={2005: lcia_reg},

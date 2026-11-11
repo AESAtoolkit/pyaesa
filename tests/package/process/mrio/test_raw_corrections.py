@@ -70,6 +70,7 @@ def _fwu_stressors() -> list[str]:
         / "exiobase_3"
         / "lcia"
         / "characterization_factors_matrices"
+        / "exiobase_3102"
         / "pb_lcia.csv",
         encoding="latin1",
     )

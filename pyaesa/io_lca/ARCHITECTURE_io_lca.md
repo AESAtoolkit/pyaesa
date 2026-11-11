@@ -48,6 +48,15 @@ Shared uncertainty code is family neutral. It receives IO-LCA row identities,
 numeric output arrays, and family metadata from `io_lca/uncertainty/`; it must
 not import IO-LCA deterministic paths, MRIO selectors, or LCIA file contracts.
 
+IO-LCA accepts EXIOBASE 3.11.2, 3.10.2, and 3.9.6 in both ixi and pxp
+forms. It consumes characterized method payloads and availability from MRIO
+processing. Bundled methods are `pb_lcia`, `ef_3.1`, `ef_3.1_14cat`,
+`gwp100_ef31`, and `gwp100_ipcc`; they retain distinct method identities in outputs and figures.
+Characterization matrix paths belong to `pyaesa/shared/lcia/paths.py` and
+include the source version. IO-LCA does not substitute another matrix
+version or synthesize missing extensions. The MRIO and IO-LCA package tests
+cover source and method compatibility.
+
 ## IO-LCA Uncertainty Contract
 
 The active IO-LCA uncertainty source is `lcia_uncertainty`. It samples

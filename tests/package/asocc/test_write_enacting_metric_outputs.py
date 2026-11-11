@@ -55,7 +55,7 @@ def _state() -> SimpleNamespace:
         mrio_default_monetary_unit="M EUR",
         mrio_units={"fd_rf": "M EUR"},
         lcia_units={
-            "gwp100_lcia": pd.Series(
+            "gwp100_ipcc": pd.Series(
                 ["kgCO2e"],
                 index=pd.Index(["Climate"], name="impact"),
             )
@@ -200,7 +200,7 @@ def test_reset_metric_index_and_build_output_cover_level_routing(tmp_path: Path)
     assert context.source in str(out_path_default_source)
 
     context.fu_code = "L2.a.a"
-    key_lcia = EnactingMetricKey(metric="e_cba_fd_reg", lcia_method="gwp100_lcia")
+    key_lcia = EnactingMetricKey(metric="e_cba_fd_reg", lcia_method="gwp100_ipcc")
     state.enacting_metric_levels[key_lcia] = "level_2"
     artifact_lcia, out_path_lcia = mod._build_enacting_metric_output(  # noqa: SLF001
         context=context,
@@ -215,13 +215,13 @@ def test_reset_metric_index_and_build_output_cover_level_routing(tmp_path: Path)
     )
     assert isinstance(artifact_lcia, OutputArtifact)
     assert artifact_lcia.schema.columns == ("unit", "impact")
-    assert out_path_lcia.name == "e_cba_fd_reg_gwp100_lcia.csv"
+    assert out_path_lcia.name == "e_cba_fd_reg_gwp100_ipcc.csv"
     assert out_path_lcia.parts[-5:] == (
         "results",
         "l2",
         "enacting_metrics",
         "regr_proj",
-        "e_cba_fd_reg_gwp100_lcia.csv",
+        "e_cba_fd_reg_gwp100_ipcc.csv",
     )
 
 

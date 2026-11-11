@@ -495,13 +495,13 @@ def test_lcia_tracking_contracts_cover_status_units_and_year_entry_payload(
         method_name="pb_lcia",
     )
     assert normalize_lcia_method_list(None) == []
-    assert normalize_lcia_method_list(["pb_lcia", " ", "gwp100_lcia"]) == [
+    assert normalize_lcia_method_list(["pb_lcia", " ", "gwp100_ipcc"]) == [
         "pb_lcia",
-        "gwp100_lcia",
+        "gwp100_ipcc",
     ]
-    assert merge_lcia_method_lists(["pb_lcia"], ["pb_lcia", "gwp100_lcia"]) == [
+    assert merge_lcia_method_lists(["pb_lcia"], ["pb_lcia", "gwp100_ipcc"]) == [
         "pb_lcia",
-        "gwp100_lcia",
+        "gwp100_ipcc",
     ]
 
     assert year_entry_lcia_methods(None) == []
@@ -550,13 +550,13 @@ def test_lcia_tracking_contracts_cover_status_units_and_year_entry_payload(
     ) == {"pb_lcia": {"climate_parent": "kg CO2-eq"}}
 
     status = build_lcia_status_payload(
-        lcia_method_names=["pb_lcia", "gwp100_lcia", "unused"],
+        lcia_method_names=["pb_lcia", "gwp100_ipcc", "unused"],
         applied_methods=["pb_lcia"],
-        missing_by_method={"gwp100_lcia": ["satellite_accounts"]},
+        missing_by_method={"gwp100_ipcc": ["satellite_accounts"]},
     )
     assert status == {
         "pb_lcia": {"available": True},
-        "gwp100_lcia": {"available": False, "missing": ["satellite_accounts"]},
+        "gwp100_ipcc": {"available": False, "missing": ["satellite_accounts"]},
         "unused": {"available": False, "missing": []},
     }
     year_entry = build_year_entry_payload(
@@ -573,7 +573,7 @@ def test_lcia_tracking_contracts_cover_status_units_and_year_entry_payload(
         is_exio=True,
         requires_characterization=True,
         year_char_jobs=jobs,
-        missing_by_method={"gwp100_lcia": ["satellite_accounts"]},
+        missing_by_method={"gwp100_ipcc": ["satellite_accounts"]},
         runtime_env={"python": "3.12"},
         raw_correction_payload={"row_count": 1, "log_path": "log.csv"},
     )

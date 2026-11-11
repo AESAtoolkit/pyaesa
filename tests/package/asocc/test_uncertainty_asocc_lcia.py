@@ -1,11 +1,12 @@
+import json
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from pyaesa import uncertainty_asocc
+from pyaesa import deterministic_acc, deterministic_asocc, deterministic_asr, uncertainty_asocc
 from pyaesa.asocc.runtime.scope.branch_resolution import AsoccDeterministicPathScope, asocc_l2_dir
 from pyaesa.asocc.runtime.scope.persisted_scope import (
     AsoccPersistedComputeSignature,
@@ -64,11 +65,19 @@ from pyaesa.shared.runtime.scenario.columns import (
     ASOCC_SSP_SCENARIO_COLUMN,
     ASOCC_TIME_ROUTE_PUBLIC_COLUMN,
 )
-from pyaesa.shared.lcia.paths import carbon_account_cov_path
+from pyaesa.shared.lcia.paths import (
+    carbon_account_cov_path,
+    characterization_matrix_path,
+    responsibility_periods_csv_path,
+    static_cc_csv_path,
+)
+from pyaesa.process.mrios.utils.io.paths import _get_metadata_path
+from pyaesa.external_inputs.lca.paths import external_lca_deterministic_dir
 from tests.package.helpers.acc_dummy_repo import prepare_exiobase_repo_with_years
 from tests.package.helpers.asr_dummy_repo import (
     add_assessment_category,
     prepare_static_asr_pb_lcia_repo,
+    prepare_static_asr_external_lca_repo,
 )
 
 
@@ -115,7 +124,7 @@ def _lcia_base_args(*, project_name: str, reference_years: list[int] | None) -> 
             "EG(Pop)::AR(E^{CBA_FD})",
             "EG(Pop)::UT(FD)",
         ],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "r_p": ["FR"],
         "s_p": ["D"],
         "l1_reg_aggreg": "pre",
@@ -319,7 +328,7 @@ def test_deterministic_asocc_renderers_expand_generic_lcia_and_hide_unused_panel
         {
             "__method": ["UT(FD)", "UT(FD)", "UT(FD)", "UT(FD)"],
             "l1_l2_method": ["UT(FD)", "UT(FD)", "UT(FD)", "UT(FD)"],
-            "lcia_method": [None, "pb_lcia", "pb_lcia", "gwp100_lcia"],
+            "lcia_method": [None, "pb_lcia", "pb_lcia", "gwp100_ipcc"],
             "impact": [None, "AAL", "SOD", "GWP_100"],
             "year": [2030, 2030, 2030, 2030],
             "value": [0.1, 0.2, 0.3, 0.4],
@@ -333,7 +342,7 @@ def test_deterministic_asocc_renderers_expand_generic_lcia_and_hide_unused_panel
             {
                 "__method": ["UT(FD)", "UT(FD)", "UT(FD)"],
                 "l1_l2_method": ["UT(FD)", "UT(FD)", "UT(FD)"],
-                "lcia_method": ["pb_lcia", "pb_lcia", "gwp100_lcia"],
+                "lcia_method": ["pb_lcia", "pb_lcia", "gwp100_ipcc"],
                 "impact": ["AAL", "SOD", "GWP_100"],
                 "impact_unit": ["ratio", "ratio", "ratio"],
                 "year": [2030, 2030, 2030],
@@ -369,7 +378,7 @@ def test_uncertainty_asocc_accepts_multi_lcia_public_scope(allocation_dummy_repo
         reference_years=[2005],
     )
     base_args["years"] = [2005]
-    base_args["lcia_method"] = ["gwp100_lcia", "pb_lcia"]
+    base_args["lcia_method"] = ["gwp100_ipcc", "pb_lcia"]
     config = {
         "mc_parameters": {
             "fixed": {"active": True, "n_runs": 2},
@@ -392,7 +401,7 @@ def test_uncertainty_asocc_accepts_multi_lcia_public_scope(allocation_dummy_repo
     identity = pd.read_csv(manifest.artifacts["public_row_identity"])
 
     assert manifest.completed_runs == 2
-    assert set(identity["lcia_method"].dropna().astype(str)) == {"gwp100_lcia", "pb_lcia"}
+    assert set(identity["lcia_method"].dropna().astype(str)) == {"gwp100_ipcc", "pb_lcia"}
     generic = identity.loc[identity["l1_l2_method"].eq("EG(Pop)_UT(FD)")]
     assert set(generic.loc[generic["lcia_method"].eq("pb_lcia"), "impact"]) == {"AAL", "IR"}
     constrained = identity.loc[identity["l1_l2_method"].eq("AR(E^{CBA_FD})")]
@@ -438,7 +447,7 @@ def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None
     mixed = pd.DataFrame(
         {
             "l1_l2_method": ["AR(E^{CBA_FD})", "AR(E^{CBA_FD})", "UT(FD)"],
-            "lcia_method": ["gwp100_lcia", "pb_lcia", None],
+            "lcia_method": ["gwp100_ipcc", "pb_lcia", None],
             "impact": ["GWP_100", "climate", None],
             "allocated_share": [0.3, 0.5, 0.4],
         }
@@ -449,9 +458,9 @@ def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None
     )
 
     assert expanded["lcia_method"].tolist() == [
-        "gwp100_lcia",
+        "gwp100_ipcc",
         "pb_lcia",
-        "gwp100_lcia",
+        "gwp100_ipcc",
         "pb_lcia",
     ]
     assert expanded["impact"].tolist() == ["GWP_100", "climate", "GWP_100", "climate"]
@@ -460,7 +469,7 @@ def test_non_lcia_rows_expand_with_values_when_lcia_public_axis_exists() -> None
         rows=non_lcia_only,
         reference=mixed,
     )
-    assert reference_expanded["lcia_method"].tolist() == ["gwp100_lcia", "pb_lcia"]
+    assert reference_expanded["lcia_method"].tolist() == ["gwp100_ipcc", "pb_lcia"]
 
 
 def test_uncertainty_asocc_public_figures_cover_no_source_and_lcia_runs(
@@ -559,7 +568,7 @@ def test_uncertainty_asocc_public_figures_cover_scalar_year_and_single_method(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["EG(Pop)::UT(GVAa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -675,7 +684,7 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_sparse_runs(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -727,7 +736,7 @@ def test_uncertainty_asocc_public_figures_cover_inter_method_sparse_runs(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -757,7 +766,7 @@ def test_uncertainty_asocc_collapsed_violin_rows_cover_ssp_ownership() -> None:
         rows=pd.DataFrame(
             {
                 "year": [2030, 2030],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP2"],
                 ASOCC_TIME_ROUTE_PUBLIC_COLUMN: ["historical", "l2_reuse_year"],
@@ -1103,7 +1112,7 @@ def test_public_lcia_axis_owner_expands_full_non_lcia_reference_axis() -> None:
     rows = pd.DataFrame({"l1_l2_method": ["UT(FD)"], "allocated_share": [0.4]})
     reference_axis = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia", "pb_lcia"],
+            "lcia_method": ["gwp100_ipcc", "pb_lcia"],
             "impact": ["GWP_100", "climate"],
         }
     )
@@ -1114,7 +1123,7 @@ def test_public_lcia_axis_owner_expands_full_non_lcia_reference_axis() -> None:
         reference_axis=reference_axis,
     )
 
-    assert expanded["lcia_method"].tolist() == ["gwp100_lcia", "pb_lcia"]
+    assert expanded["lcia_method"].tolist() == ["gwp100_ipcc", "pb_lcia"]
     assert expanded["impact"].tolist() == ["GWP_100", "climate"]
     assert values.tolist() == [[0.4, 0.4]]
 
@@ -1438,7 +1447,7 @@ def test_uncertainty_asocc_lcia_samples_l1_final_rows(allocation_dummy_repo) -> 
             "fu_code": "L1.a",
             "method_plan": "default",
             "l1_methods": ["AR(E^{CBA_FD})"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_f": ["FR"],
             "l1_reg_aggreg": "pre",
         },
@@ -1472,7 +1481,7 @@ def test_uncertainty_asocc_lcia_samples_combined_rows_without_direct_rows(
             "fu_code": "L2.a.a",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FD)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -1505,7 +1514,7 @@ def test_uncertainty_asocc_lcia_historical_reuse_uses_final_l2_reuse_year(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -1545,7 +1554,7 @@ def test_uncertainty_asocc_requires_projection_uncertainty_for_multiple_l2_reuse
                 "fu_code": "L2.a.b",
                 "method_plan": "pairs",
                 "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "r_p": ["FR"],
                 "s_p": ["D"],
                 "l1_reg_aggreg": "pre",
@@ -1573,7 +1582,7 @@ def test_uncertainty_asocc_projection_uncertainty_samples_l2_reuse_year_axis(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -1633,7 +1642,7 @@ def test_uncertainty_asocc_projection_and_reference_year_use_selected_rows(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -1754,7 +1763,7 @@ def test_uncertainty_asocc_lcia_plus_projection_collapses_reuse_axis(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -2052,3 +2061,127 @@ def test_uncertainty_asocc_reference_year_requires_compatible_requested_year(
             output_format="csv_compact",
             refresh=True,
         )
+
+
+@pytest.mark.parametrize("method", ["ef_3.1", "ef_3.1_14cat"])
+def test_bundled_ef_responsibility_periods_keep_mixed_category_coverage(
+    allocation_dummy_repo, method: str
+) -> None:
+    """Actual EF RPS rows preserve supported LCIA and generic downstream categories."""
+    repo, source, project = allocation_dummy_repo, "exiobase_3112_ixi", "ef_rps_coverage"
+    matrix = pd.read_csv(characterization_matrix_path(source=source, lcia_method=method))
+    capacities = pd.read_csv(static_cc_csv_path(lcia_method=method))
+    rps_path = responsibility_periods_csv_path(source=source, lcia_method=method)
+    rps = pd.read_csv(rps_path)
+    rps_bytes = rps_path.read_bytes()
+    actual, declared = set(matrix["impact"]), set(capacities["impact"])
+    assert len(actual) == 14
+    assert len(declared) == (16 if method == "ef_3.1" else 14)
+    assert (
+        rps.loc[rps["impact"].isin(list(declared - actual)), "responsibility_period_years"]
+        .isna()
+        .all()
+    )
+    years = list(range(1995, 2007))
+    repo.set_processed_pop_gdp_years(historical_years=years)
+    repo.write_mrio_metadata(
+        source=source,
+        matrix_version=None,
+        sectors_used=["D", "X"],
+        regions_used=["FR", "US"],
+        years=years,
+    )
+    repo.set_lcia_methods(source=source, matrix_version=None, methods=[method])
+    metadata_path = _get_metadata_path(source)
+
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    units = (
+        matrix.drop_duplicates("impact_parent").set_index("impact_parent")["impact_unit"].to_dict()
+    )
+    for year in years:
+        metadata["years"][str(year)]["enacting_metrics"]["units"]["lcia_by_method"][method] = units
+        repo.write_mrio_year_payloads(
+            source=source,
+            matrix_version=None,
+            year=year,
+            lcia_methods=[method],
+            lcia_impacts_by_method={method: sorted(actual)},
+        )
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+    base = {
+        "method_plan": "two_steps",
+        "l1_methods": ["EG(Pop)", "AR(E^{CBA_FD})", "PR-HR(Ecap,cum^{CBA_FD})"],
+        "two_step_methods": ["UT(FD)"],
+        "reference_years": [2006],
+    }
+    common: dict[str, Any] = dict(
+        project_name=project,
+        source=source,
+        years=[2006],
+        lcia_method=method,
+        fu_code="L2.a.a",
+        r_p=["FR"],
+        s_p=["D"],
+        figures=False,
+    )
+    assert deterministic_asocc(**common, **base) is not None
+    assert (
+        deterministic_acc(
+            **common, base_asocc_args=base, base_cc_args={"static": {"exclude_max_cc": True}}
+        )
+        is not None
+    )
+    prepare_static_asr_external_lca_repo(
+        repo,
+        project_name=project,
+        source=source,
+        lcia_method=method,
+        impact="GWP_100",
+        impact_unit="kg CO2-eq",
+        include_deterministic=True,
+        years=[2006],
+    )
+    external = (
+        external_lca_deterministic_dir(project_base=repo.repo_root / project)
+        / f"supplier_v1__{method}.csv"
+    )
+    rows = pd.read_csv(external).drop(columns=["impact", "impact_unit"])
+    rows.merge(capacities[["impact", "impact_unit"]], how="cross").to_csv(external, index=False)
+    assert (
+        deterministic_asr(
+            **common,
+            base_asocc_args=base,
+            base_cc_args={"static": {"exclude_max_cc": True}},
+            lca_args={
+                "external_lca": {"active": True, "version_name": "supplier_v1"},
+                "io_lca": {"active": False},
+            },
+            subfigures=False,
+        )
+        is not None
+    )
+    for family in ["B1_asocc", "B2_acc", "C_asr"]:
+        paths = [
+            path
+            for path in (repo.repo_root / project / family).rglob("*.csv")
+            if path.name.startswith(("EG(Pop)", "AR(", "PR-HR("))
+        ]
+        assert len(paths) == 3
+        for path in paths:
+            frame = pd.read_csv(path)
+            assert bool(np.isfinite(frame["2006"].to_numpy(dtype=float)).all())
+            if family == "B1_asocc" and "EG(Pop)" in path.name:
+                assert bool(frame["2006"].gt(0).all())
+                assert set(frame.columns) == {
+                    "l1_l2_method",
+                    "l1_method",
+                    "l2_method",
+                    "asocc_ssp_scenario",
+                    "asocc_time_route",
+                    "r_p",
+                    "s_p",
+                    "2006",
+                }
+            else:
+                assert set(frame["impact"]) == (declared if "EG(Pop)" in path.name else actual)
+    assert rps_path.read_bytes() == rps_bytes

@@ -388,7 +388,7 @@ def _inter_mrio_rows(*, value: float, route: str = ASOCC_TIME_ROUTE_HISTORICAL) 
             "l2_method": ["UT(GVAa)", "AR(E^{CBA_TD})"],
             "r_c": ["FR", "FR"],
             "s_p": ["Electricity", "Electricity"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["climate_parent", "climate_parent"],
             "year": [2030, 2030],
             ASOCC_TIME_ROUTE_COLUMN: [route, route],
@@ -529,7 +529,7 @@ def test_inter_mrio_matches_non_lcia_rows_across_lcia_public_axis() -> None:
         }
     )
     alternate = rows.assign(
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         **{ASOCC_VALUE_COLUMN: 0.8},
     )
@@ -566,7 +566,7 @@ def test_external_methods_skip_lcia_projection_and_inter_mrio_sources(
             "l2_method": ["AR(E^{CBA_FD})", "CO(S)"],
             "r_c": ["FR", "FR"],
             "s_p": ["Electricity", "Electricity"],
-            "lcia_method": ["gwp100_lcia", None],
+            "lcia_method": ["gwp100_ipcc", None],
             "impact": ["climate change", None],
             "year": [2030, 2030],
             "l2_reuse_year": [None, 2005],
@@ -688,7 +688,7 @@ def test_external_method_monte_carlo_discovery_uses_persisted_files(tmp_path: Pa
         loaded=loaded,
         external_method=external_method,
     )
-    for lcia_method in ("gwp100_lcia", ["gwp100_lcia"]):
+    for lcia_method in ("gwp100_ipcc", ["gwp100_ipcc"]):
         assert not external_asocc_has_monte_carlo_rows(
             loaded=replace(
                 loaded,
@@ -3167,7 +3167,7 @@ def test_sobol_request_context_uses_reference_and_projection_sources(
             "fu_code": "L2.a.b",
             "method_plan": "pairs",
             "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "r_p": ["FR"],
             "s_p": ["D"],
             "l1_reg_aggreg": "pre",
@@ -3467,11 +3467,11 @@ def test_asocc_sobol_year_scope_and_selector_summary() -> None:
             "r_c": ["FR", "FR", "FR", "FR", "FR"],
             "s_p": ["Electricity", "Electricity", "Electricity", "Electricity", "Electricity"],
             "lcia_method": [
-                "gwp100_lcia",
-                "gwp100_lcia",
-                "gwp100_lcia",
-                "gwp100_lcia",
-                "gwp100_lcia",
+                "gwp100_ipcc",
+                "gwp100_ipcc",
+                "gwp100_ipcc",
+                "gwp100_ipcc",
+                "gwp100_ipcc",
             ],
             "impact": [
                 "climate change",

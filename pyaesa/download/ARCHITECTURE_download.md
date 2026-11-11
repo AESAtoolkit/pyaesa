@@ -105,10 +105,12 @@ Supported MRIO sources are declared in `mrios/utils/source_registry.py`.
 
 | Source key | Family | Raw scope |
 | --- | --- | --- |
-| `exiobase_396_ixi` | EXIOBASE | EXIOBASE 3.9.6 industry by industry |
-| `exiobase_396_pxp` | EXIOBASE | EXIOBASE 3.9.6 product by product |
+| `exiobase_3112_ixi` | EXIOBASE | EXIOBASE 3.11.2 industry by industry, 1995 to 2024 |
+| `exiobase_3112_pxp` | EXIOBASE | EXIOBASE 3.11.2 product by product, 1995 to 2024 |
 | `exiobase_3102_ixi` | EXIOBASE | EXIOBASE 3.10.2 industry by industry |
 | `exiobase_3102_pxp` | EXIOBASE | EXIOBASE 3.10.2 product by product |
+| `exiobase_396_ixi` | EXIOBASE | EXIOBASE 3.9.6 industry by industry |
+| `exiobase_396_pxp` | EXIOBASE | EXIOBASE 3.9.6 product by product |
 | `oecd_v2025` | OECD | OECD ICIO v2025 |
 
 MRIO handler contract:

@@ -33,9 +33,30 @@ conditions. For all data sources, cite the original provider following the
 | IIASA SSP population/GDP | Prospective population and GDP allocation inputs. | <ul><li>Noncommercial use: allowed under the IIASA Public License.</li><li>Commercial use: allowed within the licensed rights; adapted material is limited to scientific research, science communication, or policy consultancy. Reproducing substantial database portions is prohibited.</li></ul> | [IIASA SSP terms and conditions](https://ssp.apps.ece.iiasa.ac.at/documentation/license) |
 | IIASA AR6 climate pathways | Dynamic climate change carrying capacity pathways. | <ul><li>Noncommercial use: allowed under the AR6 Scenario Explorer Public License.</li><li>Commercial use: allowed within the licensed rights. Reproducing substantial database portions is prohibited.</li></ul> | [IIASA AR6 license terms and conditions](https://data.ene.iiasa.ac.at/ar6/static/License/Legal.html) |
 
-Current EXIOBASE LCIA coverage is `gwp100_lcia` and `pb_lcia`. EF3.1 is
-available for non LCIA based allocation routes, but it is not currently
-available for `pyaesa` owned IO-LCA or LCIA based allocation methods.
+Current EXIOBASE LCIA coverage is `pb_lcia`, EF 3.1,
+`gwp100_ef31` (EF 3.1 climate change) and `gwp100_ipcc` (IPCC AR6).
+With EXIOBASE, characterization is possible for 14 of the 16 EF 3.1 impact
+categories; ionising radiation and ozone depletion are not covered.
+
+- Use `ef_3.1_14cat` when Phase A IO-LCA or Phase B LCIA-based allocated
+  shares are calculated with EXIOBASE. These calculations and their matching
+  carrying capacities cover 14 impact categories.
+- Use `ef_3.1` to retain all 16 EF 3.1 impact categories. To assess all 16,
+  use external LCA results for Phase A and Phase B allocated shares from
+  non-LCIA-based methods calculated by `pyaesa`, compatible externally supplied
+  LCIA-based allocation results, or both.
+
+`ef_3.1` can also be selected when combining EXIOBASE-based LCIA allocation
+methods with non-LCIA-based methods and/or external LCIA-based allocation
+results covering all 16 categories. `pyaesa` then calculates the EXIOBASE-based
+LCIA allocated shares for 14 categories and retains all 16 for the other
+allocation methods and external results. For ASR, use external Phase A LCA
+results to assess all 16 categories; EXIOBASE IO-LCA limits ASR to 14.
+
+GWP_100 responsibility periods are 1,000,000 years for the two EF methods,
+`gwp100_ef31` and `gwp100_ipcc`. This is separate from the 100-year
+characterization horizon.
+
 The {doc}`process data tutorial <tutorials/core_prerequisites/2_process_data>` explains the
 detailed process for adding LCIA methods with EXIOBASE characterization
 matrices and matching carrying capacity thresholds, either for private project

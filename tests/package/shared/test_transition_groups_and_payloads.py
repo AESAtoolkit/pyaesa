@@ -35,7 +35,7 @@ def test_group_files_by_base_normalizes_parents_and_reuse_metadata(tmp_path: Pat
         / "l2"
         / "l2_in_l1"
         / "regr_proj"
-        / "native_SSP2_C1_ssp2__gwp100_lcia_min_cc.csv"
+        / "native_SSP2_C1_ssp2__gwp100_ipcc_min_cc.csv"
     )
     reuse_path = root / "hist_reuse" / "family" / "base.csv"
     regression_path.parent.mkdir(parents=True)
@@ -189,7 +189,7 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
     ) == Path("ut_propag_contrib/family")
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="native_SSP2_C1_ssp2__gwp100_lcia_min_cc",
+            output_stem="native_SSP2_C1_ssp2__gwp100_ipcc_min_cc",
             share_transition_meta={"native_SSP2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}},
         )
         == "native_SSP2"
@@ -215,22 +215,22 @@ def test_long_and_combined_transition_frames_expand_reuse_history(tmp_path: Path
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="base__gwp100_lcia_max_cc",
+            output_stem="base__gwp100_ipcc_max_cc",
             share_transition_meta={"base": {}},
         )
         == "base"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_ssp2_min_cc",
-            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2": {}},
+            output_stem="EG_Pop_AR_E_PBA__gwp100_ipcc_ssp2_min_cc",
+            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_ipcc_ssp2": {}},
         )
-        == "EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2"
+        == "EG(Pop)_AR(E^{PBA})__gwp100_ipcc_ssp2"
     )
     assert scenarios_mod.share_transition_payload_for_output_stem(
-        output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_ssp2_min_cc",
+        output_stem="EG_Pop_AR_E_PBA__gwp100_ipcc_ssp2_min_cc",
         share_transition_meta={
-            "EG(Pop)_AR(E^{PBA})__gwp100_lcia_ssp2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
+            "EG(Pop)_AR(E^{PBA})__gwp100_ipcc_ssp2": {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
         },
     ) == {ASOCC_SSP_SCENARIO_COLUMN: "SSP2"}
 
@@ -264,23 +264,23 @@ def test_transition_group_stem_resolution_contracts(
     ) == {"marker_label": "fallback"}
     assert (
         groups_mod._candidate_output_share_stem(  # noqa: SLF001
-            "base__gwp100_lcia_max_cc"
+            "base__gwp100_ipcc_max_cc"
         )
-        == "base__gwp100_lcia"
+        == "base__gwp100_ipcc"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="base__gwp100_lcia_max_cc",
-            share_transition_meta={"base__gwp100_lcia": {}},
+            output_stem="base__gwp100_ipcc_max_cc",
+            share_transition_meta={"base__gwp100_ipcc": {}},
         )
-        == "base__gwp100_lcia"
+        == "base__gwp100_ipcc"
     )
     assert (
         groups_mod.origin_share_stem_from_output_stem(
-            output_stem="EG_Pop_AR_E_PBA__gwp100_lcia_min_cc",
-            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_lcia": {}},
+            output_stem="EG_Pop_AR_E_PBA__gwp100_ipcc_min_cc",
+            share_transition_meta={"EG(Pop)_AR(E^{PBA})__gwp100_ipcc": {}},
         )
-        == "EG(Pop)_AR(E^{PBA})__gwp100_lcia"
+        == "EG(Pop)_AR(E^{PBA})__gwp100_ipcc"
     )
     assert (
         groups_mod._raw_candidate_output_share_stem(  # noqa: SLF001
@@ -290,9 +290,9 @@ def test_transition_group_stem_resolution_contracts(
     )
     assert (
         groups_mod._raw_candidate_output_share_stem(  # noqa: SLF001
-            "base__gwp100_lcia_min_cc_ssp2_max_cc"
+            "base__gwp100_ipcc_min_cc_ssp2_max_cc"
         )
-        == "base__gwp100_lcia"
+        == "base__gwp100_ipcc"
     )
     assert (
         groups_mod.grouped_transition_method_identity(

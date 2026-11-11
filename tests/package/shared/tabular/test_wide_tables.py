@@ -46,7 +46,7 @@ def test_year_and_identifier_column_contracts() -> None:
     frame = pd.DataFrame(
         {
             "l1_l2_method": ["UT(FD)"],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "region": ["FR"],
             2020: [1.0],
             "2021": [2.0],

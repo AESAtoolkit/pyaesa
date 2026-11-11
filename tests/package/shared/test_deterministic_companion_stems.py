@@ -21,17 +21,17 @@ def test_parse_deterministic_companion_stem_covers_regression_reuse_and_ssp() ->
     assert projected_alt.ssp_scenario == "SSP2"
 
     external_projected = parse_deterministic_companion_stem(
-        "external__CO(S)_gwp100_lcia_ssp2",
+        "external__CO(S)_gwp100_ipcc_ssp2",
         scenario_tokens=["SSP1", "SSP2"],
     )
-    assert external_projected.base_stem == "external__CO(S)_gwp100_lcia"
+    assert external_projected.base_stem == "external__CO(S)_gwp100_ipcc"
     assert external_projected.ssp_scenario == "SSP2"
 
     external_plain = parse_deterministic_companion_stem(
-        "external__CO(S)_gwp100_lcia",
+        "external__CO(S)_gwp100_ipcc",
         scenario_tokens=["SSP1", "SSP2"],
     )
-    assert external_plain.base_stem == "external__CO(S)_gwp100_lcia"
+    assert external_plain.base_stem == "external__CO(S)_gwp100_ipcc"
     assert external_plain.ssp_scenario is None
 
     plain = parse_deterministic_companion_stem("l2_UT(GVA)")

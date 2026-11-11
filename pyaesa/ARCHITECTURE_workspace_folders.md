@@ -38,6 +38,19 @@ MRIO refresh is an expensive replacement of raw or processed MRIO
 scopes. It must be run only when the caller explicitly requests
 `download_mrio(..., refresh=True)` or `process_mrio(..., refresh=True)`.
 
+## EXIOBASE Prerequisite Paths
+
+| Input | Canonical workspace path | Path owner |
+| --- | --- | --- |
+| Characterization matrix | `data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/<exiobase_version>/<method>.csv` | `pyaesa/shared/lcia/paths.py` |
+| Responsibility periods | `data_raw/mrio/exiobase_3/lcia/responsibility_periods/<method>_rps.csv` | `pyaesa/shared/lcia/paths.py` |
+| Static carrying capacities | `data_raw/carrying_capacities/<method>_cc_steady_state.csv` | `pyaesa/shared/lcia/paths.py` |
+
+Version folders are `exiobase_3112`, `exiobase_3102`, and `exiobase_396`. Packaged method stems are
+`pb_lcia`, `ef_3.1`, `ef_3.1_14cat`, `gwp100_ef31`, and `gwp100_ipcc`. `set_workspace(...)` installs
+missing assets without overwriting existing custom files unless refresh is selected. Tests live in `tests/package/workspace_initialisation/`,
+`tests/package/shared/`, and `tests/package/process/mrio/`.
+
 ## Deterministic Output Roots
 
 Active deterministic families write under:

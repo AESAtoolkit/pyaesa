@@ -54,7 +54,12 @@ class _WorkspaceData:
         prereq = self._repo_root / "pyaesa" / "workspace_initialisation" / "prerequisites" / "mrio"
         self._agg_reg_eu27_path = prereq / "exiobase_3" / "aggregation" / "agg_reg_eu27.csv"
         self._pb_lcia_path = (
-            prereq / "exiobase_3" / "lcia" / "characterization_factors_matrices" / "pb_lcia.csv"
+            prereq
+            / "exiobase_3"
+            / "lcia"
+            / "characterization_factors_matrices"
+            / "exiobase_3102"
+            / "pb_lcia.csv"
         )
         self._frame_cache: dict[tuple[int, str], pd.DataFrame] = {}
         self._basis_cache: dict[int, pd.Series] = {}

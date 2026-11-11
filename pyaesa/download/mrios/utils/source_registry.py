@@ -22,86 +22,44 @@ class MRIORegistryEntry:
     display_label: str
 
 
-_EXIOBASE_396_DOI = "10.5281/zenodo.15689391"
-_EXIOBASE_3102_DOI = "10.5281/zenodo.20051562"
-
 _REGISTRY = {
-    "exiobase_396_ixi": MRIORegistryEntry(
-        source_key="exiobase_396_ixi",
+    f"exiobase_{version}_{system}": MRIORegistryEntry(
+        source_key=f"exiobase_{version}_{system}",
         family="exiobase",
-        version_token="396",
-        system="ixi",
-        doi=_EXIOBASE_396_DOI,
-        raw_root="exiobase_396",
-        raw_full_dir_name="full_ixi",
+        version_token=version,
+        system=system,
+        doi=doi,
+        raw_root=f"exiobase_{version}",
+        raw_full_dir_name=f"full_{system}",
         shared_prereq_root="exiobase_3",
         region_code_column="exio_code",
         modeled_year_min=1995,
-        modeled_year_max=2022,
-        default_historical_cutoff=2019,
-        display_label="EXIOBASE 3.9.6 IXI",
-    ),
-    "exiobase_396_pxp": MRIORegistryEntry(
-        source_key="exiobase_396_pxp",
-        family="exiobase",
-        version_token="396",
-        system="pxp",
-        doi=_EXIOBASE_396_DOI,
-        raw_root="exiobase_396",
-        raw_full_dir_name="full_pxp",
-        shared_prereq_root="exiobase_3",
-        region_code_column="exio_code",
-        modeled_year_min=1995,
-        modeled_year_max=2022,
-        default_historical_cutoff=2019,
-        display_label="EXIOBASE 3.9.6 PXP",
-    ),
-    "exiobase_3102_ixi": MRIORegistryEntry(
-        source_key="exiobase_3102_ixi",
-        family="exiobase",
-        version_token="3102",
-        system="ixi",
-        doi=_EXIOBASE_3102_DOI,
-        raw_root="exiobase_3102",
-        raw_full_dir_name="full_ixi",
-        shared_prereq_root="exiobase_3",
-        region_code_column="exio_code",
-        modeled_year_min=1995,
-        modeled_year_max=2024,
-        default_historical_cutoff=2022,
-        display_label="EXIOBASE 3.10.2 IXI",
-    ),
-    "exiobase_3102_pxp": MRIORegistryEntry(
-        source_key="exiobase_3102_pxp",
-        family="exiobase",
-        version_token="3102",
-        system="pxp",
-        doi=_EXIOBASE_3102_DOI,
-        raw_root="exiobase_3102",
-        raw_full_dir_name="full_pxp",
-        shared_prereq_root="exiobase_3",
-        region_code_column="exio_code",
-        modeled_year_min=1995,
-        modeled_year_max=2024,
-        default_historical_cutoff=2022,
-        display_label="EXIOBASE 3.10.2 PXP",
-    ),
-    "oecd_v2025": MRIORegistryEntry(
-        source_key="oecd_v2025",
-        family="oecd",
-        version_token="v2025",
-        system=None,
-        doi=None,
-        raw_root="oecd_v2025",
-        raw_full_dir_name="full",
-        shared_prereq_root="oecd_v2025",
-        region_code_column="oecd_code",
-        modeled_year_min=1995,
-        modeled_year_max=2022,
-        default_historical_cutoff=2022,
-        display_label="OECD ICIO v2025",
-    ),
+        modeled_year_max=last_year,
+        default_historical_cutoff=historical_cutoff,
+        display_label=f"EXIOBASE {label} {system.upper()}",
+    )
+    for version, label, doi, last_year, historical_cutoff in (
+        ("3112", "3.11.2", "10.5281/zenodo.23039074", 2024, 2023),
+        ("3102", "3.10.2", "10.5281/zenodo.20051562", 2024, 2022),
+        ("396", "3.9.6", "10.5281/zenodo.15689391", 2022, 2019),
+    )
+    for system in ("ixi", "pxp")
 }
+_REGISTRY["oecd_v2025"] = MRIORegistryEntry(
+    source_key="oecd_v2025",
+    family="oecd",
+    version_token="v2025",
+    system=None,
+    doi=None,
+    raw_root="oecd_v2025",
+    raw_full_dir_name="full",
+    shared_prereq_root="oecd_v2025",
+    region_code_column="oecd_code",
+    modeled_year_min=1995,
+    modeled_year_max=2022,
+    default_historical_cutoff=2022,
+    display_label="OECD ICIO v2025",
+)
 
 
 def normalize_mrio_source_key(source_key: str) -> str:
@@ -109,7 +67,7 @@ def normalize_mrio_source_key(source_key: str) -> str:
     key = str(source_key).strip().lower()
     if key not in _REGISTRY:
         raise ValueError(
-            f"Unsupported MRIO source '{source_key}'. Supported sources: {sorted(_REGISTRY)}"
+            f"Unsupported MRIO source '{source_key}'. Supported sources: {list(_REGISTRY)}"
         )
     return key
 

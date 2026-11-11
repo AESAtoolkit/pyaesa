@@ -138,7 +138,7 @@ def _static_acc_kwargs(*, project_name: str) -> dict[str, Any]:
     return {
         "project_name": project_name,
         "years": [2005],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "source": "oecd_v2025",
         "base_asocc_args": {
@@ -193,7 +193,7 @@ def _dynamic_acc_kwargs(*, project_name: str) -> dict[str, Any]:
     return {
         "project_name": project_name,
         "years": _DYNAMIC_TEST_YEARS,
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "source": "exiobase_396_ixi",
         "base_asocc_args": {
@@ -213,7 +213,7 @@ def _dynamic_acc_ut_kwargs(*, project_name: str) -> dict[str, Any]:
     return {
         "project_name": project_name,
         "years": _DYNAMIC_TEST_YEARS,
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -263,7 +263,7 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
     assert first_report is not None
     assert len(first_report.branches) == 1
     branch = first_report.branches[0]
-    assert branch.cc_source == "gwp100_lcia"
+    assert branch.cc_source == "gwp100_ipcc"
     assert branch.cc_type == "static"
     assert branch.cc_bounds == ["min_cc", "max_cc"]
     assert branch.n_share_files_processed == 1
@@ -289,7 +289,7 @@ def test_deterministic_acc_static_end_to_end_reuse_and_refresh(
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert output_paths[0].name == "UT(FD)__gwp100_lcia.csv"
+    assert output_paths[0].name == "UT(FD)__gwp100_ipcc.csv"
 
     first_output = pd.read_csv(output_paths[0])
     assert {"impact", "impact_unit", "cc_bound", "2005"}.issubset(first_output.columns)
@@ -396,7 +396,7 @@ def test_deterministic_acc_asocc_prerequisite_summary_lines(tmp_path: Path) -> N
             {
                 "arguments": {
                     "source": "oecd_v2025",
-                    "lcia_method": ["gwp100_lcia"],
+                    "lcia_method": ["gwp100_ipcc"],
                     "intermediate_outputs": True,
                 },
                 "provenance": {
@@ -432,7 +432,7 @@ def test_deterministic_acc_asocc_prerequisite_summary_lines(tmp_path: Path) -> N
     )
 
     assert summary_lines
-    assert any("gwp100_lcia" in line for line in summary_lines)
+    assert any("gwp100_ipcc" in line for line in summary_lines)
     assert deterministic_asocc_summary_record_messages(
         metadata_path=metadata_path,
         severity="INFO",
@@ -597,7 +597,7 @@ def test_deterministic_acc_static_min_only_end_to_end(allocation_dummy_repo: Any
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert output_paths[0].name == "UT(FD)__gwp100_lcia.csv"
+    assert output_paths[0].name == "UT(FD)__gwp100_ipcc.csv"
 
 
 def test_deterministic_acc_static_figures_are_public_for_single_and_multi_year(
@@ -651,7 +651,7 @@ def test_deterministic_acc_figure_helpers_cover_variant_and_order_branches(
     rows = pd.DataFrame(
         {
             "year": [2030, 2030],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "cc_type": ["static", "static"],
@@ -716,7 +716,7 @@ def test_deterministic_acc_figure_helpers_cover_variant_and_order_branches(
         "demo",
         pd.DataFrame(
             {
-                "lcia_method": ["gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc"],
                 "impact": ["GWP_100"],
                 "impact_unit": ["kg CO2-eq"],
                 "cc_category": ["C1"],
@@ -729,7 +729,7 @@ def test_deterministic_acc_figure_helpers_cover_variant_and_order_branches(
         "demo",
         pd.DataFrame(
             {
-                "lcia_method": ["gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc"],
                 "impact": ["GWP_100"],
                 "impact_unit": ["kg CO2-eq"],
                 AR6_CATEGORY_SCOPE_COLUMN: ["C1, C2"],
@@ -890,7 +890,7 @@ def test_normalize_requested_years_accepts_scalar_year() -> None:
     [
         (
             [2030, 2032],
-            "gwp100_lcia",
+            "gwp100_ipcc",
             {"static": {"active": False}, "dynamic_ar6": {}},
             "years must represent consecutive years with no gaps",
         ),
@@ -938,7 +938,7 @@ def test_deterministic_acc_dynamic_end_to_end_and_reuse(
     assert len(first_report.branches) == 1
     branch = first_report.branches[0]
     assert branch.cc_type == "dynamic_ar6"
-    assert branch.cc_source == "gwp100_lcia"
+    assert branch.cc_source == "gwp100_ipcc"
     assert branch.cc_bounds == ["C1"]
     assert branch.n_share_files_processed == 1
     assert branch.n_acc_files_written == 1
@@ -953,7 +953,7 @@ def test_deterministic_acc_dynamic_end_to_end_and_reuse(
         ).rglob("*.csv")
     )
     assert len(output_paths) == 1
-    assert all("__gwp100_lcia_dynamic_ar6.csv" in path.name for path in output_paths)
+    assert all("__gwp100_ipcc_dynamic_ar6.csv" in path.name for path in output_paths)
 
     first_output = pd.read_csv(output_paths[0])
     assert {
@@ -1021,7 +1021,7 @@ def test_deterministic_acc_dynamic_figures_cover_public_asocc_transition(
     report = deterministic_acc(
         project_name="acc_dynamic_public_transition_figures",
         years=[2024, 2025],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
         base_asocc_args={
@@ -1131,7 +1131,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
         proj_base=tmp_path,
         source_label="oecd_v2025",
         agg_version=None,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="static",
     )
 
@@ -1139,10 +1139,10 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
         build_acc_scope_label(
             source_label="oecd_v2025",
             agg_version=None,
-            cc_source="gwp100 lcia",
+            cc_source="gwp100 ipcc",
             cc_type="static",
         )
-        == "oecd_v2025_static_gwp100_lcia"
+        == "oecd_v2025_static_gwp100_ipcc"
     )
     assert (
         build_acc_scope_label(
@@ -1153,7 +1153,7 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
         )
         == "oecd_v2025_dynamic_ar6_item"
     )
-    assert get_acc_output_dir(context=context).name == "static_gwp100_lcia"
+    assert get_acc_output_dir(context=context).name == "static_gwp100_ipcc"
     assert get_acc_meta_path(context=context).name == "scope_manifest.json"
     assert acc_output_relative_dir(upstream_relative_dir=Path()) == Path(".")
     assert acc_output_relative_dir(upstream_relative_dir=Path("l2/results/demo")) == Path("demo")
@@ -1165,20 +1165,20 @@ def test_acc_deterministic_path_owner_covers_validation_and_relative_contracts(
 def test_prepare_static_compatible_share_frame_skips_mismatched_lcia_inputs(
     tmp_path: Path,
 ) -> None:
-    gwp_frame = pd.DataFrame({"lcia_method": ["gwp100_lcia"], "2005": [1.0]})
+    gwp_frame = pd.DataFrame({"lcia_method": ["gwp100_ipcc"], "2005": [1.0]})
     pb_frame = pd.DataFrame({"lcia_method": ["pb_lcia"], "2005": [1.0]})
-    path_only = tmp_path / "demo__gwp100_lcia.csv"
+    path_only = tmp_path / "demo__gwp100_ipcc.csv"
     path_only.write_text("demo", encoding="utf-8")
 
     prepared_gwp = static_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="gwp__gwp100_lcia",
+            file_stem="gwp__gwp100_ipcc",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="external",
         ),
         share_frame=gwp_frame,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
     )
     assert prepared_gwp is not None
     assert prepared_gwp.equals(gwp_frame)
@@ -1191,20 +1191,20 @@ def test_prepare_static_compatible_share_frame_skips_mismatched_lcia_inputs(
                 source_label="external",
             ),
             share_frame=pb_frame,
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
         )
         is None
     )
     prepared_path_only = static_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="demo__gwp100_lcia",
+            file_stem="demo__gwp100_ipcc",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="native",
             path=path_only,
         ),
         share_frame=pd.DataFrame({"2005": [1.0]}),
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
     )
     assert prepared_path_only is not None
     assert prepared_path_only.equals(pd.DataFrame({"2005": [1.0]}))
@@ -1316,7 +1316,7 @@ def test_acc_table_covers_dynamic_materialization_and_method_resolution() -> Non
             pd.DataFrame(
                 {
                     "l1_l2_method": ["UT(FD)"],
-                    "lcia_method": ["gwp100_lcia"],
+                    "lcia_method": ["gwp100_ipcc"],
                     "impact": ["GWP_100"],
                     "impact_unit": ["other_unit"],
                     "2019": [1.0],
@@ -1364,7 +1364,7 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
         return build_composite_base_allocate_args(
             project_name=project_name,
             years=[2005],
-            lcia_method=normalize_shared_lcia_methods("gwp100_lcia"),
+            lcia_method=normalize_shared_lcia_methods("gwp100_ipcc"),
             fu_code="L2.a.a",
             r_p=None,
             s_p=None,
@@ -1400,11 +1400,11 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
             path_context=_acc_path_context(
                 project_name=project_name,
                 source_label="oecd_v2025",
-                cc_source="gwp100_lcia",
+                cc_source="gwp100_ipcc",
                 cc_type="static",
             ),
             public_result_root_name="results_l2_vs_global",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             years=[2005],
             asocc_shares=[_loaded_asocc_share(share_path)],
             fmt="csv",
@@ -1435,11 +1435,11 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
             path_context=_acc_path_context(
                 project_name=incompatible_project_name,
                 source_label="oecd_v2025",
-                cc_source="gwp100_lcia",
+                cc_source="gwp100_ipcc",
                 cc_type="static",
             ),
             public_result_root_name="results_l2_vs_global",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             years=[2005],
             asocc_shares=[_loaded_asocc_share(share_path)],
             fmt="csv",
@@ -1470,11 +1470,11 @@ def test_process_static_acc_covers_missing_asocc_shares_and_requested_year_skip(
             path_context=_acc_path_context(
                 project_name=impact_filtered_project,
                 source_label="oecd_v2025",
-                cc_source="gwp100_lcia",
+                cc_source="gwp100_ipcc",
                 cc_type="static",
             ),
             public_result_root_name="results_l2_vs_global",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             years=[2005],
             asocc_shares=[_loaded_asocc_share(share_path)],
             fmt="csv",
@@ -1561,7 +1561,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
         prepared_asocc_shares=[asocc_share_no_scenario],
         cc_table=table,
         require_selected_ssp_shares=False,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         resolved_cc_path=csv_path,
         requested_years=[2019],
     )
@@ -1578,7 +1578,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
             prepared_asocc_shares=[asocc_share_mismatch],
             cc_table=table,
             require_selected_ssp_shares=False,
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             resolved_cc_path=csv_path,
             requested_years=[2019],
         )
@@ -1590,7 +1590,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
         prepared_asocc_shares=[asocc_share_matching],
         cc_table=table.loc[table["ssp_scenario"].eq("SSP1")].reset_index(drop=True),
         require_selected_ssp_shares=False,
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         resolved_cc_path=csv_path,
         requested_years=[2019],
     )
@@ -1599,7 +1599,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
             prepared_asocc_shares=[asocc_share_no_scenario],
             cc_table=table.loc[table["ssp_scenario"].eq("SSP1")].reset_index(drop=True),
             require_selected_ssp_shares=True,
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             resolved_cc_path=csv_path,
             requested_years=[2019],
         )
@@ -1646,7 +1646,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
             source_label="impact-labeled",
         ),
         share_frame=pd.DataFrame({"value": [1.0]}),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert impact_labeled is not None
     assert impact_labeled.equals(pd.DataFrame({"value": [1.0]}))
@@ -1660,7 +1660,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 source_label="impact-labeled",
             ),
             share_frame=pd.DataFrame({"value": [1.0]}),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         is None
     )
@@ -1673,7 +1673,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
             source_label="generic-share",
         ),
         share_frame=pd.DataFrame({"value": [1.0]}),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert generic_share is not None
     assert generic_share.equals(pd.DataFrame({"value": [1.0]}))
@@ -1686,7 +1686,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 source_label="declared-impact-mismatch",
             ),
             share_frame=pd.DataFrame({"impact": ["AAL"], "2019": [1.0]}),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         is None
     )
@@ -1714,47 +1714,47 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 impacts=tuple(),
                 source_label="multiple-lcia",
             ),
-            share_frame=pd.DataFrame({"lcia_method": ["gwp100_lcia", "pb_lcia"]}),
-            lcia_method="gwp100_lcia",
+            share_frame=pd.DataFrame({"lcia_method": ["gwp100_ipcc", "pb_lcia"]}),
+            lcia_method="gwp100_ipcc",
         )
 
     matching_lcia = dynamic_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="matching_lcia__gwp100_lcia",
+            file_stem="matching_lcia__gwp100_ipcc",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="matching-lcia",
         ),
-        share_frame=pd.DataFrame({"lcia_method": ["gwp100_lcia"]}),
-        lcia_method="gwp100_lcia",
+        share_frame=pd.DataFrame({"lcia_method": ["gwp100_ipcc"]}),
+        lcia_method="gwp100_ipcc",
     )
     assert matching_lcia is not None
-    assert matching_lcia.equals(pd.DataFrame({"lcia_method": ["gwp100_lcia"]}))
+    assert matching_lcia.equals(pd.DataFrame({"lcia_method": ["gwp100_ipcc"]}))
 
     inferred_lcia = dynamic_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="demo_gwp100_lcia",
+            file_stem="demo_gwp100_ipcc",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="inferred-lcia",
-            path=Path("demo_gwp100_lcia.csv"),
+            path=Path("demo_gwp100_ipcc.csv"),
         ),
         share_frame=pd.DataFrame({"2019": [1.0]}),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert inferred_lcia is not None
     assert inferred_lcia.equals(pd.DataFrame({"2019": [1.0]}))
     assert (
         dynamic_compatible_share_frame(
             asocc_share=AsoccShare(
-                file_stem="demo_gwp100_lcia",
+                file_stem="demo_gwp100_ipcc",
                 relative_dir=Path("."),
                 impacts=tuple(),
                 source_label="inferred-lcia",
-                path=Path("demo_gwp100_lcia.csv"),
+                path=Path("demo_gwp100_ipcc.csv"),
             ),
             share_frame=pd.DataFrame({"2018": [1.0]}),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             requested_years=[2025, 2026],
         )
         is None
@@ -1769,7 +1769,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 source_label="other-lcia",
             ),
             share_frame=pd.DataFrame({"lcia_method": ["pb_lcia"]}),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         is None
     )
@@ -1807,13 +1807,13 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
 
     matching_static = static_compatible_share_frame(
         asocc_share=AsoccShare(
-            file_stem="matching_static_gwp100_lcia",
+            file_stem="matching_static_gwp100_ipcc",
             relative_dir=Path("."),
             impacts=tuple(),
             source_label="matching-static",
         ),
-        share_frame=pd.DataFrame({"lcia_method": ["gwp100_lcia"], "2005": [1.0]}),
-        cc_source="gwp100_lcia",
+        share_frame=pd.DataFrame({"lcia_method": ["gwp100_ipcc"], "2005": [1.0]}),
+        cc_source="gwp100_ipcc",
     )
     assert matching_static is not None
     assert matching_static["2005"].tolist() == [1.0]
@@ -1826,7 +1826,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 source_label="other-static",
             ),
             share_frame=pd.DataFrame({"lcia_method": ["pb_lcia"], "2005": [1.0]}),
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
         )
         is None
     )
@@ -1839,7 +1839,7 @@ def test_dynamic_runtime_covers_table_loading_subset_and_compatibility(
                 source_label="dynamic-other-method",
             ),
             share_frame=pd.DataFrame({"lcia_method": ["pb_lcia"], "2019": [1.0]}),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         is None
     )
@@ -1872,7 +1872,7 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
             frame_wide=pd.DataFrame(
                 {
                     "l1_l2_method": ["AR(E^{CBA_FD})"] * 3,
-                    "lcia_method": ["gwp100_lcia"] * 3,
+                    "lcia_method": ["gwp100_ipcc"] * 3,
                     "impact": ["GWP_100"] * 3,
                     ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP1", "SSP2"],
                     "2020": [0.1, 0.2, 0.3],
@@ -1890,7 +1890,7 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
             frame_wide=pd.DataFrame(
                 {
                     "l1_l2_method": ["AR(E^{CBA_FD})"],
-                    "lcia_method": ["gwp100_lcia"],
+                    "lcia_method": ["gwp100_ipcc"],
                     "impact": ["GWP_100"],
                     "2020": [0.7],
                     "2021": [0.8],
@@ -1907,7 +1907,7 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
             frame_wide=pd.DataFrame(
                 {
                     "l1_l2_method": ["AR(E^{CBA_FD})"],
-                    "lcia_method": ["gwp100_lcia"],
+                    "lcia_method": ["gwp100_ipcc"],
                     "impact": ["GWP_100"],
                     ASOCC_SSP_SCENARIO_COLUMN: ["SSP1"],
                     "2020": [0.9],
@@ -1923,15 +1923,15 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
                 proj_base=tmp_path,
                 source_label="exiobase_396_ixi",
                 agg_version=None,
-                cc_source="gwp100_lcia",
+                cc_source="gwp100_ipcc",
                 cc_type="dynamic_ar6",
                 public_result_root_name="results_l2_vs_global",
             ),
             public_result_root_name="results_l2_vs_global",
-            cc_source="gwp100_lcia",
+            cc_source="gwp100_ipcc",
             asocc_shares=[share_with_row_ssp, invariant_share, stem_ssp_share],
             fmt="csv",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=range(2020, 2022),
             emission_type="kyoto_gases",
             include_afolu=False,
@@ -1948,9 +1948,9 @@ def test_process_dynamic_acc_covers_row_ssp_matching_and_duplicate_outputs(
     assert n_written == 3
     assert impacts == [GROSS_ALT_KYOTO_WO_AFOLU]
     outputs = {path.stem: pd.read_csv(path) for path in output_files}
-    assert len(outputs["row_ssp_share__gwp100_lcia_dynamic_ar6"]) == 4
-    assert len(outputs["invariant_share__gwp100_lcia_dynamic_ar6"]) == 2
-    assert len(outputs["stem_share_ssp1__gwp100_lcia_dynamic_ar6"]) == 1
+    assert len(outputs["row_ssp_share__gwp100_ipcc_dynamic_ar6"]) == 4
+    assert len(outputs["invariant_share__gwp100_ipcc_dynamic_ar6"]) == 2
+    assert len(outputs["stem_share_ssp1__gwp100_ipcc_dynamic_ar6"]) == 1
 
 
 def test_deterministic_acc_budget_axis_and_static_min_max_legend_branches(
@@ -1961,7 +1961,7 @@ def test_deterministic_acc_budget_axis_and_static_min_max_legend_branches(
             "__method": ["A", "A"],
             "year": [2020, 2021],
             "value": [1.0, 2.0],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "cc_type": ["dynamic_ar6", "dynamic_ar6"],
@@ -2019,7 +2019,7 @@ def test_deterministic_acc_budget_axis_and_static_min_max_legend_branches(
                 "__method": ["A", "A", "B", "B"],
                 "year": [2020, 2021, 2020, 2021],
                 "value": [1.0, 2.0, 1.5, 2.5],
-                "lcia_method": ["gwp100_lcia"] * 4,
+                "lcia_method": ["gwp100_ipcc"] * 4,
                 "impact": ["GWP_100"] * 4,
                 "impact_unit": ["kg CO2-eq"] * 4,
                 "cc_type": ["dynamic_ar6"] * 4,
@@ -2050,7 +2050,7 @@ def test_deterministic_acc_budget_axis_and_static_min_max_legend_branches(
 
 def test_compute_acc_report_and_builder_cover_summary_contracts(tmp_path: Path) -> None:
     single_branch = ACCBranchReport(
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="static",
         cc_bounds=["min_cc"],
         n_share_files_processed=1,
@@ -2074,7 +2074,7 @@ def test_compute_acc_report_and_builder_cover_summary_contracts(tmp_path: Path) 
     meta_file.parent.mkdir(parents=True, exist_ok=True)
     meta_file.write_text("{}", encoding="utf-8")
     multi_branch = ACCBranchReport(
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="dynamic_ar6",
         cc_bounds=["dynamic"],
         n_share_files_processed=1,
@@ -2122,7 +2122,7 @@ def test_compute_acc_report_and_builder_cover_summary_contracts(tmp_path: Path) 
     assert build_downstream_common_scope_lines(
         project_name="acc_report_test",
         years=[2020, 2021],
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         fu_code="L2.a.a",
         agg_reg=False,
         agg_sec=False,

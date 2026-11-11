@@ -98,9 +98,26 @@ allocated carrying capacity (aCC) trajectories and cumulative budgets.
 EXIOBASE is supported for `ixi` and `pxp` source variants. The
 examples use EXIOBASE 3.10.2 but EXIOBASE 3.9.6 is also supported.
 
-Current EXIOBASE LCIA coverage is `gwp100_lcia` and `pb_lcia`. Therefore in `pyaesa` EF3.1 is
-available for non-LCIA based allocation routes, but it is not currently
-available for `pyaesa` owned IO-LCA or LCIA based allocation methods.
+Current EXIOBASE LCIA coverage is `pb_lcia`, EF 3.1,
+`gwp100_ef31` (EF 3.1 climate change) and `gwp100_ipcc` (IPCC AR6).
+With EXIOBASE, characterization is possible for 14 of the 16 EF 3.1 impact
+categories; ionising radiation and ozone depletion are not covered.
+
+- Use `ef_3.1_14cat` when Phase A IO-LCA or Phase B LCIA-based allocated
+  shares are calculated with EXIOBASE. These calculations and their matching
+  carrying capacities cover 14 impact categories.
+- Use `ef_3.1` to retain all 16 EF 3.1 impact categories. To assess all 16,
+  use external LCA results for Phase A and Phase B allocated shares from
+  non-LCIA-based methods calculated by `pyaesa`, externally supplied
+  LCIA-based allocation results, or both.
+
+`ef_3.1` can also be selected when combining EXIOBASE-based LCIA allocation
+methods with non-LCIA-based methods and/or external LCIA-based allocation
+results covering all 16 categories. `pyaesa` then calculates the EXIOBASE-based
+LCIA allocated shares for 14 categories and retains all 16 for the other
+allocation methods and external results. For ASR, use external Phase A LCA
+results to assess all 16 categories; EXIOBASE IO-LCA limits ASR to 14.
+
 [tutorials/core_prerequisites/2_process_data.ipynb](tutorials/core_prerequisites/2_process_data.ipynb) explains the detailed
 process for adding LCIA methods with EXIOBASE characterization matrices and
 matching carrying capacity thresholds, either for private project use or for

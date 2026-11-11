@@ -44,7 +44,7 @@ def _context(**overrides: Any) -> Any:
         },
         "wb_df": pd.DataFrame(columns=["2005"]),
         "historical_years": [2005],
-        "lcia_methods": ["gwp100_lcia"],
+        "lcia_methods": ["gwp100_ipcc"],
         "l1_only_no_mrio": False,
         "logger": SimpleNamespace(warning=lambda _message: None),
     }
@@ -482,7 +482,7 @@ def test_enacting_metric_lcia_direct_pass_records_filtered_per_cap_outputs() -> 
         state=state,
         year=2005,
         scenario_key=None,
-        lcia_by_method={"gwp100_lcia": {"e_cba_fd_reg": _impact_frame(axis="r_f")}},
+        lcia_by_method={"gwp100_ipcc": {"e_cba_fd_reg": _impact_frame(axis="r_f")}},
         pop_series=pop_series,
         pairs=pairs,
         use_original_domain=False,
@@ -491,7 +491,7 @@ def test_enacting_metric_lcia_direct_pass_records_filtered_per_cap_outputs() -> 
 
     direct_key = EnactingMetricKey(
         metric="e_cba_fd_reg_cap",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         ssp_scenario=None,
     )
     assert direct_key in state.enacting_metric_inputs
@@ -500,7 +500,7 @@ def test_enacting_metric_lcia_direct_pass_records_filtered_per_cap_outputs() -> 
     ).tolist() == ["FR"]
     missing_key = EnactingMetricKey(
         metric="e_pba_reg_cap",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         ssp_scenario=None,
     )
     assert missing_key not in state.enacting_metric_inputs
@@ -514,11 +514,11 @@ def test_enacting_metric_lcia_pr_hr_pass_records_cumulative_outputs_and_skips_in
     good_state = RunState(
         pop_series_by_ssp_scenario={None: {2005: population}},
         pr_post_pop_series_by_ssp_scenario={None: {2005: population}},
-        lcia_timeseries={"gwp100_lcia": {"CBA_FD": lcia_reg_by_year}},
+        lcia_timeseries={"gwp100_ipcc": {"CBA_FD": lcia_reg_by_year}},
         rps_by_method={
-            "gwp100_lcia": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
+            "gwp100_ipcc": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
         },
-        cf_by_method={"gwp100_lcia": pd.Series({"AAL": "AAL"})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"AAL": "AAL"})},
     )
 
     passes_mod._record_pr_hr_cumulative_pass(  # noqa: SLF001
@@ -535,7 +535,7 @@ def test_enacting_metric_lcia_pr_hr_pass_records_cumulative_outputs_and_skips_in
 
     cumulative_key = EnactingMetricKey(
         metric="e_cba_fd_reg_cap_cum",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         ssp_scenario=None,
     )
     assert cumulative_key in good_state.enacting_metric_inputs
@@ -546,9 +546,9 @@ def test_enacting_metric_lcia_pr_hr_pass_records_cumulative_outputs_and_skips_in
     bad_state = RunState(
         pop_series_by_ssp_scenario={None: {2005: population}},
         pr_post_pop_series_by_ssp_scenario={None: {2005: population}},
-        lcia_timeseries={"gwp100_lcia": {"CBA_FD": lcia_reg_by_year}},
-        rps_by_method={"gwp100_lcia": pd.DataFrame({"impact": ["AAL"]})},
-        cf_by_method={"gwp100_lcia": pd.Series({"AAL": "AAL"})},
+        lcia_timeseries={"gwp100_ipcc": {"CBA_FD": lcia_reg_by_year}},
+        rps_by_method={"gwp100_ipcc": pd.DataFrame({"impact": ["AAL"]})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"AAL": "AAL"})},
     )
 
     passes_mod._record_pr_hr_cumulative_pass(  # noqa: SLF001
@@ -568,11 +568,11 @@ def test_enacting_metric_lcia_pr_hr_pass_records_cumulative_outputs_and_skips_in
     empty_parent_state = RunState(
         pop_series_by_ssp_scenario={None: {2005: population}},
         pr_post_pop_series_by_ssp_scenario={None: {2005: population}},
-        lcia_timeseries={"gwp100_lcia": {"CBA_FD": lcia_reg_by_year}},
+        lcia_timeseries={"gwp100_ipcc": {"CBA_FD": lcia_reg_by_year}},
         rps_by_method={
-            "gwp100_lcia": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
+            "gwp100_ipcc": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
         },
-        cf_by_method={"gwp100_lcia": pd.Series({"AAL": None})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"AAL": None})},
     )
 
     passes_mod._record_pr_hr_cumulative_pass(  # noqa: SLF001
@@ -728,7 +728,7 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
         state=state,
         year=2030,
         lcia_by_method={
-            "gwp100_lcia": {
+            "gwp100_ipcc": {
                 "e_pba_reg": _impact_frame(axis="r_p"),
                 "e_cba_fd_reg": _impact_frame(axis="r_f"),
                 "e_cba_fd_rp_sp": pd.DataFrame(
@@ -756,25 +756,25 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
             },
         },
         lcia_effective_year_by_method={
-            "gwp100_lcia": 2030,
+            "gwp100_ipcc": 2030,
             "skip_method": 2029,
             "partial_method": 2030,
         },
     )
     assert (
         state.enacting_metric_levels[
-            EnactingMetricKey(metric="e_pba_reg", lcia_method="gwp100_lcia")
+            EnactingMetricKey(metric="e_pba_reg", lcia_method="gwp100_ipcc")
         ]
         == "level_1"
     )
     assert (
         state.enacting_metric_levels[
-            EnactingMetricKey(metric="e_cba_fd_rp_sp", lcia_method="gwp100_lcia")
+            EnactingMetricKey(metric="e_cba_fd_rp_sp", lcia_method="gwp100_ipcc")
         ]
         == "level_2"
     )
     for metric, axis in (("e_pba_reg", "r_p"), ("e_cba_fd_reg", "r_f")):
-        metric_key = EnactingMetricKey(metric=metric, lcia_method="gwp100_lcia")
+        metric_key = EnactingMetricKey(metric=metric, lcia_method="gwp100_ipcc")
         assert state.enacting_metric_inputs[metric_key][2030].index.get_level_values(
             axis
         ).tolist() == ["FR", "DE"]
@@ -793,14 +793,14 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
         state=full_weight_axis_state,
         year=2030,
         lcia_by_method={
-            "gwp100_lcia": {
+            "gwp100_ipcc": {
                 "e_cba_fd_reg": _impact_frame(axis="r_f"),
             }
         },
     )
     full_weight_axis_key = EnactingMetricKey(
         metric="e_cba_fd_reg",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert full_weight_axis_state.enacting_metric_inputs[full_weight_axis_key][
         2030
@@ -823,7 +823,7 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
         state=all_scope_state,
         year=2030,
         lcia_by_method={
-            "gwp100_lcia": {
+            "gwp100_ipcc": {
                 "e_cba_fd_rp_sp": pd.DataFrame(
                     [[11.0, 15.0]],
                     index=pd.Index(["AAL"], name="impact"),
@@ -837,7 +837,7 @@ def test_enacting_metric_lcia_recorders_cover_required_key_and_preweight_paths()
     )
     all_scope_key = EnactingMetricKey(
         metric="e_cba_fd_rp_sp",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert all_scope_state.enacting_metric_inputs[all_scope_key][2030].index.tolist() == [
         ("AAL", "FR", "A"),
@@ -1000,14 +1000,14 @@ def test_pr_and_lcia_percap_recorders_cover_direct_and_aggregated_routes() -> No
         state=direct_state,
         year=2030,
         ssp_scenario="SSP2",
-        lcia_by_method={"gwp100_lcia": {"e_pba_reg": _impact_frame(axis="r_p")}},
+        lcia_by_method={"gwp100_ipcc": {"e_pba_reg": _impact_frame(axis="r_p")}},
         pop_series=pd.Series([2.0, 4.0], index=pd.Index(["FR", "DE"], name="r_p")),
         use_original_domain=False,
     )
     assert (
         EnactingMetricKey(
             metric="e_pba_reg_cap",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             ssp_scenario="SSP2",
         )
         in direct_state.enacting_metric_inputs
@@ -1023,11 +1023,11 @@ def test_pr_and_lcia_percap_recorders_cover_direct_and_aggregated_routes() -> No
             None: {2005: cumulative_population},
             "SSP2": {2030: cumulative_population},
         },
-        lcia_timeseries={"gwp100_lcia": {"CBA_FD": {2030: _impact_frame(axis="r_f")}}},
+        lcia_timeseries={"gwp100_ipcc": {"CBA_FD": {2030: _impact_frame(axis="r_f")}}},
         rps_by_method={
-            "gwp100_lcia": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
+            "gwp100_ipcc": pd.DataFrame({"impact": ["AAL"], "responsibility_period_years": [1]})
         },
-        cf_by_method={"gwp100_lcia": pd.Series({"AAL": "AAL"})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"AAL": "AAL"})},
     )
     percap_mod.record_lcia_percap_enacting_metrics(
         context=_context(
@@ -1045,7 +1045,7 @@ def test_pr_and_lcia_percap_recorders_cover_direct_and_aggregated_routes() -> No
     assert (
         EnactingMetricKey(
             metric="e_cba_fd_reg_cap_cum",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             ssp_scenario="SSP2",
         )
         in cumulative_state.enacting_metric_inputs

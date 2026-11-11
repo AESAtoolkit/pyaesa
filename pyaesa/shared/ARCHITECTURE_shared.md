@@ -63,6 +63,8 @@ Concrete canonical owners include:
   notification, external version and release metadata retrieval, and terminal
   message formatting
 - `tabular/table_io.py` for small shared table read/write helpers
+- `lcia/paths.py` for source version-specific characterization matrix paths,
+  shared method responsibility periods, and static carrying capacity paths
 - `lcia/file_owned_tables.py` for LCIA method owned table path helpers
 - `lcia/prerequisite_tables.py` for canonical numerical matrix validation;
   unique factor keys, finite factors, required identities, and compatible units

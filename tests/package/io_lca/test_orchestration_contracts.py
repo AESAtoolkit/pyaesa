@@ -92,6 +92,12 @@ def test_validation_and_year_resolution_contracts_cover_success_and_errors(
         )
         == io_lca_dummy_repo.source
     )
+    for system in ("ixi", "pxp"):
+        source = f"exiobase_3112_{system}"
+        assert (
+            validation.normalize_supported_source(source=source, caller="deterministic_io_lca")
+            == source
+        )
 
     with pytest.raises(ValueError):
         validation.normalize_supported_source(source=cast(Any, None), caller="deterministic_io_lca")

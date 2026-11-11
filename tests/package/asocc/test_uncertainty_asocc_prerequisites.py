@@ -801,7 +801,7 @@ def test_uncertainty_asocc_writes_inter_method_sobol_outputs(allocation_dummy_re
         "fu_code": "L2.a.b",
         "method_plan": "pairs",
         "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FDa)", "PR(GDPcap)::UT(GVAa)"],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "r_p": ["FR"],
         "s_p": ["D"],
         "l1_reg_aggreg": "pre",
@@ -1477,7 +1477,7 @@ def test_uncertainty_asocc_inter_method_writes_tree_artifacts(allocation_dummy_r
     base_args = {
         **_base_asocc_args(project_name=project_name),
         "source": "exiobase_396_ixi",
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "reference_years": [2005],
         "r_p": ["FR"],
         "s_p": ["D"],

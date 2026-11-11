@@ -28,7 +28,7 @@ def test_rps_loading_and_cf_mapping_cover_success_and_failures(tmp_path: Path) -
         inputs_mod.read_rps_frame(missing_path)
 
     source = "oecd_v2025"
-    lcia_method = "gwp100_lcia"
+    lcia_method = "gwp100_ipcc"
     valid_path = _write_rps_csv(
         source=source,
         lcia_method=lcia_method,
@@ -78,13 +78,13 @@ def test_rps_loading_and_cf_mapping_cover_success_and_failures(tmp_path: Path) -
 
 def test_lcia_normalization_contracts_cover_all_reachable_paths() -> None:
     assert inputs_mod.normalize_lcia_methods(None) is None
-    assert inputs_mod.normalize_lcia_methods("gwp100_lcia") == ["gwp100_lcia"]
-    assert inputs_mod.normalize_lcia_methods([" gwp100_lcia ", "", "pb_lcia"]) == [
-        "gwp100_lcia",
+    assert inputs_mod.normalize_lcia_methods("gwp100_ipcc") == ["gwp100_ipcc"]
+    assert inputs_mod.normalize_lcia_methods([" gwp100_ipcc ", "", "pb_lcia"]) == [
+        "gwp100_ipcc",
         "pb_lcia",
     ]
     with pytest.raises(ValueError):
-        inputs_mod.normalize_lcia_methods(["gwp100_lcia", "gwp100_lcia"])
+        inputs_mod.normalize_lcia_methods(["gwp100_ipcc", "gwp100_ipcc"])
 
 
 def test_lcia_parent_aggregation_contracts_cover_success_and_failures() -> None:
@@ -131,7 +131,7 @@ def test_lcia_parent_aggregation_contracts_cover_success_and_failures() -> None:
 def test_load_pr_hr_timeseries_covers_store_selection_and_cache_init(tmp_path: Path) -> None:
     set_workspace(tmp_path / "workspace", refresh=True)
     source = "oecd_v2025"
-    lcia_method = "gwp100_lcia"
+    lcia_method = "gwp100_ipcc"
     _write_rps_csv(
         source=source,
         lcia_method=lcia_method,

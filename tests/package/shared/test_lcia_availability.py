@@ -80,5 +80,6 @@ def test_discover_static_cc_methods_uses_packaged_prerequisites_without_workspac
         discovered_methods = availability_mod.discover_static_cc_methods()
     finally:
         clear_default_repo_root()
-    assert "gwp100_lcia" in discovered_methods
+    assert "gwp100_ipcc" in discovered_methods
+    assert "gwp100_ef31" in discovered_methods
     assert "pb_lcia" in discovered_methods

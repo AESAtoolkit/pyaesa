@@ -337,12 +337,12 @@ def test_completed_run_policy_rejects_mixed_subset_superset_scope(tmp_path: Path
     persisted_signature = {
         **_signature(),
         "years": [2020, 2021, 2022],
-        "lcia_methods": ["gwp100_lcia"],
+        "lcia_methods": ["gwp100_ipcc"],
     }
     requested_signature = {
         **persisted_signature,
         "years": [2020, 2021],
-        "lcia_methods": ["gwp100_lcia", "pb_lcia"],
+        "lcia_methods": ["gwp100_ipcc", "pb_lcia"],
     }
     output = _output_file(tmp_path, persisted_signature)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -369,11 +369,11 @@ def test_completed_run_policy_rejects_mixed_subset_superset_scope(tmp_path: Path
 def test_completed_run_policy_rejects_partial_axis_overlap(tmp_path: Path) -> None:
     persisted_signature = {
         **_signature(),
-        "lcia_methods": ["gwp100_lcia", "water_lcia"],
+        "lcia_methods": ["gwp100_ipcc", "water_lcia"],
     }
     requested_signature = {
         **persisted_signature,
-        "lcia_methods": ["gwp100_lcia", "pb_lcia"],
+        "lcia_methods": ["gwp100_ipcc", "pb_lcia"],
     }
     output = _output_file(tmp_path, persisted_signature)
     output.parent.mkdir(parents=True, exist_ok=True)

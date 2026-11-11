@@ -20,7 +20,7 @@ def _year_entry_with_units() -> dict:
                     "gva_rp": "M EUR",
                 },
                 "lcia_by_method": {
-                    "gwp100_lcia": {
+                    "gwp100_ipcc": {
                         "Climate change": "kg CO2-eq",
                         "Other climate": "kg CO2-eq",
                     }
@@ -37,16 +37,16 @@ def test_parse_enacting_metric_units_from_year_entry() -> None:
     )
     assert default_unit == "M EUR"
     assert mrio_units["fd_rf"] == "M EUR"
-    assert set(lcia_units.keys()) == {"gwp100_lcia"}
-    assert isinstance(lcia_units["gwp100_lcia"], pd.Series)
-    assert lcia_units["gwp100_lcia"].loc["Climate change"] == "kg CO2-eq"
+    assert set(lcia_units.keys()) == {"gwp100_ipcc"}
+    assert isinstance(lcia_units["gwp100_ipcc"], pd.Series)
+    assert lcia_units["gwp100_ipcc"].loc["Climate change"] == "kg CO2-eq"
 
 
 def test_lcia_unit_series_for_method() -> None:
     unit_series = lcia_unit_series_for_method(
         year_entry=_year_entry_with_units(),
         year=2019,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert unit_series.loc["Other climate"] == "kg CO2-eq"
 
@@ -84,7 +84,7 @@ def test_load_enacting_metric_units_from_metadata(allocation_dummy_repo) -> None
     )
     assert default_unit == "M EUR"
     assert mrio_units["gva_rp"] == "M EUR"
-    assert "gwp100_lcia" in lcia_units
+    assert "gwp100_ipcc" in lcia_units
 
 
 def test_load_enacting_metric_units_from_metadata_rejects_inconsistencies(
@@ -182,7 +182,7 @@ def test_load_enacting_metric_units_from_metadata_rejects_inconsistencies(
         years=[2018, 2019],
     )
     lcia_2019 = _year_entry_with_units()
-    lcia_2019["enacting_metrics"]["units"]["lcia_by_method"]["gwp100_lcia"] = {
+    lcia_2019["enacting_metrics"]["units"]["lcia_by_method"]["gwp100_ipcc"] = {
         "Climate change": "t CO2-eq"
     }
     lcia_payload = allocation_dummy_repo._read_mrio_metadata(

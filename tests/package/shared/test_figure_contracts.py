@@ -237,12 +237,12 @@ def test_figure_path_contracts_cover_routing_and_validation(tmp_path: Path) -> N
         == "plot__GWP_100_total"
     )
     assert (
-        paths_mod.scope_filename_stem(base_stem="plot__gwp100_lcia", lcia_method="gwp100_lcia")
-        == "plot__gwp100_lcia"
+        paths_mod.scope_filename_stem(base_stem="plot__gwp100_ipcc", lcia_method="gwp100_ipcc")
+        == "plot__gwp100_ipcc"
     )
     assert (
-        paths_mod.scope_filename_stem(base_stem="plot_gwp100_lcia", lcia_method="gwp100_lcia")
-        == "plot_gwp100_lcia__gwp100_lcia"
+        paths_mod.scope_filename_stem(base_stem="plot_gwp100_ipcc", lcia_method="gwp100_ipcc")
+        == "plot_gwp100_ipcc__gwp100_ipcc"
     )
     assert paths_mod.scope_filename_stem(base_stem=" plot ", lcia_method="   ") == "plot__item"
 

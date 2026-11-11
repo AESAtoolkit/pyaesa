@@ -14,7 +14,7 @@ def test_extract_lcia_units_from_char_matrix() -> None:
         }
     )
     units = extract_lcia_units_from_char_matrix(
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         char_matrix=char_df,
     )
     assert units == {"Climate change": "kg CO2-eq"}

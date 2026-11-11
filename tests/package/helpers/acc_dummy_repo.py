@@ -47,7 +47,7 @@ def prepare_dynamic_acc_repo_with_years(
     )
     rps_path = responsibility_periods_csv_path(
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     pd.DataFrame(
         [
@@ -86,6 +86,6 @@ def prepare_exiobase_repo_with_years(
     allocation_dummy_repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=historical_years,
     )

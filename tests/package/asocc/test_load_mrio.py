@@ -110,11 +110,11 @@ def test_metric_loaders_cover_success_unknown_metrics_and_invalid_stored_types(
     (invalid_saved_dir / "enacting_metrics" / "level_1").mkdir(parents=True, exist_ok=True)
     (invalid_saved_dir / "enacting_metrics" / "level_2").mkdir(parents=True, exist_ok=True)
     (invalid_saved_dir / "utility_propag_uncasext").mkdir(parents=True, exist_ok=True)
-    (invalid_saved_dir / "enacting_metrics" / "level_1" / "gwp100_lcia").mkdir(
+    (invalid_saved_dir / "enacting_metrics" / "level_1" / "gwp100_ipcc").mkdir(
         parents=True,
         exist_ok=True,
     )
-    (invalid_saved_dir / "enacting_metrics" / "level_2" / "gwp100_lcia").mkdir(
+    (invalid_saved_dir / "enacting_metrics" / "level_2" / "gwp100_ipcc").mkdir(
         parents=True,
         exist_ok=True,
     )
@@ -143,20 +143,20 @@ def test_metric_loaders_cover_success_unknown_metrics_and_invalid_stored_types(
         mod._load_enacting_metric_l2_metric(invalid_saved_dir, "fd_rp_sp_rf")
 
     pd.Series([1.0], index=pd.Index(["climate_child"], name="impact")).to_pickle(
-        invalid_saved_dir / "enacting_metrics" / "level_1" / "gwp100_lcia" / "e_cba_fd_reg.pickle"
+        invalid_saved_dir / "enacting_metrics" / "level_1" / "gwp100_ipcc" / "e_cba_fd_reg.pickle"
     )
     with pytest.raises(ValueError):
-        mod._load_lcia_l1_metric(invalid_saved_dir, "gwp100_lcia", "e_cba_fd_reg")
+        mod._load_lcia_l1_metric(invalid_saved_dir, "gwp100_ipcc", "e_cba_fd_reg")
 
     pd.DataFrame(
         [[1.0, 2.0]],
         index=pd.Index(["climate_child"], name="impact"),
         columns=pd.MultiIndex.from_tuples([("FR", "D"), ("US", "X")], names=["bad", "s_p"]),
     ).to_pickle(
-        invalid_saved_dir / "enacting_metrics" / "level_2" / "gwp100_lcia" / "e_pba_rp_sp.pickle"
+        invalid_saved_dir / "enacting_metrics" / "level_2" / "gwp100_ipcc" / "e_pba_rp_sp.pickle"
     )
     with pytest.raises(ValueError):
-        mod._load_lcia_l2_metric(invalid_saved_dir, "gwp100_lcia", "e_pba_rp_sp")
+        mod._load_lcia_l2_metric(invalid_saved_dir, "gwp100_ipcc", "e_pba_rp_sp")
 
 
 def test_metric_to_series_covers_series_frame_and_multiindex_paths() -> None:

@@ -11,7 +11,6 @@ from pyaesa.shared.lcia.path_tokens import infer_lcia_method_from_path
 from pyaesa.shared.figures.scope_values import visible_scope_values
 from pyaesa.shared.tabular.scalars import display_scalar, is_display_missing
 
-GWP100_LCIA_METHOD = "gwp100_lcia"
 PB_LCIA_IMPACT_PANEL_ORDER = (
     "SOD",
     "AAL",
@@ -240,8 +239,6 @@ def lcia_title_parts(
         lcia_method_column=lcia_method_column,
         impact_column=impact_column,
     )
-    if method == GWP100_LCIA_METHOD and impact_title is not None:
-        return [impact_title]
     parts = [method]
     if include_impact and impact_title is not None:
         parts.append(impact_title)
