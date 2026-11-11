@@ -918,8 +918,7 @@ def test_io_lca_method_support_contracts_and_pending_stage_years(
         lcia_method=io_lca_dummy_repo.lcia_method,
         filters=_filters(),
     )
-    assert selector_rows.columns.tolist() == []
-    assert selector_rows.to_dict(orient="records") == []
+    assert selector_rows.shape == (1, 0)
 
     non_empty_selector_rows = selector_combos(
         payload=payload,
