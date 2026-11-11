@@ -1180,6 +1180,27 @@ def test_uncertainty_acc_static_fixed_uses_deterministic_components(
         item["base_function_source"] == "deterministic_asocc"
         for item in manifest.deterministic_prerequisites
     )
+    from pyaesa.shared.lcia.paths import static_cc_csv_path
+    from pyaesa.shared.lcia.identity import carrying_capacity_sha256
+
+    cc_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+    original_manifest = Path(manifest.artifacts["scope_manifest"])
+    preserved = original_manifest.read_bytes()
+    cc_frame = pd.read_csv(cc_path)
+    cc_frame["min_cc"] = cc_frame["min_cc"] * 0.9
+    cc_frame.to_csv(cc_path, index=False)
+    updated = uncertainty_acc(
+        **kwargs,
+        sobol_parameters={"active": False},
+        figures=False,
+        subfigures=False,
+    ).manifest
+    assert updated.source_parameters is not None
+    assert updated.source_parameters["scientific_inputs"] == {
+        "carrying_capacity/gwp100_lcia": carrying_capacity_sha256(lcia_method="gwp100_lcia")
+    }
+    assert updated.compatibility_key != manifest.compatibility_key
+    assert original_manifest.read_bytes() == preserved
 
 
 def test_uncertainty_acc_external_asocc_monte_carlo_routes_to_component_inventory(

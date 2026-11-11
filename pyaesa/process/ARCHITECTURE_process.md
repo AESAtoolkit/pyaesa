@@ -178,6 +178,7 @@ own a separate characterization directory contract.
 | Missing LCIA methods or impacts | Clear reason for skipped LCIA payloads. |
 | LCIA units | Public deterministic output unit metadata. |
 | Characterization status | Downstream setup validation. |
+| `characterization_inputs` | SHA256 of characterization values, flow mappings, category mappings, and units by attempted method and year, including unavailable methods. |
 
 `shared/lcia/prerequisite_tables.py` owns numerical matrix validation. It
 rejects missing keys, nonfinite factors, duplicate factor keys, and conflicting
@@ -185,6 +186,15 @@ units or parent mappings before characterization. Numerical rows represent
 supported contributions or explicit EF zero factors; omissions belong in the
 coverage records. Parsers must not fill missing factors or select a first
 duplicate as a repair.
+
+`mrios/utils/pipeline/runner.py` checks the identity of retained and
+requested methods before skipping or appending processed years. Changed or
+unverified files raise an actionable error before modifying existing results.
+`shared/lcia/identity.py` provides the same identity contract to downstream
+consumers. Public refresh behavior is independent of this validation.
+Citation and comment edits, CSV formatting, and row or column reordering do not
+invalidate processed results. Canonical identities are derived from the same
+normalized calculation fields consumed by processing.
 
 OECD ICIO does not support `lcia_method`; public processing must fail early when
 LCIA is requested for OECD.

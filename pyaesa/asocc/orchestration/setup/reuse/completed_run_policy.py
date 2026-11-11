@@ -10,6 +10,7 @@ from pyaesa.asocc.runtime.scope.persisted_scope import (
     load_asocc_persisted_run_catalog,
 )
 from pyaesa.shared.tabular.contracts import TABULAR_SUFFIXES
+from pyaesa.shared.lcia.identity import require_matching_scientific_inputs
 
 from ....io.metadata import _load_run_metadata
 from ....runtime.paths.deterministic import _get_allocate_run_metadata_path
@@ -22,6 +23,7 @@ _SET_AWARE_SIGNATURE_KEYS = {
     "reference_years_input",
     "selected_methods",
     "l2_reuse_years",
+    "scientific_inputs",
 }
 
 
@@ -393,6 +395,16 @@ def apply_completed_run_policy(
     incompatible_overlap_details: list[str] = []
     for scope in catalog.scopes:
         persisted_signature = scope.compute_signature.as_dict()
+        prior_methods = set(persisted_signature.get("lcia_methods") or [])
+        require_matching_scientific_inputs(
+            persisted=persisted_signature.get("scientific_inputs"),
+            current={
+                key: digest
+                for key, digest in run_signature["scientific_inputs"].items()
+                if key.rsplit("/", 1)[-1] in prior_methods
+            },
+            context=f"deterministic aSoCC source={output_source}",
+        )
         exact_mismatches = _exact_identity_mismatches(
             requested_signature=run_signature,
             persisted_signature=persisted_signature,

@@ -133,6 +133,13 @@ impact unit on each y axis. Native IO-LCA figures are retrospective only.
 
 Completed run reuse is keyed by the normalized public request, active source
 parameters, deterministic prerequisite identity, and output format.
+`data/metadata.py` validates each selected processed year's CF identity through
+`shared/lcia/identity.py` before completed result discovery. Run signatures
+include `scientific_inputs` for selected CF and RPS files. Figure only and
+uncertainty routes enforce the same prerequisite identity contract. A subset
+request may reuse a compatible larger scope; each consumed year's recorded
+identity must match the current workspace file. Missing identities are
+unverified, rather than inferred from a method name or package version.
 When `figures=False`, public IO-LCA functions skip rendering and preserve
 existing figure files and figure metadata. Figure cleanup occurs only inside a
 requested `figures=True` render for the resolved figure scope.

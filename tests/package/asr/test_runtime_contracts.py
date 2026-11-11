@@ -186,7 +186,14 @@ def _asr_context(
     )
 
 
-def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path: Path) -> None:
+def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(
+    tmp_path: Path, read_only_project_repo: Path
+) -> None:
+    from pyaesa.shared.lcia.identity import carrying_capacity_sha256
+
+    scientific_inputs = {
+        "carrying_capacity/gwp100_lcia": carrying_capacity_sha256(lcia_method="gwp100_lcia")
+    }
     assert (
         shared_paths_mod.build_asr_scope_label(
             source_label="oecd_v2025",
@@ -258,6 +265,7 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
     ) == (branch_root / "figs_l2_vs_global")
     assert not (branch_root / "figs_l2_vs_global").exists()
     public_payload = {
+        "lcia_method": ["gwp100_lcia"],
         "years": [2020, 2021],
         "base_cc_args": {
             "static": {"exclude_max_cc": False},
@@ -268,15 +276,21 @@ def test_shared_runtime_paths_cover_dynamic_scope_guard_and_results_dir(tmp_path
         public_request_payload=public_payload,
         cc_type="static",
     ) == {
+        "lcia_method": ["gwp100_lcia"],
+        "scientific_inputs": scientific_inputs,
         "base_cc_args": {
             "static": {},
             "dynamic_ar6": {"category": ["C1"], "ssp_scenario": ["SSP2"]},
-        }
+        },
     }
     assert scope_guard_mod.branch_identity_payload(
         public_request_payload=public_payload,
         cc_type="dynamic_ar6",
-    ) == {"base_cc_args": {"static": {"exclude_max_cc": False}, "dynamic_ar6": {}}}
+    ) == {
+        "lcia_method": ["gwp100_lcia"],
+        "scientific_inputs": scientific_inputs,
+        "base_cc_args": {"static": {"exclude_max_cc": False}, "dynamic_ar6": {}},
+    }
     assert scope_guard_mod.branch_coverage(
         cc_type="static",
         requested_years=[2020],

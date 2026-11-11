@@ -40,6 +40,8 @@ from pyaesa.workspace_initialisation.workspace import (
     get_default_repo_root,
 )
 from pyaesa.shared.runtime.reporting.values import format_values
+from pyaesa.shared.lcia.identity import processed_lcia_inputs
+from pyaesa.process.mrios.utils.io.metadata import _read_metadata
 
 from ...data.enacting_metric_units import load_enacting_metric_units_from_metadata
 from ...data.source_schema import is_exio_source, is_iso3_source
@@ -298,6 +300,22 @@ def _prepare_context(
         historical_year_cap=request.historical_year_cap,
         variant_tag=request.variant_tag,
     )
+    scientific_inputs: dict[str, str] = {}
+    if is_exio and selection.needs_lcia_flag:
+        domains = [request.agg_version]
+        if use_original_l1_post_domain and request.agg_version is not None:
+            domains.append(None)
+        for domain in domains:
+            scientific_inputs.update(
+                processed_lcia_inputs(
+                    source=source,
+                    metadata=_read_metadata(source, matrix_version=domain),
+                    years=year_bundle.historical_years,
+                    methods=lcia_methods or [],
+                    domain=domain or "original_class",
+                )
+            )
+    run_signature["scientific_inputs"] = scientific_inputs
     ssp_scenario_options_by_year = build_scenario_plan_by_year(
         years=requested_years,
         wb_df=wb_df,

@@ -44,6 +44,7 @@ from pyaesa.process.mrios.utils.pipeline.lcia_tracking import (
     year_entry_lcia_methods,
     year_entry_unavailable_lcia_methods,
 )
+from pyaesa.shared.lcia.identity import characterization_frame_sha256
 from tests.package.helpers.data_processing_dummy import (
     DummyExtension,
     build_dummy_iosystem,
@@ -102,6 +103,7 @@ def test_parser_wrappers_and_characterization_job_builders(project_repo: Path) -
     )
     matrix = _load_characterization_matrix(matrix_path)
     assert matrix["extension"].tolist() == ["satellite_accounts"]
+    assert matrix.attrs["source_sha256"] == characterization_frame_sha256(matrix)
     assert _requested_extensions_from_matrix(matrix) == ["satellite_accounts"]
     assert _requested_extensions_from_matrix_core(matrix) == ["satellite_accounts"]
 
@@ -140,6 +142,7 @@ def test_parser_wrappers_and_characterization_job_builders(project_repo: Path) -
     )
     assert list(jobs) == ["pb_lcia"]
     assert jobs["pb_lcia"].requested_extensions == ["satellite_accounts"]
+    assert jobs["pb_lcia"].matrix_sha256 == matrix.attrs["source_sha256"]
     assert (
         _build_characterization_jobs(
             source_key="exiobase_396_ixi",

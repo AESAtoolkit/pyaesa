@@ -12,7 +12,9 @@ def read_rps_frame(path) -> pd.DataFrame:
     """Read one responsibility-period CSV and normalize its public schema."""
     if not path.exists():
         raise FileNotFoundError(f"RPS file not found: {path}")
-    frame = clean_responsibility_period_frame(frame=pd.read_csv(path), path=path)
+    frame = clean_responsibility_period_frame(
+        frame=pd.read_csv(path, float_precision="round_trip"), path=path
+    )
     frame.attrs["source_csv"] = str(path)
     return frame
 

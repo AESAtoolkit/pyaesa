@@ -543,9 +543,18 @@ def test_runtime_types_path_logging_origin_and_selector_contracts(
 
 def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
     tmp_path: Path,
+    io_lca_dummy_repo,
 ) -> None:
+    from pyaesa.shared.lcia.identity import processed_lcia_inputs
+    from pyaesa.io_lca.data.loaders import load_domain_metadata
+
+    metadata, _ = load_domain_metadata(source=io_lca_dummy_repo.source, agg_version=None)
+    scientific_inputs = processed_lcia_inputs(
+        source=io_lca_dummy_repo.source, metadata=metadata, years=[2019, 2020], methods=["pb_lcia"]
+    )
     filters = _filters()
     signature = build_io_lca_signature(
+        scientific_inputs=scientific_inputs,
         project_name="proj",
         source="exiobase_396_ixi",
         agg_reg=False,
@@ -561,6 +570,7 @@ def test_run_signatures_and_scope_contracts_cover_matching_and_reuse_failures(
         output_format="csv",
     )
     figure_signature = build_io_lca_figure_signature(
+        scientific_inputs=scientific_inputs,
         project_name="proj",
         source="exiobase_396_ixi",
         agg_reg=False,

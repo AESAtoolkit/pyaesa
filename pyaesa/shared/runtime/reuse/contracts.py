@@ -122,6 +122,12 @@ def asocc_signature_payload_matches_request(
         if requested_ssp is not None and not requested_ssp.issubset(candidate_ssp or set()):
             return False
     requested_methods = requested_signature.get("selected_methods")
+    recorded_inputs = candidate_signature.get("scientific_inputs", {})
+    if any(
+        recorded_inputs.get(key) != digest
+        for key, digest in requested_signature.get("scientific_inputs", {}).items()
+    ):
+        return False
     candidate_methods = candidate_signature.get("selected_methods")
     if isinstance(requested_methods, dict):
         if not isinstance(candidate_methods, dict):
@@ -148,6 +154,7 @@ def io_lca_signature_compatible(
     requested_years: set[int],
     requested_methods: set[str],
     requested_selectors: dict[str, tuple[str, ...]],
+    scientific_inputs: dict[str, str],
 ) -> tuple[bool, tuple[int, int]]:
     """Return compatibility and score for one deterministic IO-LCA signature."""
     exact = {
@@ -163,6 +170,9 @@ def io_lca_signature_compatible(
     for key, expected in exact.items():
         if signature.get(key) != expected:
             return False, (0, 0)
+    recorded_inputs = signature.get("scientific_inputs", {})
+    if any(recorded_inputs.get(key) != digest for key, digest in scientific_inputs.items()):
+        return False, (0, 0)
     years = {int(year) for year in signature.get("years", [])}
     methods = {str(method) for method in signature.get("lcia_methods", [])}
     if not requested_years.issubset(years) or not requested_methods.issubset(methods):

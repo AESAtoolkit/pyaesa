@@ -6,6 +6,7 @@ from typing import Any
 
 from pyaesa.shared.runtime.manifest_contract import manifest_digest
 from pyaesa.shared.runtime.scenario.columns import AR6_CC_SSP_SCENARIO_COLUMN
+from pyaesa.shared.lcia.identity import carrying_capacity_sha256
 
 
 def branch_identity_payload(
@@ -23,6 +24,10 @@ def branch_identity_payload(
         dynamic.pop("ssp_scenario", None)
         cc_args["dynamic_ar6"] = dynamic
     payload["base_cc_args"] = cc_args
+    payload["scientific_inputs"] = {
+        f"carrying_capacity/{method}": carrying_capacity_sha256(lcia_method=method)
+        for method in payload["lcia_method"]
+    }
     return payload
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd
+from pyaesa.shared.lcia.identity import characterization_sha256
 import pytest
 
 from pyaesa import uncertainty_io_lca
@@ -104,6 +105,12 @@ def _add_aggregated_sector_scope(*, io_lca_dummy_repo, year: int | None = None) 
                 "labels": {"sectors_used": ["Electricity"]},
                 "years": {
                     str(effective_year): {
+                        "characterization_inputs": {
+                            io_lca_dummy_repo.lcia_method: characterization_sha256(
+                                source=io_lca_dummy_repo.source,
+                                lcia_method=io_lca_dummy_repo.lcia_method,
+                            )
+                        },
                         "core": ["A", "L"],
                         "extensions": {io_lca_dummy_repo.lcia_method: {"available": True}},
                         "lcia_status": {io_lca_dummy_repo.lcia_method: {"available": True}},
@@ -162,6 +169,11 @@ def _add_aggregated_region_scope(*, io_lca_dummy_repo, include_2020: bool = Fals
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     years_payload = {
         "2019": {
+            "characterization_inputs": {
+                io_lca_dummy_repo.lcia_method: characterization_sha256(
+                    source=io_lca_dummy_repo.source, lcia_method=io_lca_dummy_repo.lcia_method
+                )
+            },
             "core": ["A", "L"],
             "extensions": {io_lca_dummy_repo.lcia_method: {"available": True}},
             "lcia_status": {io_lca_dummy_repo.lcia_method: {"available": True}},

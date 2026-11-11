@@ -67,6 +67,11 @@ Concrete canonical owners include:
 - `lcia/prerequisite_tables.py` for canonical numerical matrix validation;
   unique factor keys, finite factors, required identities, and compatible units
   are enforced before consumers perform calculations
+- `lcia/identity.py` for calculation-content identities of active workspace
+  characterization factors, responsibility periods, and carrying capacities,
+  plus processed year verification before result reuse. Identities include
+  numerical values, category mappings, and units; citations, comments, display
+  labels, CSV formatting, and row or column order do not affect compatibility.
 - `lcia/static_cc.py` for static carrying capacity CSV loading and bound
   validation used by aCC, ASR, and shared aCC/ASR request normalization
 - `lcia/uncertainty_keys.py` for LCIA shared random key construction used

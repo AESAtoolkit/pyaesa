@@ -43,6 +43,10 @@ from pyaesa.io_lca.orchestration.pipeline.progress import io_lca_banner, year_pr
 from pyaesa.io_lca.orchestration.pipeline.run_signatures import build_io_lca_signature
 from pyaesa.shared.runtime.reporting.progress import StatusProgressPrinter
 from pyaesa.shared.runtime.reporting.status import StatusSink
+from pyaesa.shared.lcia.identity import (
+    processed_lcia_inputs,
+    require_matching_scientific_inputs,
+)
 
 
 def _read_signature_group_indices(signature: dict[str, Any]) -> bool:
@@ -208,6 +212,25 @@ def execute_io_lca_mode(
             fu_code=spec.fu_code,
             filters=filters,
         )
+    scientific_inputs = processed_lcia_inputs(
+        source=source,
+        metadata=metadata,
+        years=resolved_years,
+        methods=methods,
+        domain=agg_version or "original_class",
+    )
+    if not refresh and log_payload.get("arguments") is not None:
+        prior_signature = require_scope_signature(scope=log_payload)
+        prior_methods = set(prior_signature["lcia_methods"])
+        require_matching_scientific_inputs(
+            persisted=prior_signature.get("scientific_inputs"),
+            current={
+                key: digest
+                for key, digest in scientific_inputs.items()
+                if key.rsplit("/", 1)[-1] in prior_methods
+            },
+            context=f"deterministic IO-LCA source={source}",
+        )
     signature = build_io_lca_signature(
         project_name=project_name,
         source=source,
@@ -222,6 +245,7 @@ def execute_io_lca_mode(
         upstream_stages=stages,
         group_indices=group_indices,
         output_format=output_format,
+        scientific_inputs=scientific_inputs,
     )
     scope_key, scope_existing = get_scope(payload=log_payload, signature=signature)
     if refresh:

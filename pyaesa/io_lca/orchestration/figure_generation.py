@@ -183,6 +183,7 @@ def render_io_lca_figures(
         dpi=dpi_norm,
         output_format=figure_output_norm,
         io_output_format=io_output_format,
+        scientific_inputs=io_scope["arguments"]["scientific_inputs"],
     )
     scope_key, scope_existing = get_scope(payload=figure_payload, signature=figure_signature)
     if scope_existing is None and figure_payload.get("arguments") is not None:
@@ -207,6 +208,7 @@ def render_io_lca_figures(
                 requested_years={int(year) for year in resolved_years},
                 requested_methods=set(methods),
                 requested_selectors=normalize_selector_payload(filters),
+                scientific_inputs=io_scope["arguments"]["scientific_inputs"],
             )
             is not None
         ):

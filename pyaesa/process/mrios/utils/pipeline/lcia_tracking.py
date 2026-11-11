@@ -221,6 +221,9 @@ def build_year_entry_payload(
         ),
     }
     if requires_characterization and year_char_jobs:
+        year_entry["characterization_inputs"] = {
+            method: options.matrix_sha256 for method, options in year_char_jobs.items()
+        }
         lcia_status_payload = build_lcia_status_payload(
             lcia_method_names=list(year_char_jobs.keys()),
             applied_methods=applied_methods,

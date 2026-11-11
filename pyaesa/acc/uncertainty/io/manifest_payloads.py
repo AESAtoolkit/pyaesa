@@ -4,7 +4,9 @@ from typing import Any
 
 from pyaesa.ar6_cc.uncertainty.request.normalization import AR6_DYNAMIC_CC_SOURCE
 from pyaesa.acc.uncertainty.runtime.models import ACCUncertaintyPlan, ACCUncertaintyRunPaths
-from pyaesa.shared.runtime.manifest_contract import manifest_json_value
+from pyaesa.shared.runtime.manifest_contract import manifest_digest, manifest_json_value
+from pyaesa.shared.runtime.metadata.json import read_json_dict
+from pyaesa.shared.lcia.identity import carrying_capacity_sha256
 from pyaesa.shared.uncertainty_assessment.run_state.manifest import (
     UncertaintyManifest,
     build_compatibility_key,
@@ -79,6 +81,12 @@ def build_acc_manifest_context(
         "run_role": run_role_payload(component_inventory=component_inventory),
         "output_format": runtime.output_format,
         "arguments": base_args,
+        "scientific_inputs": {
+            f"carrying_capacity/{branch.cc_source}": carrying_capacity_sha256(
+                lcia_method=branch.cc_source
+            )
+            for branch in plan.branch_plans
+        },
         "active_sources": list(plan.active_sources),
         "deterministic_prerequisites": strip_reporting_only_fields(
             list(compatibility_prerequisites)
@@ -90,6 +98,7 @@ def build_acc_manifest_context(
             "upstream_sources": list(plan.active_sources),
             "dynamic_cc_category_uncertainty": plan.dynamic_category_uncertainty_active,
             "dynamic_cc_sampling_method": _dynamic_cc_sampling_method(plan=plan),
+            "scientific_inputs": compatibility_payload["scientific_inputs"],
         },
         "arguments": manifest_json_value(base_args),
         "deterministic_prerequisites": prerequisites,
@@ -299,4 +308,7 @@ def _asocc_prerequisite_payload(*, plan: ACCUncertaintyPlan) -> dict[str, str] |
         "base_function_source": "deterministic_asocc",
         "scope_manifest": str(plan.asocc_input.deterministic_manifest_path),
         "reuse_status": plan.asocc_input.reuse_status,
+        "signature_key": manifest_digest(
+            read_json_dict(plan.asocc_input.deterministic_manifest_path)["arguments"]
+        ),
     }

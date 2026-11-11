@@ -241,6 +241,7 @@ def test_io_lca_metadata_contracts_cover_roundtrip_defaults_and_contract_errors(
     }
     complete_scope = {"arguments": complete_signature}
     compatible = metadata_mod.compatible_scope(
+        scientific_inputs={},
         payload=complete_scope,
         project_name="proj",
         source="exiobase_396_ixi",

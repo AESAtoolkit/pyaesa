@@ -9,6 +9,7 @@ import pymrio
 from pyaesa.download.mrios.utils.paths import _get_exio_archive_path
 from pyaesa.shared.runtime.io.filesystem import ensure_file_parent
 from pyaesa.shared.lcia.prerequisite_tables import clean_characterization_matrix_frame
+from pyaesa.shared.lcia.identity import characterization_frame_sha256
 
 from pyaesa.process.mrios.utils.io.paths import (
     _get_characterization_matrix_path,
@@ -62,6 +63,7 @@ class ExioCharacterizationOptions:
     char_matrix: pd.DataFrame
     retain_instances: tuple[str, ...] = _DEFAULT_RETAINED_EXTENSIONS
     requested_extensions: list[str] = field(default_factory=list)
+    matrix_sha256: str = ""
 
 
 def _build_characterization_options(
@@ -84,6 +86,7 @@ def _build_characterization_options(
         char_matrix=char_matrix,
         retain_instances=_DEFAULT_RETAINED_EXTENSIONS,
         requested_extensions=_requested_extensions_from_matrix(char_matrix),
+        matrix_sha256=char_matrix.attrs["source_sha256"],
     )
 
 
@@ -121,10 +124,11 @@ def _load_characterization_matrix(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Characterization matrix not found at {path}")
     df = clean_characterization_matrix_frame(
-        frame=pd.read_csv(path),
+        frame=pd.read_csv(path, float_precision="round_trip"),
         path=path,
     )
     df.attrs["source_path"] = str(path)
+    df.attrs["source_sha256"] = characterization_frame_sha256(df)
     return df
 
 

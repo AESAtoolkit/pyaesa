@@ -16,11 +16,6 @@ from pyaesa.shared.acc_asr_common.branches.expand import iter_cc_method_branches
 from pyaesa.shared.acc_asr_common.deterministic.downstream.tabular_io import (
     normalize_downstream_output_format,
 )
-from pyaesa.shared.acc_asr_common.deterministic.state.scope_guard import (
-    branch_coverage,
-    branch_identity_payload,
-    branch_reuse_mode_or_raise,
-)
 from pyaesa.shared.acc_asr_common.persistence.requests import (
     build_public_cc_branch_args,
     build_public_composite_request_payload,
@@ -49,14 +44,12 @@ from pyaesa.shared.figures.request_validation import (
 from pyaesa.shared.runtime.reporting.composite_phase_index import (
     CompositePhaseIndexEntry,
     PHASE_C_ASR,
-    phase_index_path_for_metadata,
     phase_ready_detail,
     phase_reused_detail,
     public_phase_reuse_status,
-    read_phase_index,
     write_phase_index,
 )
-from pyaesa.shared.runtime.reporting.phase import NullPhasePrinter, PhasePrinter
+from pyaesa.shared.runtime.reporting.phase import PhasePrinter
 from pyaesa.shared.runtime.reporting.output_roots import public_output_root_from_path
 from pyaesa.shared.runtime.reporting.summary_log import summary_log_path, write_summary_log
 from pyaesa.shared.selectors.request_targets import build_asocc_target_selector
@@ -66,14 +59,12 @@ from pyaesa.shared.selectors.time_selectors import (
 )
 
 from .deterministic.runner import run_single_asr
-from .deterministic.state.metadata import load_run_metadata
 from .deterministic.state.reports import (
     ASRBranchReport,
     ComputeASRReport,
     asr_phase_inventory_lines,
     asr_phase_summary_lines,
 )
-from .shared.runtime.paths import build_asr_path_context, get_asr_meta_path
 
 
 def _resolve_proj_base(base_allocate_args: dict[str, Any]) -> Path:
@@ -644,85 +635,6 @@ def deterministic_asr(
         branch_include_afolu = cast(bool, branch["include_afolu"]) if is_dynamic_branch else False
         branch_emissions_mode = str(branch["emissions_mode"]) if is_dynamic_branch else "gross_alt"
         branch_subset_version = branch["subset_version"] if is_dynamic_branch else None
-        if not refresh and not figures and not subfigures_norm and branch["cc_type"] == "static":
-            path_context = build_asr_path_context(
-                proj_base=proj_base,
-                source_label=source_label,
-                agg_version=base_allocate_args["agg_version"],
-                fu_code=fu_code,
-                lca_type=lca_type,
-                cc_source=branch["cc_source"],
-                cc_type=branch["cc_type"],
-                lca_version_name=lca_version_name,
-            )
-            meta_path = get_asr_meta_path(context=path_context)
-            existing_metadata = load_run_metadata(meta_path)
-            identity_payload = branch_identity_payload(
-                public_request_payload=public_request_payload,
-                cc_type=branch["cc_type"],
-            )
-            coverage = branch_coverage(
-                cc_type=branch["cc_type"],
-                requested_years=normalize_requested_years(years),
-                static_cc_bounds=branch_static_cc_bounds,
-                category=branch_category,
-                ssp_scenario=branch_ssp_scenario,
-            )
-            signature = _build_branch_signature(public_request_payload=identity_payload)
-            if (
-                existing_metadata
-                and branch_reuse_mode_or_raise(
-                    existing_metadata=existing_metadata,
-                    requested_identity=signature,
-                    requested_coverage=coverage,
-                    scope_label=str(path_context),
-                    function_name="deterministic_asr",
-                )
-                == "reuse"
-            ):
-                result = run_single_asr(
-                    proj_base=proj_base,
-                    build_branch_signature=_build_branch_signature,
-                    build_figure_signature=_build_figure_signature,
-                    public_request_payload=public_request_payload,
-                    source_label=source_label,
-                    base_allocate_args=base_allocate_args,
-                    fu_code=fu_code,
-                    external_method=external_method_norm,
-                    cc_source=branch["cc_source"],
-                    cc_type=branch["cc_type"],
-                    years=years,
-                    static_cc_bounds=branch_static_cc_bounds,
-                    harmonization=branch_harmonization,
-                    harmonization_method=branch_harmonization_method,
-                    category=branch_category,
-                    ssp_scenario=branch_ssp_scenario,
-                    emission_type=branch_emission_type,
-                    include_afolu=branch_include_afolu,
-                    emissions_mode=branch_emissions_mode,
-                    subset_version=branch_subset_version,
-                    lca_type=lca_type,
-                    lca_version_name=lca_version_name,
-                    acc_output_files=[],
-                    output_format=fmt,
-                    figures=False,
-                    figure_options=figure_options_norm,
-                    figure_output_format=figure_output_format,
-                    figure_dpi=figure_dpi,
-                    subfigures=False,
-                    refresh=False,
-                    status=NullPhasePrinter(),
-                )
-                meta_file = cast(Path, result.meta_file)
-                phase_index_path = phase_index_path_for_metadata(metadata_path=meta_file)
-                branches.append(
-                    replace(
-                        result,
-                        phase_entries=read_phase_index(metadata_path=meta_file),
-                        phase_index_path=phase_index_path if phase_index_path.exists() else None,
-                    )
-                )
-                continue
         phase = PhasePrinter("deterministic_asr")
         prerequisite_kwargs: dict[str, Any] = {
             "phase": phase,

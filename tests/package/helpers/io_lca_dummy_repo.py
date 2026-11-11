@@ -11,6 +11,7 @@ from pyaesa import set_workspace
 from pyaesa.process.mrios.utils.io.paths import _get_metadata_path, _get_year_saved_dir
 from pyaesa.workspace_initialisation.workspace import get_default_repo_root
 from pyaesa.shared.lcia.paths import responsibility_periods_csv_path
+from pyaesa.shared.lcia.identity import characterization_sha256
 
 _PB_LCIA_IMPACTS = ["AAL", "BI FD GHG"]
 _PB_LCIA_PARENT_BY_IMPACT = {
@@ -97,6 +98,9 @@ def _write_processed_mrio_metadata(
     for year in [*available_years, *unavailable_years]:
         available = int(year) in set(available_years)
         years[str(int(year))] = {
+            "characterization_inputs": {
+                lcia_method: characterization_sha256(source=source, lcia_method=lcia_method)
+            },
             "core": ["A", "L"],
             "extensions": {
                 lcia_method: {
@@ -308,6 +312,9 @@ def add_io_lca_dummy_method(
             method_status["reason"] = "extension missing"
         year_payload["extensions"][method] = dict(method_status)
         year_payload["lcia_status"][method] = dict(method_status)
+        year_payload["characterization_inputs"][method] = characterization_sha256(
+            source=repo.source, lcia_method=method
+        )
         year_payload["enacting_metrics"]["units"]["lcia_by_method"][method] = dict(parent_units)
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     for year in repo.available_years:
