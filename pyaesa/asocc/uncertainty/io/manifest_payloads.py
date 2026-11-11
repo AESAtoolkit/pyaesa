@@ -9,6 +9,7 @@ from pyaesa.asocc.uncertainty.schema.public_rows import ASOCC_UNCERTAINTY_CSV_DT
 from pyaesa.asocc.uncertainty.sources.names import INTER_METHOD_SOURCE
 from pyaesa.asocc.orchestration.common_formatting import format_year_ranges
 from pyaesa.external_inputs.asocc.monte_carlo.files import external_monte_carlo_manifest_payload
+from pyaesa.external_inputs.asocc.schema.row_schema import expected_external_selector_columns
 from pyaesa.shared.runtime.io.file_identity import file_identity_payload
 from pyaesa.shared.runtime.manifest_contract import manifest_json_value
 from pyaesa.shared.runtime.scenario.columns import ASOCC_SSP_SCENARIO_COLUMN
@@ -119,7 +120,16 @@ def external_input_payload(*, plan: ExternalAsoccRowsPlan) -> tuple[dict[str, An
                 "selection": source.selection.asocc_method_label,
                 "files": [
                     {
-                        **file_identity_payload(path=file_selection.path),
+                        **file_identity_payload(
+                            path=file_selection.path,
+                            labels=(
+                                *expected_external_selector_columns(
+                                    fu_code=source.selection.fu_code
+                                ),
+                                "impact",
+                            ),
+                            numbers=("reference_year", *map(str, file_selection.requested_years)),
+                        ),
                         "lcia_method": file_selection.lcia_method,
                         "requested_years": list(file_selection.requested_years),
                         ASOCC_SSP_SCENARIO_COLUMN: file_selection.ssp_scenario,

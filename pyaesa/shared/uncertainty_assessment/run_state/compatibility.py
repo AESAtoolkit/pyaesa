@@ -3,6 +3,7 @@
 from typing import Any
 
 _REPORTING_ONLY_KEYS = {
+    "input_provenance",
     "reuse_status",
     "summary_records",
     "summary_infos",

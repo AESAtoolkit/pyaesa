@@ -24,7 +24,7 @@ def read_table(*, path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     if suffix == ".csv":
-        frame = pd.read_csv(path)
+        frame = pd.read_csv(path, float_precision="round_trip")
         frame.attrs["source_path"] = str(path)
         return frame
     if suffix == ".parquet":

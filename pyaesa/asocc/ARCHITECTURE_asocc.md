@@ -508,11 +508,13 @@ function family.
 Carlo compatibility checks. Monte Carlo external files are used directly when a
 complete run file set exists. Otherwise matching deterministic external files
 are loaded once and repeated over runs. Both external input modes are recorded
-in `logs/scope_manifest.json` through `external_inputs`, including selected
-file paths, sizes, and SHA-256 checksums. These manifest rows participate in the
-Monte Carlo compatibility key so edits to external input files cannot reuse a
-completed run whose staged external content digest differs from the current
-request.
+in `logs/scope_manifest.json` through `external_inputs`. Their compatibility
+identities include selected calculation values, selectors, categories, years,
+and Monte Carlo run identities. Citations, comments, file locations, and CSV
+formatting do not invalidate reuse. Numerical or calculation-identity changes
+prevent reuse of an incompatible completed run.
+Source paths remain in `input_provenance` for reporting; the shared uncertainty
+compatibility owner excludes that field from compatibility keys.
 
 Any change to external input schemas must update the external template writers,
 template explanations, package docs, and tests in the same change set.

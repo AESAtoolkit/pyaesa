@@ -1,5 +1,4 @@
 from pathlib import Path
-import hashlib
 
 import pandas as pd
 import pytest
@@ -1311,9 +1310,8 @@ def test_uncertainty_asocc_external_method_repeats_deterministic_rows(
             "selection": "UT(TD)",
             "files": [
                 {
-                    "path": str(external_path),
-                    "size_bytes": external_path.stat().st_size,
-                    "sha256": hashlib.sha256(external_path.read_bytes()).hexdigest(),
+                    "sha256": "b2f73deabf1252ed5c67799e6e835e3c1265f3c18234efffb9205811982c90f8",
+                    "input_provenance": {"path": str(external_path)},
                     "lcia_method": None,
                     "requested_years": [2005],
                     ASOCC_SSP_SCENARIO_COLUMN: None,
@@ -1321,6 +1319,27 @@ def test_uncertainty_asocc_external_method_repeats_deterministic_rows(
             ],
         },
     )
+
+    frame = pd.read_csv(external_path).assign(citation="edited reference", comment="annotation")
+    frame.to_csv(external_path, index=False, float_format="%.17g")
+    reused = uncertainty_asocc(
+        base_asocc_args=base_args,
+        uncertainty_config=config,
+        external_method={"one_step_methods": ["UT(TD)"]},
+        output_format="csv_compact",
+        figures=False,
+    ).manifest
+    assert reused.run_id == manifest.run_id
+    frame["2005"] = 0.43
+    frame.to_csv(external_path, index=False)
+    changed = uncertainty_asocc(
+        base_asocc_args=base_args,
+        uncertainty_config=config,
+        external_method={"one_step_methods": ["UT(TD)"]},
+        output_format="csv_compact",
+        figures=False,
+    ).manifest
+    assert len({changed.run_id, manifest.run_id}) == 2
 
 
 def test_uncertainty_asocc_reference_year_keeps_invariant_external_rows(
