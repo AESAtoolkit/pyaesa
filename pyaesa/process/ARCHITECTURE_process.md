@@ -165,7 +165,7 @@ downstream scientific packages.
 ### MRIO LCIA Characterization
 
 EXIOBASE LCIA characterization uses prerequisite characterization factors and
-responsibility period files under `data_raw/`. LCIA processing must record:
+responsibility period files under `data_raw/`.
 
 LCIA characterization matrix paths are owned by `pyaesa/shared/lcia/paths.py`.
 MRIO processing consumes that path owner through
@@ -178,6 +178,13 @@ own a separate characterization directory contract.
 | Missing LCIA methods or impacts | Clear reason for skipped LCIA payloads. |
 | LCIA units | Public deterministic output unit metadata. |
 | Characterization status | Downstream setup validation. |
+
+`shared/lcia/prerequisite_tables.py` owns numerical matrix validation. It
+rejects missing keys, nonfinite factors, duplicate factor keys, and conflicting
+units or parent mappings before characterization. Numerical rows represent
+supported contributions or explicit EF zero factors; omissions belong in the
+coverage records. Parsers must not fill missing factors or select a first
+duplicate as a repair.
 
 OECD ICIO does not support `lcia_method`; public processing must fail early when
 LCIA is requested for OECD.

@@ -197,14 +197,6 @@ def test_characterization_validation_logging_and_wrapper_contracts(project_repo:
             "impact_unit": ["kg CO2-eq"],
         }
     )
-    with pytest.raises(ValueError):
-        _characterize_exiobase_io(
-            iosys,
-            char_matrix=char_matrix,
-            new_extension_name="not valid",
-            retain_instances=["factor_inputs"],
-        )
-
     summary = _characterize_exiobase_io(
         iosys,
         char_matrix=char_matrix,
@@ -308,15 +300,6 @@ def test_exio_characterization_core_contracts_cover_success_and_failure_paths() 
     )
     assert validation_missing_f["error_stressor"].tolist() == [True]
 
-    with pytest.raises(ValueError):
-        _build_impact_units(
-            pd.DataFrame(
-                {
-                    "impact": ["x", "x"],
-                    "impact_unit": ["kg", "t"],
-                }
-            )
-        )
     assert (
         _build_impact_units(
             pd.DataFrame(
@@ -493,43 +476,6 @@ def test_lcia_tracking_contracts_cover_status_units_and_year_entry_payload(
         }
     ) == {"pb_lcia"}
 
-    with pytest.raises(ValueError):
-        extract_lcia_units_from_char_matrix(
-            lcia_method="pb_lcia",
-            char_matrix=pd.DataFrame({"impact_parent": ["x"]}),
-        )
-    with pytest.raises(ValueError):
-        extract_lcia_units_from_char_matrix(
-            lcia_method="pb_lcia",
-            char_matrix=pd.DataFrame(
-                {
-                    "extension": ["satellite_accounts"],
-                    "impact_unit": ["kg CO2-eq"],
-                }
-            ),
-        )
-    with pytest.raises(ValueError):
-        extract_lcia_units_from_char_matrix(
-            lcia_method="pb_lcia",
-            char_matrix=pd.DataFrame(
-                {
-                    "extension": ["satellite_accounts", "satellite_accounts"],
-                    "impact_parent": [" ", "nan"],
-                    "impact_unit": [" ", "kg"],
-                }
-            ),
-        )
-    with pytest.raises(ValueError):
-        extract_lcia_units_from_char_matrix(
-            lcia_method="pb_lcia",
-            char_matrix=pd.DataFrame(
-                {
-                    "extension": ["satellite_accounts", "satellite_accounts"],
-                    "impact_parent": ["climate_parent", "climate_parent"],
-                    "impact_unit": ["kg CO2-eq", "t CO2-eq"],
-                }
-            ),
-        )
     assert extract_lcia_units_from_char_matrix(
         lcia_method="pb_lcia",
         char_matrix=pd.DataFrame(

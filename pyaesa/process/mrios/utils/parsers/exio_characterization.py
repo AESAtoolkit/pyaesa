@@ -178,23 +178,7 @@ def _build_characterization_validation(
 
 def _build_impact_units(char_matrix: pd.DataFrame) -> pd.DataFrame:
     """Return unit table for characterized impacts."""
-    units = char_matrix.loc[:, ["impact", "impact_unit"]].dropna(subset=["impact"]).copy()
-    units["impact"] = units["impact"].astype(str).str.strip()
-    units["impact_unit"] = units["impact_unit"].astype(str).str.strip()
-    units = units[units["impact"] != ""]
-
-    duplicates = (
-        units.groupby("impact")["impact_unit"].nunique(dropna=False).loc[lambda series: series > 1]
-    )
-    if not duplicates.empty:
-        conflict_impacts = duplicates.index.tolist()
-        source_path = char_matrix.attrs.get("source_path", "<unknown>")
-        raise ValueError(
-            "Inconsistent impact units in characterization matrix. "
-            f"File={source_path}. Conflicting impacts={conflict_impacts[:20]}."
-        )
-
-    unit_table = units.drop_duplicates(subset=["impact"], keep="first").set_index("impact")
+    unit_table = char_matrix.loc[:, ["impact", "impact_unit"]].drop_duplicates().set_index("impact")
     unit_table.columns = pd.Index(["unit"])
     unit_table.index.name = "impact"
     return unit_table
@@ -211,12 +195,6 @@ def _project_extension_characterization(
     factors_clean = factors.loc[:, ["stressor", "impact", "factor"]].copy()
     factors_clean["stressor"] = factors_clean["stressor"].astype(str).str.strip()
     factors_clean["impact"] = factors_clean["impact"].astype(str).str.strip()
-    factors_clean["factor"] = pd.Series(
-        pd.to_numeric(factors_clean["factor"], errors="raise"),
-        copy=False,
-    ).fillna(0.0)
-    factors_clean = factors_clean.drop_duplicates(subset=["stressor", "impact"], keep="first")
-
     factor_matrix = (
         factors_clean.set_index(["stressor", "impact"])["factor"].unstack("impact").fillna(0.0)
     )
