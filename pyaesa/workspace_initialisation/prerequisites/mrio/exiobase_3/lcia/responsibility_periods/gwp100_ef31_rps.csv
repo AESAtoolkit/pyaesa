@@ -1,0 +1,2 @@
+impact_full_name,impact_parent,impact,impact_duration_years,responsibility_period_years,source,comment
+Climate change (EF 3.1 GWP100),GWP_100,GWP_100,Gas dependent; no single lifetime,1000000,"IPCC (2021), AR6 Working Group I, Chapter 7, section 7.6: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07.pdf",A responsibility period of 1000000 years includes all available historical inventories. This modelling convention is separate from the 100 year GWP characterization horizon and does not assign one physical lifetime to the aggregated greenhouse gases.
