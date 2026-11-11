@@ -53,8 +53,9 @@ Concrete canonical owners include:
   `scope_manifest.json`
 - `runtime/manifest_contract.py` for canonical manifest JSON value
   normalization, stable digest keys, and path list serialization
-- `runtime/io/file_identity.py` for file size and checksum identity payloads used
-  by deterministic and uncertainty manifests
+- `runtime/io/file_identity.py` for calculation-table identities used by
+  deterministic and uncertainty manifests; callers select the calculation
+  columns, excluding citations, comments, file size, and file location
 - `runtime/reuse/contracts.py` for deterministic persisted scope compatibility
   checks shared by aSoCC and IO-LCA consumers
 - `runtime/scenario/partitions.py` for SSP partition filename parsing

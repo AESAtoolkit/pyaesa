@@ -1,23 +1,35 @@
 """File identity payloads for manifest compatibility keys."""
 
-import hashlib
 from pathlib import Path
 
+import pandas as pd
 
-def file_identity_payload(*, path: Path) -> dict[str, object]:
-    """Return path, size, and SHA256 identity for one input file."""
-    file_path = Path(path)
+from pyaesa.shared.runtime.manifest_contract import manifest_digest
+from pyaesa.shared.tabular.table_io import read_table
+
+
+def table_sha256(frame: pd.DataFrame, *, labels: tuple[str, ...], numbers: tuple[str, ...]) -> str:
+    """Fingerprint calculation fields, independently of row order and table formatting."""
+    selected = frame.loc[:, list(labels)].astype("string")
+    for column in numbers:
+        selected[column] = (
+            pd.Series(pd.to_numeric(frame[column], errors="raise"), dtype=float) + 0.0
+        )
+    selected = selected.sort_values(list(selected.columns)).astype(object)
+    return manifest_digest(
+        {
+            "columns": list(selected.columns),
+            "rows": selected.where(selected.notna(), None).values.tolist(),
+        }
+    )
+
+
+def file_identity_payload(
+    *, path: Path, labels: tuple[str, ...], numbers: tuple[str, ...]
+) -> dict[str, object]:
+    """Fingerprint explicit calculation columns, excluding file location and annotations."""
+    frame = read_table(path=path).reindex(columns=[*labels, *numbers])
     return {
-        "path": str(file_path),
-        "size_bytes": file_path.stat().st_size,
-        "sha256": file_sha256(path=file_path),
+        "sha256": table_sha256(frame, labels=labels, numbers=numbers),
+        "input_provenance": {"path": str(path)},
     }
-
-
-def file_sha256(*, path: Path) -> str:
-    """Return the SHA256 digest for one file."""
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()

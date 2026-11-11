@@ -735,6 +735,18 @@ def test_external_monte_carlo_compact_matrix_materializes_selected_rows(
 
     assert materialized.run_matrix.template["year"].tolist() == [2020]
     np.testing.assert_allclose(materialized.run_matrix.values, [[0.43], [0.53]])
+    payload = monte_carlo_mod.external_monte_carlo_manifest_payload(source=materialized)
+    identity_path = compact_dir / "row_identity.csv"
+    identity = pd.read_csv(identity_path).iloc[::-1].reset_index(drop=True)
+    identity["public_row_id"] = [0, 1]
+    identity["citation"] = "edited reference"
+    identity.to_csv(identity_path, index=False)
+    values_path = compact_dir / "asocc_runs.csv"
+    values = pd.read_csv(values_path)
+    values[["0", "1"]] = values[["1", "0"]].to_numpy()
+    values.to_csv(values_path, index=False)
+    reordered = monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
+    assert monte_carlo_mod.external_monte_carlo_manifest_payload(source=reordered) == payload
 
 
 def test_external_monte_carlo_matrix_materializes_frame_scenario_identities(
@@ -834,6 +846,31 @@ def test_external_monte_carlo_source_year_filter_and_manifest(
     assert payload["selection"] == "CO(S)_UT(FD)"
     assert payload["run_indices"] == [0, 1]
     assert payload["files"][0]["requested_years"] == [2019, 2020]
+    path = source.file_selections[0].path
+    frame = pd.read_csv(path).assign(citation="edited citation", comment="new annotation")
+    frame.to_csv(path, index=False, float_format="%.17g")
+    annotated = monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
+    assert monte_carlo_mod.external_monte_carlo_manifest_payload(source=annotated) == payload
+    frame = frame.iloc[[1, 0, 3, 2]].reset_index(drop=True)
+    frame.to_csv(path, index=False)
+    reordered = monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
+    assert monte_carlo_mod.external_monte_carlo_manifest_payload(source=reordered) == payload
+    frame["value"] *= 2
+    frame.to_csv(path, index=False)
+    changed = monte_carlo_mod.materialize_external_monte_carlo_source(source=source)
+    revised = monte_carlo_mod.external_monte_carlo_manifest_payload(source=changed)
+    assert len({payload["values"], revised["values"]}) == 2
+
+
+def test_external_matrix_identity_streams_strided_numeric_blocks():
+    values = np.zeros((3, 800_000), dtype=float)
+    values[2, 0] = 0.5
+    strided = values[:, ::2]
+    positions = np.arange(strided.shape[1], dtype=np.int64)
+    expected = monte_carlo_mod._values_sha256(np.ascontiguousarray(strided), positions)
+    assert monte_carlo_mod._values_sha256(strided, positions) == expected
+    strided[0, 0] = -0.0
+    assert monte_carlo_mod._values_sha256(strided, positions) == expected
 
 
 def test_external_monte_carlo_matrix_rejects_empty_frame_inventory(

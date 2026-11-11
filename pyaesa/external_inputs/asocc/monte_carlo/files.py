@@ -1,13 +1,14 @@
 """Monte Carlo external aSoCC loading."""
 
 from dataclasses import dataclass
+import hashlib
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 
-from pyaesa.shared.runtime.io.file_identity import file_identity_payload
+from pyaesa.shared.runtime.io.file_identity import table_sha256
 
 from pyaesa.external_inputs.asocc.schema.contracts import ExternalMethodSelection
 from pyaesa.external_inputs.asocc.schema.file_specs import (
@@ -188,37 +189,41 @@ def external_monte_carlo_manifest_payload(
     source: MaterializedExternalMonteCarloRowsSource,
 ) -> dict[str, Any]:
     """Return the manifest identity payload for one materialized source."""
+    template = source.run_matrix.template
+    identities = [column for column in template.columns if column not in {"run_index", "value"}]
+    positions = template.sort_values(identities).index.to_numpy(dtype=np.int64)
+    numbers = ("year", "reference_year", "value")
     return {
         "storage_mode": "monte_carlo",
         "selection": source.selection.asocc_method_label,
         "run_indices": list(source.run_indices),
+        "row_identity": table_sha256(
+            template,
+            labels=tuple(column for column in template.columns if column not in numbers),
+            numbers=numbers,
+        ),
+        "values": _values_sha256(source.run_matrix.values, positions),
+        "input_provenance": {"paths": [str(item.path) for item in source.file_selections]},
         "files": [
-            _file_selection_manifest_payload(file_selection)
+            {
+                "lcia_method": file_selection.lcia_method,
+                "requested_years": list(file_selection.requested_years),
+            }
             for file_selection in source.file_selections
         ],
     }
 
 
-def _file_selection_manifest_payload(
-    file_selection: ExternalMonteCarloFileSelection,
-) -> dict[str, Any]:
-    if file_selection.path.is_dir():
-        return {
-            "path": str(file_selection.path),
-            "layout": "compact_run_matrix",
-            "public_row_identity": file_identity_payload(
-                path=file_selection.path / "row_identity.csv"
-            ),
-            "asocc_runs": file_identity_payload(path=file_selection.path / "asocc_runs.csv"),
-            "lcia_method": file_selection.lcia_method,
-            "requested_years": list(file_selection.requested_years),
-        }
-    return {
-        **file_identity_payload(path=file_selection.path),
-        "layout": "long_rows",
-        "lcia_method": file_selection.lcia_method,
-        "requested_years": list(file_selection.requested_years),
-    }
+def _values_sha256(values: np.ndarray, positions: np.ndarray) -> str:
+    """Fingerprint numeric run values in bounded blocks, normalizing signed zero."""
+    digest = hashlib.sha256()
+    rows_per_block = max(1, 1_000_000 // values.shape[1])
+    for start in range(0, len(values), rows_per_block):
+        block = np.ascontiguousarray(
+            values[start : start + rows_per_block, positions] + 0.0, dtype="<f8"
+        )
+        digest.update(memoryview(block).cast("B"))
+    return digest.hexdigest()
 
 
 def _normalize_scenario_options_by_year(
