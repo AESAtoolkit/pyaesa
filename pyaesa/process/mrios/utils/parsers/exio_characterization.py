@@ -43,21 +43,19 @@ def _sum_columns_by_region(frame: pd.DataFrame, *, context: str) -> pd.DataFrame
     return cast(pd.DataFrame, aggregated.T)
 
 
-def _replace_na_in_zero_output_columns(
+def _replace_na_in_inactive_columns(
     frame: pd.DataFrame,
-    x_series: pd.Series,
+    activity: pd.Series,
 ) -> pd.DataFrame:
-    """Return ``frame`` with missing values replaced only for zero output sectors.
+    """Replace missing cells only where native economic activity is exactly zero.
 
-    In MRIO accounting, a sector with zero total output is inactive for the year.
-    Missing direct satellite entries in such columns should not propagate as
-    undefined intensities through ``S = F / x`` and then contaminate the full
-    multiplier row via ``M = S . L``. For inactive sectors, the operationally
-    correct direct contribution is zero while missing values in active sectors
-    remain an error signal and are left untouched.
+    Production uses native sector output; direct emissions use an indicator of
+    any nonzero economic final demand. Resolve these cells before aggregation
+    or characterization can propagate N/A values. Preserve all finite values,
+    including physical quantities at zero output, and leave active N/As visible.
     """
-    x_aligned = x_series.reindex(frame.columns)
-    zero_output_columns = pd.Series(x_aligned.eq(0), index=frame.columns, copy=False)
+    aligned = activity.reindex(frame.columns)
+    zero_output_columns = pd.Series(aligned.eq(0), index=frame.columns, copy=False)
     if not zero_output_columns.any():
         return frame
 
@@ -330,8 +328,7 @@ def _calc_characterized_extensions_minimal(
         ext = getattr(io_system, lcia_method)
         f_obj = cast(pd.DataFrame, ext.F)
 
-        sanitized_f = _replace_na_in_zero_output_columns(f_obj, x_series)
-        s_mat = cast(pd.DataFrame, pymrio.calc_A(sanitized_f, x_series))
+        s_mat = cast(pd.DataFrame, pymrio.calc_A(f_obj, x_series))
         ext.S = s_mat if keep_direct_intensities else None
         ext.M = cast(pd.DataFrame, calc_M(s_mat, l_obj))
         if not keep_direct_intensities:
