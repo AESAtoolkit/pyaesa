@@ -80,7 +80,9 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "Files:",
         "Carrying capacities available by default:",
         "  -> ef_3.1_cc_steady_state.csv",
-        "  -> gwp100_lcia_cc_steady_state.csv",
+        "  -> ef_3.1_14cat_cc_steady_state.csv",
+        "  -> gwp100_ef31_cc_steady_state.csv",
+        "  -> gwp100_ipcc_cc_steady_state.csv",
         "  -> pb_lcia_cc_steady_state.csv",
         "Use only if you want to add custom carrying capacities not among the defaults:",
         "  -> README_add_custom_carrying_capacities.txt",
@@ -118,9 +120,13 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         str(exiobase_root / "lcia" / "characterization_factors_matrices"),
         "",
         "Files:",
-        "LCIA characterization matrices available by default:",
+        "Version folders: exiobase_3112, exiobase_3102, exiobase_396.",
+        "LCIA characterization matrices available in each version folder:",
         "  -> pb_lcia.csv",
-        "  -> gwp100_lcia.csv",
+        "  -> ef_3.1.csv",
+        "  -> ef_3.1_14cat.csv",
+        "  -> gwp100_ef31.csv",
+        "  -> gwp100_ipcc.csv",
         "Use only if you want to add custom LCIA matrices not among the defaults:",
         "  -> README_add_custom_lcia_characterization_matrices.txt",
         "  -> name_lcia_template.csv",
@@ -133,7 +139,10 @@ def _formatted_guidance_lines(*, repo_root: Path) -> tuple[str, ...]:
         "Files:",
         "Responsibility periods available by default:",
         "  -> pb_lcia_rps.csv",
-        "  -> gwp100_lcia_rps.csv",
+        "  -> ef_3.1_rps.csv",
+        "  -> ef_3.1_14cat_rps.csv",
+        "  -> gwp100_ef31_rps.csv",
+        "  -> gwp100_ipcc_rps.csv",
         "Use only if you want to add custom responsibility periods not among the defaults:",
         "  -> README_add_custom_lcia_responsibility_periods.txt",
         "  -> name_lcia_rps_template.csv",
@@ -230,7 +239,9 @@ def set_workspace(
     when missing or when ``refresh=True``. They include MRIO
     aggregation templates, region matching tables for population and GDP
     processing, the EXIOBASE sector definition guide, EXIOBASE LCIA
-    characterization matrices, LCIA responsibility period tables, carbon
+    characterization matrices for each supported EXIOBASE version
+    (``exiobase_3112``, ``exiobase_3102``, and ``exiobase_396``), LCIA
+    responsibility period tables, carbon
     consumption based accounts coefficients of variation (CoV) tables, static
     carrying capacity CSVs and templates, local README guides for editable
     prerequisite folders, methodological PDF references and LaTeX source

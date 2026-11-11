@@ -50,7 +50,7 @@ def test_asr_state_covers_method_loading(tmp_path: Path) -> None:
 
 def test_asr_report_covers_empty_single_and_multi_branch_strings(tmp_path: Path) -> None:
     branch_state = written_branch_state(
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
         cc_type="dynamic_ar6",
         cc_bounds=["dynamic"],
         impacts_used=["GWP_100"],
@@ -81,7 +81,7 @@ def test_asr_report_covers_empty_single_and_multi_branch_strings(tmp_path: Path)
             missing_pathway_combinations=[],
         ),
     )
-    assert branch_report.cc_source == "gwp100_lcia"
+    assert branch_report.cc_source == "gwp100_ipcc"
     assert branch_report.cc_type == "dynamic_ar6"
     assert branch_report.cc_bounds == ["dynamic"]
     assert branch_report.lca_type == "io_lca"
@@ -141,7 +141,7 @@ def test_asr_io_lca_prerequisite_summary_reports_upstream_figures(tmp_path: Path
         source="exiobase_396_ixi",
         fu_code="L2.a.a",
         years=[2005],
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         main_result_paths=[tmp_path / "results" / "main.csv"],
         origin_paths=[],
         stage_paths=[],
@@ -174,7 +174,7 @@ def test_cached_branch_state_reads_package_written_manifest(tmp_path: Path) -> N
             "execution": {"status": "complete"},
             "artifacts": {"output_dirs": [str(tmp_path / "outputs")]},
             "provenance": {
-                "cc_source": "gwp100_lcia",
+                "cc_source": "gwp100_ipcc",
                 "cc_type": "static",
                 "cc_bounds": ["min_cc"],
                 "impacts": ["GWP_100"],
@@ -183,5 +183,5 @@ def test_cached_branch_state_reads_package_written_manifest(tmp_path: Path) -> N
         figure_paths=[],
         meta_path=tmp_path / "scope_manifest.json",
     )
-    assert state.cc_source == "gwp100_lcia"
+    assert state.cc_source == "gwp100_ipcc"
     assert state.output_dirs == [tmp_path / "outputs"]

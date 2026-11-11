@@ -17,6 +17,7 @@ from pyaesa.download.pop_gdp.contracts import GDP_SSP_INDICATOR, POP_SSP_INDICAT
 from pyaesa.download.pop_gdp.download_wb import GDP_WB_INDICATOR, POP_WB_INDICATOR
 from pyaesa.download.pop_gdp.raw_paths import _get_output_path
 from pyaesa.process.mrios.utils.io.paths import _get_characterization_matrix_path
+from pyaesa.process.mrios.utils.raw_corrections.runtime import load_raw_corrected_value_rows
 from pyaesa.process.pop_gdp.io.paths import _get_ssp_matching_path, _get_wb_matching_path
 
 
@@ -196,12 +197,34 @@ def write_oecd_raw_csv_files(
     return full_dir
 
 
+def _build_correction_products(source: str, years: list[int]) -> DummyIOSystem:
+    """Include the real correction input identities in a small balanced MRIO."""
+    rows = pd.concat([load_raw_corrected_value_rows(source=source, year=year) for year in years])
+    regions = tuple(sorted(set(rows["region"])))
+    sectors = tuple(sorted(set(rows["sector"])))
+    products = build_product_index(regions=regions, sectors=sectors)
+    demand = build_fd_columns(regions=regions)
+    return DummyIOSystem(
+        Z=pd.DataFrame(np.eye(len(products)), index=products, columns=products),
+        Y=pd.DataFrame(1.0, index=products, columns=demand),
+        unit=pd.DataFrame({"unit": "M EUR"}, index=products),
+        extensions={
+            "factor_inputs": DummyExtension(
+                name="factor_inputs",
+                F=pd.DataFrame(0.5, index=["gva"], columns=products),
+                unit=pd.DataFrame({"unit": ["M EUR"]}, index=["gva"]),
+            )
+        },
+    )
+
+
 def write_exio_archive_files(
     repo_root: Path,
     *,
     source: str,
     years: list[int],
     lcia_methods: tuple[str, ...] = (),
+    include_correction_products: bool = False,
     inactive_missing: bool = False,
 ) -> Path:
     """Write parseable archives, optionally with all selected matrix stressors.
@@ -216,7 +239,11 @@ def write_exio_archive_files(
     system = "ixi" if source_key.endswith("_ixi") else "pxp"
     full_dir = _get_full_dir(source_key)
     full_dir.mkdir(parents=True, exist_ok=True)
-    base = build_dummy_iosystem()
+    base = (
+        _build_correction_products(source_key, years)
+        if include_correction_products
+        else build_dummy_iosystem()
+    )
     if inactive_missing:
         cast(pd.DataFrame, base.Z).iloc[-1, :] = 0
         cast(pd.DataFrame, base.Z).iloc[:, -1] = 0

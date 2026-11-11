@@ -2,6 +2,8 @@
 
 from typing import Any, cast
 
+from pyaesa.download.mrios.utils.source_registry import iter_mrio_entries
+
 from pyaesa.shared.figures.request_validation import (
     normalize_figure_format,
     normalize_figure_options,
@@ -66,7 +68,11 @@ _BASE_ALLOCATE_REQUIRED_KEYS = {"project_name", "fu_code"}
 _BASE_ALLOCATE_ARG_DEFAULTS = dict(DISAGGREGATION_BASE_ALLOCATE_DEFAULTS)
 _ALLOWED_SELECTOR_KEYS = {"source", "agg_reg", "agg_sec", "agg_version", "s_p"}
 _ALLOWED_SPEC_KEYS = {"agg_sector_label", "disagg_sector_label"}
-_ALLOWED_SOURCES = {"oecd_v2025", "exiobase_396_ixi", "exiobase_3102_ixi"}
+_ALLOWED_SOURCES = tuple(
+    entry.source_key
+    for entry in iter_mrio_entries()
+    if entry.family == "oecd" or entry.system == "ixi"
+)
 
 
 def _require_bool(value: Any, *, name: str) -> bool:
@@ -133,7 +139,7 @@ def parse_selector(name: str, raw: Any) -> RunSelector:
     if source not in _ALLOWED_SOURCES:
         raise ValueError(
             f"Unsupported source in 'disaggregation_config.{name}.source': '{source}'. "
-            f"Use one of {sorted(_ALLOWED_SOURCES)}."
+            f"Use one of {list(_ALLOWED_SOURCES)}."
         )
     agg_reg = _parse_optional_bool(raw.get("agg_reg"), name=f"{name}.agg_reg")
     agg_sec = _parse_optional_bool(raw.get("agg_sec"), name=f"{name}.agg_sec")

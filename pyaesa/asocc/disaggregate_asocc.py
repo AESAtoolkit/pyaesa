@@ -58,8 +58,8 @@ def disaggregate_asocc(
     ``target_aggregated(y) * ref_disaggregated(y) / ref_aggregated(y)``.
 
     Only non LCIA aSoCC methods are supported. Do not pass ``lcia_method`` in
-    ``base_asocc_args``. Supported sources are ``"oecd_v2025"``,
-    ``"exiobase_3102_ixi"``, and ``"exiobase_396_ixi"`` because OECD ICIO is
+    ``base_asocc_args``. Supported sources are ``"exiobase_3112_ixi"``,
+    ``"exiobase_3102_ixi"``, ``"exiobase_396_ixi"``, and ``"oecd_v2025"`` because OECD ICIO is
     an ixi MRIO. It renders figures when requested.
     Omit arguments to use their default.
 
@@ -92,8 +92,9 @@ def disaggregate_asocc(
             Each ``*_run`` selector requires:
 
             - ``source``: supported MRIO source key for this transformation.
-              Accepted values are ``"oecd_v2025"``, ``"exiobase_3102_ixi"``,
-              and ``"exiobase_396_ixi"``. Only ixi MRIO layouts are supported.
+              Accepted values are ``"exiobase_3112_ixi"``,
+              ``"exiobase_3102_ixi"``, ``"exiobase_396_ixi"``, and ``"oecd_v2025"``.
+              Only ixi MRIO layouts are supported.
             - ``s_p``: non empty list of sector labels.
             - ``agg_reg``: If ``True``, reclassify MRIO regions with the
               ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -192,9 +193,9 @@ def disaggregate_asocc(
               an explicit list of consecutive years in fit window order. When
               omitted, the source registry supplies the default fit window
               from the modeled year minimum through the source historical
-              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
-              to 1995 to 2022; other supported MRIO sources use their own
-              registry window.
+              cutoff. For EXIOBASE 3.11.2, this resolves to 1995 to 2023;
+              for OECD ICIO v2025, it resolves to 1995 to 2022. Other supported
+              MRIO sources use their own registry window.
             - ``l2_reuse_years``: Historical L2 reuse year selector used by
               all UT historical reuse routes. In
               ``projection_mode="historical_reuse"`` it applies to all UT

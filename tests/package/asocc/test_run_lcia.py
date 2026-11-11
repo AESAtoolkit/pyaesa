@@ -21,7 +21,7 @@ def _context(*, logger: _Logger, needs_lcia: bool = True) -> SimpleNamespace:
         source="oecd_v2025",
         agg_version=None,
         needs_lcia=needs_lcia,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         fu_code="L1.a",
         selected_l1=["AR(E^{CBA_FD})"],
         selected_l2_one_step=[],
@@ -35,7 +35,7 @@ def _l2_context(*, logger: _Logger) -> SimpleNamespace:
         source="oecd_v2025",
         agg_version=None,
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         fu_code="L2.a.a",
         selected_l1=[],
         selected_l2_one_step=["AR(E^{CBA_FD})"],
@@ -58,6 +58,44 @@ def _state() -> SimpleNamespace:
     )
 
 
+@pytest.mark.parametrize("source", ["exiobase_3112_ixi", "exiobase_3112_pxp"])
+def test_exio3112_lcia_year_resolution_is_independent_per_method(
+    allocation_dummy_repo_factory, source: str
+) -> None:
+    repo = allocation_dummy_repo_factory(name="exio3112_lcia_years")
+    repo.write_mrio_metadata(
+        source=source,
+        matrix_version=None,
+        years=[2023, 2024],
+        sectors_used=["D", "X"],
+        regions_used=["FR", "US"],
+    )
+    repo.write_mrio_history(source=source, matrix_version=None, years=[2023, 2024])
+    methods = ["pb_lcia", "gwp100_ef31", "gwp100_ipcc"]
+    for method in methods:
+        repo.write_lcia_support(
+            source=source,
+            matrix_version=None,
+            lcia_method=method,
+            available_years=[2023] if method == "pb_lcia" else [2023, 2024],
+        )
+    context = SimpleNamespace(
+        **{**vars(_context(logger=_Logger())), "source": source, "lcia_methods": methods}
+    )
+    effective_years: dict[str, int] = {}
+    loaded = mod._load_lcia_for_year(
+        context=context,
+        state=_state(),
+        year=2024,
+        saved_dir=_get_mrio_year_dir(source=source, year=2024, agg_version=None),
+        allow_method_year_fallback=True,
+        method_year_out=effective_years,
+    )
+    assert loaded is not None
+    assert list(loaded) == methods
+    assert effective_years == {"pb_lcia": 2023, "gwp100_ef31": 2024, "gwp100_ipcc": 2024}
+
+
 def test_available_lcia_years_for_method_covers_cache_saved_dirs_and_metadata_contracts(
     allocation_dummy_repo_factory,
 ) -> None:
@@ -70,7 +108,7 @@ def test_available_lcia_years_for_method_covers_cache_saved_dirs_and_metadata_co
         context=context,
         state=state,
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     ) == [2005, 2006]
 
     year_2006_dir = _get_mrio_year_dir(
@@ -83,7 +121,7 @@ def test_available_lcia_years_for_method_covers_cache_saved_dirs_and_metadata_co
         context=context,
         state=_state(),
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     ) == [2005]
 
     repo_with_invalid_token = allocation_dummy_repo_factory(name="run_lcia_year_tokens")
@@ -101,7 +139,7 @@ def test_available_lcia_years_for_method_covers_cache_saved_dirs_and_metadata_co
         context=context,
         state=_state(),
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     ) == [2005, 2006]
 
 
@@ -143,12 +181,12 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         method_year_out=method_year_out,
     )
     assert first is not None
-    assert list(first) == ["gwp100_lcia"]
-    assert method_year_out == {"gwp100_lcia": 2005}
-    assert state.lcia_units["gwp100_lcia"].to_dict() == {"climate_parent": "kg CO2-eq / year"}
+    assert list(first) == ["gwp100_ipcc"]
+    assert method_year_out == {"gwp100_ipcc": 2005}
+    assert state.lcia_units["gwp100_ipcc"].to_dict() == {"climate_parent": "kg CO2-eq / year"}
 
     cached_cf_state = _state()
-    cached_cf_state.cf_by_method["gwp100_lcia"] = pd.Series(
+    cached_cf_state.cf_by_method["gwp100_ipcc"] = pd.Series(
         ["climate_parent"],
         index=pd.Index(["climate_child"], name="impact"),
     )
@@ -160,9 +198,9 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         agg_version_override=None,
     )
     assert cached_cf is not None
-    assert "gwp100_lcia" in cached_cf
+    assert "gwp100_ipcc" in cached_cf
 
-    payload_dir = saved_dir_2005 / "enacting_metrics" / "level_1" / "gwp100_lcia"
+    payload_dir = saved_dir_2005 / "enacting_metrics" / "level_1" / "gwp100_ipcc"
     shutil.rmtree(payload_dir)
     second = mod._load_lcia_for_year(
         context=_context(logger=logger),
@@ -171,7 +209,7 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         saved_dir=saved_dir_2005,
     )
     assert second is not None
-    assert second["gwp100_lcia"] is first["gwp100_lcia"]
+    assert second["gwp100_ipcc"] is first["gwp100_ipcc"]
 
     allocation_dummy_repo_factory(name="run_lcia_l2")
     l2_loaded = mod._load_lcia_for_year(
@@ -185,13 +223,13 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         ),
     )
     assert l2_loaded is not None
-    assert "e_cba_fd_rp_sp" in l2_loaded["gwp100_lcia"]
+    assert "e_cba_fd_rp_sp" in l2_loaded["gwp100_ipcc"]
 
     fallback_repo = allocation_dummy_repo_factory(name="run_lcia_fallback")
     fallback_repo.write_lcia_support(
         source="oecd_v2025",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=[2005],
     )
     fallback_saved_dir_2006 = _get_mrio_year_dir(
@@ -210,14 +248,14 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         method_year_out=fallback_year_out,
     )
     assert fallback is not None
-    assert fallback_year_out == {"gwp100_lcia": 2005}
+    assert fallback_year_out == {"gwp100_ipcc": 2005}
 
     unavailable_repo = allocation_dummy_repo_factory(name="run_lcia_unavailable")
     unavailable_repo.set_lcia_methods(
         source="oecd_v2025",
         matrix_version=None,
-        methods=["gwp100_lcia"],
-        available_years_by_method={"gwp100_lcia": []},
+        methods=["gwp100_ipcc"],
+        available_years_by_method={"gwp100_ipcc": []},
     )
     unavailable_saved_dir_2006 = _get_mrio_year_dir(
         source="oecd_v2025",
@@ -236,8 +274,8 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         )
         is None
     )
-    assert set(unavailable_state.skipped_years[2006]) == {"gwp100_lcia"}
-    assert unavailable_state.skipped_years[2006]["gwp100_lcia"]
+    assert set(unavailable_state.skipped_years[2006]) == {"gwp100_ipcc"}
+    assert unavailable_state.skipped_years[2006]["gwp100_ipcc"]
     assert unavailable_logger.messages == []
 
     unavailable_with_notice_state = _state()
@@ -251,10 +289,10 @@ def test_load_lcia_for_year_covers_guards_fallback_skip_notice_and_cache(
         )
         is None
     )
-    assert set(unavailable_with_notice_state.skipped_years[2006]) == {"gwp100_lcia"}
-    assert unavailable_with_notice_state.skipped_years[2006]["gwp100_lcia"]
+    assert set(unavailable_with_notice_state.skipped_years[2006]) == {"gwp100_ipcc"}
+    assert unavailable_with_notice_state.skipped_years[2006]["gwp100_ipcc"]
     assert len(unavailable_logger.messages) == 1
-    assert "gwp100_lcia" in unavailable_logger.messages[0]
+    assert "gwp100_ipcc" in unavailable_logger.messages[0]
 
     assert (
         mod._load_lcia_for_year(

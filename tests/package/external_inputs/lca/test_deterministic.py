@@ -157,7 +157,7 @@ def test_external_lca_deterministic_loading_filters_unselected_specs_and_methods
 ) -> None:
     lcia_method = "pb_lcia"
     version_name = "supplier_v1"
-    other_lcia_method = "gwp100_lcia"
+    other_lcia_method = "gwp100_ipcc"
     deterministic_dir = project_repo / "A_lca" / "ext_lca" / "deterministic"
     deterministic_dir.mkdir(parents=True, exist_ok=True)
     historical_path = deterministic_dir / f"{version_name}__{lcia_method}.csv"

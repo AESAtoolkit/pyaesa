@@ -172,9 +172,10 @@ def deterministic_asr(
     Args:
         project_name: Required project name used to build
             ``<repo>/<project_name>``.
-        source: MRIO source key (``"exiobase_396_ixi"``,
-            ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-            ``"exiobase_3102_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
+        source: MRIO source key (``"exiobase_3112_ixi"``,
+            ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+            ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+            ``"exiobase_396_pxp"``, or ``"oecd_v2025"``), or ``"iso3"``
             for ISO3 only mode (L1 EG/PR(GDPcap) only).
         agg_reg: If ``True``, reclassify MRIO regions with the
             ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -205,10 +206,17 @@ def deterministic_asr(
         lcia_method: Shared downstream LCIA method name or list of names. When
             static carrying capacity (CC) is active, the denominator requires
             a matching carrying capacity CSV. The package includes static CC files for
-            ``"pb_lcia"``, ``"gwp100_lcia"``, and ``"ef_3.1"``; among these,
-            ``"ef_3.1"`` is the default carrying capacity method that
-            currently has no MRIO LCIA characterization matrix. It is still
-            dynamic AR6 compatible for its ``"GWP_100"`` impact category.
+            ``"pb_lcia"``, ``"gwp100_ef31"``, ``"gwp100_ipcc"``,
+            ``"ef_3.1_14cat"``, and ``"ef_3.1"``. ``"ef_3.1"`` is the default
+            carrying capacity method. Both EF methods can be used directly
+            with pyaesa IO-LCA for ASR across 14 EXIOBASE-compatible categories.
+            Select ``"ef_3.1_14cat"`` to keep matching carrying capacities on
+            those 14 categories. With ``"ef_3.1"``, ASR across all
+            16 requires external Phase A LCA and non-LCIA-based allocation
+            and/or compatible externally supplied LCIA-based shares. In mixed
+            workflows, the EXIOBASE LCIA-based routes cover only 14; other
+            compatible routes retain all 16. Both EF methods are dynamic AR6
+            compatible for their ``"GWP_100"`` impact category.
             Dynamic AR6 CC is available for any selected method whose static
             carrying capacity CSV contains an impact row equal to
             ``"GWP_100"``. Custom static CC methods also require a matching
@@ -226,6 +234,11 @@ def deterministic_asr(
             methods, so the requested ``lcia_method`` may be non MRIO when the
             matching carrying capacity and selected LCA numerator prerequisites
             exist.
+            For ASR with dynamic AR6 CC, IPCC AR6 GWP100 characterization is recommended for Phase
+            A climate change results, whether from IO-LCA or external LCA. ``"gwp100_ipcc"`` is
+            the recommended method for package IO-LCA and Phase B LCIA-based allocation (AR and
+            PR-HR). This aligns both phases with the IPCC GWP100 characterization used for
+            carrying capacities derived from AR6 pathways.
         fu_code: Required functional unit code (for example ``"L1.a"``,
             ``"L2.c.b"``). See
             ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
@@ -298,8 +311,8 @@ def deterministic_asr(
             - ``reference_years``: Acquired rights (AR) methods reference
               year selector. Accepts a single year, list, or range. If
               omitted, AR routes use all historical years in the studied range
-              up to the source registry historical cutoff. For EXIOBASE
-              3.10.2 and OECD ICIO v2025, the cutoff is 2022; other supported
+              up to the source registry historical cutoff. For EXIOBASE 3.11.2, the cutoff is 2023;
+              for OECD ICIO v2025, it is 2022. Other supported
               MRIO sources use their own registry cutoff.
             - ``projection_mode``: Projection policy for post historical
               years of L2 utilitarian (UT) methods (MRIO economic enacting
@@ -311,9 +324,9 @@ def deterministic_asr(
               an explicit list of consecutive years in fit window order. When
               omitted, the source registry supplies the default fit window
               from the modeled year minimum through the source historical
-              cutoff. For EXIOBASE 3.10.2 and OECD ICIO v2025, this resolves
-              to 1995 to 2022; other supported MRIO sources use their own
-              registry window.
+              cutoff. For EXIOBASE 3.11.2, this resolves to 1995 to 2023;
+              for OECD ICIO v2025, it resolves to 1995 to 2022. Other supported
+              MRIO sources use their own registry window.
             - ``l2_reuse_years``: Historical L2 reuse year selector used by
               all UT historical reuse routes. In
               ``projection_mode="historical_reuse"`` it applies to all UT
@@ -476,8 +489,8 @@ def deterministic_asr(
             scope before recomputation. For example, for
             ``project_name="demo"``, ``source="exiobase_3102_ixi"``,
             ``agg_version="elec"``, external LCA version ``"test_v1"``, and
-            static ``cc_source="gwp100_lcia"``, the refreshed scope is
-            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/deterministic/static_gwp100_lcia``.
+            static ``cc_source="gwp100_ipcc"``, the refreshed scope is
+            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/deterministic/static_gwp100_ipcc``.
             External LCA staged inputs, processed MRIO inputs, processed
             population and GDP, and raw downloads are not refreshed. Defaults
             to ``False``.
@@ -514,7 +527,7 @@ def deterministic_asr(
                 project_name="demo",
                 source="exiobase_3102_ixi",
                 years=range(2020, 2031),
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",
                 s_p=["Paper"],
                 r_c=["FR"],

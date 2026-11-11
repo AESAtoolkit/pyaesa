@@ -115,7 +115,7 @@ def test_normalize_base_allocate_args_normalizes_full_public_scope() -> None:
             "two_step_methods": None,
             "l1_l2_pairs": None,
             "l1_reg_aggreg": "pre",
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "reference_years": [2005, 2006],
             "ssp_scenario": "SSP2",
             "projection_mode": "regression",
@@ -142,7 +142,7 @@ def test_normalize_base_allocate_args_normalizes_full_public_scope() -> None:
     assert normalized["two_step_methods"] is None
     assert normalized["l1_l2_pairs"] is None
     assert normalized["l1_reg_aggreg"] == "pre"
-    assert normalized["lcia_method"] == ["gwp100_lcia"]
+    assert normalized["lcia_method"] == ["gwp100_ipcc"]
     assert normalized["reference_years"] == [2005, 2006]
     assert normalized["ssp_scenario"] == ["SSP2"]
     assert normalized["projection_mode"] == "regression"
@@ -341,7 +341,7 @@ def test_request_scope_wrappers_build_payloads_signatures_and_iso3_scope(
             "years": [2005],
             "reference_years": [2005],
             "ssp_scenario": "SSP2",
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "projection_mode": "historical_reuse",
             "reg_window": [2005],
             "l2_reuse_years": [2005],
@@ -355,7 +355,7 @@ def test_request_scope_wrappers_build_payloads_signatures_and_iso3_scope(
         "reference_year": [2005],
         "l2_reuse_year": [2005],
         "ssp_values": ["SSP2"],
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "methods": ["EG(Pop)"],
     }
     assert scope.resolve_path_scope().source_label == "iso3"
@@ -404,7 +404,7 @@ def test_request_scope_wrappers_build_payloads_signatures_and_iso3_scope(
                 "fu_code": "L2.a.a",
                 "method_plan": "pairs",
                 "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FD)"],
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "years": [2005],
             }
         )
@@ -412,7 +412,7 @@ def test_request_scope_wrappers_build_payloads_signatures_and_iso3_scope(
     assert pair_scope.target_selector_payload == {
         "years": [2005],
         "ssp_values": ["SSP1", "SSP2", "SSP3", "SSP4", "SSP5"],
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "methods": ["AR(E^{CBA_FD})_UT(FD)"],
     }
     assert (

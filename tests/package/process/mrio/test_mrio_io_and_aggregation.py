@@ -309,7 +309,7 @@ def test_processed_mrio_metadata_contracts_fail_fast_on_invalid_shapes(project_r
             required_core=["A"],
             required_extensions=[],
             required_lcia_method=None,
-            required_lcia_methods=["pb_lcia", "gwp100_lcia"],
+            required_lcia_methods=["pb_lcia", "gwp100_ipcc"],
         )
         is False
     )
@@ -318,7 +318,7 @@ def test_processed_mrio_metadata_contracts_fail_fast_on_invalid_shapes(project_r
             roundtrip["years"]["2019"],
             saved_exists=True,
             required_core=["A"],
-            required_extensions=["gwp100_lcia"],
+            required_extensions=["gwp100_ipcc"],
             required_lcia_method=None,
         )
         is False
@@ -329,7 +329,7 @@ def test_processed_mrio_metadata_contracts_fail_fast_on_invalid_shapes(project_r
             saved_exists=True,
             required_core=["A"],
             required_extensions=[],
-            required_lcia_method="gwp100_lcia",
+            required_lcia_method="gwp100_ipcc",
         )
         is False
     )
@@ -490,7 +490,7 @@ def test_process_report_summary_and_source_configs_cover_user_visible_paths() ->
         "empty_method": [],
         "mid_method": ["a", "b"],
         "pb_lcia": ["satellite_accounts"],
-        "gwp100_lcia": ["a", "b", "c", "d"],
+        "gwp100_ipcc": ["a", "b", "c", "d"],
     }
 
     assert report.missing() == []

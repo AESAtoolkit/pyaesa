@@ -70,7 +70,7 @@ def _context(*, source: str = "oecd_v2025", logger: Any | None = None, **overrid
         "selected_l1": [],
         "selected_l2_one_step": [],
         "combined": [],
-        "lcia_methods": ["gwp100_lcia"],
+        "lcia_methods": ["gwp100_ipcc"],
         "needs_lcia": True,
         "use_original_l1_post_domain": False,
         "fu_code": "L2.a.a",
@@ -379,18 +379,18 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
         l1_results_by_ssp_scenario={"SSP2": {}},
         output_spec_cache={},
         rps_by_method={
-            "gwp100_lcia": pd.DataFrame(
+            "gwp100_ipcc": pd.DataFrame(
                 {"impact": ["climate_child"], "responsibility_period_years": [1]}
             )
         },
-        cf_by_method={"gwp100_lcia": pd.Series({"climate_child": "climate_parent"})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"climate_child": "climate_parent"})},
     )
     run = _run(context=context, state=state)
 
     pr_hr_inputs = _iter_lcia_method_inputs(
         run=run,
         l1_method="PR-HR(Ecap,cum^{CBA_FD})",
-        lcia_by_method={"gwp100_lcia": {}},
+        lcia_by_method={"gwp100_ipcc": {}},
         lcia_by_method_original=None,
     )
     assert len(pr_hr_inputs) == 1
@@ -402,7 +402,7 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
     scenario_runtime = _prepare_pr_hr_parent_cumulative_runtime(
         context=context,
         state=state,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         ssp_scenario="SSP2",
         population_by_year={2030: pd.Series({"EU": 10.0})},
@@ -415,12 +415,12 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
     assert scenario_runtime.fallback_callback is not None
     scenario_runtime.fallback_callback(["climate_child"], 2030, 2006)
     assert state.pr_hr_rp1_zero_fallback_pending == {
-        ("gwp100_lcia", ("climate_child",), 2030, 2006, True, "SSP2"): {"CBA_FD"}
+        ("gwp100_ipcc", ("climate_child",), 2030, 2006, True, "SSP2"): {"CBA_FD"}
     }
     base_runtime = _prepare_pr_hr_parent_cumulative_runtime(
         context=context,
         state=state,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         ssp_scenario=None,
         population_by_year={2006: pd.Series({"EU": 10.0})},
@@ -432,7 +432,7 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
     unmerged_runtime = _prepare_pr_hr_parent_cumulative_runtime(
         context=context,
         state=state,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         ssp_scenario="SSP2",
         population_by_year={2030: pd.Series({"EU": 10.0})},
@@ -464,7 +464,7 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
         lcia_inputs=lcia_inputs,
         region_label_override=None,
     )
-    assert "PR-HR(Ecap,cum^{CBA_FD})_gwp100_lcia" in pr_hr_run.l1_results_year
+    assert "PR-HR(Ecap,cum^{CBA_FD})_gwp100_ipcc" in pr_hr_run.l1_results_year
     assert sorted(standard_runtime.parent_cum_cache) == [2006]
 
     non_pr_context = _context(
@@ -488,7 +488,7 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
         run=non_pr_run,
         l1_method="PR(GDPcap)",
         lcia_inputs=_LciaMethodInputs(
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             lcia_kind="CBA_FD",
             lcia_reg=pd.DataFrame(
                 [[10.0, 20.0]],
@@ -504,7 +504,7 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
         region_label_override=None,
     )
 
-    assert "PR(GDPcap)_gwp100_lcia" in non_pr_run.l1_results_year
+    assert "PR(GDPcap)_gwp100_ipcc" in non_pr_run.l1_results_year
     dispatch_state = RunState(
         pop_series_by_ssp_scenario={"SSP2": {2030: pd.Series({"EU": 10.0})}},
         pr_post_pop_series_by_ssp_scenario={
@@ -517,11 +517,11 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
         l1_results_by_ssp_scenario={"SSP2": {}},
         output_spec_cache={},
         rps_by_method={
-            "gwp100_lcia": pd.DataFrame(
+            "gwp100_ipcc": pd.DataFrame(
                 {"impact": ["climate_child"], "responsibility_period_years": [1]}
             )
         },
-        cf_by_method={"gwp100_lcia": pd.Series({"climate_child": "climate_parent"})},
+        cf_by_method={"gwp100_ipcc": pd.Series({"climate_child": "climate_parent"})},
     )
     dispatch_run = _run(
         context=context,
@@ -532,16 +532,16 @@ def test_l1_lcia_input_and_pr_hr_runtime_cover_validation_and_prefill(
     _compute_l1_lcia_method(
         run=dispatch_run,
         l1_method="PR-HR(Ecap,cum^{CBA_FD})",
-        lcia_by_method={"gwp100_lcia": {}},
+        lcia_by_method={"gwp100_ipcc": {}},
         lcia_by_method_original=None,
     )
-    assert "PR-HR(Ecap,cum^{CBA_FD})_gwp100_lcia" in dispatch_run.l1_results_year
+    assert "PR-HR(Ecap,cum^{CBA_FD})_gwp100_ipcc" in dispatch_run.l1_results_year
 
     allocation_dummy_repo.set_lcia_methods(
         source="oecd_v2025",
         matrix_version=None,
-        methods=["gwp100_lcia"],
-        available_years_by_method={"gwp100_lcia": []},
+        methods=["gwp100_ipcc"],
+        available_years_by_method={"gwp100_ipcc": []},
     )
     empty_lcia_inputs = _iter_lcia_method_inputs(
         run=_run(
@@ -755,7 +755,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
     lcia_results = _compute_l1_for_year(
         run=lcia_run,
         lcia_by_method={
-            "gwp100_lcia": {
+            "gwp100_ipcc": {
                 "e_cba_fd_reg": pd.DataFrame(
                     [[10.0, 20.0]],
                     index=pd.Index(["climate_child"], name="impact"),
@@ -765,7 +765,7 @@ def test_l1_compute_covers_non_lcia_alias_routing_and_missing_lcia_skip(
         },
         lcia_by_method_original=None,
     )
-    assert "AR(E^{CBA_FD})_gwp100_lcia_ref_2005" in lcia_results
+    assert "AR(E^{CBA_FD})_gwp100_ipcc_ref_2005" in lcia_results
 
 
 def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
@@ -773,7 +773,7 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
 ) -> None:
     del allocation_dummy_repo
     lcia_payload = {
-        "gwp100_lcia": {
+        "gwp100_ipcc": {
             "e_cba_fd_reg": pd.DataFrame(
                 [[10.0, 20.0]],
                 index=pd.Index(["climate_child"], name="impact"),
@@ -808,7 +808,7 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
         2030,
         "AR(E^{CBA_FD})",
         "AR(E^{CBA_FD})",
-        "gwp100_lcia",
+        "gwp100_ipcc",
         "CBA_FD",
         2005,
         None,
@@ -833,8 +833,8 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
         region_label_override=None,
     )
 
-    assert "AR(E^{CBA_FD})_gwp100_lcia_ref_2005" in run.l1_results_year
-    assert run.l1_results_year["AR(E^{CBA_FD})_gwp100_lcia_ref_2005"].equals(cached_value)
+    assert "AR(E^{CBA_FD})_gwp100_ipcc_ref_2005" in run.l1_results_year
+    assert run.l1_results_year["AR(E^{CBA_FD})_gwp100_ipcc_ref_2005"].equals(cached_value)
 
     no_ref_context = _context(
         selected_l1=["AR(E^{CBA_FD})"],
@@ -872,7 +872,7 @@ def test_l1_ar_lcia_covers_invariant_cache_and_missing_reference_notice(
     )
 
     assert no_ref_run.l1_results_year == {}
-    assert "ar-no-refs:gwp100_lcia" in no_ref_state.notices_emitted
+    assert "ar-no-refs:gwp100_ipcc" in no_ref_state.notices_emitted
 
 
 def test_l1_ar_lcia_covers_ar_ecap_original_domain_population_reference(
@@ -880,7 +880,7 @@ def test_l1_ar_lcia_covers_ar_ecap_original_domain_population_reference(
 ) -> None:
     del allocation_dummy_repo
     lcia_payload = {
-        "gwp100_lcia": {
+        "gwp100_ipcc": {
             "e_cba_fd_reg": pd.DataFrame(
                 [[10.0, 20.0]],
                 index=pd.Index(["climate_child"], name="impact"),
@@ -926,8 +926,8 @@ def test_l1_ar_lcia_covers_ar_ecap_original_domain_population_reference(
         region_label_override=None,
     )
 
-    assert "AR(Ecap^{CBA_FD})_gwp100_lcia_ref_2005" in run.l1_results_year
-    assert not run.l1_results_year["AR(Ecap^{CBA_FD})_gwp100_lcia_ref_2005"].empty
+    assert "AR(Ecap^{CBA_FD})_gwp100_ipcc_ref_2005" in run.l1_results_year
+    assert not run.l1_results_year["AR(Ecap^{CBA_FD})_gwp100_ipcc_ref_2005"].empty
 
 
 def test_lcia_reference_policy_emits_pr_hr_gap_notices(allocation_dummy_repo) -> None:
@@ -946,18 +946,18 @@ def test_lcia_reference_policy_emits_pr_hr_gap_notices(allocation_dummy_repo) ->
 
     emit_pr_hr_lcia_freeze_notice_if_needed(
         run=run,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         last_timeseries_year=2006,
     )
     assert logger.messages == []
 
     emit_pr_hr_lcia_freeze_notice_if_needed(
         run=run,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         last_timeseries_year=2005,
     )
 
-    assert any("gwp100_lcia" in message for message in logger.messages)
+    assert any("gwp100_ipcc" in message for message in logger.messages)
 
     future_logger = _RecorderLogger()
     future_state = RunState(notices_emitted=set())
@@ -972,19 +972,19 @@ def test_lcia_reference_policy_emits_pr_hr_gap_notices(allocation_dummy_repo) ->
     )
     emit_pr_hr_lcia_freeze_notice_if_needed(
         run=future_run,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         last_timeseries_year=2005,
     )
     emit_pr_hr_lcia_freeze_notice_if_needed(
         run=future_run,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         last_timeseries_year=2005,
     )
 
     assert len(future_logger.messages) == 1
     assert "2006" in future_logger.messages[0]
 
-    prefixed_state = RunState(notices_emitted={"pr-hr-lcia-gap:gwp100_lcia:2006"})
+    prefixed_state = RunState(notices_emitted={"pr-hr-lcia-gap:gwp100_ipcc:2006"})
     prefixed_logger = _RecorderLogger()
     prefixed_run = _run(
         context=_context(
@@ -997,7 +997,7 @@ def test_lcia_reference_policy_emits_pr_hr_gap_notices(allocation_dummy_repo) ->
     )
     emit_pr_hr_lcia_freeze_notice_if_needed(
         run=prefixed_run,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         last_timeseries_year=2005,
     )
     assert prefixed_logger.messages == []
@@ -1009,11 +1009,11 @@ def test_ar_reference_policy_emits_default_and_requested_clipping_notices(
     allocation_dummy_repo.set_lcia_methods(
         source="oecd_v2025",
         matrix_version=None,
-        methods=["gwp100_lcia"],
-        available_years_by_method={"gwp100_lcia": [2005]},
+        methods=["gwp100_ipcc"],
+        available_years_by_method={"gwp100_ipcc": [2005]},
     )
     lcia_inputs = _LciaMethodInputs(
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         lcia_reg=pd.DataFrame(),
         lcia_reg_by_year=None,
@@ -1096,7 +1096,7 @@ def test_ar_reference_policy_emits_default_and_requested_clipping_notices(
         reference_years=None,
         selected_l1=["AR(E^{CBA_FD})"],
     )
-    cached_key = ("gwp100_lcia", "CBA_FD", False, None, (2005, 2006))
+    cached_key = ("gwp100_ipcc", "CBA_FD", False, None, (2005, 2006))
     cached_state.ar_valid_refs_cache[cached_key] = ([2005], [])
     cached_run = _run(context=cached_context, state=cached_state, year=2006)
     assert resolve_reference_years_for_ar(

@@ -43,7 +43,7 @@ def test_io_lca_progress_helpers_use_count_only_live_lines(capsys) -> None:
 
     assert source_prefix(source=" exiobase_3102_ixi ") == "[exiobase_3102_ixi]"
     assert format_year_ranges_with_count([2019, 2021, 2020, 2020]) == "2019-2021 (3 year(s))"
-    assert format_method_labels([" gwp100_lcia ", "", "pb_lcia"]) == "gwp100_lcia, pb_lcia"
+    assert format_method_labels([" gwp100_ipcc ", "", "pb_lcia"]) == "gwp100_ipcc, pb_lcia"
     assert format_method_labels(["", " "]) == "none"
     assert format_indices_label({}) == "all"
     assert format_indices_label(filters) == "s_p=Electricity, r_c=FR"
@@ -58,14 +58,14 @@ def test_io_lca_progress_helpers_use_count_only_live_lines(capsys) -> None:
         io_lca_banner(
             source="source",
             years=[2019],
-            methods=["gwp100_lcia"],
+            methods=["gwp100_ipcc"],
             fu_code="L2.c.b",
             filters=filters,
             upstream_analysis=upstream_analysis,
             upstream_stages=2,
         )
     io_lca_mode_banner(source="source", fu_code="L2.c.b", filters=filters, mode_tag="post")
-    progress = year_progress(source="exiobase_3102_ixi", action="processing[gwp100_lcia]", total=1)
+    progress = year_progress(source="exiobase_3102_ixi", action="processing[gwp100_ipcc]", total=1)
     progress.begin_year(2019)
     progress.complete_year(2019)
     progress.finish()

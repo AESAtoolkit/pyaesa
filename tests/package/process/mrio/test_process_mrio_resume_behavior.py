@@ -23,34 +23,34 @@ def test_expected_pyaesa_methods_respects_explicit_empty_metadata_list() -> None
 def test_expected_pyaesa_methods_uses_metadata_methods_without_status_filtering() -> None:
     expected = expected_pyaesa_lcia_methods(
         year_meta={
-            "enacting_metrics": {"lcia_methods": ["pb_lcia", "gwp100_lcia"]},
+            "enacting_metrics": {"lcia_methods": ["pb_lcia", "gwp100_ipcc"]},
             "lcia_status": {
                 "pb_lcia": {"available": False, "missing": ["land"]},
-                "gwp100_lcia": {"available": True},
+                "gwp100_ipcc": {"available": True},
             },
         },
-        requested_methods=["pb_lcia", "gwp100_lcia"],
+        requested_methods=["pb_lcia", "gwp100_ipcc"],
     )
-    assert expected == ["pb_lcia", "gwp100_lcia"]
+    assert expected == ["pb_lcia", "gwp100_ipcc"]
 
 
 def test_expected_pyaesa_methods_merges_metadata_and_requested() -> None:
     expected = expected_pyaesa_lcia_methods(
         year_meta={"enacting_metrics": {"lcia_methods": ["pb_lcia"]}},
-        requested_methods=["gwp100_lcia"],
+        requested_methods=["gwp100_ipcc"],
     )
-    assert expected == ["pb_lcia", "gwp100_lcia"]
+    assert expected == ["pb_lcia", "gwp100_ipcc"]
 
 
 def test_expected_pyaesa_methods_excludes_requested_unavailable_methods() -> None:
     expected = expected_pyaesa_lcia_methods(
         year_meta={
-            "enacting_metrics": {"lcia_methods": ["gwp100_lcia"]},
+            "enacting_metrics": {"lcia_methods": ["gwp100_ipcc"]},
             "lcia_status": {"pb_lcia": {"available": False, "missing": ["land"]}},
         },
         requested_methods=["pb_lcia"],
     )
-    assert expected == ["gwp100_lcia"]
+    assert expected == ["gwp100_ipcc"]
 
 
 def test_metadata_satisfies_treats_unavailable_lcia_status_as_satisfied() -> None:

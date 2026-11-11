@@ -178,7 +178,7 @@ def _static_asr_kwargs(*, project_name: str) -> dict:
     return {
         "project_name": project_name,
         "years": [2005],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -310,7 +310,7 @@ def test_uncertainty_asr_external_lca_run_provider_extends_cached_source_values(
     )
     source = ExternalLCAMonteCarloSource(
         version_name="supplier_v1",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         identity=source_identity,
         run_indices=np.array([0, 1, 2, 3], dtype=np.int64),
         paths=(Path("external.csv"),),
@@ -364,7 +364,7 @@ def test_asr_summary_groups_drop_active_dynamic_cc_category_axis(tmp_path: Path)
             {
                 "public_row_id": [0, 1],
                 "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "cc_category": ["C1", "C2"],
                 "ar6_cc_ssp_scenario": ["SSP1", "SSP1"],
                 "year": [2030, 2030],
@@ -395,7 +395,7 @@ def test_asr_summary_groups_drop_active_dynamic_cc_category_axis(tmp_path: Path)
         identity=pd.DataFrame(
             {
                 "public_row_id": [0],
-                "lcia_method": ["gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc"],
                 "impact": ["climate_child"],
                 "year": [2030],
                 "impact_unit": ["kg"],
@@ -446,7 +446,7 @@ def test_asr_cumulative_identity_keeps_method_axis_for_inter_method_figures(
             {
                 "public_row_id": [0, 1, 2, 3],
                 "cc_type": ["dynamic_ar6", "dynamic_ar6", "dynamic_ar6", "dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia"] * 4,
+                "lcia_method": ["gwp100_ipcc"] * 4,
                 "impact": ["GWP_100"] * 4,
                 "impact_unit": ["kg CO2-eq"] * 4,
                 "year": [2024, 2030, 2024, 2030],
@@ -482,7 +482,7 @@ def test_asr_cumulative_identity_keeps_method_axis_for_inter_method_figures(
         identity=pd.DataFrame(
             {
                 "public_row_id": [0, 1],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
                 "year": [2024, 2030],
@@ -529,7 +529,7 @@ def test_asr_inter_method_summaries_use_visible_external_lca_scenario_scope(
             {
                 "public_row_id": [0, 1, 2, 3],
                 "cc_type": ["dynamic_ar6", "dynamic_ar6", "dynamic_ar6", "dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia"] * 4,
+                "lcia_method": ["gwp100_ipcc"] * 4,
                 "impact": ["GWP_100"] * 4,
                 "impact_unit": ["kg CO2-eq"] * 4,
                 "year": [2024, 2030, 2024, 2030],
@@ -566,7 +566,7 @@ def test_asr_inter_method_summaries_use_visible_external_lca_scenario_scope(
         identity=pd.DataFrame(
             {
                 "public_row_id": [0, 1],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
                 "year": [2024, 2030],
@@ -621,7 +621,7 @@ def test_asr_alignment_repeats_scenario_invariant_acc_for_external_lca_ssp() -> 
         {
             "public_row_id": [0, 1],
             "cc_type": ["static", "static"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "year": [2023, 2024],
@@ -632,7 +632,7 @@ def test_asr_alignment_repeats_scenario_invariant_acc_for_external_lca_ssp() -> 
     lca_identity = pd.DataFrame(
         {
             "public_row_id": [0, 1, 2, 3],
-            "lcia_method": ["gwp100_lcia"] * 4,
+            "lcia_method": ["gwp100_ipcc"] * 4,
             "impact": ["GWP_100"] * 4,
             "impact_unit": ["kg CO2-eq"] * 4,
             "year": [2023, 2023, 2024, 2024],
@@ -690,7 +690,7 @@ def test_asr_cumulative_identity_repeats_invariant_rows_into_ssp_periods(
             {
                 "public_row_id": [0, 1, 2],
                 "cc_type": ["dynamic_ar6", "dynamic_ar6", "dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100", "GWP_100"],
                 "impact_unit": ["kg CO2-eq", "kg CO2-eq", "kg CO2-eq"],
                 "year": [2024, 2030, 2030],
@@ -728,7 +728,7 @@ def test_asr_cumulative_identity_repeats_invariant_rows_into_ssp_periods(
         identity=pd.DataFrame(
             {
                 "public_row_id": [0, 1],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
                 "year": [2024, 2030],
@@ -762,7 +762,7 @@ def test_asr_cumulative_identity_repeats_invariant_rows_into_ssp_periods(
             {
                 "public_row_id": [0, 1],
                 "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
                 "impact": ["GWP_100", "GWP_100"],
                 "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
                 "year": [2024, 2030],
@@ -859,7 +859,7 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
                 np.array([5.0, 6.0]),
             ],
             "cc_type": ["dynamic_ar6", "dynamic_ar6", "dynamic_ar6"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq", "kg CO2-eq"],
             "reference_year": [2019, 2019, 2019],
@@ -877,7 +877,7 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
     component_summary_base = {
         "year": [2024, 2030],
         "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-        "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
         "impact": ["GWP_100", "GWP_100"],
         "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
         ASOCC_SSP_SCENARIO_COLUMN: ["", "SSP2"],
@@ -941,7 +941,7 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
     repo_root = tmp_path / "repo"
     cc_dir = repo_root / "data_raw" / "carrying_capacities"
     cc_dir.mkdir(parents=True)
-    (cc_dir / "gwp100_lcia_cc_steady_state.csv").write_text(
+    (cc_dir / "gwp100_ipcc_cc_steady_state.csv").write_text(
         "impact_full_name,impact,impact_unit,min_cc,max_cc\n"
         "Climate change,GWP_100,kg CO2-eq,1.0,2.0\n"
         "Climate neutral,GWP_NEUTRAL,kg CO2-eq,1.0,1.0\n",
@@ -953,7 +953,7 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
             "year": [2024, 2024],
             VALUE_ARRAY_COLUMN: [np.array([1.0, 2.0]), np.array([2.0, 3.0])],
             "cc_type": ["static", "static"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_NEUTRAL"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "cc_bound": ["max_cc", "max_cc"],
@@ -999,7 +999,7 @@ def test_asr_dynamic_figure_component_rows_collapse_sampled_axes(tmp_path: Path)
         asr_frame=pd.DataFrame(
             {
                 "cc_type": ["dynamic_ar6"],
-                "lcia_method": ["gwp100_lcia"],
+                "lcia_method": ["gwp100_ipcc"],
                 "impact": ["GWP_100"],
                 "cc_category": ["C1"],
                 "ar6_cc_ssp_scenario": ["SSP2"],
@@ -1023,7 +1023,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
     base_args = {
         "project_name": "asr_component_deterministic",
         "years": [2020, 2021],
-        "lcia_method": ["gwp100_lcia"],
+        "lcia_method": ["gwp100_ipcc"],
         "fu_code": "L2.a.a",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -1095,7 +1095,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
         io_path = main_results_path(
             paths=io_paths,
             source="exiobase_396_ixi",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             extension="csv",
         )
         io_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1128,7 +1128,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
             "2020": [4.0],
             "2021": [6.0],
         }
-    ).to_csv(external_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(external_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
     external_args = {**base_args, "project_name": "asr_component_external"}
     set_default_repo_root(repo_root)
     try:
@@ -1138,7 +1138,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
             lca_type="external",
             lca_version_name="supplier_v1",
             base_allocate_args=external_args,
-            lcia_methods=["gwp100_lcia"],
+            lcia_methods=["gwp100_ipcc"],
             uncertainty_config={},
             output_format="csv_compact",
             refresh=False,
@@ -1186,7 +1186,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
             for run_index in range(2)
             for year, value in [(2020, 5.0), (2021, 6.0)]
         ]
-    ).to_csv(mc_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(mc_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
     mc_args = {**base_args, "project_name": "asr_component_external_mc"}
     set_default_repo_root(repo_root)
     try:
@@ -1196,7 +1196,7 @@ def test_asr_component_rows_load_deterministic_numerator_artifacts(
             lca_type="external",
             lca_version_name="supplier_v1",
             base_allocate_args=mc_args,
-            lcia_methods=["gwp100_lcia"],
+            lcia_methods=["gwp100_ipcc"],
             uncertainty_config={},
             output_format="csv_compact",
             refresh=False,
@@ -1219,7 +1219,7 @@ def test_uncertainty_asr_static_io_lca_outputs(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -1456,7 +1456,7 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
         historical_years=[2020, 2021],
@@ -1476,7 +1476,7 @@ def test_uncertainty_asr_dynamic_io_lca_outputs_cumulative_artifacts(
     manifest = uncertainty_asr(
         project_name="asr_uncertainty_dynamic_io_lca",
         years=range(2020, 2022),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1622,7 +1622,7 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
         historical_years=[2020, 2021],
@@ -1638,7 +1638,7 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(
     kwargs = {
         "project_name": "asr_uncertainty_mixed_branch_roots",
         "years": range(2020, 2022),
-        "lcia_method": ["pb_lcia", "gwp100_lcia"],
+        "lcia_method": ["pb_lcia", "gwp100_ipcc"],
         "fu_code": "L2.a.a",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -1676,19 +1676,19 @@ def test_uncertainty_asr_mixed_cc_request_writes_branch_roots(
             manifest=manifest,
             output_format="csv_compact",
         )
-        static_manifest = by_branch["static_gwp100_lcia"]
-        dynamic_manifest = by_branch["dynamic_ar6_gwp100_lcia"]
+        static_manifest = by_branch["static_gwp100_ipcc"]
+        dynamic_manifest = by_branch["dynamic_ar6_gwp100_ipcc"]
         assert "cumulative_asr_runs" not in static_manifest.artifacts
         assert static_manifest.compatibility_context is not None
         assert bool(static_manifest.compatibility_context["has_cumulative_outputs"]) is False
     else:
         dynamic_manifest = manifest
         assert manifest.arguments is not None
-        assert manifest.arguments["lcia_method"] == ["gwp100_lcia"]
+        assert manifest.arguments["lcia_method"] == ["gwp100_ipcc"]
         identity = pd.read_csv(manifest.artifacts["public_row_identity"])
-        assert set(identity["lcia_method"]) == {"gwp100_lcia"}
+        assert set(identity["lcia_method"]) == {"gwp100_ipcc"}
         assert (
-            Path(manifest.artifacts["scope_manifest"]).parents[2].name == "dynamic_ar6_gwp100_lcia"
+            Path(manifest.artifacts["scope_manifest"]).parents[2].name == "dynamic_ar6_gwp100_ipcc"
         )
     assert "cumulative_asr_runs" in dynamic_manifest.artifacts
     assert dynamic_manifest.compatibility_context is not None
@@ -1711,7 +1711,7 @@ def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
     prepare_dynamic_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
         historical_years=[2020, 2021],
@@ -1722,13 +1722,13 @@ def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
         allocation_dummy_repo,
         project_name=project_name,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
     )
     project_root = allocation_dummy_repo.repo_root / f"{project_name}"
     mc_dir = external_lca_monte_carlo_dir(project_base=project_root)
-    compact_dir = mc_dir / "supplier_v1__gwp100_lcia"
+    compact_dir = mc_dir / "supplier_v1__gwp100_ipcc"
     compact_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         {
@@ -1752,7 +1752,7 @@ def test_uncertainty_asr_dynamic_external_lca_component_diagnostics(
     manifest = uncertainty_asr(
         project_name=project_name,
         years=range(2020, 2022),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1803,7 +1803,7 @@ def test_uncertainty_asr_static_io_lca_component_source_routing(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -1878,7 +1878,7 @@ def test_uncertainty_asr_static_io_lca_deterministic_numerator_compact(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -1926,7 +1926,7 @@ def test_uncertainty_asr_static_external_lca_monte_carlo_outputs(
         allocation_dummy_repo,
         project_name="asr_uncertainty_static_external_lca",
         source="oecd_v2025",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
         include_deterministic=True,
@@ -1948,7 +1948,7 @@ def test_uncertainty_asr_static_external_lca_monte_carlo_outputs(
             }
             for run, value in [(0, 1.0), (1, 1.2)]
         ]
-    ).to_csv(mc_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(mc_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
     kwargs = _static_asr_kwargs(project_name="asr_uncertainty_static_external_lca")
     kwargs["source"] = "oecd_v2025"
     kwargs["lca_args"] = {
@@ -2014,7 +2014,7 @@ def test_uncertainty_asr_static_external_lca_deterministic_repeat(
         allocation_dummy_repo,
         project_name="asr_uncertainty_static_external_lca_deterministic",
         source="oecd_v2025",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
         include_deterministic=True,
@@ -2097,7 +2097,7 @@ def test_uncertainty_asr_static_io_lca_deterministic_subfigures(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -2129,14 +2129,14 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
         allocation_dummy_repo,
         project_name="asr_uncertainty_external_lca_render_filter",
         source="oecd_v2025",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact="GWP_100",
         impact_unit="kg CO2-eq",
         include_deterministic=True,
     )
     project_root = allocation_dummy_repo.repo_root / "asr_uncertainty_external_lca_render_filter"
     deterministic_path = (
-        external_lca_deterministic_dir(project_base=project_root) / "supplier_v1__gwp100_lcia.csv"
+        external_lca_deterministic_dir(project_base=project_root) / "supplier_v1__gwp100_ipcc.csv"
     )
     lca_phase = PhasePrinter("uncertainty_asr")
     resolve_lca_uncertainty_component_input(
@@ -2150,7 +2150,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
             "r_p": ["FR"],
             "s_p": ["D"],
         },
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         uncertainty_config={},
         output_format="csv",
         refresh=False,
@@ -2169,7 +2169,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
             external_inputs=(
                 {
                     "type": "ignored_external_lca",
-                    "lcia_method": "gwp100_lcia",
+                    "lcia_method": "gwp100_ipcc",
                     "paths": [str(deterministic_path)],
                 },
                 {
@@ -2179,7 +2179,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
                 },
                 {
                     "type": "external_lca_deterministic",
-                    "lcia_method": "gwp100_lcia",
+                    "lcia_method": "gwp100_ipcc",
                     "paths": [str(deterministic_path)],
                 },
             ),
@@ -2194,7 +2194,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
             "r_p": ["FR"],
             "s_p": ["D"],
         },
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         lca_version_name="supplier_v1",
         lca_config={},
         figure_format={"format": "svg", "dpi": 1},
@@ -2218,7 +2218,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
             external_inputs=(
                 {
                     "type": "external_lca_deterministic",
-                    "lcia_method": "gwp100_lcia",
+                    "lcia_method": "gwp100_ipcc",
                     "paths": [str(deterministic_path)],
                 },
             ),
@@ -2233,7 +2233,7 @@ def test_render_lca_subfigures_filters_external_deterministic_inputs(
             "r_p": ["FR"],
             "s_p": ["D"],
         },
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         lca_version_name="supplier_v1",
         lca_config={},
         figure_format={"format": "svg", "dpi": 1},
@@ -2249,7 +2249,7 @@ def test_uncertainty_asr_convergence_reports_unreached_and_reuse(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -2321,7 +2321,7 @@ def test_uncertainty_asr_compact_convergence_reaches(allocation_dummy_repo) -> N
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -2484,7 +2484,7 @@ def test_asr_checkpoints_skip_final_component_refresh_without_live_sessions(
         initial_lca_session=None,
         project_name="asr_checkpoint_no_components",
         years=[2005],
-        shared_methods=["gwp100_lcia"],
+        shared_methods=["gwp100_ipcc"],
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -2828,7 +2828,7 @@ def test_uncertainty_asr_convergence_uses_fixed_io_lca_component_inventory(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -2878,7 +2878,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     identity = pd.DataFrame(
         {
             "public_row_id": [0],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "year": [2005],
             "impact": ["GWP_100"],
             "impact_unit": ["kg CO2-eq"],
@@ -2889,10 +2889,10 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     source_values = pd.DataFrame({"value": [1.0, 2.0]}).to_numpy(dtype=float)
     source = ExternalLCAMonteCarloSource(
         version_name="supplier_v1",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         identity=identity,
         run_indices=pd.Series([0, 1]).to_numpy(dtype=int),
-        paths=(tmp_path / "supplier_v1__gwp100_lcia.csv",),
+        paths=(tmp_path / "supplier_v1__gwp100_ipcc.csv",),
         values_for_runs=lambda run_indices: source_values[run_indices],
     )
     lca_input = LCAUncertaintyInput(
@@ -2934,12 +2934,12 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     bad_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         [{"year": 2005, "impact": "GWP_100", "impact_unit": "kg CO2-eq", "value": 1.0}]
-    ).to_csv(bad_dir / "supplier_v1__gwp100_lcia.csv", index=False)
+    ).to_csv(bad_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
     with pytest.raises(ValueError):
         load_external_lca_monte_carlo_source(
             proj_base=tmp_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args={
                 "fu_code": "L2.a.a",
@@ -2964,11 +2964,11 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             }
         ]
     )
-    matrix_path = bad_dir / "supplier_v1__gwp100_lcia.csv"
+    matrix_path = bad_dir / "supplier_v1__gwp100_ipcc.csv"
     repo_root = tmp_path / "repo"
     cc_dir = repo_root / "data_raw" / "carrying_capacities"
     cc_dir.mkdir(parents=True)
-    (cc_dir / "gwp100_lcia_cc_steady_state.csv").write_text(
+    (cc_dir / "gwp100_ipcc_cc_steady_state.csv").write_text(
         "impact_full_name,impact,impact_unit,min_cc,max_cc\n"
         "Climate change,GWP_100,kg CO2-eq,1.0,2.0\n",
         encoding="utf-8",
@@ -2988,7 +2988,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         path_source = load_external_lca_monte_carlo_source_from_path(
             path=matrix_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005, 2006],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3025,14 +3025,14 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             run_indices=np.array([2], dtype=np.int64),
             row_positions=np.array([0], dtype=np.int64),
         )
-    pickle_path = bad_dir / "supplier_v1__gwp100_lcia.pickle"
+    pickle_path = bad_dir / "supplier_v1__gwp100_ipcc.pickle"
     historical_and_ssp_rows.to_pickle(pickle_path)
     set_default_repo_root(repo_root)
     try:
         pickle_source = load_external_lca_monte_carlo_source_from_path(
             path=pickle_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005, 2006],
             base_allocate_args=base_args,
         )
@@ -3045,13 +3045,13 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         np.array([1], dtype=np.int64),
         np.array([1], dtype=np.int64),
     ).tolist() == [[4.0]]
-    parquet_path = bad_dir / "supplier_v1__gwp100_lcia.parquet"
+    parquet_path = bad_dir / "supplier_v1__gwp100_ipcc.parquet"
     historical_and_ssp_rows.to_parquet(parquet_path, index=False, row_group_size=2)
     set_default_repo_root(repo_root)
     try:
         parquet_source = load_external_lca_long_matrix_source(
             path=parquet_path,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005, 2006],
             base_allocate_args=base_args,
         )
@@ -3096,7 +3096,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             with pytest.raises(ValueError):
                 load_external_lca_long_matrix_source(
                     path=case_path,
-                    lcia_method="gwp100_lcia",
+                    lcia_method="gwp100_ipcc",
                     years=[2005],
                     base_allocate_args=base_args,
                 )
@@ -3108,7 +3108,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     with pytest.raises(ValueError):
         load_external_lca_long_matrix_source(
             path=no_year_path,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2030],
             base_allocate_args=base_args,
         )
@@ -3117,7 +3117,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     with pytest.raises(ValueError):
         load_external_lca_long_matrix_source(
             path=no_year_parquet_path,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2030],
             base_allocate_args=base_args,
         )
@@ -3131,7 +3131,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     try:
         large_source = load_external_lca_long_matrix_source(
             path=large_path,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args=base_args,
         )
@@ -3145,7 +3145,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
 
     compact_root = tmp_path / "compact_lca"
     compact_dir = external_lca_monte_carlo_dir(project_base=compact_root) / (
-        "supplier_v1__gwp100_lcia"
+        "supplier_v1__gwp100_ipcc"
     )
     compact_dir.mkdir(parents=True)
     pd.DataFrame(
@@ -3164,7 +3164,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         index=False,
     )
     historical_and_ssp_rows.assign(value=99.0).to_csv(
-        external_lca_monte_carlo_dir(project_base=compact_root) / "supplier_v1__gwp100_lcia.csv",
+        external_lca_monte_carlo_dir(project_base=compact_root) / "supplier_v1__gwp100_ipcc.csv",
         index=False,
     )
     set_default_repo_root(repo_root)
@@ -3172,7 +3172,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         compact_source = load_external_lca_monte_carlo_source(
             proj_base=compact_root,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005, 2006],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3195,7 +3195,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         reloaded_compact = load_external_lca_monte_carlo_source_from_path(
             path=compact_source.paths[0],
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005, 2006],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3229,7 +3229,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         ),
     }
     for stem, (identity_frame, runs_frame) in compact_error_cases.items():
-        case_dir = compact_error_base / f"supplier_v1__gwp100_lcia_{stem}"
+        case_dir = compact_error_base / f"supplier_v1__gwp100_ipcc_{stem}"
         case_dir.mkdir(parents=True)
         identity_frame.to_csv(case_dir / "row_identity.csv", index=False)
         runs_frame.to_csv(case_dir / "lca_runs.csv", index=False)
@@ -3239,7 +3239,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
                 load_external_lca_monte_carlo_source_from_path(
                     path=case_dir,
                     version_name="supplier_v1",
-                    lcia_method="gwp100_lcia",
+                    lcia_method="gwp100_ipcc",
                     years=[2005, 2006],
                     base_allocate_args=base_args,
                 )
@@ -3252,7 +3252,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             load_external_lca_monte_carlo_source(
                 proj_base=compact_root,
                 version_name="supplier_v1",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 years=[2030],
                 base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
             )
@@ -3263,7 +3263,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
         rows=valid_rows,
         path=matrix_path,
         version_name="supplier_v1",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     assert values.tolist() == [[1.0]]
 
@@ -3271,7 +3271,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     fixed_lca_values = np.array([99.0], dtype=np.float64)
     direct_source = ExternalLCAMonteCarloSource(
         version_name="supplier_v1",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         identity=pd.DataFrame({"public_row_id": [0]}),
         run_indices=np.array([0, 1], dtype=np.int64),
         paths=(matrix_path,),
@@ -3326,9 +3326,9 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
 
     with pytest.raises(ValueError):
         _normalize_rows(
-            frame=valid_rows.assign(lcia_method="gwp100_lcia"),
+            frame=valid_rows.assign(lcia_method="gwp100_ipcc"),
             path=bad_dir / "conflict.csv",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3338,7 +3338,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             _normalize_rows(
                 frame=valid_rows.assign(run_index=-1),
                 path=bad_dir / "negative.csv",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 years=[2005],
                 base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
             )
@@ -3346,7 +3346,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             _normalize_rows(
                 frame=valid_rows,
                 path=bad_dir / "empty_year.csv",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 years=[2006],
                 base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
             )
@@ -3357,14 +3357,14 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             rows=pd.concat([valid_rows, valid_rows], ignore_index=True),
             path=matrix_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
     with pytest.raises(ValueError):
         _materialize_matrix(
             rows=valid_rows.assign(run_index=1),
             path=matrix_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
     missing_run = pd.concat(
         [
@@ -3378,7 +3378,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             rows=missing_run,
             path=matrix_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
     incomplete_run = pd.concat(
         [
@@ -3393,7 +3393,7 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
             rows=incomplete_run,
             path=matrix_path,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
 
     assert _lca_values_for_units(
@@ -3444,13 +3444,13 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     ssp_root = tmp_path / "ssp_lca"
     ssp_dir = external_lca_monte_carlo_dir(project_base=ssp_root)
     ssp_dir.mkdir(parents=True, exist_ok=True)
-    ssp_path = ssp_dir / "supplier_v1__gwp100_lcia_ssp2.csv"
+    ssp_path = ssp_dir / "supplier_v1__gwp100_ipcc_ssp2.csv"
     valid_rows.to_csv(ssp_path, index=False)
     with pytest.raises(ValueError):
         load_external_lca_monte_carlo_source(
             proj_base=ssp_root,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3459,14 +3459,14 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     multi_dir = external_lca_monte_carlo_dir(project_base=multi_root)
     multi_dir.mkdir(parents=True, exist_ok=True)
     multi_rows = valid_rows.assign(lca_ssp_scenario="SSP1")
-    multi_rows.to_csv(multi_dir / "supplier_v1__gwp100_lcia.csv", index=False)
-    multi_rows.to_pickle(multi_dir / "supplier_v1__gwp100_lcia.pickle")
+    multi_rows.to_csv(multi_dir / "supplier_v1__gwp100_ipcc.csv", index=False)
+    multi_rows.to_pickle(multi_dir / "supplier_v1__gwp100_ipcc.pickle")
     set_default_repo_root(repo_root)
     try:
         selected_source = load_external_lca_monte_carlo_source(
             proj_base=multi_root,
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )
@@ -3477,9 +3477,9 @@ def test_external_lca_monte_carlo_errors_and_mixed_matrix(tmp_path: Path) -> Non
     set_default_repo_root(repo_root)
     try:
         pickle_source = load_external_lca_monte_carlo_source_from_path(
-            path=multi_dir / "supplier_v1__gwp100_lcia.pickle",
+            path=multi_dir / "supplier_v1__gwp100_ipcc.pickle",
             version_name="supplier_v1",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             years=[2005],
             base_allocate_args={"fu_code": "L2.a.a", "r_p": ["FR"], "s_p": ["D"]},
         )

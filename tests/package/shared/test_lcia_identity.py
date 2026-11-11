@@ -154,7 +154,7 @@ def test_asocc_checks_scientific_inputs_before_completed_reuse(allocation_dummy_
         "project_name": "scientific_identity",
         "source": "exiobase_396_ixi",
         "years": [2005],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L1.a",
         "method_plan": "default",
         "l1_methods": ["AR(E^{CBA_FD})"],
@@ -168,7 +168,7 @@ def test_asocc_checks_scientific_inputs_before_completed_reuse(allocation_dummy_
             if change == "cf_editorial"
             else responsibility_periods_csv_path
         )
-        _rewrite_editorial_metadata(resolver(source="exiobase_396_ixi", lcia_method="gwp100_lcia"))
+        _rewrite_editorial_metadata(resolver(source="exiobase_396_ixi", lcia_method="gwp100_ipcc"))
         reused = deterministic_asocc(**arguments)
         assert reused is not None
         assert reused.reuse_status == "reused_exact"
@@ -176,7 +176,7 @@ def test_asocc_checks_scientific_inputs_before_completed_reuse(allocation_dummy_
     resolver = (
         characterization_matrix_path if change == "factor" else responsibility_periods_csv_path
     )
-    path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_lcia")
+    path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_ipcc")
     frame = pd.read_csv(path)
     column = "factor" if change == "factor" else "responsibility_period_years"
     frame[column] = frame[column] * 2
@@ -204,7 +204,7 @@ def test_static_consumers_reject_changed_cc_before_completed_reuse(
     prepare_static_asr_io_lca_repo(
         allocation_dummy_repo,
         source="exiobase_396_ixi",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impact_parent="GWP_100",
         impact_unit="kg CO2-eq",
     )
@@ -212,7 +212,7 @@ def test_static_consumers_reject_changed_cc_before_completed_reuse(
         "project_name": "capacity_identity",
         "source": "exiobase_396_ixi",
         "years": [2005],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.a",
         "base_asocc_args": {
             "method_plan": "one_step",
@@ -232,26 +232,26 @@ def test_static_consumers_reject_changed_cc_before_completed_reuse(
     assert second.branches[0].reuse_status == "reused_exact"
     if change.endswith("_editorial"):
         if change == "cc_editorial":
-            path = static_cc_csv_path(lcia_method="gwp100_lcia")
+            path = static_cc_csv_path(lcia_method="gwp100_ipcc")
         else:
             resolver = (
                 characterization_matrix_path
                 if change == "cf_editorial"
                 else responsibility_periods_csv_path
             )
-            path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_lcia")
+            path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_ipcc")
         _rewrite_editorial_metadata(path)
         reused = function(**arguments)
         assert reused.branches[0].reuse_status == "reused_exact"
         return
     if change == "cc":
-        path = static_cc_csv_path(lcia_method="gwp100_lcia")
+        path = static_cc_csv_path(lcia_method="gwp100_ipcc")
         column = "min_cc"
     else:
         resolver = (
             characterization_matrix_path if change == "factor" else responsibility_periods_csv_path
         )
-        path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_lcia")
+        path = resolver(source="exiobase_396_ixi", lcia_method="gwp100_ipcc")
         column = "factor" if change == "factor" else "responsibility_period_years"
     frame = pd.read_csv(path)
     frame[column] = frame[column] * 0.9

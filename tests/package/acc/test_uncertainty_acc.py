@@ -124,7 +124,7 @@ def _run_root(*, repo_root: Path, project_name: str, run_id: str, source: str) -
         / "B2_acc"
         / source
         / "monte_carlo"
-        / "static_gwp100_lcia"
+        / "static_gwp100_ipcc"
         / run_id
     )
 
@@ -195,7 +195,7 @@ def test_uncertainty_acc_branch_scope_keeps_full_asocc_lcia_scope(allocation_dum
         r_c=None,
         r_f=None,
         group_indices=False,
-        lcia_method=["gwp100_lcia", "pb_lcia"],
+        lcia_method=["gwp100_ipcc", "pb_lcia"],
         base_asocc_args={
             "method_plan": "one_step",
             "one_step_methods": ["UT(FD)"],
@@ -208,7 +208,7 @@ def test_uncertainty_acc_branch_scope_keeps_full_asocc_lcia_scope(allocation_dum
     branch_scope = _acc_branch_scope(scope=scope, branch=branch)
 
     assert branch_scope.shared_methods == ["pb_lcia"]
-    assert branch_scope.asocc_lcia_methods == ["gwp100_lcia", "pb_lcia"]
+    assert branch_scope.asocc_lcia_methods == ["gwp100_ipcc", "pb_lcia"]
     assert branch_scope.base_args["lcia_method"] == ["pb_lcia"]
 
 
@@ -216,7 +216,7 @@ def _static_kwargs(*, project_name: str) -> dict[str, Any]:
     return {
         "project_name": project_name,
         "years": [2030],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.b",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -328,7 +328,7 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
             "year": [2024, 2030],
             VALUE_ARRAY_COLUMN: [np.array([1.0, 2.0]), np.array([3.0, 4.0])],
             "cc_type": ["dynamic_ar6", "dynamic_ar6"],
-            "lcia_method": ["gwp100_lcia", "gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc", "gwp100_ipcc"],
             "impact": ["GWP_100", "GWP_100"],
             "impact_unit": ["kg CO2-eq", "kg CO2-eq"],
             "reference_year": [2019, 2019],
@@ -362,7 +362,7 @@ def test_uncertainty_acc_figure_rows_collapse_dynamic_sampled_axes(tmp_path: Pat
         {
             "public_row_id": [0],
             "cc_type": ["dynamic_ar6"],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "impact_unit": ["kg CO2-eq"],
             AR6_CC_SSP_SCENARIO_COLUMN: ["SSP2"],
@@ -582,7 +582,7 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
     )
     assert acc_scope_stem("multi_method", pd.DataFrame({"value": [1.0]})) == "multi_method"
     gwp_frame = frame.loc[frame["impact"].eq("SOD")].copy()
-    gwp_frame["lcia_method"] = "gwp100_lcia"
+    gwp_frame["lcia_method"] = "gwp100_ipcc"
     gwp_frame["impact"] = "GWP_100"
     gwp_title = scope_title(
         "aCC uncertainty",
@@ -591,8 +591,7 @@ def test_uncertainty_acc_figure_renderers_cover_selector_and_budget_labels(
         include_impact=False,
         selector_title="France electricity",
     )
-    assert "Climate change (GWP_100)" in gwp_title
-    assert "gwp100_lcia" not in gwp_title
+    assert "gwp100_ipcc" in gwp_title
     assert ordered_impacts(frame.loc[frame["impact"].eq("SOD")]) == ["SOD"]
     assert method_labels(
         pd.DataFrame({"l1_l2_method": ["EG(Pop)_UT(FD)", "PR(GDPcap)_UT(FD)"]})
@@ -1129,7 +1128,7 @@ def test_reused_acc_final_subfigures_use_current_static_asocc_figures(tmp_path: 
     render_final_acc_subfigures(
         plan=plan,
         scope=ACCUncertaintyScope(
-            shared_methods=["gwp100_lcia"],
+            shared_methods=["gwp100_ipcc"],
             mrio_scope={},
             asocc_config={},
             cc_config={},
@@ -1183,7 +1182,7 @@ def test_uncertainty_acc_static_fixed_uses_deterministic_components(
     from pyaesa.shared.lcia.paths import static_cc_csv_path
     from pyaesa.shared.lcia.identity import carrying_capacity_sha256
 
-    cc_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+    cc_path = static_cc_csv_path(lcia_method="gwp100_ipcc")
     original_manifest = Path(manifest.artifacts["scope_manifest"])
     preserved = original_manifest.read_bytes()
     cc_frame = pd.read_csv(cc_path)
@@ -1197,7 +1196,7 @@ def test_uncertainty_acc_static_fixed_uses_deterministic_components(
     ).manifest
     assert updated.source_parameters is not None
     assert updated.source_parameters["scientific_inputs"] == {
-        "carrying_capacity/gwp100_lcia": carrying_capacity_sha256(lcia_method="gwp100_lcia")
+        "carrying_capacity/gwp100_ipcc": carrying_capacity_sha256(lcia_method="gwp100_ipcc")
     }
     assert updated.compatibility_key != manifest.compatibility_key
     assert original_manifest.read_bytes() == preserved
@@ -1256,7 +1255,7 @@ def test_uncertainty_acc_external_asocc_monte_carlo_routes_to_component_inventor
 def test_uncertainty_acc_static_rejects_missing_requested_max_cc(
     allocation_dummy_repo,
 ) -> None:
-    static_path = static_cc_csv_path(lcia_method="gwp100_lcia")
+    static_path = static_cc_csv_path(lcia_method="gwp100_ipcc")
     original = pd.read_csv(static_path)
     original.drop(columns=["max_cc"], errors="ignore").to_csv(static_path, index=False)
     kwargs = _static_kwargs(project_name="acc_uncertainty_missing_static_max")
@@ -1282,7 +1281,7 @@ def test_uncertainty_acc_dynamic_fixed_outputs(
     manifest = uncertainty_acc(
         project_name="acc_uncertainty_dynamic",
         years=range(2020, 2022),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1409,7 +1408,7 @@ def test_uncertainty_acc_mixed_cc_request_writes_branch_roots(allocation_dummy_r
     kwargs = {
         "project_name": "acc_uncertainty_mixed_branch_roots",
         "years": range(2020, 2022),
-        "lcia_method": ["pb_lcia", "gwp100_lcia"],
+        "lcia_method": ["pb_lcia", "gwp100_ipcc"],
         "fu_code": "L2.a.a",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -1462,7 +1461,7 @@ def test_uncertainty_acc_component_multi_branch_uses_parent_phase(
     component = run_uncertainty_acc_component(
         project_name="acc_uncertainty_component_parent_phase",
         years=range(2020, 2022),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         r_p=["FR"],
         s_p=["D"],
@@ -1538,7 +1537,7 @@ def test_uncertainty_acc_dynamic_figures_cover_public_category_uncertainty(
     manifest = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_category_figures",
         years=range(2020, 2022),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.c",
         r_p=["FR"],
         s_p=["D"],
@@ -1591,7 +1590,7 @@ def test_uncertainty_acc_dynamic_asocc_only_keeps_deterministic_cc_rows(
     manifest = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_asocc_only",
         years=range(2024, 2026),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
         base_asocc_args={
@@ -1747,7 +1746,7 @@ def test_acc_sparse_writer_preserves_empty_requested_runs(
         {
             "public_row_id": [0],
             "cc_type": ["static"],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "cc_bound": ["min_cc"],
             "year": [2030],
             "impact": ["GWP_100"],
@@ -1767,7 +1766,7 @@ def test_acc_sparse_writer_preserves_empty_requested_runs(
                 static_cc_values=np.array([1.0], dtype=np.float64),
                 dynamic_cc_factors=None,
                 cc_type="static",
-                cc_source="gwp100_lcia",
+                cc_source="gwp100_ipcc",
             ),
         ),
         asocc_input=ACCAsoccInput(
@@ -1871,7 +1870,7 @@ def test_acc_sobol_target_groups_accept_static_identity_without_year_axis() -> N
         {
             "public_row_id": [0],
             "cc_type": ["static"],
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             "cc_bound": ["min_cc"],
         }
@@ -1900,7 +1899,7 @@ def test_uncertainty_acc_dynamic_sobol_covers_dynamic_and_deterministic_cc(
     dynamic_cc = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_sobol_cc_source",
         years=range(2030, 2032),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         source="exiobase_396_ixi",
         base_asocc_args={
@@ -1946,7 +1945,7 @@ def test_uncertainty_acc_dynamic_sobol_covers_dynamic_and_deterministic_cc(
     deterministic_cc = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_sobol_deterministic_cc",
         years=range(2030, 2032),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         s_p=["D"],
         source="exiobase_396_ixi",
@@ -2005,7 +2004,7 @@ def test_uncertainty_acc_dynamic_convergence_refreshes_component_inventories(
     manifest = uncertainty_acc(
         project_name="acc_uncertainty_dynamic_convergence_subfigures",
         years=range(2030, 2032),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         s_p=["D"],
         source="exiobase_396_ixi",
@@ -2049,7 +2048,7 @@ def test_uncertainty_acc_dynamic_convergence_refreshes_component_inventories(
     deterministic_asocc_manifest = uncertainty_acc(
         project_name="acc_uncertainty_convergence_deterministic_asocc_subfigures",
         years=range(2030, 2032),
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.a",
         s_p=["D"],
         source="exiobase_396_ixi",
@@ -2092,7 +2091,7 @@ def test_uncertainty_acc_static_figures_are_public_for_single_and_multi_year(
     allocation_dummy_repo_factory(name="acc_uncertainty_public_figures")
     base_kwargs: dict[str, Any] = {
         "project_name": "acc_uncertainty_public_figures",
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.b",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -2180,7 +2179,7 @@ def test_uncertainty_acc_static_figures_cover_public_asocc_transition(
     repo.write_lcia_support(
         source="exiobase_3102_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=[2020, 2021, 2022, 2023, 2024],
         impacts=["climate_child"],
         impact_parents={"climate_child": "GWP_100"},
@@ -2188,7 +2187,7 @@ def test_uncertainty_acc_static_figures_cover_public_asocc_transition(
     manifest = uncertainty_acc(
         project_name="acc_uncertainty_public_transition_figures",
         years=[2024, 2025],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         fu_code="L2.a.b",
         r_p=["FR"],
         s_p=["D"],
@@ -2346,14 +2345,14 @@ def test_uncertainty_acc_static_figures_cover_public_projection_source(
     repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=list(range(1995, 2007)),
         impacts=["climate_child"],
         impact_parents={"climate_child": "GWP_100"},
     )
     base_kwargs: dict[str, Any] = {
         "project_name": "acc_uncertainty_public_figure_sources",
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "fu_code": "L2.a.b",
         "r_p": ["FR"],
         "s_p": ["D"],
@@ -2427,7 +2426,7 @@ def test_uncertainty_acc_static_figures_validate_inactive_reference_axis(
     repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=list(range(1995, 2007)),
         impacts=["climate_child"],
         impact_parents={"climate_child": "GWP_100"},
@@ -2482,7 +2481,7 @@ def test_uncertainty_acc_rejects_invalid_dynamic_cc_source_config(
         uncertainty_acc(
             project_name="acc_uncertainty_invalid_dynamic_cc_source",
             years=range(2020, 2022),
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             fu_code="L2.a.a",
             source="exiobase_396_ixi",
             base_asocc_args={
@@ -2520,7 +2519,7 @@ def test_acc_uncertainty_normalization_keeps_absent_mc_parameters_absent() -> No
 def test_acc_sampling_vectorized_contracts_cover_reachable_edge_paths(
     tmp_path: Path,
 ) -> None:
-    cc_source = "gwp100_lcia"
+    cc_source = "gwp100_ipcc"
     cc_rows = branch_mod._static_cc_rows(cc_source=cc_source, bounds=["min_cc"])  # noqa: SLF001
     impact = str(cc_rows.loc[0, "impact"])
     static_branch = {
@@ -2828,7 +2827,7 @@ def test_acc_sparse_selected_layout_iterators_cover_source_combinations(tmp_path
         static_cc_values=np.array([10.0], dtype=np.float64),
         dynamic_cc_factors=None,
         cc_type="static",
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
     )
     dynamic_branch = ACCBranchPlan(
         identity=pd.DataFrame({"public_row_id": [1, 2]}),
@@ -2837,7 +2836,7 @@ def test_acc_sparse_selected_layout_iterators_cover_source_combinations(tmp_path
         static_cc_values=None,
         dynamic_cc_factors=np.array([1.0, 1.0], dtype=np.float64),
         cc_type="dynamic_ar6",
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
     )
     unmatched_dynamic_branch = ACCBranchPlan(
         identity=pd.DataFrame({"public_row_id": [3]}),
@@ -2846,7 +2845,7 @@ def test_acc_sparse_selected_layout_iterators_cover_source_combinations(tmp_path
         static_cc_values=None,
         dynamic_cc_factors=np.array([1.0], dtype=np.float64),
         cc_type="dynamic_ar6",
-        cc_source="gwp100_lcia",
+        cc_source="gwp100_ipcc",
     )
 
     def _plan(*, asocc_manifest):
@@ -2955,7 +2954,7 @@ def test_acc_sparse_selected_layout_iterators_cover_source_combinations(tmp_path
                     static_cc_values=None,
                     dynamic_cc_factors=np.array([1.0], dtype=np.float64),
                     cc_type="dynamic_ar6",
-                    cc_source="gwp100_lcia",
+                    cc_source="gwp100_ipcc",
                 ),
             )
         ),

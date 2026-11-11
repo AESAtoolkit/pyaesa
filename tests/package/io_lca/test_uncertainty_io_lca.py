@@ -361,7 +361,7 @@ def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
 ) -> None:
     add_io_lca_dummy_method(
         io_lca_dummy_repo,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         impacts=["GWP_100"],
         parent_by_impact={"GWP_100": "GWP_100"},
     )
@@ -432,7 +432,7 @@ def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
                 io_lca_dummy_repo=io_lca_dummy_repo,
                 project_name="uncertainty_io_lca_component_method_scope",
             ),
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "years": [io_lca_dummy_repo.available_year],
             "r_f": ["FR"],
         },
@@ -448,7 +448,7 @@ def test_uncertainty_io_lca_component_run_id_reuse_requires_compatible_request(
     first_identity = pd.read_csv(first.artifacts["public_row_identity"])
     second_identity = pd.read_csv(second.artifacts["public_row_identity"])
     assert first_identity["lcia_method"].drop_duplicates().tolist() == ["pb_lcia"]
-    assert second_identity["lcia_method"].drop_duplicates().tolist() == ["gwp100_lcia"]
+    assert second_identity["lcia_method"].drop_duplicates().tolist() == ["gwp100_ipcc"]
     assert second_identity["impact"].drop_duplicates().tolist() == ["GWP_100"]
 
 

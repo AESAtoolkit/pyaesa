@@ -80,7 +80,7 @@ def _context(
         requested_years=[2005, 2030] if requested_years is None else requested_years,
         resolved_years=[2005] if resolved_years is None else resolved_years,
         ssp_scenario_options=(["SSP2"] if ssp_scenario_options is None else ssp_scenario_options),
-        lcia_methods=["gwp100_lcia"] if lcia_methods is None else lcia_methods,
+        lcia_methods=["gwp100_ipcc"] if lcia_methods is None else lcia_methods,
         wb_df=wb_df,
         filters={"r_p": None, "s_p": None, "r_c": None, "r_f": None},
         logger=_RecorderLogger(messages=[]),

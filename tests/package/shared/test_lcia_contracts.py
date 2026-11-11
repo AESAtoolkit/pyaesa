@@ -64,7 +64,7 @@ def test_lcia_contracts_cover_rules_and_bundled_static_cc_loading(
     with pytest.raises(ValueError):
         contracts_mod.bundled_cc_impact_unit(lcia_method="pb_lcia", impact="missing_impact")
 
-    assert contracts_mod.dynamic_cc_match(lcia_method="gwp100_lcia") == {"impact": "GWP_100"}
+    assert contracts_mod.dynamic_cc_match(lcia_method="gwp100_ipcc") == {"impact": "GWP_100"}
     assert contracts_mod.dynamic_cc_match(lcia_method="pb_lcia") is None
     pd.DataFrame(
         [
@@ -82,20 +82,42 @@ def test_lcia_contracts_cover_rules_and_bundled_static_cc_loading(
     )
     assert contracts_mod.dynamic_cc_match(lcia_method="custom_climate") == {"impact": "GWP_100"}
     assert contracts_mod.dynamic_cc_compatible_methods(
-        method_specs=("pb_lcia", "ef_3.1", "gwp100_lcia", "custom_climate", "unknown_method")
-    ) == ["ef_3.1", "gwp100_lcia", "custom_climate"]
+        method_specs=("pb_lcia", "ef_3.1", "gwp100_ipcc", "custom_climate", "unknown_method")
+    ) == ["ef_3.1", "gwp100_ipcc", "custom_climate"]
 
 
 def test_lcia_path_contracts_cover_cleaning_and_cov_paths(
     project_repo: Path,
 ) -> None:
-    del project_repo
-
     with pytest.raises(ValueError):
         paths_mod.static_cc_csv_path(lcia_method=" ")
 
-    assert paths_mod.static_cc_csv_path(lcia_method=" gwp100_lcia ").name == (
-        "gwp100_lcia_cc_steady_state.csv"
+    assert paths_mod.characterization_matrix_path(source="oecd_v2025", lcia_method="custom") == (
+        project_repo
+        / "data_raw"
+        / "mrio"
+        / "oecd_v2025"
+        / "lcia"
+        / "characterization_factors_matrices"
+        / "custom.csv"
+    )
+    for version in ("3112", "3102", "396"):
+        for system in ("ixi", "pxp"):
+            assert paths_mod.characterization_matrix_path(
+                source=f"exiobase_{version}_{system}", lcia_method="pb_lcia"
+            ) == (
+                project_repo
+                / "data_raw"
+                / "mrio"
+                / "exiobase_3"
+                / "lcia"
+                / "characterization_factors_matrices"
+                / f"exiobase_{version}"
+                / "pb_lcia.csv"
+            )
+
+    assert paths_mod.static_cc_csv_path(lcia_method=" gwp100_ipcc ").name == (
+        "gwp100_ipcc_cc_steady_state.csv"
     )
     assert paths_mod._shared_lcia_subdir(source="oecd_v2025") == "oecd_v2025"  # noqa: SLF001
     assert (

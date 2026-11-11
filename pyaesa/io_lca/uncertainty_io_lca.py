@@ -62,9 +62,10 @@ def uncertainty_io_lca(
 
             - ``project_name``: Required project name used to build
               ``<repo>/<project_name>``.
-            - ``source``: MRIO source key (``"exiobase_396_ixi"``,
-              ``"exiobase_396_pxp"``, ``"exiobase_3102_ixi"``,
-              ``"exiobase_3102_pxp"``). pyaesa currently only supports
+            - ``source``: MRIO source key (``"exiobase_3112_ixi"``,
+              ``"exiobase_3112_pxp"``, ``"exiobase_3102_ixi"``,
+              ``"exiobase_3102_pxp"``, ``"exiobase_396_ixi"``,
+              ``"exiobase_396_pxp"``). pyaesa currently only supports
               EXIOBASE for LCIA characterization.
             - ``agg_reg``: If ``True``, reclassify MRIO regions with the
               ``agg_reg_<agg_version>.csv`` MRIO aggregation and disaggregation mapping.
@@ -94,14 +95,23 @@ def uncertainty_io_lca(
               source and ``agg_version`` are used.
             - ``lcia_method``: Required LCIA method(s) selected for IO-LCA
               results (for example ``"pb_lcia"`` or
-              ``["pb_lcia", "gwp100_lcia"]``). The method(s) must have been
+              ``["pb_lcia", "ef_3.1_14cat", "ef_3.1",
+              "gwp100_ef31", "gwp100_ipcc"]``). The method(s) must have been
               processed for the same MRIO source with ``process_mrio(...)``.
-              pyaesa currently supports IO-LCA only for EXIOBASE sources. To
-              add a custom LCIA method with which run ``process_mrio(...)``,
+              pyaesa currently supports IO-LCA only for EXIOBASE sources.
+              For IO-LCA results used with dynamic AR6 CC, ``"gwp100_ipcc"`` is recommended. This
+              aligns Phase A climate change burdens with the IPCC GWP100 characterization used for
+              carrying capacities derived from AR6 pathways.
+              For EF 3.1, use ``"ef_3.1_14cat"`` for Phase A IO-LCA and matching
+              downstream carrying capacities across 14 categories. Selecting
+              ``"ef_3.1"`` also produces only those 14 EXIOBASE categories;
+              ASR across all 16 requires external LCA results. To add a custom
+              LCIA method with which run ``process_mrio(...)``,
               follow
               ``README_add_custom_lcia_characterization_matrices.txt`` in
               ``data_raw/mrio/exiobase_3/lcia/characterization_factors_matrices/``
-              and pass the custom method file stem here.
+              and pass the custom method file stem here. The matrix must be in
+              the selected source version subfolder, such as ``exiobase_3112/``.
             - ``fu_code``: Required functional unit code (for example
               ``"L1.a"``, ``"L2.c.b"``). See
               ``data_raw/methodological_notes/appendixB_UNCASExt_Allocating_Shares_of_Carrying_Capacities.pdf``
@@ -268,7 +278,7 @@ def uncertainty_io_lca(
                     "project_name": "demo",
                     "source": "exiobase_3102_ixi",
                     "years": 2019,
-                    "lcia_method": "gwp100_lcia",
+                    "lcia_method": "gwp100_ipcc",
                     "fu_code": "L2.c.b",
                     "s_p": ["Paper"],
                     "r_c": ["FR"],

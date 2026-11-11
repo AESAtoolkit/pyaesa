@@ -450,6 +450,7 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         / "exiobase_3"
         / "lcia"
         / "characterization_factors_matrices"
+        / "exiobase_396"
         / "pb_lcia.csv"
     )
     char_jobs = {
@@ -508,9 +509,9 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
             requested_extensions=["satellite_accounts"],
             char_matrix=char_matrix,
         ),
-        "gwp100_lcia": ExioCharacterizationOptions(
-            lcia_method="gwp100_lcia",
-            matrix_path=Path("gwp100_lcia.csv"),
+        "gwp100_ipcc": ExioCharacterizationOptions(
+            lcia_method="gwp100_ipcc",
+            matrix_path=Path("gwp100_ipcc.csv"),
             retain_instances=("factor_inputs", "missing_ext"),
             requested_extensions=["missing"],
             char_matrix=pd.DataFrame(
@@ -540,7 +541,7 @@ def test_parse_and_calc_year_covers_exio_characterization_paths(project_repo: Pa
         parse_exio_func=lambda full_dir, year, system: build_dummy_iosystem(),
     )
     assert applied_duplicate == ["pb_lcia"]
-    assert missing_duplicate == {"gwp100_lcia": ["missing"]}
+    assert missing_duplicate == {"gwp100_ipcc": ["missing"]}
     assert hasattr(iosys_duplicate, "pb_lcia")
 
     no_retention_job = {

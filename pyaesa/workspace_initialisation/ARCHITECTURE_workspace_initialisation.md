@@ -122,7 +122,7 @@ Prerequisite families:
 | --- | --- |
 | `prerequisites/mrio/exiobase_3/aggregation/` | EXIOBASE region and sector aggregation templates. |
 | `prerequisites/mrio/exiobase_3/reg_matching/` | EXIOBASE region matching tables for WB and SSP data. |
-| `prerequisites/mrio/exiobase_3/lcia/characterization_factors_matrices/` | EXIOBASE LCIA characterization factors and the local README guide for adding custom characterization matrices beyond package shipped methods. |
+| `prerequisites/mrio/exiobase_3/lcia/characterization_factors_matrices/` | Templates and custom matrix guide; `exiobase_3112/`, `exiobase_3102/`, and `exiobase_396/` contain `pb_lcia`, `ef_3.1`, `ef_3.1_14cat`, `gwp100_ef31`, and `gwp100_ipcc` method CSVs. |
 | `prerequisites/mrio/exiobase_3/lcia/responsibility_periods/` | LCIA responsibility period files and the local README guide for adding custom responsibility period tables beyond package shipped methods. |
 | `prerequisites/mrio/exiobase_3/lcia/carbon_accounts_covs/` | Carbon consumption based accounts coefficients of variation (CoV) CSVs for LCIA based allocation methods and IO-LCA LCIA result uncertainty. |
 | `prerequisites/mrio/oecd_v2025/aggregation/` | OECD region and sector aggregation templates. |
@@ -143,6 +143,7 @@ The import owner preserves the package resource folder hierarchy beneath
 `prerequisites/methodological_notes/`.
 If a destination file path is occupied by a directory, import fails because the
 workspace cannot represent the prerequisite file.
+
 The import owner returns whether any file was copied or refreshed. The public
 coordinator combines that result with the summary log write result to decide
 whether to print full setup guidance or only the persisted summary log path.
@@ -201,6 +202,11 @@ Family refresh arguments belong to their public family functions:
 | Monte Carlo outputs | Family uncertainty functions |
 
 Keep these refresh scopes separate.
+
+Characterization paths are resolved by `pyaesa/shared/lcia/paths.py` using
+the source registry version token. Responsibility periods and carrying
+capacities are shared by method. Prerequisite import copies missing nested
+files and preserves existing workspace assets unless refresh is requested.
 
 ## Testing And Quality Gates
 

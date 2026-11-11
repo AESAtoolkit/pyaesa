@@ -91,7 +91,7 @@ def test_setup_selection_cover_validation_and_pruning() -> None:
 
     unchanged, dropped = selection_mod._prune_lcia_methods_without_lcia_input(
         fu_code="L1.a",
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         selection=selection_mod._resolve_selection_bundle(
             fu_code="L1.a",
             l_1=["AR(E^{CBA_FD})"],
@@ -205,7 +205,7 @@ def test_prepare_context_rejects_invalid_source_and_iso3_contracts(allocation_du
             request=_request(
                 source="iso3",
                 fu_code="L1.a",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
             )
         )
     with pytest.raises(ValueError):
@@ -271,19 +271,19 @@ def test_prepare_context_builds_state_and_reuses_complete_scope(allocation_dummy
     allocation_dummy_repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     context, state, is_complete = _prepare_context(
         request=_request(
             project_name="setup_prepare_context_success",
             source="exiobase_396_ixi",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             l_1=["AR(E^{CBA_FD})"],
         )
     )
     assert is_complete is False
     assert context.source == "exiobase_396_ixi"
-    assert state.lcia_units["gwp100_lcia"]["climate_parent"] == "kg CO2-eq / year"
+    assert state.lcia_units["gwp100_ipcc"]["climate_parent"] == "kg CO2-eq / year"
 
     output_path = Path(context.proj_base) / "existing.csv"
     output_path.write_text("x", encoding="utf-8")
@@ -296,7 +296,7 @@ def test_prepare_context_builds_state_and_reuses_complete_scope(allocation_dummy
         request=_request(
             project_name="setup_prepare_context_success",
             source="exiobase_396_ixi",
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             l_1=["AR(E^{CBA_FD})"],
         )
     )
@@ -494,7 +494,7 @@ def test_prepare_context_covers_original_domain_lcia_setup_branch(
     allocation_dummy_repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version="demo_reg",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
 
     context, state, is_complete = _prepare_context(
@@ -504,7 +504,7 @@ def test_prepare_context_covers_original_domain_lcia_setup_branch(
             agg_version="demo_reg",
             agg_reg=True,
             years=[2005],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             l_1=["AR(Ecap^{CBA_FD})"],
             fu_code="L1.a",
             r_p=None,
@@ -513,7 +513,7 @@ def test_prepare_context_covers_original_domain_lcia_setup_branch(
 
     assert is_complete is False
     assert context.use_original_l1_post_domain is True
-    assert state.lcia_units["gwp100_lcia"]["climate_parent"] == "kg CO2-eq / year"
+    assert state.lcia_units["gwp100_ipcc"]["climate_parent"] == "kg CO2-eq / year"
 
 
 def test_prepare_context_records_dropped_lcia_notice(allocation_dummy_repo) -> None:
@@ -587,7 +587,7 @@ def test_prepare_context_rejects_oecd_lcia_method(allocation_dummy_repo) -> None
             request=_request(
                 project_name="setup_prepare_context_oecd_lcia_invalid",
                 source="oecd_v2025",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 l_1=["AR(E^{CBA_FD})"],
             )
         )
@@ -616,7 +616,7 @@ def test_prepare_context_rejects_missing_lcia_unit_metadata(allocation_dummy_rep
     allocation_dummy_repo.write_lcia_support(
         source="exiobase_396_ixi",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
     )
     metadata_path = _get_metadata_path("exiobase_396_ixi", matrix_version=None)
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -630,15 +630,15 @@ def test_prepare_context_rejects_missing_lcia_unit_metadata(allocation_dummy_rep
         assert isinstance(units, dict)
         lcia_by_method = units["lcia_by_method"]
         assert isinstance(lcia_by_method, dict)
-        lcia_by_method.pop("gwp100_lcia", None)
+        lcia_by_method.pop("gwp100_ipcc", None)
     metadata_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     with pytest.raises(ValueError) as exc_info:
         _prepare_context(
             request=_request(
                 project_name="setup_prepare_context_missing_units",
                 source="exiobase_396_ixi",
-                lcia_method="gwp100_lcia",
+                lcia_method="gwp100_ipcc",
                 l_1=["AR(E^{CBA_FD})"],
             )
         )
-    assert "gwp100_lcia" in str(exc_info.value)
+    assert "gwp100_ipcc" in str(exc_info.value)

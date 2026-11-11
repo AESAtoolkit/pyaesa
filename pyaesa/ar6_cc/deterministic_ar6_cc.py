@@ -141,6 +141,12 @@ def deterministic_ar6_cc(
         in
         ``data_raw/methodological_notes/appendixC_UNCASExt_Carrying_capacities_definition.pdf``.
 
+        For downstream assessments using these carrying capacities, IPCC AR6 GWP100
+        characterization is recommended for Phase A climate change results, from IO-LCA or
+        external LCA. Use ``lcia_method="gwp100_ipcc"`` for package IO-LCA and Phase B LCIA-based
+        allocation (AR and PR-HR). This aligns both phases with the IPCC GWP100 characterization
+        used for carrying capacities derived from AR6 pathways.
+
     Example:
         Extract dynamic AR6 carrying capacity pathways for one study period
         and a subset of model-scenario pairs::

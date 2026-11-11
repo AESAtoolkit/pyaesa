@@ -497,10 +497,17 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     assert pb_metadata.family == "pb_lcia"
     assert pb_metadata.schema_kind == "planetary boundary"
     assert pb_metadata.n_impacts >= 1
-    gwp100_metadata = metadata_mod.load_lcia_metadata("gwp100_lcia")
+    gwp100_metadata = metadata_mod.load_lcia_metadata("gwp100_ipcc")
+    for method in ("gwp100_ef31", "gwp100_ipcc"):
+        frame = pd.DataFrame({"lcia_method": [method], "impact": ["GWP_100"]})
+        assert metadata_mod.lcia_title_parts(frame, include_impact=False) == [method]
+        assert metadata_mod.lcia_title_parts(frame, include_impact=True) == [
+            method,
+            metadata_mod.resolve_impact_title(lcia_method=method, impact="GWP_100"),
+        ]
     assert (
         metadata_mod.resolve_impact_title(
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             impact="climate_parent",
         )
         == gwp100_metadata.labels["GWP_100"]
@@ -640,14 +647,14 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
 
     scope_frame = pd.DataFrame(
         {
-            "lcia_method": ["pb_lcia", None, "gwp100_lcia"],
+            "lcia_method": ["pb_lcia", None, "gwp100_ipcc"],
             "impact": [first_impact, None, "co2"],
             "value": [1.0, 2.0, 3.0],
         }
     )
     method_slices = list(scope_mod.lcia_method_slices(scope_frame))
     assert [(token, title, lcia_method) for token, title, _, lcia_method in method_slices] == [
-        ("gwp100_lcia", "gwp100_lcia", "gwp100_lcia"),
+        ("gwp100_ipcc", "gwp100_ipcc", "gwp100_ipcc"),
         ("pb_lcia", "pb_lcia", "pb_lcia"),
     ]
     method_slices_without_generic_fill = list(
@@ -688,7 +695,7 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
     )
     assert (
         scope_mod.resolve_unique_lcia_method(
-            pd.DataFrame({"lcia_method": ["pb_lcia", "gwp100_lcia"]})
+            pd.DataFrame({"lcia_method": ["pb_lcia", "gwp100_ipcc"]})
         )
         is None
     )
@@ -750,14 +757,14 @@ def test_lcia_metadata_and_scopes_cover_real_metadata_and_errors(project_repo: P
             pd.DataFrame(
                 {
                     "impact": [first_impact, None, "co2"],
-                    "lcia_method": ["pb_lcia", None, "gwp100_lcia"],
+                    "lcia_method": ["pb_lcia", None, "gwp100_ipcc"],
                     "value": [1.0, 2.0, 3.0],
                 }
             )
         )
     )
     assert [(token, method) for token, _title, _frame, method in lcia_impact_combined] == [
-        ("co2", "gwp100_lcia"),
+        ("co2", "gwp100_ipcc"),
         (first_impact, "pb_lcia"),
     ]
     assert all(len(frame) == 2 for _token, _title, frame, _method in lcia_impact_combined)

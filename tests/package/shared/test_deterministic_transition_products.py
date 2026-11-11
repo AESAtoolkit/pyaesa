@@ -686,13 +686,13 @@ def test_default_scoped_output_base_suffixes_selector_scenario_and_impact_tokens
 ) -> None:
     scoped = products_mod._default_scoped_output_base(
         output_base=tmp_path / "base",
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         selector_token="r_p_FR",
         scenario_token="prospective_SSP2",
         impact_token="impact_GWP_100",
     )
 
-    assert scoped.name == "base__gwp100_lcia_r_p_FR_prospective_SSP2_impact_GWP_100"
+    assert scoped.name == "base__gwp100_ipcc_r_p_FR_prospective_SSP2_impact_GWP_100"
 
 
 def test_render_transition_products_groups_combined_impacts_by_lcia_selector_and_scenario(

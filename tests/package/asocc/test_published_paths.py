@@ -95,18 +95,18 @@ def test_share_and_enacting_metric_path_cover_suffix_and_stem_contracts(tmp_path
     assert paths_mod._get_enacting_metric_output_path(  # noqa: SLF001
         level="level_1",
         key_metric="e_pba_reg_capita",
-        key_method="gwp100_lcia",
+        key_method="gwp100_ipcc",
         key_scenario="SSP2",
         output_format="csv",
         lcia_sub=None,
         **common,
     ) == (
-        deterministic_root / "results" / "enacting_metrics" / "e_pba_reg_cap_SSP2_gwp100_lcia.csv"
+        deterministic_root / "results" / "enacting_metrics" / "e_pba_reg_cap_SSP2_gwp100_ipcc.csv"
     )
     assert paths_mod._get_enacting_metric_output_path(  # noqa: SLF001
         level="level_1",
         key_metric="e_pba_reg_capita",
-        key_method="gwp100_lcia",
+        key_method="gwp100_ipcc",
         key_scenario="SSP2",
         output_format="csv",
         lcia_sub=None,
@@ -117,7 +117,7 @@ def test_share_and_enacting_metric_path_cover_suffix_and_stem_contracts(tmp_path
         / "results"
         / "l1"
         / "enacting_metrics"
-        / "e_pba_reg_cap_SSP2_gwp100_lcia.csv"
+        / "e_pba_reg_cap_SSP2_gwp100_ipcc.csv"
     )
     assert paths_mod._get_enacting_metric_output_path(  # noqa: SLF001
         level="level_2",

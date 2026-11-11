@@ -16,7 +16,7 @@ def test_request_target_contracts_cover_asocc_merge_and_io_lca_selection(
             "fu_code": "L2.a.a",
             "method_plan": "one_step",
             "one_step_methods": ["UT(FD)"],
-            "lcia_method": "gwp100_lcia",
+            "lcia_method": "gwp100_ipcc",
             "years": [2005],
         }
     )
@@ -39,12 +39,12 @@ def test_request_target_contracts_cover_asocc_merge_and_io_lca_selection(
                 "fu_code": "L2.a.a",
                 "method_plan": "pairs",
                 "l1_l2_pairs": ["AR(E^{CBA_FD})::UT(FD)"],
-                "lcia_method": "gwp100_lcia",
+                "lcia_method": "gwp100_ipcc",
                 "years": [2005],
             }
         )
     )
-    assert pair_selector["lcia_method"] == ["gwp100_lcia"]
+    assert pair_selector["lcia_method"] == ["gwp100_ipcc"]
     assert pair_selector["methods"] == ["AR(E^{CBA_FD})_UT(FD)"]
 
     io_selector = targets_mod.build_io_lca_target_selector(

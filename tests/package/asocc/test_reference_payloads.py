@@ -28,7 +28,7 @@ def _reference_context(*, fu_code: str = "L2.a.a") -> SimpleNamespace:
             "r_u": ["FR"],
         },
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         selected_l1=["AR(E^{CBA_FD})", "AR(E^{PBA})"],
         selected_l2_one_step=[
             "AR(E^{CBA_FD})",
@@ -64,7 +64,7 @@ def test_load_ar_l2_reference_lcia_payload_slices_real_payloads(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
     )
 
     assert list(lcia_ref["e_cba_td_rp_sp"].columns.get_level_values("r_p")) == ["FR"]
@@ -82,7 +82,7 @@ def test_load_reference_lcia_reg_uses_skipped_year_reason_and_domain_wrapper(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         agg_version=None,
     )
@@ -90,7 +90,7 @@ def test_load_reference_lcia_reg_uses_skipped_year_reason_and_domain_wrapper(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="PBA",
         agg_version=None,
     )
@@ -98,7 +98,7 @@ def test_load_reference_lcia_reg_uses_skipped_year_reason_and_domain_wrapper(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         use_original_domain=True,
     )
@@ -114,7 +114,7 @@ def test_load_reference_lcia_reg_reports_skipped_year_reason(
     repo.write_lcia_support(
         source="oecd_v2025",
         matrix_version=None,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         available_years=[2006],
     )
     context = _reference_context()
@@ -125,11 +125,11 @@ def test_load_reference_lcia_reg_reports_skipped_year_reason(
             context=context,
             state=state,
             ref_year=2005,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             lcia_kind="CBA_FD",
             agg_version=None,
         )
-    assert state.skipped_years[2005]["gwp100_lcia"] == "Dummy LCIA unavailable"
+    assert state.skipped_years[2005]["gwp100_ipcc"] == "Dummy LCIA unavailable"
 
 
 def test_reference_payload_contracts_cover_reason_suffix() -> None:
@@ -139,7 +139,7 @@ def test_reference_payload_contracts_cover_reason_suffix() -> None:
         _reference_lcia_reason_suffix(
             state=state_with_non_dict_reason,
             ref_year=2005,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         == ""
     )
@@ -150,7 +150,7 @@ def test_reference_payload_contracts_cover_reason_suffix() -> None:
         _reference_lcia_reason_suffix(
             state=state_with_missing_method,
             ref_year=2005,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
         )
         == ""
     )
@@ -168,7 +168,7 @@ def test_load_reference_lcia_payload_and_reg_cover_missing_method_and_missing_ke
         (
             None,
             str(saved_dir),
-            "gwp100_lcia",
+            "gwp100_ipcc",
         )
     ] = {
         "e_cba_fd_reg": pd.DataFrame(
@@ -177,14 +177,14 @@ def test_load_reference_lcia_payload_and_reg_cover_missing_method_and_missing_ke
             columns=pd.Index(["FR", "US"], name="r_f"),
         ),
     }
-    state.skipped_years[2005] = {"gwp100_lcia": "cached payload incomplete"}
+    state.skipped_years[2005] = {"gwp100_ipcc": "cached payload incomplete"}
 
     with pytest.raises(ValueError):
         load_reference_lcia_reg(
             context=context,
             state=state,
             ref_year=2005,
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             lcia_kind="PBA",
             agg_version=None,
         )
@@ -198,7 +198,7 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
     state = _reference_state()
     saved_dir = _get_mrio_year_dir(source=context.source, year=2005, agg_version=None)
     missing_metric = (
-        saved_dir / "enacting_metrics" / "level_1" / "gwp100_lcia" / "e_cba_fd_reg.pickle"
+        saved_dir / "enacting_metrics" / "level_1" / "gwp100_ipcc" / "e_cba_fd_reg.pickle"
     )
     missing_metric.unlink()
 
@@ -206,7 +206,7 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
         context=context,
         state=state,
         through_year=2006,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         use_original_domain=False,
     )
@@ -222,7 +222,7 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
         fu_code="L2.a.a",
         filters=context.filters,
         needs_lcia=True,
-        lcia_methods=["gwp100_lcia"],
+        lcia_methods=["gwp100_ipcc"],
         historical_years=[2005],
     )
     original_state = _reference_state()
@@ -230,14 +230,14 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
         context=original_context,
         state=original_state,
         through_year=2005,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         use_original_domain=True,
     )
 
     assert 2005 in original_loaded
     assert (
-        original_state.lcia_timeseries_original["gwp100_lcia"]["CBA_FD"][2005].index.name
+        original_state.lcia_timeseries_original["gwp100_ipcc"]["CBA_FD"][2005].index.name
         == "impact"
     )
 
@@ -247,12 +247,12 @@ def test_ensure_pr_hr_child_impact_timeseries_loaded_handles_missing_files(
         index=pd.Index(["climate_parent"], name="impact"),
         columns=pd.Index(["FR", "US"], name="r_f"),
     )
-    cached_state.lcia_timeseries["gwp100_lcia"] = {"CBA_FD": {2005: cached_frame}, "PBA": {}}
+    cached_state.lcia_timeseries["gwp100_ipcc"] = {"CBA_FD": {2005: cached_frame}, "PBA": {}}
     cached_loaded = ensure_pr_hr_child_impact_timeseries_loaded(
         context=context,
         state=cached_state,
         through_year=2006,
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         lcia_kind="CBA_FD",
         use_original_domain=False,
     )
@@ -272,7 +272,7 @@ def test_load_ar_l2_reference_lcia_payload_uses_normal_filtered_axes(
         context=context,
         state=state,
         ref_year=2005,
-        lcia_key="gwp100_lcia",
+        lcia_key="gwp100_ipcc",
     )
 
     assert list(lcia_ref["e_cba_fd_reg"].columns) == ["FR", "US"]

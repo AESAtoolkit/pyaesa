@@ -44,7 +44,7 @@ def test_deterministic_asocc_figure_scope_helpers_cover_selectors_and_empty_ssps
     del read_only_project_repo
     frame = pd.DataFrame(
         {
-            "lcia_method": ["gwp100_lcia"],
+            "lcia_method": ["gwp100_ipcc"],
             "impact": ["GWP_100"],
             ASOCC_SSP_SCENARIO_COLUMN: ["SSP2"],
         }
@@ -58,11 +58,11 @@ def test_deterministic_asocc_figure_scope_helpers_cover_selectors_and_empty_ssps
             selector_token="rp_FR_sp_D",
             studied_year=2030,
         )
-        == "multi_method_rp_FR_sp_D__gwp100_lcia_GWP_100_SSP2_2030"
+        == "multi_method_rp_FR_sp_D__gwp100_ipcc_GWP_100_SSP2_2030"
     )
     assert (
         asocc_scope_stem("multi_method", frame, include_impact=False)
-        == "multi_method__gwp100_lcia_SSP2"
+        == "multi_method__gwp100_ipcc_SSP2"
     )
     assert "France electricity" in asocc_scope_title(
         "aSoCC deterministic",
@@ -87,23 +87,18 @@ def test_deterministic_asocc_figure_scope_helpers_cover_selectors_and_empty_ssps
         "aSoCC deterministic",
         "demo",
         frame,
+        include_impact=True,
         selector_title="France electricity",
         studied_year=2030,
     )
-    assert "gwp100_lcia" not in asocc_scope_title(
+    assert "gwp100_ipcc" in asocc_scope_title(
         "aSoCC deterministic",
         "demo",
         frame,
         selector_title="France electricity",
         studied_year=2030,
     )
-    assert "GWP_100" in uncertainty_scope_title(
-        "demo",
-        frame,
-        selector_title="France electricity",
-        studied_year=None,
-    )
-    assert "gwp100_lcia" not in uncertainty_scope_title(
+    assert "gwp100_ipcc" in uncertainty_scope_title(
         "demo",
         frame,
         selector_title="France electricity",
@@ -198,7 +193,7 @@ def test_deterministic_asocc_filtered_direct_ar_share_uses_global_denominator(
         fu_code="L2.c.a",
         method_plan="one_step",
         one_step_methods=["AR(E^{CBA_FD})"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         reference_years=[2005],
         s_p="D",
         r_f="FR",
@@ -208,7 +203,7 @@ def test_deterministic_asocc_filtered_direct_ar_share_uses_global_denominator(
 
     result_path = next(
         _asocc_root(allocation_dummy_repo.repo_root, project_name=project_name).rglob(
-            "AR(E^{CBA_FD})__gwp100_lcia.csv"
+            "AR(E^{CBA_FD})__gwp100_ipcc.csv"
         )
     )
     result = pd.read_csv(result_path)
@@ -226,7 +221,7 @@ def test_deterministic_asocc_filtered_two_step_pba_weights_keep_full_domain(
         fu_code="L2.b.b",
         method_plan="pairs",
         l1_l2_pairs=["AR(E^{PBA})::UT(GVAa)"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         reference_years=[2005],
         r_p="FR",
         s_p="D",
@@ -237,7 +232,7 @@ def test_deterministic_asocc_filtered_two_step_pba_weights_keep_full_domain(
 
     output_root = _asocc_root(allocation_dummy_repo.repo_root, project_name=project_name)
     l1_result = pd.read_csv(
-        next(output_root.rglob("l1_AR(E^{PBA})__gwp100_lcia.csv")),
+        next(output_root.rglob("l1_AR(E^{PBA})__gwp100_ipcc.csv")),
         nrows=1,
     )
     assert l1_result.columns.tolist() == [
@@ -250,7 +245,7 @@ def test_deterministic_asocc_filtered_two_step_pba_weights_keep_full_domain(
         "reference_year",
         "2005",
     ]
-    result_path = next(output_root.rglob("AR(E^{PBA})_UT(GVAa)__gwp100_lcia.csv"))
+    result_path = next(output_root.rglob("AR(E^{PBA})_UT(GVAa)__gwp100_ipcc.csv"))
     result = pd.read_csv(result_path)
     global_pba = 8.005 + 10.005
     expected = (11 / 60) * (8.005 / global_pba) + (9 / 80) * (10.005 / global_pba)
@@ -504,7 +499,7 @@ def test_deterministic_asocc_generates_public_variant_and_transition_figures(
         "fu_code": "L2.a.b",
         "method_plan": "pairs",
         "l1_l2_pairs": ["EG(Pop)::UT(GVAa)", "PR(GDPcap)::UT(GVAa)"],
-        "lcia_method": "gwp100_lcia",
+        "lcia_method": "gwp100_ipcc",
         "r_p": ["FR"],
         "s_p": ["D"],
         "l1_reg_aggreg": "pre",
@@ -570,7 +565,7 @@ def test_deterministic_asocc_generates_public_regression_route_figures(
         fu_code="L2.a.a",
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         r_p=["FR"],
         s_p=["D"],
         l1_reg_aggreg="pre",
@@ -696,7 +691,7 @@ def test_deterministic_asocc_rejects_oecd_lcia_method(allocation_dummy_repo) -> 
             fu_code="L1.a",
             method_plan="default",
             l1_methods=["AR(E^{CBA_FD})"],
-            lcia_method="gwp100_lcia",
+            lcia_method="gwp100_ipcc",
             figures=False,
             refresh=True,
         )

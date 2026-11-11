@@ -7,14 +7,11 @@ from pyaesa.shared.figures.contracts import (
     normalize_figure_output_format as normalize_shared_figure_output_format,
 )
 from pyaesa.shared.tabular.contracts import normalize_tabular_output_format
-from pyaesa.download.mrios.utils.source_registry import is_exio_mrio_source
+from pyaesa.download.mrios.utils.source_registry import iter_mrio_entries
 
-_SUPPORTED_SOURCES = {
-    "exiobase_396_ixi",
-    "exiobase_396_pxp",
-    "exiobase_3102_ixi",
-    "exiobase_3102_pxp",
-}
+_SUPPORTED_SOURCES = tuple(
+    entry.source_key for entry in iter_mrio_entries() if entry.family == "exiobase"
+)
 
 
 def normalize_supported_source(*, source: str, caller: str) -> str:
@@ -36,8 +33,8 @@ def normalize_supported_source(*, source: str, caller: str) -> str:
     value = str(source).strip()
     if not value:
         raise ValueError(f"{caller} requires a non-empty source.")
-    if value not in _SUPPORTED_SOURCES or not is_exio_mrio_source(value):
-        supported = sorted(_SUPPORTED_SOURCES)
+    if value not in _SUPPORTED_SOURCES:
+        supported = list(_SUPPORTED_SOURCES)
         raise ValueError(
             f"{caller} currently supports only EXIOBASE sources {supported}. Got '{value}'."
         )

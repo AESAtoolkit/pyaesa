@@ -119,13 +119,13 @@ def _prepare_context(
     if request.source is None:
         raise ValueError(
             "source cannot be None. Provide an explicit source "
-            "(for example 'oecd_v2025', 'exiobase_3102_pxp', or 'iso3')."
+            "(for example 'exiobase_3112_pxp', 'oecd_v2025', or 'iso3')."
         )
     source = str(request.source).strip()
     if not source:
         raise ValueError(
             "source cannot be empty. Provide an explicit source "
-            "(for example 'oecd_v2025', 'exiobase_3102_pxp', or 'iso3')."
+            "(for example 'exiobase_3112_pxp', 'oecd_v2025', or 'iso3')."
         )
     output_source = request.output_source
     l1_reg_aggreg_mode = normalize_l1_reg_mode_required(request.l1_reg_aggreg)

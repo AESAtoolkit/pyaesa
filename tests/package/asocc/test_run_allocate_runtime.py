@@ -119,7 +119,7 @@ def test_deterministic_asocc_skips_missing_year_directory_and_keeps_processed_ou
         fu_code="L2.a.a",
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         figures=False,
         refresh=True,
     )
@@ -141,7 +141,7 @@ def test_deterministic_asocc_figures_false_preserves_existing_figures(
         fu_code="L2.a.a",
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         figures=True,
         figure_format={"format": "png", "dpi": 10},
         refresh=True,
@@ -157,7 +157,7 @@ def test_deterministic_asocc_figures_false_preserves_existing_figures(
         fu_code="L2.a.a",
         method_plan="one_step",
         one_step_methods=["UT(FD)"],
-        lcia_method="gwp100_lcia",
+        lcia_method="gwp100_ipcc",
         figures=False,
         refresh=False,
     )

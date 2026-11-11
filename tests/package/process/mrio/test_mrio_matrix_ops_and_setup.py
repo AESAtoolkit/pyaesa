@@ -425,9 +425,9 @@ def test_process_setup_contracts_cover_aggregation_jobs_and_clipping(project_rep
     assert _normalize_lcia_methods(None) is None
     assert _normalize_lcia_methods("pb_lcia") == ["pb_lcia"]
     assert _normalize_lcia_methods([]) is None
-    assert _normalize_lcia_methods(["pb_lcia", " ", "gwp100_lcia"]) == [
+    assert _normalize_lcia_methods(["pb_lcia", " ", "gwp100_ipcc"]) == [
         "pb_lcia",
-        "gwp100_lcia",
+        "gwp100_ipcc",
     ]
 
     empty_aggregation = _resolve_aggregation_inputs(

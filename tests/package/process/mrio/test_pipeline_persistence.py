@@ -312,17 +312,17 @@ def test_prune_saved_dir_keeps_only_requested_directories(tmp_path: Path) -> Non
 def test_save_lcia_fy_pickles_keeps_only_methods_with_fy(tmp_path: Path) -> None:
     iosys = SimpleNamespace(
         pb_lcia=SimpleNamespace(F_Y={"k": "v"}),
-        gwp100_lcia=SimpleNamespace(F_Y=None),
+        gwp100_ipcc=SimpleNamespace(F_Y=None),
     )
     kept = mod.save_lcia_fy_pickles(
         iosys=iosys,
         saved_dir=tmp_path,
-        lcia_method_names=["pb_lcia", "gwp100_lcia", "missing", " "],
+        lcia_method_names=["pb_lcia", "gwp100_ipcc", "missing", " "],
     )
 
     assert kept == ["pb_lcia"]
     assert (tmp_path / "enacting_metrics" / "level_1" / "pb_lcia" / "F_Y.pickle").exists()
-    assert not (tmp_path / "enacting_metrics" / "level_1" / "gwp100_lcia" / "F_Y.pickle").exists()
+    assert not (tmp_path / "enacting_metrics" / "level_1" / "gwp100_ipcc" / "F_Y.pickle").exists()
 
 
 def _touch(path: Path) -> None:
@@ -504,16 +504,16 @@ def test_save_pyaesa_extension_pickles_fails_when_requested_extension_missing(
 def test_save_pyaesa_extension_pickles_handles_multiple_methods(tmp_path: Path) -> None:
     iosys = SimpleNamespace(
         pb_lcia=SimpleNamespace(S={"s": 1}, M={"m": 1}, unit="kg"),
-        gwp100_lcia=SimpleNamespace(S={"s": 2}, M={"m": 2}, unit="kg"),
+        gwp100_ipcc=SimpleNamespace(S={"s": 2}, M={"m": 2}, unit="kg"),
     )
     summary = mod.save_pyaesa_extension_pickles(
         iosys=iosys,
         saved_dir=tmp_path,
-        lcia_methods=["pb_lcia", "gwp100_lcia"],
+        lcia_methods=["pb_lcia", "gwp100_ipcc"],
     )
     assert summary == {
         "pb_lcia": ["M", "S", "unit"],
-        "gwp100_lcia": ["M", "S", "unit"],
+        "gwp100_ipcc": ["M", "S", "unit"],
     }
 
 
