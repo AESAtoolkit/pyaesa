@@ -487,10 +487,10 @@ def deterministic_asr(
             ``deterministic_ar6_cc(...)`` output scope. The refresh removes the
             scope manifest plus recorded ASR result tables and figures for that
             scope before recomputation. For example, for
-            ``project_name="demo"``, ``source="exiobase_3102_ixi"``,
+            ``project_name="demo"``, ``source="exiobase_3112_ixi"``,
             ``agg_version="elec"``, external LCA version ``"test_v1"``, and
             static ``cc_source="gwp100_ipcc"``, the refreshed scope is
-            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/deterministic/static_gwp100_ipcc``.
+            ``<repo>/demo/C_asr/exiobase_3112_ixi_elec/ext_lca_test_v1/deterministic/static_gwp100_ipcc``.
             External LCA staged inputs, processed MRIO inputs, processed
             population and GDP, and raw downloads are not refreshed. Defaults
             to ``False``.
@@ -525,7 +525,7 @@ def deterministic_asr(
 
             deterministic_asr(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=range(2020, 2031),
                 lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",

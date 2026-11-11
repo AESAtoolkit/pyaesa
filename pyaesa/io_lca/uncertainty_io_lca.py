@@ -248,7 +248,7 @@ def uncertainty_io_lca(
             matching run folders for the current request under the adjacent
             ``monte_carlo`` root. For example, matching IO-LCA Monte Carlo run
             folders are refreshed under
-            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/A_lca/io_lca/exiobase_3112_ixi_elec/monte_carlo/mc_<generated_id>``.
             Processed MRIO inputs, processed population and GDP, raw downloads,
             and downstream ASR outputs are not refreshed. Defaults to
             ``False``.
@@ -276,7 +276,7 @@ def uncertainty_io_lca(
             uncertainty_io_lca(
                 base_io_lca_args={
                     "project_name": "demo",
-                    "source": "exiobase_3102_ixi",
+                    "source": "exiobase_3112_ixi",
                     "years": 2019,
                     "lcia_method": "gwp100_ipcc",
                     "fu_code": "L2.c.b",

@@ -705,7 +705,7 @@ def uncertainty_asr(
             ``deterministic_io_lca(...)`` and ``uncertainty_io_lca(...)``
             output scopes can also be refreshed. For example, matching ASR
             Monte Carlo run folders are refreshed under
-            ``<repo>/demo/C_asr/exiobase_3102_ixi_elec/ext_lca_test_v1/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/C_asr/exiobase_3112_ixi_elec/ext_lca_test_v1/monte_carlo/mc_<generated_id>``.
             External LCA staged inputs, processed MRIO inputs, processed
             population and GDP, raw downloads, and deterministic ASR outputs
             are not refreshed. Defaults to ``False``.
@@ -732,7 +732,7 @@ def uncertainty_asr(
 
             uncertainty_asr(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=range(2020, 2031),
                 lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",

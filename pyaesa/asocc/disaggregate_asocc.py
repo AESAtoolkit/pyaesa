@@ -272,13 +272,13 @@ def disaggregate_asocc(
                         "s_p": ["D"],
                     },
                     "ref_agg_run": {
-                        "source": "exiobase_3102_ixi",
+                        "source": "exiobase_3112_ixi",
                         "agg_sec": True,
                         "agg_version": "oecd_d",
                         "s_p": ["D"],
                     },
                     "ref_disagg_run": {
-                        "source": "exiobase_3102_ixi",
+                        "source": "exiobase_3112_ixi",
                         "agg_sec": True,
                         "agg_version": "elec",
                         "s_p": ["Electricity"],

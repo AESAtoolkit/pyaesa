@@ -48,7 +48,7 @@ _REGRESSION_COLUMNS_DEFINITIONS = {
     "projection_branch": (
         "Name of the projection run branch (e.g., project name or internal branch label).",
     ),
-    "source": ("MRIO source identifier (e.g., `exiobase_3102_ixi`).",),
+    "source": ("MRIO source identifier (e.g., `exiobase_3112_ixi`).",),
     "fu_code": ("Functional unit code (e.g., `L2.c.b`).",),
     "l2_method": ("L2 method label.",),
     "model_type": (

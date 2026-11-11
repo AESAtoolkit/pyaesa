@@ -135,12 +135,12 @@ def process_mrio(
         ``data_raw/mrio/exiobase_3/lcia/carbon_accounts_covs/``.
 
     Example:
-        Process EXIOBASE 3.10.2 ixi outputs with selected LCIA methods::
+        Process EXIOBASE 3.11.2 ixi outputs with selected LCIA methods::
 
             from pyaesa import process_mrio
 
             process_mrio(
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 lcia_method=["pb_lcia","gwp100_ipcc"],
             )
     """

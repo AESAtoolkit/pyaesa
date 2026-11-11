@@ -201,9 +201,9 @@ def deterministic_io_lca(
         refresh: If ``True``, clear and recompute the resolved deterministic
             IO-LCA source and version output scope under
             ``<project>/A_lca/io_lca``. For example, for
-            ``project_name="demo"``, ``source="exiobase_3102_ixi"``, and
+            ``project_name="demo"``, ``source="exiobase_3112_ixi"``, and
             ``agg_version="elec"``, the refreshed path is
-            ``<repo>/demo/A_lca/io_lca/exiobase_3102_ixi_elec/deterministic``.
+            ``<repo>/demo/A_lca/io_lca/exiobase_3112_ixi_elec/deterministic``.
             It is not limited to one LCIA method inside that output scope.
             Processed MRIO inputs, processed population and GDP, raw downloads,
             and downstream ASR outputs are not refreshed. Defaults to
@@ -233,7 +233,7 @@ def deterministic_io_lca(
 
             deterministic_io_lca(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=2019,
                 lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",

@@ -67,10 +67,11 @@ framework based on human capital dynamics. Global Environmental Change, 42,
 
 2.2 MRIO tables
 
-2.2.1 EXIOBASE 3.10.2
+2.2.1 EXIOBASE 3.11.2
 
-exiobase_3102 is used by download_mrio(...) and
-process_mrio(...) when this MRIO source is selected. 
+The exiobase_3112, exiobase_3102, and exiobase_396 source families are used
+by download_mrio(...) and process_mrio(...) when the matching ixi or pxp
+source is selected. Cite the version used in the study:
 
 Citations:
 Stadler, K. (2021). Pymrio: A Python-based multi-regional input-output analysis
@@ -88,8 +89,12 @@ https://doi.org/10.1111/jiec.12715
 Stadler, K., Wood, R., Bulavskaya, T., Södersten, C.-J., Simas, M., Schmidt,
 S., Usubiaga, A., Acosta-Fernández, J., Kuenen, J., Bruckner, M., Giljum, S.,
 Lutter, S., Merciai, S., Schmidt, J. H., Theurl, M. C., Plutzar, C., Kastner,
-T., Eisenmenger, N., Erb, K.-H., ... Tukker, A. (2026). EXIOBASE 3 (3.10.2)
-[Data set]. Zenodo. https://doi.org/10.5281/zenodo.20051562
+T., Eisenmenger, N., Erb, K.-H., ... Tukker, A. (2026). EXIOBASE 3 (3.11.2)
+[Data set]. Zenodo. https://doi.org/10.5281/zenodo.23039074
+
+Additional version records:
+EXIOBASE 3 (3.10.2), Zenodo: https://doi.org/10.5281/zenodo.20051562
+EXIOBASE 3 (3.9.6), Zenodo: https://doi.org/10.5281/zenodo.15689391
 
 2.2.2 OECD ICIO v2025
 
