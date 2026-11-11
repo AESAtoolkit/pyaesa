@@ -3,12 +3,6 @@
 This module fetches SSP scenario data directly from the IIASA Scenario
 Explorer legacy API and writes a wide CSV to
 ``data_raw/pop_gdp/ssp_raw.csv``.
-
-Why no ``pyam`` dependency:
-    The rest of this package requires ``pymrio``. Recent ``pyam`` versions
-    conflict with ``pymrio`` through incompatible ``openpyxl`` constraints,
-    which blocks modern Python environments. Using direct HTTP queries keeps
-    SSP download behavior while avoiding that hard dependency conflict.
 """
 
 import json
