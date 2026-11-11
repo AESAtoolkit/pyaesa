@@ -20,6 +20,7 @@ from .exio_characterization import (
     _calc_characterized_extensions_minimal as _core_calc_characterized_extensions_minimal,
     _characterize_exiobase_io_core,
     _find_missing_characterization_extensions as _core_find_missing_characterization_extensions,
+    _replace_na_in_inactive_columns,
     _retain_extension_instances as _core_retain_extension_instances,
 )
 
@@ -33,7 +34,7 @@ def _parse_exio_year(
     system: str,
     parser: Callable[[str], Any] = pymrio.parse_exiobase3,
 ) -> pymrio.IOSystem:
-    """Parse a single EXIOBASE archive for ``year``."""
+    """Parse EXIOBASE and resolve inactive N/A cells before aggregation or LCIA."""
     archive_path = _get_exio_archive_path(
         Path(full_dir),
         int(year),
@@ -43,7 +44,15 @@ def _parse_exio_year(
         raise FileNotFoundError(
             f"EXIO archive for {year} not found at {archive_path}. Run MRIO downloads first."
         )
-    return cast(pymrio.IOSystem, parser(str(archive_path)))
+    io_system = cast(pymrio.IOSystem, parser(str(archive_path)))
+    output = cast(pd.DataFrame, io_system.x).iloc[:, 0]
+    demand_activity = ~cast(pd.DataFrame, io_system.Y).eq(0).all(axis=0)
+    for candidate in io_system.get_extensions(data=True):
+        extension = cast(pymrio.Extension, candidate)
+        extension.F = _replace_na_in_inactive_columns(cast(pd.DataFrame, extension.F), output)
+        if isinstance(extension.F_Y, pd.DataFrame):
+            extension.F_Y = _replace_na_in_inactive_columns(extension.F_Y, demand_activity)
+    return io_system
 
 
 @dataclass

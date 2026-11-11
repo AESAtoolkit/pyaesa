@@ -1,11 +1,12 @@
 """Reusable real-pymrio IO/repository helpers for MRIO package tests."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 import zipfile
 
 import pandas as pd
 import pymrio
+import numpy as np
 
 from pyaesa.download.mrios.utils.paths import (
     _get_exio_archive_path,
@@ -195,33 +196,80 @@ def write_oecd_raw_csv_files(
     return full_dir
 
 
-def write_exio_archive_files(repo_root: Path, *, source: str, years: list[int]) -> Path:
-    """Write small EXIOBASE archives that are parseable by pymrio."""
+def write_exio_archive_files(
+    repo_root: Path,
+    *,
+    source: str,
+    years: list[int],
+    lcia_methods: tuple[str, ...] = (),
+    inactive_missing: bool = False,
+) -> Path:
+    """Write parseable archives, optionally with all selected matrix stressors.
+
+    Each optional characterization stressor has unit intermediate and final
+    demand flows, allowing exact projection expectations from the bundled CSVs.
+    ``inactive_missing`` adds missing satellite entries in one zero output
+    sector and one final demand column whose economic entries are all zero.
+    """
     del repo_root
     source_key = str(source).strip().lower()
     system = "ixi" if source_key.endswith("_ixi") else "pxp"
     full_dir = _get_full_dir(source_key)
     full_dir.mkdir(parents=True, exist_ok=True)
     base = build_dummy_iosystem()
-    iosys = pymrio.IOSystem(
-        Z=base.Z,
-        Y=base.Y,
-        unit=base.unit,
-        factor_inputs={
+    if inactive_missing:
+        cast(pd.DataFrame, base.Z).iloc[-1, :] = 0
+        cast(pd.DataFrame, base.Z).iloc[:, -1] = 0
+        cast(pd.DataFrame, base.Y).iloc[-1, :] = 0
+        cast(pd.DataFrame, base.Y).iloc[:, -1] = 0
+    extensions: dict[str, Any] = {
+        "factor_inputs": {
             "name": "factor_inputs",
             "F": base.factor_inputs.F,
             "F_Y": None,
             "unit": base.factor_inputs.unit,
         },
-        satellite={
+    }
+    if lcia_methods:
+        matrices = pd.concat(
+            [
+                pd.read_csv(
+                    _get_characterization_matrix_path(source_key=source_key, lcia_method=method)
+                )
+                for method in lcia_methods
+            ],
+            ignore_index=True,
+        ).drop_duplicates(["extension", "stressor"])
+        for name, group in matrices.groupby("extension", sort=False):
+            stressors = pd.Index(group["stressor"], name="stressor")
+            extensions[str(name).replace(" ", "_")] = {
+                "name": str(name),
+                "F": pd.DataFrame(1.0, index=stressors, columns=cast(pd.DataFrame, base.Z).columns),
+                "F_Y": pd.DataFrame(
+                    1.0, index=stressors, columns=cast(pd.DataFrame, base.Y).columns
+                ),
+                "unit": pd.DataFrame({"unit": group["stressor_unit"].to_numpy()}, index=stressors),
+            }
+    else:
+        extensions["satellite"] = {
             "name": "satellite",
             "F": base.satellite_accounts.F,
             "F_Y": base.satellite_accounts.F_Y,
             "unit": base.satellite_accounts.unit,
-        },
-    )
-    iosys.calc_system(include_ghosh=True)
+        }
+    if inactive_missing:
+        for extension in extensions.values():
+            extension["F"].iloc[:, -1] = np.nan
+            if extension["F_Y"] is not None:
+                extension["F_Y"].iloc[:, -1] = np.nan
     for year in years:
+        iosys = pymrio.IOSystem(
+            Z=base.Z,
+            Y=base.Y,
+            unit=base.unit,
+            **extensions,
+        )
+        iosys.calc_system(include_ghosh=True)
         staging = full_dir / f".dummy_exio_{int(year)}"
         if staging.exists():
             for child in sorted(staging.rglob("*"), reverse=True):

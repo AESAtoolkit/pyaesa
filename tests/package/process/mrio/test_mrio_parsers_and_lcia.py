@@ -15,7 +15,7 @@ from pyaesa.process.mrios.utils.parsers.exio_characterization import (
     _find_missing_characterization_extensions as _find_missing_core,
     _normalize_label,
     _project_extension_characterization,
-    _replace_na_in_zero_output_columns,
+    _replace_na_in_inactive_columns,
     _requested_extensions_from_matrix as _requested_extensions_from_matrix_core,
     _retain_extension_instances as _retain_core,
 )
@@ -45,12 +45,15 @@ from pyaesa.process.mrios.utils.pipeline.lcia_tracking import (
     year_entry_unavailable_lcia_methods,
 )
 from pyaesa.shared.lcia.identity import characterization_frame_sha256
+from pyaesa.process.mrios.utils.pipeline.contracts import SourceConfig
+from pyaesa.process.mrios.utils.pipeline.year_orchestrator import parse_and_calc_year
 from tests.package.helpers.data_processing_dummy import (
     DummyExtension,
     build_dummy_iosystem,
     build_fd_columns,
     build_product_index,
     write_characterization_matrix,
+    write_exio_archive_files,
 )
 
 
@@ -63,21 +66,13 @@ def test_parser_wrappers_and_characterization_job_builders(project_repo: Path) -
     exio_zip.write_bytes(b"zip")
 
     oecd_obj = object()
-    exio_obj = object()
+    exio_obj = build_dummy_iosystem()
+    cast(pd.DataFrame, exio_obj.Y).iloc[:, -1] = [1.0, -1.0, 0.0, 0.0]
+    cast(pd.DataFrame, exio_obj.satellite_accounts.F_Y).iloc[:, -1] = np.nan
     parsed_oecd = cast(Any, _parse_oecd_year(full_dir, 2019, parser=lambda path: (path, oecd_obj)))
     assert parsed_oecd[1] is oecd_obj
-    assert (
-        cast(
-            Any,
-            _parse_exio_year(
-                full_dir,
-                2019,
-                system="ixi",
-                parser=lambda path: (path, exio_obj),
-            ),
-        )[1]
-        is exio_obj
-    )
+    assert _parse_exio_year(full_dir, 2019, system="ixi", parser=lambda path: exio_obj) is exio_obj
+    assert pd.isna(cast(pd.DataFrame, exio_obj.satellite_accounts.F_Y).iloc[0, -1])
     with pytest.raises(FileNotFoundError):
         _parse_oecd_year(full_dir, 2020, parser=lambda path: path)
     with pytest.raises(FileNotFoundError):
@@ -150,6 +145,52 @@ def test_parser_wrappers_and_characterization_job_builders(project_repo: Path) -
         )
         == {}
     )
+
+
+@pytest.mark.parametrize("full", [False, True])
+@pytest.mark.parametrize("aggregate", [False, True])
+def test_inactive_na_are_resolved_before_aggregation_and_characterization(
+    project_repo: Path, full: bool, aggregate: bool
+) -> None:
+    source = "exiobase_396_ixi"
+    write_characterization_matrix(
+        project_repo, source_key=source, method_name="na_guard", extension_name="air emissions"
+    )
+    full_dir = write_exio_archive_files(
+        project_repo, source=source, years=[2010], lcia_methods=("na_guard",), inactive_missing=True
+    )
+    jobs = _build_characterization_jobs(source_key=source, lcia_methods=["na_guard"])
+    io, applied, missing, *_ = parse_and_calc_year(
+        source=source,
+        cfg=SourceConfig(
+            requires_characterization=True,
+            required_core=("A",),
+            required_extensions=(),
+            exio_system="ixi",
+        ),
+        full_dir=full_dir,
+        year=2010,
+        char_jobs=jobs,
+        agg_reg=aggregate,
+        agg_sec=False,
+        agg_reg_df=pd.DataFrame(
+            {
+                "original_classification": ["R1", "R1", "R2"],
+                "aggregated_mrio": ["ALL", "SPARE", "ALL"],
+                "weight": [0.5, 0.5, 1.0],
+            }
+        ),
+        agg_sec_df=None,
+        agg_reg_path=Path("regions.csv"),
+        agg_sec_path=None,
+        pymrio_calc_all=full,
+    )
+    extension = cast(Any, io).na_guard
+    assert applied == ["na_guard"]
+    assert missing == {}
+    for frame in (extension.F, extension.F_Y, extension.S, extension.M, extension.D_pba_reg):
+        assert np.isfinite(frame.to_numpy()).all()
+    assert float(extension.D_pba_reg.to_numpy().sum()) == pytest.approx(8.0)
 
 
 def test_characterization_validation_logging_and_wrapper_contracts(project_repo: Path) -> None:
@@ -372,7 +413,7 @@ def test_exio_characterization_core_contracts_cover_success_and_failure_paths() 
     assert _retain_core(iosys, ["factor_inputs", "pb_lcia"]) == []
 
 
-def test_replace_na_in_zero_output_columns_only_changes_zero_output_targets() -> None:
+def test_replace_na_in_inactive_columns_only_changes_inactive_targets() -> None:
     frame = pd.DataFrame(
         {
             ("R1", "S1"): [np.nan, 2.0],
@@ -385,7 +426,7 @@ def test_replace_na_in_zero_output_columns_only_changes_zero_output_targets() ->
         index=pd.Index([("R1", "S1"), ("R1", "S2")]),
     )
 
-    sanitized = _replace_na_in_zero_output_columns(frame, x_series)
+    sanitized = _replace_na_in_inactive_columns(frame, x_series)
 
     assert sanitized.loc["stress_1", ("R1", "S1")] == 0.0
     assert pd.isna(sanitized.loc["stress_1", ("R1", "S2")])

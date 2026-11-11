@@ -167,6 +167,13 @@ downstream scientific packages.
 EXIOBASE LCIA characterization uses prerequisite characterization factors and
 responsibility period files under `data_raw/`.
 
+`mrios/utils/parsers/exio_parser.py::_parse_exio_year` resolves missing native
+satellite entries before aggregation and characterization. Production entries
+are eligible only at exactly zero native output; direct entries require every
+economic value in their final demand column to be zero. Finite physical values
+and missing entries in active columns are preserved. Both minimal and full
+pymrio calculations consume these same parsed accounts.
+
 LCIA characterization matrix paths are owned by `pyaesa/shared/lcia/paths.py`.
 MRIO processing consumes that path owner through
 `mrios/utils/io/paths.py::_get_characterization_matrix_path(...)`; it does not
