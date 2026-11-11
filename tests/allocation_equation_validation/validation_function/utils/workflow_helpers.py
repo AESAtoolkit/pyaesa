@@ -75,7 +75,6 @@ def _scope_compatible_args(base_allocate_args: Mapping[str, Any]) -> dict[str, A
         "ssp_scenario",
         "projection_mode",
         "reg_window",
-        "reuse_years",
     )
     return {key: base_allocate_args.get(key) for key in keys}
 
