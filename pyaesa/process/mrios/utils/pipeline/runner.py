@@ -280,7 +280,7 @@ def run_process_mrio(
         progress.finish()
 
     _write_metadata(source_key, metadata, matrix_version=matrix_version)
-    if report.processed or report.errors:
+    if report.processed or report.errors or report.lcia_missing_by_year:
         return report
     return None
 
@@ -378,6 +378,13 @@ def _resolve_year_reuse_plan(
         ):
             report.skipped_already_saved.append(year)
             report.saved_dirs[year] = saved_dir
+            omitted = {
+                method: status["missing"]
+                for method, status in cast(dict, (year_meta or {}).get("lcia_status", {})).items()
+                if status.get("available") and status.get("missing")
+            }
+            if omitted:
+                report.lcia_missing_by_year[year] = omitted
             continue
         years_to_process.append(year)
 

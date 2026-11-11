@@ -23,6 +23,10 @@ from pyaesa.process.mrios.utils.parsers.exio_parser import (
     _retain_extension_instances,
 )
 from pyaesa.process.mrios.utils.parsers.oecd_parser import _parse_oecd_year
+from pyaesa.process.mrios.utils.parsers.exio_characterization import (
+    _OPTIONAL_EXTENSIONS,
+    _normalize_label,
+)
 
 from pyaesa.process.mrios.utils.pipeline.contracts import SourceConfig
 from .matrix_ops import (
@@ -149,7 +153,8 @@ def parse_and_calc_year(
             missing = _find_missing_characterization_extensions(iosys, options.requested_extensions)
             if missing:
                 missing_by_method[lcia_method] = missing
-                continue
+                if {_normalize_label(name) for name in missing} - _OPTIONAL_EXTENSIONS:
+                    continue
             _characterize_exiobase_io(
                 iosys,
                 char_matrix=char_matrix,

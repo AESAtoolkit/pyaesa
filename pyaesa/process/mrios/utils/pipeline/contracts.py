@@ -9,6 +9,10 @@ from pyaesa.download.mrios.utils.source_registry import (
     iter_mrio_entries,
 )
 from pyaesa.process.mrios.utils.raw_corrections.runtime import build_scope_summary
+from pyaesa.process.mrios.utils.parsers.exio_characterization import (
+    _OPTIONAL_EXTENSIONS,
+    _normalize_label,
+)
 from pyaesa.shared.runtime.text import extend_user_text_lines
 
 
@@ -139,7 +143,7 @@ class ProcessReportMRIO:
                         lines.append(f"    - {path}")
         if self.lcia_missing_by_year:
             lines.append("")
-            lines.append("  LCIA skipped:")
+            lines.append("  LCIA inventory warnings:")
             for year in sorted(self.lcia_missing_by_year):
                 missing_by_method = self.lcia_missing_by_year.get(year, {})
                 if not missing_by_method:
@@ -149,13 +153,21 @@ class ProcessReportMRIO:
                     missing_unique = sorted({str(name) for name in missing})
                     if not missing_unique:
                         continue
-                    if len(missing_unique) == 1:
-                        reason = f"{missing_unique[0]} extension missing in {source_reason_label}"
+                    if {_normalize_label(name) for name in missing_unique} == _OPTIONAL_EXTENSIONS:
+                        reason = (
+                            f"deforestation extension missing in {source_reason_label}; "
+                            "computed without this extension"
+                        )
+                    elif len(missing_unique) == 1:
+                        reason = (
+                            f"skipped: {missing_unique[0]} extension missing "
+                            f"in {source_reason_label}"
+                        )
                     else:
                         listed = ", ".join(missing_unique[:3])
                         if len(missing_unique) > 3:
                             listed = f"{listed}, +{len(missing_unique) - 3} more"
-                        reason = f"extensions missing in {source_reason_label}: {listed}"
+                        reason = f"skipped: extensions missing in {source_reason_label}: {listed}"
                     lcia_method_parts.append(f"{lcia_method}: {reason}")
                 if lcia_method_parts:
                     extend_user_text_lines(lines, f"    {year}: {'; '.join(lcia_method_parts)}")

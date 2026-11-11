@@ -7,6 +7,10 @@ import pandas as pd
 from pyaesa.process.mrios.utils.parsers.exio_parser import (
     ExioCharacterizationOptions,
 )
+from pyaesa.process.mrios.utils.parsers.exio_characterization import (
+    _OPTIONAL_EXTENSIONS,
+    _normalize_label,
+)
 
 
 def normalize_lcia_method_list(method_specs: Sequence[str] | None) -> list[str]:
@@ -58,7 +62,11 @@ def year_entry_unavailable_lcia_methods(year_meta: dict[str, Any] | None) -> set
         if not lcia_method:
             continue
         raw_meta = cast(dict[str, Any], raw_meta)
-        if raw_meta.get("available") is False:
+        if (
+            raw_meta.get("available") is False
+            and {_normalize_label(name) for name in raw_meta.get("missing", ())}
+            != _OPTIONAL_EXTENSIONS
+        ):
             unavailable.add(lcia_method)
     return unavailable
 
@@ -145,7 +153,7 @@ def build_lcia_status_payload(
         missing = missing_map.get(lcia_method)
         if missing:
             payload[lcia_method] = {
-                "available": False,
+                "available": lcia_method in applied,
                 "missing": sorted(set(missing)),
             }
             continue

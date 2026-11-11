@@ -192,13 +192,19 @@ may characterize a subset of those categories. Missing characterization does
 not acquire zero factors; allocation consumers resolve eligible methods against
 the assessment axis, and IO-LCA consumes actual characterized impacts.
 
+The year orchestrator records a method as unavailable when a required whole
+extension is absent. The optional `deforestation` extension is omitted when
+absent; available accounts are characterized on the full declared impact axis.
+Metadata records `available=True` with `missing=["deforestation"]`, and the processing
+report warns about the omission during processing and reuse. The complete
+original characterization matrix retains its scientific identity.
 The EXIOBASE 3.10.2 raw correction owner does not apply its corrections to
 EXIOBASE 3.11.2.
 
 | Metadata | Purpose |
 | --- | --- |
 | Applied LCIA methods | Downstream aSoCC LCIA method availability. |
-| Missing LCIA methods or impacts | Clear reason for skipped LCIA payloads. |
+| Missing LCIA extensions | Reason for skipped methods or omitted optional contributions. |
 | LCIA units | Public deterministic output unit metadata. |
 | Characterization status | Downstream setup validation. |
 | `characterization_inputs` | SHA256 of characterization values, flow mappings, category mappings, and units by attempted method and year, including unavailable methods. |

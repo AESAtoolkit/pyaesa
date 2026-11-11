@@ -224,6 +224,7 @@ def write_exio_archive_files(
     source: str,
     years: list[int],
     lcia_methods: tuple[str, ...] = (),
+    missing_extensions_by_year: dict[int, tuple[str, ...]] | None = None,
     include_correction_products: bool = False,
     inactive_missing: bool = False,
 ) -> Path:
@@ -231,6 +232,7 @@ def write_exio_archive_files(
 
     Each optional characterization stressor has unit intermediate and final
     demand flows, allowing exact projection expectations from the bundled CSVs.
+    Whole extensions can be omitted for years whose source inventory lacks them.
     ``inactive_missing`` adds missing satellite entries in one zero output
     sector and one final demand column whose economic entries are all zero.
     """
@@ -290,11 +292,12 @@ def write_exio_archive_files(
             if extension["F_Y"] is not None:
                 extension["F_Y"].iloc[:, -1] = np.nan
     for year in years:
+        missing = (missing_extensions_by_year or {}).get(year, ())
         iosys = pymrio.IOSystem(
             Z=base.Z,
             Y=base.Y,
             unit=base.unit,
-            **extensions,
+            **{name: value for name, value in extensions.items() if name not in missing},
         )
         iosys.calc_system(include_ghosh=True)
         staging = full_dir / f".dummy_exio_{int(year)}"

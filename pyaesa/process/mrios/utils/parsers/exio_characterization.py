@@ -10,6 +10,8 @@ import pandas as pd
 import pymrio
 from pymrio.tools.iomath import calc_M
 
+_OPTIONAL_EXTENSIONS = frozenset({"deforestation"})
+
 
 def _requested_extensions_from_matrix(char_df: pd.DataFrame) -> list[str]:
     """Return unique extension names referenced by ``char_df``."""
@@ -224,27 +226,34 @@ def _project_extension_characterization(
 
 def _direct_characterize_extensions(
     *,
+    io_system: pymrio.IOSystem,
     extensions: Sequence[pymrio.Extension],
     char_matrix: pd.DataFrame,
     new_extension_name: str,
 ) -> pymrio.Extension:
-    """Create characterized extension by direct stressor factor projection."""
+    """Project available accounts onto the full impact axis, omitting absent optional ones."""
     ext_lookup = {cast(str, cast(Any, ext).name): ext for ext in extensions}
-    f_total: pd.DataFrame | None = None
+    unit_table = _build_impact_units(char_matrix)
+    f_total = pd.DataFrame(
+        0.0, index=unit_table.index.sort_values(), columns=cast(pd.DataFrame, io_system.Z).columns
+    )
     fy_total: pd.DataFrame | None = None
 
-    for ext_name in _requested_extensions_from_matrix(char_matrix):
-        ext = ext_lookup[ext_name]
+    for ext_name, ext in ext_lookup.items():
         factors = char_matrix.loc[char_matrix["extension"].astype(str).str.strip() == ext_name]
         f_part, fy_part = _project_extension_characterization(
             extension=ext,
             factors=factors,
         )
-        f_total = f_part if f_total is None else f_total.add(f_part, fill_value=0.0)
+        f_total = f_total.add(f_part.reindex(f_total.index, fill_value=0.0))
         if fy_part is not None:
-            fy_total = fy_part if fy_total is None else fy_total.add(fy_part, fill_value=0.0)
+            fy_part = fy_part.reindex(f_total.index, fill_value=0.0)
+            fy_total = fy_part if fy_total is None else fy_total.add(fy_part)
 
-    unit_table = _build_impact_units(char_matrix)
+    if not extensions:
+        fy_total = pd.DataFrame(
+            0.0, index=f_total.index, columns=cast(pd.DataFrame, io_system.Y).columns
+        )
     return pymrio.Extension(
         name=new_extension_name,
         F=f_total,
@@ -264,15 +273,20 @@ def _characterize_exiobase_io_core(
 ) -> tuple[list[str], list[str]]:
     """Attach characterized extension and return kept/requested extension lists."""
     requested_ext_names = _requested_extensions_from_matrix(char_matrix)
-    extensions, _ = _collect_extensions(io_system, list(requested_ext_names))
+    extensions, missing = _collect_extensions(io_system, list(requested_ext_names))
 
     validation = _build_characterization_validation(
-        char_matrix=char_matrix,
+        char_matrix=char_matrix.loc[
+            ~char_matrix["extension"].isin(
+                [name for name in missing if _normalize_label(name) in _OPTIONAL_EXTENSIONS]
+            )
+        ],
         extensions=extensions,
     )
     validate(validation)
 
     characterized_extension = _direct_characterize_extensions(
+        io_system=io_system,
         extensions=extensions,
         char_matrix=char_matrix,
         new_extension_name=new_extension_name,

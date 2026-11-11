@@ -376,6 +376,7 @@ def test_exio_characterization_core_contracts_cover_success_and_failure_paths() 
     assert fy_none is None
 
     direct = _direct_characterize_extensions(
+        io_system=iosys,
         extensions=[satellite],
         char_matrix=cast(
             pd.DataFrame,
@@ -385,6 +386,7 @@ def test_exio_characterization_core_contracts_cover_success_and_failure_paths() 
     )
     assert direct.name == "pb_lcia"
     direct_no_fy = _direct_characterize_extensions(
+        io_system=iosys,
         extensions=[DummyExtension(name="satellite_accounts", F=satellite.F.copy(), F_Y=None)],
         char_matrix=cast(
             pd.DataFrame,
@@ -393,6 +395,23 @@ def test_exio_characterization_core_contracts_cover_success_and_failure_paths() 
         new_extension_name="pb_lcia_no_fy",
     )
     assert direct_no_fy.F_Y is None
+    active_f = satellite.F.copy()
+    active_f.iloc[0, 0] = np.nan
+    active_fy = cast(pd.DataFrame, satellite.F_Y).copy()
+    active_fy.iloc[0, 0] = np.nan
+    direct_missing_values = _direct_characterize_extensions(
+        io_system=iosys,
+        extensions=[
+            DummyExtension(name="satellite_accounts", F=active_f, F_Y=active_fy),
+            DummyExtension(name="air emissions", F=satellite.F, F_Y=satellite.F_Y),
+        ],
+        char_matrix=char_matrix.iloc[:2].assign(
+            extension=["satellite_accounts", "air emissions"], impact="impact_1"
+        ),
+        new_extension_name="missing_values",
+    )
+    assert pd.isna(cast(pd.DataFrame, direct_missing_values.F).iloc[0, 0])
+    assert pd.isna(cast(pd.DataFrame, direct_missing_values.F_Y).iloc[0, 0])
 
     captured: list[pd.DataFrame] = []
     keep_instances, requested_extensions = _characterize_exiobase_io_core(
