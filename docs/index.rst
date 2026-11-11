@@ -26,6 +26,7 @@ User Documentation
    overview
    workflow_reference
    tutorial
+   workspace_guides/index
    api
    methodological_notes
 

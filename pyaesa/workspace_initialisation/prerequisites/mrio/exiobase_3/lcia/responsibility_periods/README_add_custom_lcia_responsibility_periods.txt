@@ -9,6 +9,7 @@ historical responsibility allocation methods.
 
 This workspace folder stores the optional EXIOBASE responsibility period
 tables available to the current project under:
+
 - `data_raw/mrio/exiobase_3/lcia/responsibility_periods/`
 
 This guide is only needed when adding a responsibility period table for a
@@ -23,30 +24,34 @@ What to copy for a custom method
 --------------------------------
 
 Add one CSV per method:
-- <lcia_method>_rps.csv
+
+- `<lcia_method>_rps.csv`
 
 Use exactly one of the packaged model files as the starting structure:
-- name_lcia_rps_template.csv
-- name_lcia_rps_planetary_boundary_template.csv
+
+- `name_lcia_rps_template.csv`
+- `name_lcia_rps_planetary_boundary_template.csv`
 
 Canonical column contract
 -------------------------
 
 Standard schema:
-- impact_full_name
-- impact_parent
-- impact
-- responsibility_period_years
+
+- `impact_full_name`
+- `impact_parent`
+- `impact`
+- `responsibility_period_years`
 
 Planetary boundary schema:
-- Planetary boundary
-- Control variable
-- impact_parent
-- impact
-- impact_duration_years
-- responsibility_period_years
-- source
-- comment
+
+- `Planetary boundary`
+- `Control variable`
+- `impact_parent`
+- `impact`
+- `impact_duration_years`
+- `responsibility_period_years`
+- `source`
+- `comment`
 
 When to use each schema
 -----------------------
@@ -72,7 +77,7 @@ Guidance
   one method's scientific interpretation.
 
 When a custom responsibility period file is needed
--------------------------------------------------
+--------------------------------------------------
 
 Add an RPs file only when the workflow should support historical responsibility
 allocation. Methods that never use that allocation route do not need an
@@ -82,6 +87,7 @@ Custom method workflow
 ----------------------
 
 User workflow:
+
 1. Run `set_workspace(...)` for the target workspace.
 2. Go to `data_raw/mrio/exiobase_3/lcia/responsibility_periods/`.
 3. Copy one template CSV there.
@@ -90,6 +96,7 @@ User workflow:
 6. Use the same `lcia_method` name in package calls.
 
 Optional contributor route:
+
 1. If the new method should become available to all users by default, submit
    the paired characterization matrix and this responsibility period CSV to
    `pyaesa` through a pull request.
