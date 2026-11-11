@@ -455,11 +455,11 @@ def uncertainty_asocc(
             ``deterministic_asocc(...)``. The Monte Carlo refresh removes
             matching run folders for the current request under the adjacent
             ``monte_carlo`` root. For example, for ``project_name="demo"``,
-            ``source="exiobase_3102_ixi"``, and ``agg_version="elec"``, the
+            ``source="exiobase_3112_ixi"``, and ``agg_version="elec"``, the
             refreshed deterministic path is
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/deterministic`` and
+            ``<repo>/demo/B1_asocc/exiobase_3112_ixi_elec/deterministic`` and
             matching Monte Carlo run folders are under
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/B1_asocc/exiobase_3112_ixi_elec/monte_carlo/mc_<generated_id>``.
             External aSoCC inputs, processed MRIO inputs, processed population
             and GDP, raw downloads, and downstream aCC or ASR outputs are not
             refreshed. Defaults to ``False``.
@@ -487,7 +487,7 @@ def uncertainty_asocc(
             uncertainty_asocc(
                 base_asocc_args={
                     "project_name": "demo",
-                    "source": "exiobase_3102_ixi",
+                    "source": "exiobase_3112_ixi",
                     "years": range(2020, 2031),
                     "fu_code": "L2.c.b",
                     "s_p": ["Paper"],

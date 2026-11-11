@@ -268,9 +268,9 @@ def deterministic_asocc(
             version ``deterministic`` folder under
             ``<project>/B1_asocc/<source_or_source_agg_version>``. For
             example, for ``project_name="demo"``,
-            ``source="exiobase_3102_ixi"``, and ``agg_version="elec"``, the
+            ``source="exiobase_3112_ixi"``, and ``agg_version="elec"``, the
             refreshed path is
-            ``<repo>/demo/B1_asocc/exiobase_3102_ixi_elec/deterministic``.
+            ``<repo>/demo/B1_asocc/exiobase_3112_ixi_elec/deterministic``.
             Processed MRIO inputs, processed population and GDP, raw
             downloads, and downstream aCC or ASR outputs are not refreshed.
             Defaults to ``False``.
@@ -297,7 +297,7 @@ def deterministic_asocc(
 
             deterministic_asocc(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=2022,
                 fu_code="L2.c.b",
                 s_p=["Paper"],

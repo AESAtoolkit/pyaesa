@@ -89,14 +89,14 @@ allocated carrying capacity (aCC) trajectories and cumulative budgets.
 
 | AESA phase or route | Data source | Used for |
 | --- | --- | --- |
-| Phase A IO-LCA | EXIOBASE 3.10.2 MRIO | `pyaesa` owned IO-LCA results and ASR numerators. |
-| Phase B aSoCC allocation | EXIOBASE 3.10.2 or OECD ICIO v2025 MRIO | Allocation enacting metrics, final demand, production, value added, and environmental extensions after LCIA characterization when available. |
+| Phase A IO-LCA | EXIOBASE 3.11.2 MRIO | `pyaesa` owned IO-LCA results and ASR numerators. |
+| Phase B aSoCC allocation | EXIOBASE 3.11.2 or OECD ICIO v2025 MRIO | Allocation enacting metrics, final demand, production, value added, and environmental extensions after LCIA characterization when available. |
 | Phase B aSoCC retrospective scope | World Bank population/GDP | Historical population and GDP allocation inputs. |
 | Phase B aSoCC prospective scope | SSP population/GDP | Future population and GDP allocation inputs. |
 | Phase B dynamic climate change CC | AR6 climate pathways | Dynamic climate change carrying capacity pathways. |
 
 EXIOBASE is supported for `ixi` and `pxp` source variants. The
-examples use EXIOBASE 3.10.2 but EXIOBASE 3.9.6 is also supported.
+examples use EXIOBASE 3.11.2; EXIOBASE 3.10.2 and 3.9.6 are also supported.
 
 Current EXIOBASE LCIA coverage is `pb_lcia`, EF 3.1,
 `gwp100_ef31` (EF 3.1 climate change) and `gwp100_ipcc` (IPCC AR6).
@@ -133,7 +133,7 @@ For all data sources, cite the original provider following the
 
 | Data source | Used in `pyaesa` | Terms and conditions | Link |
 | --- | --- | --- | --- |
-| EXIOBASE 3 | EXIOBASE 3.10.2 and 3.9.6 MRIO downloads for IO-LCA and allocation inputs. | <ul><li>Noncommercial use: allowed for academic use under the EXIOBASE license.</li><li>Commercial use: requires a commercial license.</li></ul> | [EXIOBASE terms and conditions](https://exiobase.eu/terms-of-use/) and [Zenodo EXIOBASE record](https://doi.org/10.5281/zenodo.3583070) |
+| EXIOBASE 3 | EXIOBASE 3.11.2, 3.10.2 and 3.9.6 MRIO downloads for IO-LCA and allocation inputs. | <ul><li>Noncommercial use: allowed for academic use under the EXIOBASE license.</li><li>Commercial use: requires a commercial license.</li></ul> | [EXIOBASE terms and conditions](https://exiobase.eu/terms-of-use/) and [Zenodo EXIOBASE record](https://doi.org/10.5281/zenodo.23039074) |
 | OECD ICIO v2025 | OECD ICIO MRIO downloads for allocation inputs. | <ul><li>Noncommercial use: allowed under OECD data terms.</li><li>Commercial use: allowed under OECD data terms.</li></ul> | [OECD ICIO page](https://www.oecd.org/en/data/datasets/inter-country-input-output-tables.html) and [OECD terms and conditions](https://www.oecd-ilibrary.org/en/about/terms-conditions.html) |
 | World Bank population/GDP | Historical population and GDP allocation inputs. | <ul><li>Noncommercial use: allowed under CC BY 4.0.</li><li>Commercial use: allowed under CC BY 4.0.</li></ul> | [World Bank terms and conditions](https://data.worldbank.org/summary-terms-of-use) |
 | IIASA SSP population/GDP | Prospective population and GDP allocation inputs. | <ul><li>Noncommercial use: allowed under the IIASA Public License.</li><li>Commercial use: allowed within the licensed rights; adapted material is limited to scientific research, science communication, or policy consultancy. Reproducing substantial database portions is prohibited.</li></ul> | [IIASA SSP terms and conditions](https://ssp.apps.ece.iiasa.ac.at/documentation/license) |

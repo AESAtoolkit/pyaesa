@@ -597,7 +597,7 @@ def uncertainty_acc(
             uncertainty is active, this can also refresh the matching
             ``uncertainty_ar6_cc(...)`` output scope. For example, matching
             aCC Monte Carlo run folders are refreshed under
-            ``<repo>/demo/B2_acc/exiobase_3102_ixi_elec/monte_carlo/mc_<generated_id>``.
+            ``<repo>/demo/B2_acc/exiobase_3112_ixi_elec/monte_carlo/mc_<generated_id>``.
             External aSoCC inputs, static carrying capacity files, processed
             MRIO inputs, processed population and GDP, raw downloads, and
             downstream ASR outputs are not refreshed. Defaults to ``False``.
@@ -624,7 +624,7 @@ def uncertainty_acc(
 
             uncertainty_acc(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=range(2020, 2031),
                 lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",

@@ -247,7 +247,7 @@ def write_asocc_weight_template(
             write_asocc_weight_template(
                 base_asocc_args={
                     "project_name": "demo",
-                    "source": "exiobase_3102_ixi",
+                    "source": "exiobase_3112_ixi",
                     "fu_code": "L2.c.b",
                     "s_p": ["Paper"],
                     "r_c": ["FR"],
@@ -507,7 +507,7 @@ def preview_asocc_weight_tree(
             preview_asocc_weight_tree(
                 base_asocc_args={
                     "project_name": "demo",
-                    "source": "exiobase_3102_ixi",
+                    "source": "exiobase_3112_ixi",
                     "fu_code": "L2.c.b",
                     "s_p": ["Paper"],
                     "r_c": ["FR"],

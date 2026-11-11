@@ -416,9 +416,9 @@ def deterministic_acc(
             processed AR6 output scope selected by ``process_ar6(...)`` and
             the matching ``deterministic_ar6_cc(...)`` output scope.
             For example, for ``project_name="demo"``,
-            ``source="exiobase_3102_ixi"``, ``agg_version="elec"``, and
+            ``source="exiobase_3112_ixi"``, ``agg_version="elec"``, and
             static ``cc_source="gwp100_ipcc"``, the refreshed scope is
-            ``<repo>/demo/B2_acc/exiobase_3102_ixi_elec/deterministic/static_gwp100_ipcc``.
+            ``<repo>/demo/B2_acc/exiobase_3112_ixi_elec/deterministic/static_gwp100_ipcc``.
             Processed MRIO inputs, processed population and GDP, raw
             downloads, and downstream ASR outputs are not refreshed. Defaults
             to ``False``.
@@ -445,7 +445,7 @@ def deterministic_acc(
 
             deterministic_acc(
                 project_name="demo",
-                source="exiobase_3102_ixi",
+                source="exiobase_3112_ixi",
                 years=range(2020, 2031),
                 lcia_method="gwp100_ipcc",
                 fu_code="L2.c.b",
