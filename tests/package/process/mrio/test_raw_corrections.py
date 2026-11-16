@@ -3,7 +3,6 @@ from pathlib import Path
 import runpy
 import shutil
 import sys
-import zipfile
 from typing import Any, cast
 
 import pandas as pd
@@ -14,10 +13,8 @@ from pyaesa.process.mrios.utils.raw_corrections.maintainer_cli import (
     main as build_corrected_values_main,
     parse_build_corrected_values_args,
 )
-from pyaesa.process.mrios.utils.raw_corrections.exio_3102_corrected_values import (
-    FULL_YEAR_RANGE,
-    _WorkspaceData,
-    _build_tw_rows,
+from pyaesa.process.mrios.utils.raw_corrections.exio_corrected_values import (
+    _build_forest_rows,
 )
 from pyaesa.process.mrios.utils.raw_corrections.runtime import (
     _apply_correction_rows_to_iosys,
@@ -32,139 +29,14 @@ from pyaesa.process.mrios.utils.raw_corrections.runtime import (
     write_applied_correction_log,
 )
 from pyaesa.process.mrios.utils.io.paths import _get_mrio_raw_corrected_values_log_path
+from pyaesa.process.mrios.utils.raw_corrections.workspace_data import _WorkspaceData
+from tests.package.helpers.raw_corrections import (
+    _build_workspace,
+    _fwu_stressors,
+    _read_extension_frame,
+    _rewrite_extension_frame,
+)
 from tests.package.helpers.data_processing_dummy import DummyExtension, build_dummy_iosystem
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
-def _eu27_regions() -> list[str]:
-    frame = pd.read_csv(
-        _repo_root()
-        / "pyaesa"
-        / "workspace_initialisation"
-        / "prerequisites"
-        / "mrio"
-        / "exiobase_3"
-        / "aggregation"
-        / "agg_reg_eu27.csv",
-        encoding="latin1",
-    )
-    return sorted(
-        {
-            str(value).strip()
-            for value in frame.loc[frame["aggregated_mrio"].eq("EU27"), "original_classification"]
-            if str(value).strip() and str(value).strip() != "MT"
-        }
-    )
-
-
-def _fwu_stressors() -> list[str]:
-    frame = pd.read_csv(
-        _repo_root()
-        / "pyaesa"
-        / "workspace_initialisation"
-        / "prerequisites"
-        / "mrio"
-        / "exiobase_3"
-        / "lcia"
-        / "characterization_factors_matrices"
-        / "exiobase_3102"
-        / "pb_lcia.csv",
-        encoding="latin1",
-    )
-    mask = frame["extension"].astype(str).str.strip().eq("water") & frame["impact_parent"].astype(
-        str
-    ).str.strip().eq("FWU")
-    return sorted(
-        {str(value).strip() for value in frame.loc[mask, "stressor"] if str(value).strip()}
-    )
-
-
-def _multiindex_columns(regions: list[str], sectors: list[str]) -> pd.MultiIndex:
-    tuples = [(region, sector) for region in regions for sector in sectors]
-    return pd.MultiIndex.from_tuples(tuples, names=["region", "sector"]).sort_values()
-
-
-def _build_workspace(tmp_path: Path, system: str) -> Path:
-    workspace_root = tmp_path / "workspace"
-    raw_dir = (
-        workspace_root
-        / "pyaesa"
-        / "data_raw"
-        / "mrio"
-        / "exiobase_3"
-        / "exiobase_3102"
-        / f"full_{system}"
-    )
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    eu27_regions = _eu27_regions()
-    regions = list(dict.fromkeys(["CN", "TW", "MT", "CH", "LU", *eu27_regions]))
-    sectors = ["S_donor", "S_skip", "S_ch", "S_lu"]
-    columns = _multiindex_columns(regions, sectors)
-    fwu_stressors = _fwu_stressors()
-    donor_eu27_regions = [region for region in eu27_regions if region not in {"CH", "LU"}]
-
-    for year in FULL_YEAR_RANGE:
-        land = pd.DataFrame(0.0, index=pd.Index(["Forest"], name="stressor"), columns=columns)
-        nutrients = pd.DataFrame(
-            0.0,
-            index=pd.Index(["P - agriculture - water", "P - waste - water"], name="stressor"),
-            columns=columns,
-        )
-        water = pd.DataFrame(
-            0.0,
-            index=pd.Index(fwu_stressors, name="stressor"),
-            columns=columns,
-        )
-        factor_inputs = pd.DataFrame(
-            0.0,
-            index=pd.Index(["fi_pos", "fi_neg"], name="stressor"),
-            columns=columns,
-        )
-
-        land.loc["Forest", ("CN", "S_donor")] = 10.0
-        land.loc["Forest", ("TW", "S_donor")] = 0.0
-        for region in donor_eu27_regions:
-            land.loc["Forest", (region, "S_donor")] = 8.0
-            land.loc["Forest", (region, "S_skip")] = 5.0
-        land.loc["Forest", ("MT", "S_donor")] = 1.0 if year in (2010, 2011) else 0.0
-
-        factor_inputs.loc["fi_pos", ("CN", "S_donor")] = 2.0
-        factor_inputs.loc["fi_pos", ("TW", "S_donor")] = 6.0
-        factor_inputs.loc["fi_pos", ("MT", "S_donor")] = 4.0
-        factor_inputs.loc["fi_neg", ("MT", "S_skip")] = -3.0
-        for region in donor_eu27_regions:
-            factor_inputs.loc["fi_pos", (region, "S_donor")] = 4.0
-            factor_inputs.loc["fi_pos", (region, "S_skip")] = 3.0
-
-        ch_x = float(year - 1990)
-        factor_inputs.loc["fi_pos", ("CH", "S_ch")] = ch_x
-        nutrients.loc["P - agriculture - water", ("CH", "S_ch")] = 2.0 * ch_x
-        nutrients.loc["P - waste - water", ("CH", "S_ch")] = 3.0 * ch_x
-        if year in (2021, 2022):
-            nutrients.loc["P - agriculture - water", ("CH", "S_ch")] = 0.0
-            nutrients.loc["P - waste - water", ("CH", "S_ch")] = 0.0
-
-        lu_x = float(year - 1990)
-        factor_inputs.loc["fi_pos", ("LU", "S_lu")] = lu_x
-        for stressor in fwu_stressors:
-            water.loc[stressor, ("LU", "S_lu")] = 4.0 * lu_x
-        if year == 2020:
-            for stressor in fwu_stressors:
-                water.loc[stressor, ("LU", "S_lu")] = 0.0
-
-        zip_path = raw_dir / f"IOT_{year}_{system}.zip"
-        with zipfile.ZipFile(zip_path, "w") as archive:
-            for extension_name, frame in {
-                "land": land,
-                "nutrients": nutrients,
-                "water": water,
-                "factor_inputs": factor_inputs,
-            }.items():
-                archive.writestr(f"{extension_name}/F.txt", frame.to_csv(sep="\t"))
-    return workspace_root
 
 
 @pytest.fixture(scope="module")
@@ -179,55 +51,6 @@ def ixi_workspace(tmp_path: Path, ixi_workspace_template: Path) -> Path:
     workspace_root = tmp_path / "workspace"
     shutil.copytree(ixi_workspace_template, workspace_root)
     return workspace_root
-
-
-def _zip_path(*, workspace_root: Path, system: str, year: int) -> Path:
-    return (
-        workspace_root
-        / "pyaesa"
-        / "data_raw"
-        / "mrio"
-        / "exiobase_3"
-        / "exiobase_3102"
-        / f"full_{system}"
-        / f"IOT_{year}_{system}.zip"
-    )
-
-
-def _read_extension_frame(
-    *, workspace_root: Path, system: str, year: int, extension: str
-) -> pd.DataFrame:
-    with zipfile.ZipFile(
-        _zip_path(workspace_root=workspace_root, system=system, year=year)
-    ) as archive:
-        with archive.open(f"{extension}/F.txt") as raw:
-            return pd.read_csv(
-                raw,
-                sep="\t",
-                index_col=0,
-                header=[0, 1],
-                encoding="latin1",
-            )
-
-
-def _rewrite_extension_frame(
-    *,
-    workspace_root: Path,
-    system: str,
-    year: int,
-    extension: str,
-    frame: pd.DataFrame,
-) -> None:
-    zip_path = _zip_path(workspace_root=workspace_root, system=system, year=year)
-    entries: dict[str, bytes] = {}
-    with zipfile.ZipFile(zip_path, "r") as archive:
-        for name in archive.namelist():
-            if name != f"{extension}/F.txt":
-                entries[name] = archive.read(name)
-    with zipfile.ZipFile(zip_path, "w") as archive:
-        for name, payload in entries.items():
-            archive.writestr(name, payload)
-        archive.writestr(f"{extension}/F.txt", frame.to_csv(sep="\t"))
 
 
 def _minimal_corrected_values_frame(*, fwu_stressors: list[str]) -> pd.DataFrame:
@@ -391,6 +214,66 @@ def test_build_corrected_values_module_main_dunder_path() -> None:
     assert importlib.import_module(module_name).main is build_corrected_values_main
 
 
+@pytest.mark.parametrize("system", ["ixi", "pxp"])
+def test_exiobase_3112_generates_and_applies_only_forest_corrections(
+    tmp_path: Path, system: str
+) -> None:
+    source = f"exiobase_3112_{system}"
+    workspace_root = _build_workspace(tmp_path, system, version="3112")
+    out_dir = tmp_path / "corrected_values"
+    assert (
+        build_corrected_values_main(
+            [
+                "--workspace-root",
+                str(workspace_root),
+                "--source",
+                source,
+                "--out-dir",
+                str(out_dir),
+            ],
+            emit=lambda _message: None,
+        )
+        == 0
+    )
+    frame = pd.read_csv(out_dir / f"{source}_raw_corrected_values.csv")
+    assert frame.extension.unique().tolist() == ["land"]
+    assert sorted(frame.year.unique().tolist()) == list(range(1995, 2024))
+    assert sorted(frame.stressor.unique().tolist()) == [
+        "Naturally generating forest - Non primary forest",
+        "Planted forest",
+    ]
+    tw = frame.loc[frame.region.eq("TW") & frame.year.eq(1995)].set_index("stressor")
+    assert tw.corrected_value.to_dict() == pytest.approx(
+        {"Naturally generating forest - Non primary forest": 18.0, "Planted forest": 12.0}
+    )
+    assert load_raw_corrected_value_rows(
+        source=source, year=2024, corrected_values_root=out_dir
+    ).empty
+
+    data = _WorkspaceData(workspace_root=workspace_root, source=source)
+    land = data.load_extension_frame(year=1995, extension="land").copy()
+    direct = pd.DataFrame(3.0, index=land.index, columns=["households"])
+    iosys = build_dummy_iosystem(
+        include_factor_inputs=False,
+        include_satellite_accounts=False,
+        extra_extensions={"land": DummyExtension(name="land", F=land, F_Y=direct.copy())},
+    )
+    summary = apply_raw_corrected_values(
+        iosys=iosys, source=source, year=1995, corrected_values_root=out_dir
+    )
+    assert summary is not None
+    assert summary.row_count == len(frame.loc[frame.year.eq(1995)])
+    applied = getattr(cast(Any, iosys), "land")
+    assert applied.F.loc["Planted forest", ("TW", "S_donor")] == pytest.approx(12.0)
+    pd.testing.assert_frame_equal(applied.F_Y, direct)
+    assert (
+        apply_raw_corrected_values(
+            iosys=iosys, source=source, year=2024, corrected_values_root=out_dir
+        )
+        is None
+    )
+
+
 def test_write_outputs_and_runtime_application_use_raw_corrected_values(
     tmp_path: Path,
     project_repo: Path,
@@ -536,9 +419,10 @@ def test_raw_correction_helpers_cover_error_and_skip_paths(
         frame=factor_1995,
     )
 
-    rows, diagnostic_rows = _build_tw_rows(
+    rows, diagnostic_rows = _build_forest_rows(
         _WorkspaceData(workspace_root=workspace_root, source="exiobase_3102_ixi"),
         source="exiobase_3102_ixi",
+        region="TW",
     )
     review = pd.DataFrame(rows)
     diagnostics = pd.DataFrame(diagnostic_rows)
@@ -566,9 +450,10 @@ def test_raw_correction_helpers_cover_error_and_skip_paths(
         frame=factor_1995,
     )
     with pytest.raises(ValueError):
-        _build_tw_rows(
+        _build_forest_rows(
             _WorkspaceData(workspace_root=workspace_root, source="exiobase_3102_ixi"),
             source="exiobase_3102_ixi",
+            region="TW",
         )
 
     empty_corrected_values_root = tmp_path / "empty_corrected_values"
@@ -644,7 +529,11 @@ def test_raw_correction_helpers_cover_error_and_skip_paths(
     iosys = build_dummy_iosystem(include_factor_inputs=False, include_satellite_accounts=False)
     with pytest.raises(ValueError):
         _require_extension_frame(iosys, "land")
-    setattr(iosys, "land", object())
+    iosys = build_dummy_iosystem(
+        include_factor_inputs=False,
+        include_satellite_accounts=False,
+        extra_extensions={"land": DummyExtension(name="land")},
+    )
     with pytest.raises(ValueError):
         _require_extension_frame(iosys, "land")
 

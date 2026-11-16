@@ -1,4 +1,4 @@
-"""Runtime application of EXIOBASE 3.10.2 raw corrections."""
+"""Runtime application of source-specific EXIOBASE raw corrections."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +11,12 @@ from pyaesa.process.mrios.utils.io.paths import _get_mrio_raw_corrected_values_l
 
 from .basis import corrected_values_dir
 
-SUPPORTED_SOURCES = ("exiobase_3102_ixi", "exiobase_3102_pxp")
+SUPPORTED_SOURCES = (
+    "exiobase_3102_ixi",
+    "exiobase_3102_pxp",
+    "exiobase_3112_ixi",
+    "exiobase_3112_pxp",
+)
 
 
 @dataclass(frozen=True)
@@ -330,7 +335,7 @@ def apply_raw_corrected_values(
     year: int,
     corrected_values_root: Path | None = None,
 ) -> AppliedCorrectionSummary | None:
-    """Apply EXIOBASE 3.10.2 raw corrected values to one parsed year."""
+    """Apply source-specific EXIOBASE raw corrected values to one parsed year."""
     rows = load_raw_corrected_value_rows(
         source=source,
         year=year,

@@ -4,7 +4,7 @@ import argparse
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from .exio_3102_corrected_values import write_corrected_values_outputs
+from .exio_corrected_values import write_corrected_values_outputs
 from .runtime import SUPPORTED_SOURCES
 
 DEFAULT_WORKSPACE_ROOT = Path(
@@ -16,7 +16,7 @@ def parse_build_corrected_values_args(argv: Sequence[str] | None = None) -> argp
     """Parse maintainer arguments for raw corrected values generation."""
     parser = argparse.ArgumentParser(
         description=(
-            "Build EXIOBASE 3.10.2 raw corrected values tables from a "
+            "Build source-specific EXIOBASE raw corrected values tables from a "
             "workspace root. Edit DEFAULT_WORKSPACE_ROOT at the top of this "
             "module if needed."
         )
@@ -30,7 +30,7 @@ def parse_build_corrected_values_args(argv: Sequence[str] | None = None) -> argp
         "--source",
         action="append",
         choices=list(SUPPORTED_SOURCES),
-        help="Optional source filter. Defaults to both exiobase_3102_ixi and exiobase_3102_pxp.",
+        help="Optional source filter. Defaults to all supported correction sources.",
     )
     parser.add_argument(
         "--out-dir",

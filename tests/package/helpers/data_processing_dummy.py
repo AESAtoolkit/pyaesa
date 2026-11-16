@@ -259,13 +259,16 @@ def write_exio_archive_files(
             "unit": base.factor_inputs.unit,
         },
     }
-    if lcia_methods:
+    matrix_methods = list(lcia_methods)
+    if include_correction_products and "pb_lcia" not in matrix_methods:
+        matrix_methods.append("pb_lcia")
+    if matrix_methods:
         matrices = pd.concat(
             [
                 pd.read_csv(
                     _get_characterization_matrix_path(source_key=source_key, lcia_method=method)
                 )
-                for method in lcia_methods
+                for method in matrix_methods
             ],
             ignore_index=True,
         ).drop_duplicates(["extension", "stressor"])

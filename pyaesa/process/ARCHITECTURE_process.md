@@ -198,8 +198,6 @@ absent; available accounts are characterized on the full declared impact axis.
 Metadata records `available=True` with `missing=["deforestation"]`, and the processing
 report warns about the omission during processing and reuse. The complete
 original characterization matrix retains its scientific identity.
-The EXIOBASE 3.10.2 raw correction owner does not apply its corrections to
-EXIOBASE 3.11.2.
 
 | Metadata | Purpose |
 | --- | --- |

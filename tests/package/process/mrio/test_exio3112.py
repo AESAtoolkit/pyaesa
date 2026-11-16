@@ -12,6 +12,7 @@ from pyaesa.process.mrios.utils.io.paths import (
     _get_characterization_matrix_path,
     _get_year_saved_dir,
 )
+from pyaesa.process.mrios.utils.raw_corrections.runtime import load_raw_corrected_value_rows
 from tests.package.helpers.data_processing_dummy import (
     write_characterization_matrix,
     write_exio_archive_files,
@@ -30,6 +31,7 @@ def test_process_exio3112_bundled_methods_and_absent_2024_land(
         years=[2022, 2023, 2024],
         lcia_methods=methods,
         missing_extensions_by_year={2022: ("deforestation",), 2024: ("land", "deforestation")},
+        include_correction_products=True,
     )
     report = process_mrio(
         source,
@@ -41,6 +43,9 @@ def test_process_exio3112_bundled_methods_and_absent_2024_land(
     assert report is not None
     assert report.processed == [2022, 2023, 2024]
     assert report.errors == {}
+    assert report.raw_corrected_value_row_count == sum(
+        len(load_raw_corrected_value_rows(source=source, year=year)) for year in (2022, 2023)
+    )
     assert report.lcia_missing_by_year == {
         2022: {method: ["deforestation"] for method in methods[1:]},
         2024: {
@@ -53,6 +58,11 @@ def test_process_exio3112_bundled_methods_and_absent_2024_land(
     }
     metadata = _read_metadata(source, matrix_version=None)
     assert metadata["source"] == source
+    for year in (2022, 2023):
+        assert metadata["years"][str(year)]["raw_corrected_values"]["row_count"] == len(
+            load_raw_corrected_value_rows(source=source, year=year)
+        )
+    assert metadata["years"]["2024"].get("raw_corrected_values") is None
     assert metadata["years"]["2022"]["lcia_status"] == {
         "pb_lcia": {"available": True},
         **{method: {"available": True, "missing": ["deforestation"]} for method in methods[1:]},
@@ -82,12 +92,34 @@ def test_process_exio3112_bundled_methods_and_absent_2024_land(
                 matrix = matrix.loc[matrix["extension"] != "deforestation"]
             factors = pd.Series(matrix.groupby("impact")["factor"].sum()).sort_index()
             extension = saved / "preclip" / "extensions" / method
-            for table, columns in (("F", 4), ("F_Y", 2)):
+            for table in ("F", "F_Y"):
                 projected = pd.read_pickle(extension / f"{table}.pickle").sort_index()
                 assert projected.index.tolist() == factors.index.tolist()
+                expected = np.repeat(
+                    factors.to_numpy(dtype=float)[:, None], projected.shape[1], axis=1
+                )
+                if table == "F":
+                    corrections = load_raw_corrected_value_rows(source=source, year=year)
+                    for _product, group in corrections.groupby(["region", "sector"]):
+                        flows = pd.Series(1.0, index=matrix.index)
+                        for ext, stressor, corrected in group[
+                            ["extension", "stressor", "corrected_value"]
+                        ].itertuples(index=False, name=None):
+                            flows.loc[matrix.extension.eq(ext) & matrix.stressor.eq(stressor)] = (
+                                corrected
+                            )
+                        corrected_impacts = pd.Series(
+                            matrix.assign(factor=matrix.factor * flows)
+                            .groupby("impact")["factor"]
+                            .sum()
+                        ).reindex(factors.index)
+                        column = projected.columns.get_loc(
+                            (str(group.region.iloc[0]), str(group.sector.iloc[0]))
+                        )
+                        expected[:, column] = corrected_impacts.to_numpy()
                 np.testing.assert_allclose(
                     projected.to_numpy(dtype=float),
-                    np.repeat(factors.to_numpy(dtype=float)[:, None], columns, axis=1),
+                    expected,
                     rtol=1e-14,
                     atol=0,
                 )
@@ -130,6 +162,7 @@ def test_absent_deforestation_preserves_custom_impact_axis(
         years=[2022, 2023],
         lcia_methods=(method,),
         missing_extensions_by_year={2022: (extension,)},
+        include_correction_products=True,
     )
     report = process_mrio(
         source,
@@ -150,11 +183,11 @@ def test_absent_deforestation_preserves_custom_impact_axis(
         production = pd.read_pickle(saved / "F.pickle")
         demand = pd.read_pickle(saved / "F_Y.pickle")
         assert demand.index.tolist() == production.index.tolist()
-        for actual, columns in ((production, 4), (demand, 2)):
+        for actual in (production, demand):
             actual = actual.sort_index()
             assert actual.index.tolist() == factors.index.tolist()
             np.testing.assert_allclose(
-                actual.to_numpy(), np.repeat(factors.to_numpy()[:, None], columns, 1)
+                actual.to_numpy(), np.repeat(factors.to_numpy()[:, None], actual.shape[1], 1)
             )
     metadata = _read_metadata(source, matrix_version=None)
     entry = metadata["years"]["2022"]
@@ -186,7 +219,13 @@ def test_present_deforestation_keeps_stressor_and_unit_validation(
     path = write_characterization_matrix(
         project_repo, source_key=source, method_name=method, extension_name="deforestation"
     )
-    write_exio_archive_files(project_repo, source=source, years=[2023], lcia_methods=(method,))
+    write_exio_archive_files(
+        project_repo,
+        source=source,
+        years=[2023],
+        lcia_methods=(method,),
+        include_correction_products=True,
+    )
     matrix = pd.read_csv(path)
     matrix[field] = value
     matrix.to_csv(path, index=False)
