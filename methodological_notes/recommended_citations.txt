@@ -303,9 +303,10 @@ folders match EXIOBASE 3.11.2, 3.10.2, or 3.9.6.
 ef_3.1, ef_3.1_14cat and gwp100_ef31: adaptation of the EF 3.1 EXIOBASE
 concordance matrix.
 
-Boivent, S., de Bantel, E.I., and Blikra Vea, E. (2026). EXIOBASE EF3.1
-concordance matrix (upcoming v1.2).
-Zenodo. https://doi.org/10.5281/zenodo.21533474
+Boivent, S., de Bantel, E. I., & Blikra Vea, E. (2026). A concordance matrix
+between EXIOBASE (v3.9.6; v3.10.2, v3.11.2) elementary flows and Environmental
+Footprint 3.1 (EF3.1) characterization factors (Version v1.2) [Data set].
+Zenodo. https://doi.org/10.5281/zenodo.24354527
 
 Andreasi Bassi, S., Biganzoli, F., Ferrara, N., Amadei, A., Valente, A.,
 Sala, S., & Ardente, F. (2023). Updated characterisation and normalisation
